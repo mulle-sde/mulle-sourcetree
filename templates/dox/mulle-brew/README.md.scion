@@ -1,11 +1,11 @@
 # mulle-brew, C/C++/Objective-C developer sandboxing with homebrew
 
-![Last version](https://img.shields.io/github/tag/{{PUBLISHER}}/mulle-bootstrap.svg)
+![Last version](https://img.shields.io/github/tag/{{PUBLISHER}}/mulle-sourcetree.svg)
 
 [Homebrew](//brew.sh) is the de facto standard package manager of OS X. It is also
 available on Linux as [Linuxbrew](linuxbrew.sh).
 
-By default homebrew installs packages system-wide into '/usr/local/' (on OS X). But you can actually clone the [brew repository](https://github.com/Homebrew/brew/) to any place in the filesystem. `brew` will the install packages in that place. This way you can create your own playground development environment of tools and libraries.
+By default homebrew installs packages system-wide into '/usr/local/' (on OS X). But you can actually nodeline the [brew repository](https://github.com/Homebrew/brew/) to any place in the filesystem. `brew` will the install packages in that place. This way you can create your own playground development environment of tools and libraries.
 
 **mulle-brew** helps you set-up and share such playgrounds, which it keeps in a folder called `addictions`.
 
@@ -143,7 +143,7 @@ You still need to manually add the libraries though.
 
 ## Sharing addictions
 
-When you have multiple small projects, it would be nice to share a common `addictions` folder. You can do this with  `mulle-brew defer`. This commands links up the current project directory with its immediate parent. 
+When you have multiple small projects, it would be nice to share a common `addictions` folder. You can do this with  `mulle-brew defer`. This commands links up the current project directory with its immediate parent.
 
 The addictions folder will now reside in `../addictions` instead of `./addictions`. Now
 if you are already in the habit of using `mulle-brew paths` and `mulle-brew run`, you don't have to modify anything!
@@ -211,6 +211,6 @@ mulle-brew config -u "clone_cache" "${HOME}/Library/Caches/mulle-brew"
 
 ## GitHub and Mulle kybernetiK
 
-The development is done on [Mulle kybernetiK](https://www.mulle-kybernetik.com/software/git/mulle-bootstrap/master). Releases and bug-tracking are on [GitHub](https://github.com/{{PUBLISHER}}/mulle-bootstrap).
+The development is done on [Mulle kybernetiK](https://www.mulle-kybernetik.com/software/git/mulle-sourcetree/master). Releases and bug-tracking are on [GitHub](https://github.com/{{PUBLISHER}}/mulle-sourcetree).
 
 

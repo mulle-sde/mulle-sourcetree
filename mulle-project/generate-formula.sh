@@ -14,7 +14,7 @@
 generate_brew_formula_build()
 {
    local project="$1"
-   local name="$2"
+   local uuid="$2"
    local version="$3"
 
    cat <<EOF
@@ -32,7 +32,7 @@ EOF
 generate_brew_formula()
 {
 #   local project="$1"
-#   local name="$2"
+#   local uuid="$2"
 #   local version="$3"
 #   local dependencies="$4"
 #   local builddependencies="$5"

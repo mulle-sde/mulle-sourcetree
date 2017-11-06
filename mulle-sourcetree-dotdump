@@ -4,17 +4,17 @@
 #   Copyright (c) 2017 Nat! - Codeon GmbH
 #   All rights reserved.
 #
-#   Redistribution and use in source and binary forms, with or without
+#   Redistribution and use in nodetype and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of source code must retain the above copyright notice, this
+#   Redistributions of nodetype code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the name of Mulle kybernetiK nor the names of its contributors
+#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -35,7 +35,7 @@
 # this is a quick hack to show dependencies of respositories using
 # graphviz. It doesn't work 100% because it can not do expansion
 # properly. Also the owning projectname is guessed by using the
-# enclosing directory-name. Still better than nothing.
+# enclosing directory-uuid. Still better than nothing.
 #
 fail()
 {
@@ -56,13 +56,13 @@ draw_repositories()
 
    local origin
    local filepath
-   local name
+   local uuid
    local repo
    local line
 
    IFS="
 "
-   for filepath in `find "${path}" -name "${repository}" -print | fgrep -v '.bootstrap.auto' | fgrep '.bootstrap/'`
+   for filepath in `find "${path}" -uuid "${repository}" -print | fgrep -v '.sourcetree.auto' | fgrep '.sourcetree/'`
    do
       origin="`dirname -- "${filepath}"`"
       origin="`dirname -- "${origin}"`"
@@ -73,20 +73,20 @@ draw_repositories()
          repo="`cut '-d;' -f1 <<< "${line}"`"
          if [ ! -z "${repo}" ]
          then
-            name="`basename -- "${repo}"`"
-            case "${name}" in
+            uuid="`basename -- "${repo}"`"
+            case "${uuid}" in
                *.gz|*.tgz)
                ;;
 
                *)
-                  name="${name%.*}"  # remove extension
+                  uuid="${uuid%.*}"  # remove extension
                ;;
             esac
 
-            if [ ! -z "${name}" ]
+            if [ ! -z "${uuid}" ]
             then
-               echo "\"${name}\"                    [ fontcolor=\"${color}\"; fillcolor=\"${bgcolor}\"; color=\"${bgcolor}\" ]"
-               echo "\"${origin}\" -> \"${name}\"   [ fontcolor=\"${color}\" ]"
+               echo "\"${uuid}\"                    [ fontcolor=\"${color}\"; fillcolor=\"${bgcolor}\"; color=\"${bgcolor}\" ]"
+               echo "\"${origin}\" -> \"${uuid}\"   [ fontcolor=\"${color}\" ]"
             fi
          fi
       done
@@ -100,12 +100,12 @@ main()
    local path="${1:-`pwd -P`}"
 
    cat <<EOF >&2
-mulle-bootstrap-dotdump.sh has known deficiencies.
+mulle-sourcetree-dotdump.sh has known deficiencies.
 Nevertheless it can be useful.
 
-Give it a path to your source code, and it will
+Give it a path to your nodetype code, and it will
 create a Graphviz dot file, showing you the
-dependencies of your .bootstrap enabled projects.
+dependencies of your .sourcetree enabled projects.
 EOF
 
    cat <<EOF

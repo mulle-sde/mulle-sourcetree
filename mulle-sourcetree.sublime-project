@@ -8,8 +8,8 @@
 		"package",
 		"build",
 		".repos",
-		"mulle-bootstrap_3.12.2",
-		".bootstrap*",
+		"mulle-sourcetree_3.12.2",
+		".sourcetree*",
 		".git*",
 	 ],
 
