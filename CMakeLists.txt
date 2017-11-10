@@ -28,6 +28,7 @@ set( PROJECT_VERSION "${MULLE_SOURCETREE_VERSION}")
 
 set( SCRIPTS
 mulle-sourcetree
+mulle-bootstrap-to-sourcetree
 )
 
 

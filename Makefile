@@ -1,5 +1,6 @@
 SCRIPTS=install.sh \
 mulle-sourcetree \
+mulle-bootstrap-to-sourcetree \
 src/mulle-sourcetree-commands.sh \
 src/mulle-sourcetree-db.sh \
 src/mulle-sourcetree-dotdump.sh \

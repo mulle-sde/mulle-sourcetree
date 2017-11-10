@@ -44,7 +44,9 @@ Options:
    -p <value>    : specify permissions (missing)
    -m <value>    : specify marks to match (e.g. build)
    --no-recurse  : do not recurse
-   --walk-db-dir : walk over information contained in the database instead
+   --walk-config : traverse the config file (default)
+   --walk-db     : walk over information contained in the database instead
+   --output-html : emit HTML Graphviz nodes, for more information
 EOF
   exit 1
 }
@@ -94,10 +96,10 @@ html_print_node()
    local branch="$3"
    local tag="$4"
    local nodetype="$5"
-   local uuid="$6"
-   local marks="$7"
-   local fetchoptions="$8"
-   local useroptions="$9"
+   local marks="$6"
+   local fetchoptions="$7"
+   local useroptions="$8"
+   local uuid="$9"
 
    bgcolor="lightgray"
    fontcolor="black"
@@ -129,7 +131,7 @@ html_print_node()
    title="`basename -- "${prefixed}"`"
    html="$(concat "${html}" "`html_print_title "${html}" "${title}" "${fontcolor}" "${bgcolor}"`")"
    html="$(concat "${html}" "`html_print_row "url" "${url}"`")"
-   html="$(concat "${html}" "`html_print_row "dstfile" "${prefixed}" "${title}"`")"
+   html="$(concat "${html}" "`html_print_row "destination" "${prefixed}" "${title}"`")"
    html="$(concat "${html}" "`html_print_row "branch" "${branch}" "master"`")"
    html="$(concat "${html}" "`html_print_row "tag" "${tag}"`")"
    html="$(concat "${html}" "`html_print_row "nodetype" "${nodetype}" "git"`")"
@@ -179,21 +181,17 @@ walk_dotdump()
       relative="`filepath_concat "${relative}" "${component}"`"
       identifier="\"${relative}\""
 
-      if [ ! -z "${LEFTOVER_DIRECTORIES}" ]
+      if [ -z "${previdentifier}" ]
       then
-         relidentifier="${DANGLING_ROOT_IDENTIFIER} -> ${identifier}"
-         echo "${relidentifier}"
-         DANGLING_ROOT_IDENTIFIER=
+         relidentifier="${ROOT_IDENTIFIER} -> ${identifier}"
+      else
+         relidentifier="${previdentifier} -> ${identifier}"
       fi
 
-      if [ ! -z "${previdentifier}" ]
+      if ! fgrep -q -s -x "${relidentifier}" <<< "${ALL_RELATIONSHIPS}"
       then
-         relidentifier="${previdentifier} -> ${identifier}"
-         if ! fgrep -q -s -x "${relidentifier}" <<< "${ALL_RELATIONSHIPS}"
-         then
-            echo "${relidentifier}"
-            ALL_RELATIONSHIPS="`add_line "${ALL_RELATIONSHIPS}" "${relidentifier}"`"
-         fi
+         echo "${relidentifier}"
+         ALL_RELATIONSHIPS="`add_line "${ALL_RELATIONSHIPS}" "${relidentifier}"`"
       fi
 
       if ! fgrep -q -s -x "${identifier}" <<< "${ALL_DIRECTORIES}"
@@ -204,13 +202,6 @@ walk_dotdump()
             TOEMIT_DIRECTORIES="`add_line "${TOEMIT_DIRECTORIES}" "${identifier}"`"
             log_debug "TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
          fi
-      fi
-
-      if [ ! -z "${DANGLING_ROOT_IDENTIFIER}" ]
-      then
-         relidentifier="${DANGLING_ROOT_IDENTIFIER} -> ${identifier}"
-         echo "${relidentifier}"
-         DANGLING_ROOT_IDENTIFIER=
       fi
 
       previdentifier="${identifier}"
@@ -224,21 +215,36 @@ walk_dotdump()
    if [ "${OPTION_HTML}" = "YES" ]
    then
       html_print_node "${identifier}" "${url}" \
-                                      "${dstfile}" \
+                                      "${destination}" \
                                       "${branch}" \
                                       "${tag}" \
                                       "${nodetype}" \
-                                      "${uuid}" \
                                       "${marks}" \
                                       "${fetchoptions}" \
-                                      "${userinfo}"
+                                      "${userinfo}" \
+                                      "${uuid}"
    else
-      echo "${identifier} [ label=\"`basename -- "${prefixed}"`\"]"
+      echo "${identifier} [ penwidth=2, fillstyle=\"none\" \
+label=\"`basename -- "${prefixed}"`\"]"
    fi
 
    IFS="${DEFAULT_IFS}"
 }
 
+
+emit_root()
+{
+   if [ "${OPTION_HTML}" = "YES" ]
+   then
+      html_print_node "${ROOT_IDENTIFIER}" "${url}" \
+                                           "${PWD}" \
+                                           "" \
+                                           "" \
+                                           "root"
+   else
+      echo "${ROOT_IDENTIFIER} [ penwidth=3 ]"
+   fi
+}
 
 emit_remaining_directories()
 {
@@ -258,7 +264,7 @@ emit_remaining_directories()
       name="$(sed 's/^.\(.*\).$/\1/' <<< "${identifier}")"
       name="`basename -- "${name}"`"
 
-      echo "${identifier} [ label=\"${name}\" ]"
+      echo "${identifier} [ label=\"${name}\", style=\"\" ]"
    done
    IFS="${DEFAULT_IFS}"
 }
@@ -277,7 +283,7 @@ sourcetree_dotdump_body()
    local ALL_RELATIONSHIPS=
    local ALL_DIRECTORIES=
    local TOEMIT_DIRECTORIES=
-   local DANGLING_ROOT_IDENTIFIER="\"project\""
+   local ROOT_IDENTIFIER="\"`basename -- "${PWD}"`\""
 
    log_debug "TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
 
@@ -305,6 +311,7 @@ sourcetree_dotdump_body()
 
    log_debug "TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
 
+   emit_root
    emit_remaining_directories "${TOEMIT_DIRECTORIES}"
 }
 
@@ -399,7 +406,7 @@ sourcetree_dotdump_main()
          ;;
 
          -*)
-            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown fetch option $1"
+            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown dotdump option $1"
             sourcetree_dotdump_usage
          ;;
 

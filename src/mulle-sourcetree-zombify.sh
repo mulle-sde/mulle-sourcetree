@@ -111,22 +111,22 @@ bury_node()
    log_entry "bury_node" "$@"
 
    local uuid="$1"
-   local dstfile="$2"
+   local destination="$2"
 
    [ $# -eq 2 ] || internal_fail "api error"
 
    [ -z "${uuid}" ] && internal_fail "uuid is empty"
-   [ -z "${dstfile}" ] && internal_fail "dstfile is empty"
+   [ -z "${destination}" ] && internal_fail "destination is empty"
    [ -z "${SOURCETREE_DB_DIR}" ] && internal_fail "SOURCETREE_DB_DIR"
 
    local gravepath
 
    gravepath="${SOURCETREE_DB_DIR}/.graveyard/${uuid}"
 
-   if [ -L "${dstfile}" ]
+   if [ -L "${destination}" ]
    then
-      log_verbose "Removing old symlink \"${dstfile}\""
-      exekutor rm -f "${dstfile}" >&2
+      log_verbose "Removing old symlink \"${destination}\""
+      exekutor rm -f "${destination}" >&2
       return
    fi
 
@@ -138,8 +138,8 @@ bury_node()
       mkdir_if_missing "${SOURCETREE_DB_DIR}/.graveyard"
    fi
 
-   log_info "Burying \"${dstfile}\" in grave \"${gravepath}\""
-   exekutor mv ${OPTION_COPYMOVEFLAGS} "${dstfile}" "${gravepath}" >&2
+   log_info "Burying \"${destination}\" in grave \"${gravepath}\""
+   exekutor mv ${OPTION_COPYMOVEFLAGS} "${destination}" "${gravepath}" >&2
 }
 
 
@@ -152,14 +152,14 @@ _bury_zombie()
    [ -z "${zombie}" ] && internal_fail "zombie is empty"
 
    local uuid
-   local dstfile
+   local destination
    local gravepath
    local nodeline
 
    nodeline="`db_get_nodeline_of_zombie "${zombie}"`"
 
    local branch
-   local dstfile
+   local destination
    local fetchoptions
    local nodetype
    local marks
@@ -179,10 +179,10 @@ _bury_zombie()
       log_fluff "${url} is marked as nodelete so not burying"
    fi
 
-   # forget it now, so it doesn't come up in db_get_all_dstfiles
+   # forget it now, so it doesn't come up in db_get_all_destinations
    db_forget "${uuid}"
 
-   if [ -e "${dstfile}" ]
+   if [ -e "${destination}" ]
    then
       if [ "${delete}" = "YES" ]
       then
@@ -192,22 +192,22 @@ _bury_zombie()
          #
          local inuse
 
-         inuse="`db_get_all_dstfiles`"
-         if fgrep -q -s -x "${dstfile}" <<< "${inuse}"
+         inuse="`db_get_all_destinations`"
+         if fgrep -q -s -x "${destination}" <<< "${inuse}"
          then
-            log_fluff "Another node is using \"${dstfile}\" now"
+            log_fluff "Another node is using \"${destination}\" now"
          else
-            if [ -L "${dstfile}"  ]
+            if [ -L "${destination}"  ]
             then
-               log_info "Removing unused symlink ${C_MAGENTA}${C_BOLD}${dstfile}${C_INFO}"
-               exekutor rm "${dstfile}" >&2
+               log_info "Removing unused symlink ${C_MAGENTA}${C_BOLD}${destination}${C_INFO}"
+               exekutor rm "${destination}" >&2
             else
-               bury_node "${uuid}" "${dstfile}"
+               bury_node "${uuid}" "${destination}"
             fi
          fi
       fi
    else
-      log_fluff "Zombie \"${dstfile}\" vanished or never existed ($PWD)"
+      log_fluff "Zombie \"${destination}\" vanished or never existed ($PWD)"
    fi
 
    remove_file_if_present "${zombie}"

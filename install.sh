@@ -171,6 +171,9 @@ main()
    install -m "${mode}" "mulle-sourcetree" "${bin}/mulle-sourcetree" || exit 1
    printf "install: ${C_MAGENTA}${C_BOLD}%s${C_RESET}\n" "${bin}/mulle-sourcetree" >&2
 
+   install -m "${mode}" "mulle-bootstrap-to-sourcetree" "${bin}/mulle-bootstrap-to-sourcetree" || exit 1
+   printf "install: ${C_MAGENTA}${C_BOLD}%s${C_RESET}\n" "${bin}/mulle-bootstrap-to-sourcetree" >&2
+
    for i in src/mulle*.sh
    do
       mkdir -p "${libexec}" 2> /dev/null

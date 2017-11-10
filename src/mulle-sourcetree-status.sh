@@ -176,10 +176,10 @@ walk_status()
 #   branch="$3"
 #   tag="$4"
 #   nodetype="$5"
-#   uuid="$6"
-    marks="$7"
-#   fetchoptions="$8"
-#   useroptions="$9"
+    marks="$6"
+#   fetchoptions="$7"
+#   useroptions="$8"
+#   uuid="$9"
 
    emit_status "${prefixed}" "${marks}"
 }
@@ -249,12 +249,7 @@ sourcetree_status_main()
    local OPTION_OUTPUT_HEADER="DEFAULT"
    local OPTION_OUTPUT_RAW="YES"
 
-   if db_is_recursive
-   then
-      OPTION_RECURSIVE="YES"
-   else
-      OPTION_RECURSIVE="NO"
-   fi
+   _db_set_default_options
 
    while [ $# -ne 0 ]
    do
@@ -344,6 +339,18 @@ sourcetree_status_main()
    if ! nodeline_config_exists
    then
       log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
+      return 0
+   fi
+
+   if ! db_is_ready
+   then
+      if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+      then
+         log_fluff "db is not marked as ready"
+         return 1
+      fi
+
+      log_warning "Update has not run yet"
    fi
 
    mode="prefix"

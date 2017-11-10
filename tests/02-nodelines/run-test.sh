@@ -5,10 +5,10 @@ run_test_1()
 {
    local nodeline
 
-   nodeline="url;dstfile;branch;tag;nodetype;uuid;marks;fetchoptions;userinfo"
+   nodeline="url;destination;branch;tag;nodetype;marks;fetchoptions;userinfo;uuid"
 
    local branch
-   local dstfile
+   local destination
    local fetchoptions
    local name
    local nodetype
@@ -16,18 +16,19 @@ run_test_1()
    local tag
    local url
    local userinfo
+   local uuid
 
    nodeline_parse "${nodeline}"
 
    [ "${url}"          = "url" ]          || fail "wrong name \"${url}\""
-   [ "${dstfile}"      = "dstfile" ]      || fail "wrong dstfile \"${dstfile}\""
+   [ "${destination}"  = "destination" ]  || fail "wrong destination \"${destination}\""
    [ "${branch}"       = "branch" ]       || fail "wrong branch \"${branch}\""
    [ "${tag}"          = "tag" ]          || fail "wrong tag \"${tag}\""
    [ "${nodetype}"     = "nodetype" ]     || fail "wrong nodetype \"${nodetype}\""
-   [ "${uuid}"         = "uuid" ]         || fail "wrong uuid \"${uuid}\""
    [ "${marks}"        = "marks" ]        || fail "wrong marks \"${marks}\""
    [ "${fetchoptions}" = "fetchoptions" ] || fail "wrong nodetype \"${fetchoptions}\""
    [ "${userinfo}"     = "userinfo" ]     || fail "wrong userinfo \"${userinfo}\""
+   [ "${uuid}"         = "uuid" ]         || fail "wrong uuid \"${uuid}\""
 
    local printed
 
@@ -40,7 +41,7 @@ run_test_1()
 run_test_2()
 {
    local branch
-   local dstfile
+   local destination
    local fetchoptions
    local name
    local nodetype
@@ -49,17 +50,17 @@ run_test_2()
    local url
    local userinfo
 
-   nodeline_parse "abc;whatever;;;xyz;"
+   nodeline_parse "abc;whatever;;;xyz;;;;uuid-required"
 
-   [ "${url}"     = "abc" ]      || fail "wrong name \"${url}\""
-   [ "${dstfile}" = "whatever" ] || fail "wrong dstfile \"${dstfile}\""
-   [ -z "${branch}"       ]      || fail "wrong branch \"${branch}\""
-   [ -z "${tag}"          ]      || fail "wrong tag \"${tag}\""
-   [ "${nodetype}" = "xyz"  ]    || fail "wrong nodetype \"${nodetype}\""
-   [ -z "${uuid}"         ]      || fail "wrong uuid \"${uuid}\""
-   [ -z "${marks}"        ]      || fail "wrong marks \"${marks}\""
-   [ -z "${fetchoptions}" ]      || fail "wrong nodetype \"${fetchoptions}\""
-   [ -z "${userinfo}"     ]      || fail "wrong userinfo \"${userinfo}\""
+   [ "${url}"     = "abc" ]          || fail "wrong name \"${url}\""
+   [ "${destination}" = "whatever" ] || fail "wrong destination \"${destination}\""
+   [ -z "${branch}"       ]          || fail "wrong branch \"${branch}\""
+   [ -z "${tag}"          ]          || fail "wrong tag \"${tag}\""
+   [ "${nodetype}" = "xyz"  ]        || fail "wrong nodetype \"${nodetype}\""
+   [ -z "${marks}"        ]          || fail "wrong marks \"${marks}\""
+   [ -z "${fetchoptions}" ]          || fail "wrong nodetype \"${fetchoptions}\""
+   [ -z "${userinfo}"     ]          || fail "wrong userinfo \"${userinfo}\""
+   [ "${uuid}" = "uuid-required" ]   || fail "wrong uuid \"${uuid}\""
 }
 
 

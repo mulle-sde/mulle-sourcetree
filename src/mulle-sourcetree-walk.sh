@@ -73,15 +73,15 @@ EOF
 #
 # Possible permissions: "symlink\nmissing"
 #
-walk_check_dstfile()
+walk_filter_permissions()
 {
-   log_entry "walk_check_dstfile" "$@"
+   log_entry "walk_filter_permissions" "$@"
 
-   local dstfile="$1"
+   local destination="$1"
    local permissions="$2"
    local marks="$3"
 
-   [ -z "${dstfile}" ] && internal_fail "empty dstfile"
+   [ -z "${destination}" ] && internal_fail "empty destination"
 
    local match
 
@@ -90,21 +90,21 @@ walk_check_dstfile()
       return
    fi
 
-   if [ ! -e "${dstfile}" ]
+   if [ ! -e "${destination}" ]
    then
-      log_fluff "${dstfile} does not exist (yet)"
+      log_fluff "${destination} does not exist (yet)"
       case "${permissions}" in
          *fail-noexist*)
-            fail "Missing \"${dstfile}\" is not yet fetched."
+            fail "Missing \"${destination}\" is not yet fetched."
          ;;
 
          *warn-noexist*)
-            log_verbose "Repository expected in \"${dstfile}\" is not yet fetched"
+            log_verbose "Repository expected in \"${destination}\" is not yet fetched"
             return 0
          ;;
 
          *skip-noexist*)
-            log_fluff "Repository expected in \"${dstfile}\" is not yet fetched, skipped"
+            log_fluff "Repository expected in \"${destination}\" is not yet fetched, skipped"
             return 1
          ;;
 
@@ -114,24 +114,24 @@ walk_check_dstfile()
       esac
    fi
 
-   if [ ! -L "${dstfile}" ]
+   if [ ! -L "${destination}" ]
    then
       return 0
    fi
 
-   log_fluff "${dstfile} is a symlink"
+   log_fluff "${destination} is a symlink"
    case "${permissions}" in
       *fail-symlink*)
-         fail "Missing \"${dstfile}\" is a symlink."
+         fail "Missing \"${destination}\" is a symlink."
       ;;
 
       *warn-symlink*)
-         log_verbose "\"${dstfile}\" is a symlink."
+         log_verbose "\"${destination}\" is a symlink."
          return 0
       ;;
 
       *skip-symlink*)
-         log_fluff "\"${dstfile}\" is a symlink, skipped"
+         log_fluff "\"${destination}\" is a symlink, skipped"
          return 1
       ;;
    esac
@@ -140,9 +140,9 @@ walk_check_dstfile()
 }
 
 
-walk_check_nodetype()
+walk_filter_nodetypes()
 {
-   log_entry "walk_check_nodetype" "$@"
+   log_entry "walk_filter_nodetypes" "$@"
 
    local nodetype="$1"
    local allowednodetypes="$2"
@@ -158,9 +158,9 @@ walk_check_nodetype()
 }
 
 
-walk_check_marks()
+walk_filter_marks()
 {
-   log_entry "walk_check_marks" "$@"
+   log_entry "walk_filter_marks" "$@"
 
    local marks="$1"
    local anymarks="$2"
@@ -186,7 +186,7 @@ __call_external()
    MULLE_NODE="${nodeline}" \
    MULLE_URL="${url}" \
    MULLE_DSTFILE="${prefixed}" \
-   MULLE_RAW_DSTFILE="${dstfile}" \
+   MULLE_RAW_DSTFILE="${destination}" \
    MULLE_BRANCH="${branch}" \
    MULLE_TAG="${tag}" \
    MULLE_NODETYPE="${nodetype}" \
@@ -209,17 +209,17 @@ __call_internal()
    local callback="${1}"; shift
 
    NODE="${nodeline}" \
-   RAW_DSTFILE="${dstfile}" \
+   RAW_DSTFILE="${destination}" \
       "${callback}" ${OPTION_CALLBACK_FLAGS} \
                     "${url}" \
                     "${prefixed}" \
                     "${branch}" \
                     "${tag}" \
                     "${nodetype}" \
-                    "${uuid}" \
                     "${marks}" \
                     "${fetchoptions}" \
                     "${useroptions}" \
+                    "${uuid}" \
                     "$@"
 }
 
@@ -229,7 +229,7 @@ _visit_callback()
    log_entry "_visit_callback" "$@"
 
    local callback="$1"; shift
-   local dstfile="$1"; shift
+   local destination="$1"; shift
    local mode="$1"; shift
 
    local rval
@@ -237,12 +237,12 @@ _visit_callback()
 
    case "${mode}" in
       *external*)
-         if [ -d "${dstfile}" ]
+         if [ -d "${destination}" ]
          then
             case "${mode}" in
                *docd*)
                   (
-                     exekutor cd "${dstfile}" &&
+                     exekutor cd "${destination}" &&
                      __call_external "${callback}" "$@"
                   )
                   return "$?"
@@ -255,14 +255,14 @@ _visit_callback()
       ;;
    esac
 
-   if [ -d "${dstfile}" ]
+   if [ -d "${destination}" ]
    then
       case "${mode}" in
          *docd*)
             # internally we want to preserve state and globals vars
             # so dont subshell
             old="${PWD}"
-            exekutor cd "${dstfile}" &&
+            exekutor cd "${destination}" &&
             __call_internal "${callback}" "$@"
             rval="$?"
             cd "${old}"
@@ -281,7 +281,7 @@ _visit_recurse()
 
    local prefixed="$1"; shift
    local marks="$1"; shift
-   local dstfile="$1"; shift
+   local destination="$1"; shift
 
    local prefix="$1"; shift
    local callback="$1"; shift
@@ -297,9 +297,15 @@ _visit_recurse()
             log_debug "Do not recurse on \"${prefixed}\" due to norecurse mark"
             return 0
          fi
+
          if ! [ -d "${prefixed}" ]
          then
-            log_debug "Do not recurse on \"${prefixed}\" as it's not a directory. ($PWD)"
+            if [ -f "${prefixed}" ]
+            then
+               log_fluff "Do not recurse on \"${prefixed}\" as it's not a directory. ($PWD)"
+            else
+               log_debug "Can not recurse into \"${prefixed}\" as it's not there yet. ($PWD)"
+            fi
             return 0
          fi
       ;;
@@ -320,7 +326,7 @@ _visit_recurse()
    case "${mode}" in
       *docd*)
          old="${PWD}"
-         cd "${dstfile}" || return 1
+         cd "${destination}" || return 1
       ;;
 
       *prefix*)
@@ -381,7 +387,7 @@ _visit_nodeline()
 
    # nodeline_parse
    local branch
-   local dstfile
+   local destination
    local fetchoptions
    local marks
    local nodetype
@@ -392,21 +398,21 @@ _visit_nodeline()
 
    nodeline_parse "${nodeline}"
 
-   if ! walk_check_marks "${marks}" "${filtermarks}"
+   if ! walk_filter_marks "${marks}" "${filtermarks}"
    then
       log_fluff "Node \"${url}\": \"${marks}\" doesn't jive with marks \"${filtermarks}\""
       return 0
    fi
 
-   if ! walk_check_nodetype "${nodetype}" "${filternodetypes}"
+   if ! walk_filter_nodetypes "${nodetype}" "${filternodetypes}"
    then
       log_fluff "Node \"${url}\": \"${nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
       return 0
    fi
 
-   if ! walk_check_dstfile "${dstfile}" "${filterpermissions}"
+   if ! walk_filter_permissions "${destination}" "${filterpermissions}"
    then
-      log_fluff "Node \"${url}\": \"${dstfile}\" doesn't jive with permissions \"${filterpermissions}\""
+      log_fluff "Node \"${url}\": \"${destination}\" doesn't jive with permissions \"${filterpermissions}\""
       return 0
    fi
 
@@ -415,14 +421,14 @@ _visit_nodeline()
    local prefixed
 
    # will be used by __call_internal
-   prefixed="${dstfile}"
+   prefixed="${destination}"
    case "${mode}" in
       *docd*)
          # if we cd into, prefixing is pointless
       ;;
 
       *prefix*)
-         prefixed="${prefix}${dstfile}"
+         prefixed="${prefix}${destination}"
       ;;
    esac
 
@@ -433,7 +439,7 @@ _visit_nodeline()
       *depth-first*)
          if ! _visit_recurse "${prefixed}" \
                              "${marks}" \
-                             "${dstfile}" \
+                             "${destination}" \
 \
                              "${prefix}" \
                              "${callback}" \
@@ -449,7 +455,7 @@ _visit_nodeline()
    esac
 
    _visit_callback "${callback}" \
-                   "${dstfile}" \
+                   "${destination}" \
                    "${mode}" \
                    "$@"
    rval=$?
@@ -476,7 +482,7 @@ _visit_nodeline()
 
    _visit_recurse "${prefixed}" \
                   "${marks}" \
-                  "${dstfile}" \
+                  "${destination}" \
 \
                   "${prefix}" \
                   "${callback}" \
@@ -532,11 +538,11 @@ _print_walk_info()
 
    case "${mode}" in
       *recurse*)
-         log_verbose "Recursive db walk ($PWD)"
+         log_verbose "Recursive walk \"${prefix:-.}\""
       ;;
 
       *)
-         log_verbose "Flat db walk ($PWD)"
+         log_verbose "Flat walk \"${prefix:-.}\""
       ;;
    esac
 
@@ -641,12 +647,7 @@ sourcetree_walk_main()
    local OPTION_PREFIX="YES"
    local OPTION_DEPTH_FIRST="NO"
 
-   if db_is_recursive
-   then
-      OPTION_RECURSIVE="YES"
-   else
-      OPTION_RECURSIVE="NO"
-   fi
+   _db_set_default_options
 
    while [ $# -ne 0 ]
    do

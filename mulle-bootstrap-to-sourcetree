@@ -42,53 +42,12 @@ MULLE_EXECUTABLE_VERSION_PATCH=0
 MULLE_EXECUTABLE_VERSION="${MULLE_EXECUTABLE_VERSION_MAJOR}.${MULLE_EXECUTABLE_VERSION_MINOR}.${MULLE_EXECUTABLE_VERSION_PATCH}"
 
 
-#
-# This is the main user interface to mulle-sourcetree
-# sorta like git
-#
 
 trap_fail()
 {
    exit 1
 }
 
-
-SHOWN_COMMANDS="\
-   add           : add a node to the tree
-   dotdump       : dump configfile or database as .dot for Graphviz
-   list          : list nodes in tree
-   mark          : add or remove a mark from a node
-   remove        : remove a node from the tree
-   set           : set a node's properties
-   status        : query state of the tree
-   update        : update the project with [default]"
-
-HIDDEN_COMMANDS="\
-   fix           : support to track user modifications in the filesystem
-   get           : get a node's properties
-   library-path  : print path to ${MULLE_EXECUTABLE_NAME} libexec
-   tag           : tag sourcetreeed repositories
-   walk          : walk over nodes with a callback
-   uname         : ${MULLE_EXECUTABLE_NAME}'s simplified uname(1)
-   version       : print ${MULLE_EXECUTABLE_NAME} version"
-
-
-print_commands()
-{
-   local  show_all="${1:-NO}"
-
-   echo "${SHOWN_COMMANDS}"
-
-   if [ "${UNAME}" = 'darwin' ]
-   then
-      echo "${DARWIN_COMMANDS}"
-   fi
-
-   if [ "${show_all}" != "NO" ]
-   then
-      echo "${HIDDEN_COMMANDS}"
-   fi
-}
 
 
 usage()
@@ -97,10 +56,10 @@ usage()
 
    cat <<EOF
 Usage:
-   ${MULLE_EXECUTABLE_NAME} [flags] [command] [options]
+   ${MULLE_EXECUTABLE_NAME} [flags]
 
-   Maintain a project sourcetree composed of multiple repositories
-   and archives.
+   Convert a mulle-bootstrap enabled to a sourcetree project.
+   This will work on files for ${UNAME} only.
 
 Flags:
 EOF
@@ -109,22 +68,11 @@ EOF
 
    cat <<EOF
 
-Commands:
-EOF
-
-   print_commands "${verbose}" | sort
-
    if [ "${verbose}" = "NO" ]
    then
       cat <<EOF
-      (use mulle-sourcetree -v help to show more commands)
+      (use mulle-sourcetree -v help to show more flags)
 EOF
-   fi
-
-   cat <<EOF
-Options are command specific. Use mulle-sourcetree <command> -h for help.
-EOF
-
    exit 1
 }
 
@@ -282,6 +230,192 @@ _init()
 }
 
 
+#
+# Read the CVS from the .repositories file
+#
+# This function sets values of variables that should be declared
+# in the caller!
+#
+#   # parse_raw_clone
+#   local url        # url of clone
+#   local dstdir
+#   local branch
+#   local scm
+#   local tag
+#
+parse_raw_clone()
+{
+   local clone="$1"
+   local expanded
+
+   [ -z "${clone}" ] && internal_fail "parse_raw_clone: clone is empty"
+
+   IFS=";" read -r url dstdir branch scm tag <<< "${clone}"
+}
+
+
+
+# this sets values to variables that should be declared
+# in the caller!
+#
+# this sets values to variables that should be declared
+# in the caller!
+#
+#   # parse_clone
+#   local name
+#   local url
+#   local branch
+#   local scm
+#   local tag
+#   local stashdir
+#
+# expansion is now done during .auto creation
+# clone="`expanded_variables "${1}"`"
+#
+parse_clone()
+{
+   local clone="$1"
+
+   parse_raw_clone "${clone}"
+
+   if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
+   then
+      log_trace2 "URL:      \"${url}\""
+      log_trace2 "SCM:      \"${scm}\""
+      log_trace2 "BRANCH:   \"${branch}\""
+      log_trace2 "TAG:      \"${tag}\""
+      log_trace2 "DSTDIR:   \"${dstdir}\""
+   fi
+}
+
+
+
+copy_repositories()
+{
+   local filename="$1"
+   local mark="$2"
+
+   local url
+   local branch
+   local scm
+   local tag
+   local dstdir
+
+   ROOT_DIR="${PWD}"
+
+   log_verbose "Copy ${C_RESET_BOLD}${filename}"
+
+   local clone
+
+   IFS="
+"
+   for clone in `grep -v '^#' "${filename}"`
+   do
+      IFS="${DEFAULT_IFS}"
+      if [ -z "${clone}" ]
+      then
+         continue
+      fi
+
+      parse_clone "${clone}"
+
+      if [ -z "${dstdir}" ]
+      then
+         local evaledurl
+
+         evaledurl="`eval echo "$url"`"
+         [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
+
+         dstdir="`mulle-fetch guess "${evaledurl}"`"
+         dstdir="stashes/${dstdir}"
+      fi
+
+      if ! exekutor mulle-sourcetree add -s "${scm}" \
+                                         -b "${branch}" \
+                                         -t "${tag}" \
+                                         "${url}" "${dstdir}"
+      then
+         exit 1
+      fi
+      if ! [ -z "${mark}" ]
+      then
+         if ! exekutor mulle-sourcetree mark "${url}" "${mark}"
+         then
+            exit 1
+         fi
+         log_info "Added embedded ${C_MAGENTA}${C_BOLD}${url}${C_INFO} for \
+${C_RESET_BOLD}${dstdir}${C_INFO}"
+      else
+         log_info "Added repository ${C_MAGENTA}${C_BOLD}${url}"
+      fi
+   done
+   IFS="${DEFAULT_IFS}"
+}
+
+
+
+convert_bootstrap()
+{
+   local directory="$1"
+
+   if [ -f "${SOURCETREE_CONFIG_FILE}" ]
+   then
+      fail "There is already a ${SOURCETREE_CONFIG_FILE} here ($PWD)"
+   fi
+
+   if [ ! -d .bootstrap -a  ! -d .bootstrap.local ]
+   then
+      log_warning "No .bootstrap folders found ($PWD)"
+      exit 0
+   fi
+
+   if [ -f ".bootstrap.local/is_master" ]
+   then
+      log_warning "This is a master bootstrap project.
+The master can not be converted. Convert the minions! ($PWD)"
+      exit 0
+   fi
+
+   local found
+
+   found="NO"
+   #
+   # copy embedded repositories
+   #
+   if [ -f ".bootstrap.local/embedded_repositories" ]
+   then
+      copy_repositories ".bootstrap.local/embedded_repositories" "nobuild"
+      found="YES"
+   else
+      if [ -f ".bootstrap/embedded_repositories" ]
+      then
+         copy_repositories ".bootstrap/embedded_repositories" "nobuild"
+         found="YES"
+      fi
+   fi
+
+   #
+   # copy repositories
+   #
+   if [ -f ".bootstrap.local/repositories" ]
+   then
+      copy_repositories ".bootstrap.local/repositories"
+      found="YES"
+   else
+      if [ -f ".bootstrap/repositories" ]
+      then
+         copy_repositories ".bootstrap/repositories"
+         found="YES"
+      fi
+   fi
+
+   if [ "${found}" = "NO" ]
+   then
+      log_warning "There are no repositories here. Maybe it's a master"
+   fi
+}
+
+
 main()
 {
    local MULLE_FLAG_MAGNUM_FORCE="NONE"
@@ -302,7 +436,7 @@ main()
    local SOURCETREE_CONFIG_FILE=".mulle-sourcetree"
    local SOURCETREE_DB_DIR=".mulle-sourcetree.db"
    local SOURCETREE_SHARED_DIR="stashes"
-   local SOURCETREE_FIX_FILE=".mulle-sourcetree.fix"
+
    #
    # simple option handling
    #
@@ -321,14 +455,6 @@ main()
 
          -h|--help)
             usage "${MULLE_TRACE}"
-         ;;
-
-         --git-terminal-prompt)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
-            shift
-
-            GIT_TERMINAL_PROMPT="$1"
-            export GIT_TERMINAL_PROMPT
          ;;
 
          --database-dir)
@@ -365,116 +491,19 @@ main()
 
    options_setup_trace "${MULLE_TRACE}"
 
-   local cmd
+   local directory
 
-   cmd="${1:-update}"
+   directory="${PWD}"
+   if [ $# -eq 1 ]
+   then
+      directory="$1"
+      shift
+   else
+      [ $# -eq 0 ] || usage
+   fi
 
-   MULLE_EXECUTABLE_FAIL_PREFIX="${MULLE_EXECUTABLE_NAME} ${cmd}"
-   [ $# -eq 0 ] || shift
 
-   #
-   #
-   #
-   case "${cmd}" in
-      add)
-         # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
-
-         sourcetree_add_main "$@"
-      ;;
-
-      dotdump)
-         # shellcheck source=src/mulle-sourcetree-dotdump.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dotdump.sh"
-
-         sourcetree_dotdump_main "$@"
-      ;;
-
-      fix)
-         # shellcheck source=src/mulle-sourcetree-fix.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-fix.sh"
-
-         sourcetree_fix_main "$@"
-      ;;
-
-      get)
-         # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
-
-         sourcetree_get_main "$@"
-      ;;
-
-      help)
-         usage "${MULLE_TRACE}"
-      ;;
-
-      library-path)
-         echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
-      ;;
-
-      list)
-         # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
-
-         sourcetree_list_main "$@"
-      ;;
-
-      mark)
-         # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
-
-         sourcetree_mark_main "$@"
-      ;;
-
-      remove)
-         # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
-
-         sourcetree_remove_main "$@"
-      ;;
-
-      set)
-         # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
-
-         sourcetree_set_main "$@"
-      ;;
-
-      status)
-         # shellcheck source=src/mulle-sourcetree-status.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-status.sh"
-
-         sourcetree_status_main "$@"
-      ;;
-
-      uname)
-         echo "${UNAME}"
-      ;;
-
-      update)
-         # shellcheck source=src/mulle-sourcetree-update.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh"
-
-         sourcetree_update_main "$@"
-      ;;
-
-      walk)
-         # shellcheck source=src/mulle-sourcetree-walk.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
-
-         sourcetree_walk_main "$@"
-      ;;
-
-      version)
-         echo "${MULLE_EXECUTABLE_VERSION}"
-         return 0
-      ;;
-
-      *)
-         log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown command \"${cmd}\""
-         usage "${MULLE_TRACE}"
-      ;;
-   esac
+   ( cd "${directory}" &&  convert_bootstrap )
 }
 
 

@@ -176,14 +176,14 @@ db_get_nodeline_for_uuid()
 }
 
 
-db_get_dstfile_of_uuid()
+db_get_destination_of_uuid()
 {
-   log_entry "db_get_dstfile_of_uuid" "$@"
+   log_entry "db_get_destination_of_uuid" "$@"
 
    local nodeline
 
    nodeline="`db_get_nodeline_for_uuid "$@"`" || exit 1
-   nodeline_get_dstfile "${nodeline}"
+   nodeline_get_destination "${nodeline}"
 }
 
 
@@ -292,11 +292,11 @@ db_get_all_nodelines()
 }
 
 
-db_get_all_dstfiles()
+db_get_all_destinations()
 {
-   log_entry "db_get_all_dstfiles" "$@"
+   log_entry "db_get_all_destinations" "$@"
 
-   db_get_all_nodelines | _nodeline_get_dstfile
+   db_get_all_nodelines | _nodeline_get_destination
 }
 
 
@@ -367,7 +367,14 @@ db_exists()
 
    [ -z "${SOURCETREE_DB_DIR}" ] && internal_fail "SOURCETREE_DB_DIR is not set"
 
-   [ -d "${prefix}${SOURCETREE_DB_DIR}" ]
+   if [ -d "${prefix}${SOURCETREE_DB_DIR}" ]
+   then
+      log_debug "\"${PWD}/${prefix}${SOURCETREE_DB_DIR}\" exists"
+      return 0
+   fi
+
+   log_debug "\"${PWD}/${prefix}${SOURCETREE_DB_DIR}\" not found"
+   return 1
 }
 
 
@@ -377,7 +384,14 @@ db_is_ready()
 
    local prefix="$1"
 
-   [ -f "${prefix}${SOURCETREE_DB_DIR}/.db_done" ]
+   if [ -f "${prefix}${SOURCETREE_DB_DIR}/.db_done" ]
+   then
+      log_debug "\"${PWD}/${prefix}${SOURCETREE_DB_DIR}/.db_done\" exists"
+      return 0
+   fi
+
+   log_debug "\"${PWD}/${prefix}${SOURCETREE_DB_DIR}/.db_done\" not found"
+   return 1
 }
 
 
@@ -595,4 +609,34 @@ db_is_uptodate()
    log_debug "Timestamps: config=${configtimestamp} db=${dbtimestamp:-0}"
 
    [ "${configtimestamp}" -le "${dbtimestamp:-0}" ]
+}
+
+
+# sets external variables!!
+_db_set_default_options()
+{
+   log_entry "_db_set_default_options" "$@"
+
+   case "`db_get_dbtype`" in
+      share)
+         OPTION_RECURSIVE="YES"
+         OPTION_SHARE="YES"
+      ;;
+
+      recursive)
+         OPTION_RECURSIVE="YES"
+         OPTION_SHARE="NO"
+      ;;
+
+
+      "")
+         OPTION_RECURSIVE="YES"  # probably what one wants
+         OPTION_SHARE="NO"
+      ;;
+
+      *)
+         OPTION_RECURSIVE="NO"
+         OPTION_SHARE="NO"
+      ;;
+   esac
 }

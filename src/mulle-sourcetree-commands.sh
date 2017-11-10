@@ -172,7 +172,7 @@ sourcetree_add_node()
    log_entry "sourcetree_add_node" "$@"
 
    local url="$1"
-   local dstfile="$2"
+   local destination="$2"
 
    if _sourcetree_get_nodeline_by_url "${url}" > /dev/null
    then
@@ -193,7 +193,7 @@ sourcetree_add_node()
    then
       mode="`concat "${mode}" "guesstype"`"
    fi
-   if [ "${OPTION_GUESS_DSTFILE}" != "NO" ]
+   if [ "${OPTION_GUESS_DESTINATION}" != "NO" ]
    then
       mode="`concat "${mode}" "guessdst"`"
    fi
@@ -279,7 +279,7 @@ sourcetree_set_node()
    oldnodeline="`sourcetree_get_nodeline_by_url "${url}"`" || exit 1
 
    local branch
-   local dstfile
+   local destination
    local fetchoptions
    local marks
    local nodetype
@@ -296,7 +296,7 @@ sourcetree_set_node()
    fi
 
    branch="${OPTION_BRANCH:-${branch}}"
-   dstfile="${OPTION_DESTINATION:-${dstfile}}"
+   destination="${OPTION_DESTINATION:-${destination}}"
    fetchoptions="${OPTION_FETCHOPTIONS:-${fetchoptions}}"
    marks="${OPTION_MARKS:-${marks}}"
    nodetype="${OPTION_NODETYPE:-${nodetype}}"
@@ -381,16 +381,8 @@ sourcetree_mark_node()
 
    oldnodeline="`sourcetree_get_nodeline_by_url "${url}"`" || exit 1
 
-   local operation
-
-   operation="nodemarks_add_${mark}"
-   if [ "`type -t "${operation}"`" != "function" ]
-   then
-      fail "mark \"${mark}\" is unknown"
-   fi
-
    local branch
-   local dstfile
+   local destination
    local fetchoptions
    local marks
    local nodetype
@@ -400,7 +392,50 @@ sourcetree_mark_node()
    local uuid
 
    nodeline_parse "${oldnodeline}"
-   marks="`${operation} "${marks}"`"
+   if nodemarks_contain "${marks}" "${mark}"
+   then
+      case "${mark}" in
+         no*)
+            log_verbose "Node already marked as \"${mark}\""
+         ;;
+
+         *)
+            log_info "Node implicitly marked as \"${mark}\". No need to mark it."
+         ;;
+      esac
+      return
+   fi
+
+   local operation
+
+   operation="nodemarks_add_${mark}"
+   if [ "`type -t "${operation}"`" = "function" ]
+   then
+      marks="`${operation} "${marks}"`"
+   else
+      if [ "${OPTION_EXTENDED_MARKS}" != "YES" ]
+      then
+         fail "mark \"${mark}\" is unknown"
+      fi
+
+      case "${mark}" in
+         "")
+            fail "mark is empty"
+         ;;
+
+         no*)
+            if egrep -q -s '[^a-z]' <<< "${mark}"
+            then
+               fail "mark must contain only lowercase letters"
+            fi
+         ;;
+
+         *)
+            fail "mark must start with no"
+         ;;
+      esac
+      marks="${marks} ${mark}"
+   fi
 
    local newnodeline
 
@@ -420,7 +455,7 @@ _sourcetree_list_nodes()
    nodelines="`nodeline_read_config`" || exit 1
 
    local branch
-   local dstfile
+   local destination
    local fetchoptions
    local marks
    local nodetype
@@ -439,13 +474,33 @@ _sourcetree_list_nodes()
 
    case "${mode}" in
       *header*)
-         echo "url${sep}dstfile${sep}branch${sep}tag${sep}nodetype${sep}uuid${sep}marks${sep}fetchoptions${sep}userinfo"
+         printf "%s" "url${sep}destination${sep}branch${sep}tag\
+${sep}marks"
+         if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
+         then
+            printf "%s" "${sep}nodetype${sep}fetchoptions${sep}userinfo"
+         fi
+         if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
+         then
+            printf "%s" "${sep}uuid"
+         fi
+         printf "\n"
       ;;
    esac
 
    case "${mode}" in
       *separator*)
-         echo "---${sep}-------${sep}------${sep}---${sep}--------${sep}----${sep}-----${sep}------------${sep}--------"
+         printf "%s" "---${sep}-------${sep}------${sep}---\
+${sep}-----"
+         if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
+         then
+            printf "%s" "${sep}--------${sep}------------${sep}--------"
+         fi
+         if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
+         then
+            printf "%s" "${sep}----"
+         fi
+         printf "\n"
       ;;
    esac
 
@@ -460,23 +515,26 @@ _sourcetree_list_nodes()
       if [ ! -z "${nodeline}" ]
       then
          nodeline_parse "${nodeline}"
-         case "${mode}" in
-            *column*)
-               echo "${url:-" "}|${dstfile:-" "}|${branch:-" "}|${tag:-" "}|\
-${nodetype:-" "}|${uuid:-" "}|${marks:-" "}|${fetchoptions:-" "}|\
-${userinfo:-" "}"
-            ;;
 
+         if [ "${OPTION_OUTPUT_EVAL}" = "YES" ]
+         then
+            url="`eval echo "${url}"`"
+            branch="`eval echo "${branch}"`"
+            tag="`eval echo "${tag}"`"
+            fetchoptions="`eval echo "${fetchoptions}"`"
+         fi
+
+         case "${mode}" in
             *cmdline*)
                local line
                local guess
 
                line="${MULLE_EXECUTABLE_NAME} add"
 
-               guess="`node_guess_dstfile "${url}" "${nodetype}"`"
-               if [ "${guess}" != "${dstfile}" ]
+               guess="`node_guess_destination "${url}" "${nodetype}"`"
+               if [ "${guess}" != "${destination}" ]
                then
-                  line="`concat "${line}" "-d '${dstfile}'"`"
+                  line="`concat "${line}" "-d '${destination}'"`"
                fi
                if [ ! -z "${branch}" -a "${branch}" != "master" ]
                then
@@ -508,9 +566,36 @@ ${userinfo:-" "}"
                echo "${line}"
             ;;
 
+            *column*)
+               # need space for colum if empty
+               printf "%s" "${url:-" "}${sep}${destination:-" "}${sep}\
+${branch:-" "}${sep}${tag:-" "}${sep}${marks:-" "}"
+               if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
+               then
+                  printf "%s" "${sep}${nodetype:-" "}${sep}${fetchoptions:-" "}\
+${sep}${userinfo:-" "}"
+               fi
+               if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
+               then
+                  printf "%s" "${sep}${uuid:-" "}"
+               fi
+               printf "\n"
+            ;;
+
+
             *)
-               echo "${url};${dstfile};${branch};${tag};\
-${nodetype};${uuid};${marks};${fetchoptions};${userinfo}"
+               printf "%s" "${url}${sep}${destination}${sep}${branch}${sep}${tag}\
+${sep}${marks}"
+               if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
+               then
+                  printf "%s" "${sep}${nodetype}${sep}${fetchoptions}${sep}\
+${userinfo}"
+               fi
+               if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
+               then
+                  printf "%s" "${sep}${uuid}"
+               fi
+               printf "\n"
             ;;
          esac
       fi
@@ -577,7 +662,7 @@ sourcetree_common_main()
    local OPTION_FETCHOPTIONS
    local OPTION_USERINFO
 
-   local OPTION_SEARCH_PATH
+   local OPTION_FETCH_SEARCH_PATH
    local OPTION_CACHE_DIR
    local OPTION_MIRROR_DIR
 
@@ -586,8 +671,12 @@ sourcetree_common_main()
    local OPTION_OUTPUT_HEADER="DEFAULT"
    local OPTION_OUTPUT_SEPARATOR="DEFAULT"
    local OPTION_GUESS_NODETYPE="DEFAULT"
+   local OPTION_EXTENDED_MARKS="DEFAULT"
    local OPTION_GUESS_DSTFILE="DEFAULT_IFS"
    local OPTION_UNSAFE="NO"
+   local OPTION_OUTPUT_UUID="DEFAULT"
+   local OPTION_OUTPUT_EVAL="NO"
+   local OPTION_OUTPUT_FULL="NO"
 
    while [ $# -ne 0 ]
    do
@@ -643,12 +732,42 @@ sourcetree_common_main()
             OPTION_GUESS_NODETYPE="NO"
          ;;
 
-         --guess-node-destination)
-            OPTION_GUESS_NODEDST="YES"
+         --guess-destination)
+            OPTION_GUESS_DESTINATION="YES"
          ;;
 
-         --no-guess-node-destination)
-            OPTION_GUESS_NODEDST="NO"
+         --no-guess-destination)
+            OPTION_GUESS_DESTINATION="NO"
+         ;;
+
+         #
+         #
+         #
+         --extended-marks)
+            OPTION_EXTENDED_MARKS="YES"
+         ;;
+
+         --no-extended-marks)
+            OPTION_EXTENDED_MARKS="NO"
+         ;;
+
+         #
+         #
+         #
+         --output-full)
+            OPTION_OUTPUT_FULL="YES"
+         ;;
+
+         --no-output-full)
+            OPTION_OUTPUT_FULL="NO"
+         ;;
+
+         --output-uuid)
+            OPTION_OUTPUT_UUID="YES"
+         ;;
+
+         --no-output-uuid)
+            OPTION_OUTPUT_UUID="NO"
          ;;
 
          #
@@ -661,11 +780,19 @@ sourcetree_common_main()
             OPTION_BRANCH="$1"
          ;;
 
-         -d|--dstfile|--destination)
+         -d|--destination|--destination)
             [ $# -eq 1 ] && fail "missing argument to \"$1\""
             shift
 
             OPTION_DESTINATION="$1"
+         ;;
+
+         -e|--output-eval)
+            OPTION_OUTPUT_EVAL="YES"
+         ;;
+
+         --no-output-eval)
+            OPTION_OUTPUT_EVAL="NO"
          ;;
 
          -f|--fetchoptions)
@@ -673,13 +800,6 @@ sourcetree_common_main()
             shift
 
             OPTION_FETCHOPTIONS="$1"
-         ;;
-
-         -l|--search-path|--local*)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
-            shift
-
-            OPTION_SEARCH_PATH="$1"
          ;;
 
          -m|--marks)
@@ -732,7 +852,7 @@ sourcetree_common_main()
 
    [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
 
-   local dstfile
+   local destination
    local url
    local key
    local mark
@@ -750,19 +870,19 @@ sourcetree_common_main()
             shift
          fi
 
-         dstfile="${OPTION_DESTINATION}"
-         if [ -z "${dstfile}" ]
+         destination="${OPTION_DESTINATION}"
+         if [ -z "${destination}" ]
          then
-            # dstfile is optional
+            # destination is optional
             if [ $# -ne 0 ]
             then
-               dstfile="$1"
+               destination="$1"
                shift
             fi
          fi
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_add_node "${url}" "${dstfile}"
+         sourcetree_add_node "${url}" "${destination}"
       ;;
 
       get|set|remove)

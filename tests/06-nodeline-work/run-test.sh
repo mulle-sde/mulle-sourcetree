@@ -14,8 +14,6 @@ expect()
 
 _setup_demo_repo_a()
 {
-   local reporoot="$1"
-
    exekutor git init
 
    exekutor git checkout -b release
@@ -35,11 +33,11 @@ _setup_demo_repo_a()
 
 setup_demo_repos()
 {
+   local repos="$1"
    (
       set -e
-      mkdir_if_missing "$1/a" &&
-      exekutor cd "$1/a" && _setup_demo_repo_a "$1"
-      set +e
+      mkdir_if_missing "${repos}/a" &&
+      exekutor cd "${repos}/a" && _setup_demo_repo_a
    )
 }
 
@@ -53,14 +51,14 @@ run_test()
 
    uuid="`uuidgen`"
    (
-      update_with_nodeline "normal" "" "${repos}/a;ringo/starr;release;;git;${uuid}"
+      update_with_nodeline "normal" "" "${repos}/a;ringo/starr;release;;git;;;;${uuid}"
    ) || fail "failed unexpectedly"
 
    [ -f "ringo/starr/VERSION" ] || fail "ringo/starr/VERSION not there"
    log_verbose "----- #1 PASSED -----"
 
    (
-      update_with_nodeline "normal" "" "${repos}/a;ringo/star;release;;git;${uuid}"
+      update_with_nodeline "normal" "" "${repos}/a;ringo/star;release;;git;;;;${uuid}"
    ) || fail "failed unexpectedly"
 
    [ ! -f "ringo/starr/VERSION" ] || fail "ringo/starr/VERSION not gone"
@@ -68,14 +66,14 @@ run_test()
    log_verbose "----- #2 PASSED -----"
 
    (
-      update_with_nodeline "normal" "" "${repos}/a;ringo/star;unknown;;git;${uuid}"
+      update_with_nodeline "normal" "" "${repos}/a;ringo/star;unknown;;git;;;;${uuid}"
    ) && fail "worked unexpectedly"
 
    [ -f "ringo/star/VERSION" ]    && fail "branch unknown should have wiped ringo/star/VERSION"
    log_verbose "----- #3 PASSED -----"
 
    (
-      update_with_nodeline "normal" "" "${repos}/a;ringo/starr;release;2.0.0;git;${uuid}"
+      update_with_nodeline "normal" "" "${repos}/a;ringo/starr;release;2.0.0;git;;;;${uuid}"
    ) || fail "failed unexpectedly"
 
    [ `cat ringo/starr/VERSION` = 2.0.0 ] || fail "Wrong checkout"
@@ -83,7 +81,7 @@ run_test()
    log_verbose "----- #4 PASSED -----"
 
    (
-      update_with_nodeline "normal" "" "${repos}/a;ringo/starr;release;1.0.0;git;${uuid}"
+      update_with_nodeline "normal" "" "${repos}/a;ringo/starr;release;1.0.0;git;;;;${uuid}"
    ) || fail "failed unexpectedly"
 
    [ `cat ringo/starr/VERSION` = 1.0.0 ] || fail "Wrong checkout"

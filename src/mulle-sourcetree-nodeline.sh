@@ -45,13 +45,13 @@ nodeline_get_url()
 }
 
 
-_nodeline_get_dstfile()
+_nodeline_get_destination()
 {
    cut -s '-d;' -f 2
 }
 
 
-nodeline_get_dstfile()
+nodeline_get_destination()
 {
    echo "$@" | cut -s '-d;' -f 2
 }
@@ -106,7 +106,7 @@ nodeline_get_userinfo()
 #   # nodeline_parse
 #
 #   local branch
-#   local dstfile
+#   local destination
 #   local fetchoptions
 #   local nodetype
 #   local marks
@@ -122,8 +122,28 @@ nodeline_parse()
    [ -z "${nodeline}" ] && internal_fail "nodeline_parse: nodeline is empty"
 
    IFS=";" \
-      read -r url dstfile branch tag nodetype uuid marks fetchoptions userinfo \
-         <<< "${nodeline}"
+      read -r url destination branch tag nodetype marks \
+            fetchoptions userinfo uuid <<< "${nodeline}"
+
+   [ -z "${url}" ]         && internal_fail "url is empty"
+   [ -z "${destination}" ] && internal_fail "destination is empty"
+   [ -z "${nodetype}" ]    && internal_fail "nodetype is empty"
+   [ -z "${uuid}" ]        && internal_fail "uuid is empty"
+
+   if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
+   then
+      log_trace2 "URL:          \"${url}\""
+      log_trace2 "DESTINATION:  \"${destination}\""
+      log_trace2 "BRANCH:       \"${branch}\""
+      log_trace2 "TAG:          \"${tag}\""
+      log_trace2 "NODETYPE:     \"${nodetype}\""
+      log_trace2 "MARKS:        \"${marks}\""
+      log_trace2 "FETCHOPTIONS: \"${fetchoptions}\""
+      log_trace2 "USERINFO:     \"${userinfo}\""
+      log_trace2 "UUID:         \"${uuid}\""
+   fi
+
+   :
 }
 
 
@@ -149,7 +169,7 @@ nodeline_merge()
    fi
 
    #
-   # additions may contain dstfile
+   # additions may contain destination
    # we replace this with
    #
    # 1. if we are a master, with the uuid of the url
@@ -212,7 +232,14 @@ nodeline_config_exists()
 
    [ -z "${prefix}${SOURCETREE_CONFIG_FILE}" ] && internal_fail "SOURCETREE_CONFIG_FILE is empty"
 
-   [ -f "${prefix}${SOURCETREE_CONFIG_FILE}" ]
+   if [ -f "${prefix}${SOURCETREE_CONFIG_FILE}" ]
+   then
+      log_debug "\"${PWD}/${prefix}${SOURCETREE_CONFIG_FILE}\" exists"
+      return 0
+   fi
+
+   log_debug "\"${PWD}/${prefix}${SOURCETREE_CONFIG_FILE}\" not found"
+   return 1
 }
 
 
@@ -260,23 +287,23 @@ nodeline_merge_files()
    log_entry "nodeline_merge_files" "$@"
 
    local srcfile="$1"
-   local dstfile="$2"
+   local destination="$2"
 
    [ -z "${srcfile}" ] && internal_fail "srcfile is empty"
-   [ -z "${dstfile}" ] && internal_fail "dstfile is empty"
+   [ -z "${destination}" ] && internal_fail "destination is empty"
 
-   log_fluff "Merge \"srcfile\" into \"${dstfile}\""
+   log_fluff "Merge \"srcfile\" into \"${destination}\""
 
    local contents
    local additions
    local results
 
    contents="$(nodeline_read_file "${srcfile}")" || exit 1
-   additions="$(nodeline_read_file "${dstfile}")" || exit 1
+   additions="$(nodeline_read_file "${destination}")" || exit 1
 
    results="`nodeline_merge "${contents}" "${additions}"`"
 
-   redirect_exekutor "${dstfile}" echo "${results}" || fail "failed to merge"
+   redirect_exekutor "${destination}" echo "${results}" || fail "failed to merge"
 }
 
 

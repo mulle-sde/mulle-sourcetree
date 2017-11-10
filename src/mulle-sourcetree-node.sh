@@ -35,28 +35,94 @@ MULLE_SOURCETREE_NODE_SH="included"
 
 node_uuidgen()
 {
+   log_entry "node_uuidgen" "$@"
+
    uuidgen || fail "Need uuidgen to wok"
 }
 
 
-node_guess_dstfile()
+node_guess_destination()
 {
+   log_entry "node_guess_destination" "$@"
+
    local url="$1"
    local nodetype="${2:-git}"
 
-   log_fluff "Asking mulle-fetch for default destination for url"
-   mulle-fetch guess -s "${nodetype}" "${url}"
+   [ -z "${url}" ] && fail "URL is empty"
+
+   local evaledurl
+
+   evaledurl="`eval echo "$url"`"
+   [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
+
+   log_fluff "Asking mulle-fetch for default destination for url ($url)"
+   mulle-fetch guess -s "${nodetype}" "${evaledurl}"
 }
 
 
 node_guess_nodetype()
 {
+   log_entry "node_guess_nodetype" "$@"
+
    local url="$1"
 
-   log_fluff "Asking mulle-fetch to determine nodetype from url"
-   mulle-fetch typeguess "${url}"
+   local evaledurl
+
+   evaledurl="`eval echo "$url"`"
+   [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
+
+   log_fluff "Asking mulle-fetch to determine nodetype from url ($url)"
+   mulle-fetch typeguess "${evaledurl}"
 }
 
+
+node_fetch_operation()
+{
+   log_entry "node_fetch_operation" "$@"
+
+   local opname="$1"; shift
+   local options="$1"; shift
+
+   [ -z "${opname}" ] && internal_fail "opname is empty"
+
+   local url="$1"; shift
+   local destination="$1"; shift
+   local branch="$1"; shift
+   local tag="$1"; shift
+   local nodetype="$1"; shift
+   local fetchoptions="$1"; shift
+
+   local options
+   local rval
+   local evaledurl
+   local evaledbranch
+   local evaledtag
+   local evaledfetchoptions
+
+   evaledurl="`eval echo "$url"`"
+   [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
+   evaledtag="`eval echo "$tag"`"
+   evaledbranch="`eval echo "$branch"`"
+   evaledfetchoptions="`eval echo "$fetchoptions"`"
+
+   eval_exekutor mulle-fetch "${opname}" --scm "'${nodetype}'" \
+                                         --tag "'${evaledtag}'" \
+                                         --branch "'${evaledbranch}'" \
+                                         --options "'${evaledfetchoptions}'" \
+                                         --url "'${evaledurl}'" \
+                                         ${options} \
+                                         "'${destination}'"
+}
+
+
+node_list_operations()
+{
+   log_entry "node_list_operations" "$@"
+
+   local nodetype="$1"
+
+   mulle-fetch operations -s "${nodetype}"
+}
 
 #
 # This function sets values of variables that should be declared
@@ -65,7 +131,7 @@ node_guess_nodetype()
 #   # node_augmentline
 #
 #   local branch
-#   local dstfile
+#   local destination
 #   local fetchoptions
 #   local marks
 #   local nodetype
@@ -99,15 +165,15 @@ node_augment()
       branch="master"
    fi
 
-   if [ -z "${dstfile}" ]
+   if [ -z "${destination}" ]
    then
       case "${mode}" in
          *guessdst*)
-            dstfile="`node_guess_dstfile "${url}" "${nodetype}"`"
+            destination="`node_guess_destination "${url}" "${nodetype}"`"
          ;;
       esac
 
-      dstfile="${dstfile:-${uuid}}"
+      destination="${destination:-${uuid}}"
    fi
 
    case "${mode}" in
@@ -115,34 +181,34 @@ node_augment()
       ;;
 
       *)
-         dstfile="`node_sanitized_dstfile "${dstfile}"`" || exit 1
+         destination="`node_sanitized_destination "${destination}"`" || exit 1
       ;;
    esac
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
    then
       log_trace2 "URL:          \"${url}\""
-      log_trace2 "DST:          \"${dstfile}\""
+      log_trace2 "DESTINATION:  \"${destination}\""
       log_trace2 "BRANCH:       \"${branch}\""
       log_trace2 "TAG:          \"${tag}\""
       log_trace2 "NODETYPE:     \"${nodetype}\""
-      log_trace2 "UUID:         \"${uuid}\""
       log_trace2 "MARKS:        \"${marks}\""
       log_trace2 "FETCHOPTIONS: \"${fetchoptions}\""
       log_trace2 "USERINFO:     \"${userinfo}\""
+      log_trace2 "UUID:         \"${uuid}\""
    fi
 
    # this is done  during auto already
-   # case "${dstfile}" in
+   # case "${destination}" in
    #    ..*|~*|/*)
-   #     fail "dstfile \"${dstfile}\" is invalid ($nodeline)"
+   #     fail "destination \"${destination}\" is invalid ($nodeline)"
    #    ;;
    # esac
 
-   [ -z "${url}" ]      && internal_fail "url is empty"
-   [ -z "${uuid}" ]     && internal_fail "uuid is empty"
-   [ -z "${nodetype}" ] && internal_fail "dstfile is empty"
-   [ -z "${dstfile}" ]  && internal_fail "dstfile is empty"
+   [ -z "${url}" ]          && internal_fail "url is empty"
+   [ -z "${uuid}" ]         && internal_fail "uuid is empty"
+   [ -z "${nodetype}" ]     && internal_fail "destination is empty"
+   [ -z "${destination}" ]  && internal_fail "destination is empty"
 
    :
 }
@@ -590,18 +656,18 @@ nodemarks_remove_noupdate()
 }
 
 
-node_sanitized_dstfile()
+node_sanitized_destination()
 {
-   log_entry "node_sanitized_dstfile" "$@"
+   log_entry "node_sanitized_destination" "$@"
 
-   local dstfile="$1"
+   local destination="$1"
 
    local modified
 
-   modified="`simplified_path "${dstfile}"`"
+   modified="`simplified_path "${destination}"`"
    if is_absolutepath "${modified}"
    then
-      fail "Destination \"${dstfile}\" is an absolute filepath"
+      fail "Destination \"${destination}\" is an absolute filepath"
    fi
 
    case "${modified}" in
@@ -610,9 +676,9 @@ node_sanitized_dstfile()
       ;;
    esac
 
-   if [ "${modified}" != "${dstfile}" ]
+   if [ "${modified}" != "${destination}" ]
    then
-      log_fluff "Destination \"${dstfile}\" sanitized to \"${modified}\""
+      log_fluff "Destination \"${destination}\" sanitized to \"${modified}\""
    fi
    echo "${modified}"
 }
@@ -632,13 +698,13 @@ node_print_nodeline()
       ;;
    esac
 
-   case "${dstfile}" in
+   case "${destination}" in
       *\;*)
-         fail "dstfile \"${dstfile}\" contains semicolon"
+         fail "destination \"${destination}\" contains semicolon"
       ;;
 
       "")
-         internal_fail "dstfile \"${dstfile}\" is empty"
+         internal_fail "destination \"${destination}\" is empty"
       ;;
    esac
 
@@ -704,19 +770,18 @@ node_print_nodeline()
    if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
    then
       log_trace2 "URL:          \"${url}\""
-      log_trace2 "DST:          \"${dstfile}\""
+      log_trace2 "DESTINATION:  \"${destination}\""
       log_trace2 "BRANCH:       \"${branch}\""
       log_trace2 "TAG:          \"${tag}\""
       log_trace2 "NODETYPE:     \"${nodetype}\""
-      log_trace2 "UUID:         \"${uuid}\""
       log_trace2 "MARKS:        \"${marks}\""
       log_trace2 "FETCHOPTIONS: \"${fetchoptions}\""
       log_trace2 "USERINFO:     \"${userinfo}\""
+      log_trace2 "UUID:         \"${uuid}\""
    fi
 
-   # remove superflous trailing ;
-   echo "${url};${dstfile};${branch};${tag};${nodetype};${uuid};${marks};\
-${fetchoptions};${userinfo}" | sed 's/;$//g'
+   echo "${url};${destination};${branch};${tag};${nodetype};${marks};\
+${fetchoptions};${userinfo};${uuid}"
 }
 
 

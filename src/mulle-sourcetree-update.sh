@@ -41,7 +41,9 @@ Usage:
    Apply recent node additions and removals.
 
 Options:
-   -r   : update recursively (git)
+   -r       : update recursively (git)
+   --no-fix : do not write ${SOURCETREE_FIX_FILE} files
+   --share  : create database in shared configuration
 EOF
   exit 1
 }
@@ -165,11 +167,11 @@ _has_system_include()
 
 mkdir_parent_if_missing()
 {
-   local dstfile="$1"
+   local destination="$1"
 
    local parent
 
-   parent="`dirname -- "${dstfile}"`"
+   parent="`dirname -- "${destination}"`"
    case "${parent}" in
       ""|"\.")
       ;;
@@ -187,14 +189,14 @@ _do_fetch_operation()
    log_entry "_do_fetch_operation" "$@"
 
    local url="$1"            # URL of the node
-   local dstfile="$2"        # dstfile of this node (absolute or relative to $PWD)
+   local destination="$2"        # destination of this node (absolute or relative to $PWD)
    local branch="$3"         # branch of the node
    local tag="$4"            # tag to checkout of the node
    local nodetype="$5"       # nodetype to use for this node
-   local uuid="$6"           # uuid of the node
-   local marks="$7"          # marks on node
-   local fetchoptions="$8"   # options to use on nodetype
-   local userinfo="$9"       # unused
+   local marks="$6"          # marks on node
+   local fetchoptions="$7"   # options to use on nodetype
+   local userinfo="$8"       # unused
+   local uuid="$9"           # uuid of the node
 
    [ $# -eq 9 ] || internal_fail "fail"
 
@@ -204,31 +206,42 @@ _do_fetch_operation()
       return 1
    fi
 
-   if [ -e "${dstfile}" ]
+   if [ -e "${destination}" ]
    then
-      bury_node "${uuid}" "${dstfile}"
+      bury_node "${uuid}" "${destination}"
    fi
 
    local dstparent
 
-   dstparent="`mkdir_parent_if_missing "${dstfile}"`"
+   dstparent="`mkdir_parent_if_missing "${destination}"`"
 
    local options
    local rval
 
+   if [ ! -z "${OPTION_OVERRIDE_BRANCH}" ]
+   then
+      branch="${OPTION_OVERRIDE_BRANCH}"
+   fi
    options="`emit_mulle_fetch_eval_options`"
-   eval_exekutor mulle-fetch "${opname}" --scm "'${nodetype}'" \
-                                         --tag "'${tag}'" \
-                                         --branch "'${branch}'" \
-                                         --options "'${fetchoptions}'" \
-                                         --url "'${url}'" \
-                                         ${options} \
-                                         "'${dstfile}'"
+   node_fetch_operation "${opname}" "${options}" \
+                                    "${url}" \
+                                    "${destination}" \
+                                    "${branch}" \
+                                    "${tag}" \
+                                    "${nodetype}" \
+                                    "${fetchoptions}"
 
 
    rval="$?"
    case $rval in
-      0|2)
+      0)
+         if [ "${OPTION_FIX}" != "NO" ] && [ -d "${destination}" ]
+         then
+            redirect_exekutor "${destination}/${SOURCETREE_FIX_FILE}" echo "${destination}"
+         fi
+      ;;
+
+      2)
       ;;
 
       111)
@@ -264,7 +277,7 @@ update_actions_for_nodelines()
    [ -z "${nodeline}" ] && internal_fail "nodeline is empty"
 
    local branch
-   local dstfile
+   local destination
    local fetchoptions
    local marks
    local nodetype
@@ -279,7 +292,7 @@ update_actions_for_nodelines()
                            "${previous}" \
                            "${nodeline}" \
                            "${url}" \
-                           "${dstfile}" \
+                           "${destination}" \
                            "${branch}" \
                            "${tag}" \
                            "${nodetype}" \
@@ -302,25 +315,30 @@ do_operation()
    [ -z "${opname}" ] && internal_fail "operation is empty"
 
    local url="$1"            # URL of the node
-   local dstfile="$2"        # dstfile of this node (absolute or relative to $PWD)
+   local destination="$2"        # destination of this node (absolute or relative to $PWD)
    local branch="$3"         # branch of the node
    local tag="$4"            # tag to checkout of the node
    local nodetype="$5"       # nodetype to use for this node
-   local uuid="$6"           # uuid of the node
-   local marks="$7"          # marks on node
-   local fetchoptions="$8"   # options to use on nodetype
-   local useroptions="$9"    # options to use on nodetype
+#   local marks="$6"          # marks on node
+   local fetchoptions="$7"   # options to use on nodetype
+#   local useroptions="$8"    # options to use on nodetype
+#   local uuid="$9"           # uuid of the node
 
    local options
 
+   if [ ! -z "${OPTION_OVERRIDE_BRANCH}" ]
+   then
+      branch="${OPTION_OVERRIDE_BRANCH}"
+   fi
+
    options="`emit_mulle_fetch_eval_options`"
-   eval_exekutor mulle-fetch "${opname}" --scm "'${nodetype}'" \
-                                         --tag "'${tag}'" \
-                                         --branch "'${branch}'" \
-                                         --options "'${fetchoptions}'" \
-                                         --url "'${url}'" \
-                                         ${options} \
-                                         "'${dstfile}'"
+   node_fetch_operation "${opname}" "${options}" \
+                                    "${url}" \
+                                    "${destination}" \
+                                    "${branch}" \
+                                    "${tag}" \
+                                    "${nodetype}" \
+                                    "${fetchoptions}"
 }
 
 
@@ -328,23 +346,23 @@ update_safe_move_node()
 {
    local url="$1"
    local marks="$2"
-   local olddstfile="$3"
-   local dstfile="$4"
+   local olddestination="$3"
+   local destination="$4"
 
-   [ -z "${url}" ]         && internal_fail "empty url"
-   [ -z "${olddstfile}" ]  && internal_fail "empty olddstfile"
-   [ -z "${dstfile}" ]  && internal_fail "empty dstfile"
+   [ -z "${url}" ]             && internal_fail "empty url"
+   [ -z "${olddestination}" ]  && internal_fail "empty olddestination"
+   [ -z "${destination}" ]     && internal_fail "empty destination"
 
    if nodemarks_contain_nodelete "${marks}"
    then
-      fail "Can't move node ${url} from to \"${olddstfile}\" \
-to \"${dstfile}\" as it is marked nodelete"
+      fail "Can't move node ${url} from to \"${olddestination}\" \
+to \"${destination}\" as it is marked nodelete"
    fi
 
-   log_info "Moving node ${C_MAGENTA}${C_BOLD}${url}${C_INFO} from \"${olddstfile}\" to \"${dstfile}\""
+   log_info "Moving node ${C_MAGENTA}${C_BOLD}${url}${C_INFO} from \"${olddestination}\" to \"${destination}\""
 
-   mkdir_parent_if_missing "${dstfile}"
-   if ! exekutor mv ${OPTION_COPYMOVEFLAGS} "${olddstfile}" "${dstfile}"  >&2
+   mkdir_parent_if_missing "${destination}"
+   if ! exekutor mv ${OPTION_COPYMOVEFLAGS} "${olddestination}" "${destination}"  >&2
    then
       fail "Move for ${url} failed!"
    fi
@@ -356,20 +374,20 @@ update_safe_remove_node()
 {
    local url="$1"
    local marks="$3"
-   local olddstfile="$3"
+   local olddestination="$3"
    local uuid="$4"
 
-   [ -z "${uuid}" ]        && internal_fail "empty uuid"
-   [ -z "${url}" ]         && internal_fail "empty url"
-   [ -z "${olddstfile}" ]  && internal_fail "empty dstfile"
+   [ -z "${uuid}" ]            && internal_fail "empty uuid"
+   [ -z "${url}" ]             && internal_fail "empty url"
+   [ -z "${olddestination}" ]  && internal_fail "empty destination"
 
    if nodemarks_contain_nodelete "${marks}"
    then
-      fail "Can't remove \"${olddstfile}\" for ${url} \
+      fail "Can't remove \"${olddestination}\" for ${url} \
 as it is marked nodelete"
    fi
 
-   bury_node "${uuid}" "${olddstfile}"
+   bury_node "${uuid}" "${olddestination}"
    db_forget "${uuid}"
 }
 
@@ -386,24 +404,21 @@ update_actions_for_node()
    local newnodeline="$1" ; shift
 
    local newurl="$1"            # URL of the node
-   local newdstfile="$2"        # dstfile of this node (absolute or relative to $PWD)
+   local newdestination="$2"    # destination of this node (absolute or relative to $PWD)
    local newbranch="$3"         # branch of the node
    local newtag="$4"            # tag to checkout of the node
    local newnodetype="$5"       # nodetype to use for this node
    local newuuid="$6"           # uuid of the node
-#   local newmarks="$7"         # marks on node
-#   local newfetchoptions="$8"  # options to use on nodetype
-#   local newuseroptions="$9"   # options to use on nodetype
 
    #
    # sanitize here because of paranoia and shit happes
    #
    local sanitized
 
-   sanitized="`node_sanitized_dstfile "${newdstfile}"`"
-   if [ "${newdstfile}" != "${sanitized}" ]
+   sanitized="`node_sanitized_destination "${newdestination}"`"
+   if [ "${newdestination}" != "${sanitized}" ]
    then
-      fail "New destination \"${newdstfile}\" looks suspicious ($sanitized), chickening out"
+      fail "New destination \"${newdestination}\" looks suspicious ($sanitized), chickening out"
    fi
 
    if [ -z "${nodeline}" ]
@@ -415,19 +430,19 @@ update_actions_for_node()
 
    if [ "${nodeline}" = "${newnodeline}" ]
    then
-      if [ -e "${newdstfile}" ]
+      if [ -e "${newdestination}" ]
       then
          log_fluff "URL ${url} repository line is unchanged"
          return
       fi
 
-      log_fluff "\"${newdstfile}\" is missing, reget."
+      log_fluff "\"${newdestination}\" is missing, reget."
       echo "fetch"
       return
    fi
 
    local branch
-   local dstfile
+   local destination
    local fetchoptions
    local marks
    local nodetype
@@ -440,15 +455,15 @@ update_actions_for_node()
 
    if [ "${uuid}" != "${newuuid}" ]
    then
-      internal_fail "uuid wrong"
+      internal_fail "uuid \"${newuuid}\" wrong (expected \"${uuid}\")"
    fi
 
    local sanitized
 
-   sanitized="`node_sanitized_dstfile "${dstfile}"`"
-   if [ "${dstfile}" != "${sanitized}" ]
+   sanitized="`node_sanitized_destination "${destination}"`"
+   if [ "${destination}" != "${sanitized}" ]
    then
-      fail "Old destination \"${dstfile}\" looks suspicious (${sanitized}), chickening out"
+      fail "Old destination \"${destination}\" looks suspicious (${sanitized}), chickening out"
    fi
 
    log_debug "Change: \"${nodeline}\" -> \"${newnodeline}\""
@@ -468,10 +483,10 @@ update_actions_for_node()
       fi
    fi
 
-   if [ ! -e "${newdstfile}" -a ! -e "${dstfile}" ]
+   if [ ! -e "${newdestination}" -a ! -e "${destination}" ]
    then
-      log_fluff "Previous destination \"${dstfile}\" and \
-current destination \"${newdstfile}\" do not exist."
+      log_fluff "Previous destination \"${destination}\" and \
+current destination \"${newdestination}\" do not exist."
 
       echo "fetch"
       return
@@ -482,20 +497,20 @@ current destination \"${newdstfile}\" do not exist."
    #
    # Handle positional changes
    #
-   if [ "${dstfile}" != "${newdstfile}" ]
+   if [ "${destination}" != "${newdestination}" ]
    then
-      if [ -e "${newdstfile}" -a ! -e "${dstfile}" ]
+      if [ -e "${newdestination}" -a ! -e "${destination}" ]
       then
-         log_warning "Destination \"${newdstfile}\" already exists and \
-\"${dstfile}\" is gone. Assuming, that the move was done already."
+         log_warning "Destination \"${newdestination}\" already exists and \
+\"${destination}\" is gone. Assuming, that the move was done already."
          echo "remember" # if nothing else changed
       else
-         log_fluff "Destination has changed from \"${dstfile}\" to \
-\"${newdstfile}\", need to move"
+         log_fluff "Destination has changed from \"${destination}\" to \
+\"${newdestination}\", need to move"
 
-         if [ ! -e "${dstfile}" ]
+         if [ ! -e "${destination}" ]
          then
-            log_warning "Can't find ${dstfile}. Will fetch again"
+            log_warning "Can't find ${destination}. Will fetch again"
             echo "fetch"
             return
          fi
@@ -513,9 +528,9 @@ current destination \"${newdstfile}\" do not exist."
 
    case "${nodetype}" in
       symlink)
-         if [ -e "${newdstfile}" ]
+         if [ -e "${newdestination}" ]
          then
-            log_fluff "\"${newdstfile}\" is symlink. Ignoring possible differences."
+            log_fluff "\"${newdestination}\" is symlink. Ignoring possible differences."
             return
          fi
       ;;
@@ -524,11 +539,10 @@ current destination \"${newdstfile}\" do not exist."
    local available
    local have_upgrade
 
-   available="`mulle-fetch operations -s "${nodetype}"`" || return 1
+   available="`node_list_operations "${nodetype}"`" || return 1
 
    if [ "${branch}" != "${newbranch}" ]
    then
-
       have_checkout="$(fgrep -s -x "checkout" <<< "${available}")" || :
       if [ ! -z "${have_checkout}" ]
       then
@@ -594,22 +608,24 @@ current destination \"${newdstfile}\" do not exist."
 #
 __update_perform_item()
 {
+   log_entry "__update_perform_item"
+
    case "${item}" in
       "checkout"|"upgrade"|"set-url")
          if ! do_operation "${item}" "${url}" \
-                                     "${dstfile}" \
+                                     "${destination}" \
                                      "${branch}" \
                                      "${tag}" \
                                      "${nodetype}" \
-                                     "${uuid}" \
                                      "${marks}" \
                                      "${fetchoptions}" \
-                                     "${userinfo}"
+                                     "${userinfo}" \
+                                     "${uuid}"
          then
             # as these are shortcuts to remove/fetch, but the
             # fetch part didn't work out we need to remove
-            # the olddstfile
-            update_safe_remove_node "${url}" "${marks}" "${olddstfile}" "${uuid}"
+            # the olddestination
+            update_safe_remove_node "${url}" "${marks}" "${olddestination}" "${uuid}"
             fail "Failed to ${item} ${url}"
          fi
          contentschanged="YES"
@@ -618,14 +634,14 @@ __update_perform_item()
 
       "fetch")
          do_operation "fetch" "${url}" \
-                              "${dstfile}" \
+                              "${destination}" \
                               "${branch}" \
                               "${tag}" \
                               "${nodetype}" \
-                              "${uuid}" \
                               "${marks}" \
                               "${fetchoptions}" \
-                              "${userinfo}"
+                              "${userinfo}" \
+                              "${uuid}"
 
          case "$?" in
             0)
@@ -660,12 +676,12 @@ __update_perform_item()
       ;;
 
       "move")
-         update_safe_move_node "${url}" "${marks}" "${olddstfile}" "${dstfile}"
+         update_safe_move_node "${url}" "${marks}" "${olddestination}" "${destination}"
          remember="YES"
       ;;
 
       "remove")
-         update_safe_remove_node "${url}" "${marks}" "${olddstfile}" "${uuid}"
+         update_safe_remove_node "${url}" "${marks}" "${olddestination}" "${uuid}"
       ;;
 
       *)
@@ -677,13 +693,15 @@ __update_perform_item()
 
 _update_perform_actions()
 {
+   log_entry "_update_perform_actions"
+
    local mode="$1"
    local nodeline="$2"
    local previous="$3"
-   local olddstfile="$4"
+   local olddestination="$4"
 
    local branch
-   local dstfile
+   local destination
    local fetchoptions
    local marks
    local nodetype
@@ -699,19 +717,19 @@ _update_perform_actions()
    if [ "${mode}" = "share" ]
    then
       log_fluff "Use guessed name as directory for shared \"${url}\""
-      dstfile="`node_guess_dstfile "${url}" "${nodetype}"`"
-      if [ -z "${dstfile}" ]
+      destination="`node_guess_destination "${url}" "${nodetype}"`"
+      if [ -z "${destination}" ]
       then
-         dstfile="${uuid}"
+         destination="${uuid}"
       fi
-      dstfile="`filepath_concat "${SOURCETREE_SHARED_DIR}" "${dstfile}"`"
+      destination="`filepath_concat "${SOURCETREE_SHARED_DIR}" "${destination}"`"
    fi
 
    actionitems="`update_actions_for_node "${mode}" \
                                          "${previous}" \
                                          "${nodeline}" \
                                          "${url}" \
-                                         "${dstfile}" \
+                                         "${destination}" \
                                          "${branch}" \
                                          "${tag}" \
                                          "${nodetype}" \
@@ -743,7 +761,7 @@ _update_perform_actions()
    echo "${remember}"
    echo "${skip}"
    echo "${nodetype}"
-   echo "${dstfile}"
+   echo "${destination}"
 }
 
 
@@ -760,7 +778,7 @@ update_with_nodeline()
    [ -z "$nodeline" ] && internal_fail "nodeline is empty"
 
    local branch
-   local dstfile
+   local destination
    local fetchoptions
    local marks
    local nodetype
@@ -771,7 +789,7 @@ update_with_nodeline()
 
    nodeline_parse "${nodeline}"
 
-   if [ -e "${dstfile}"  ] && nodemarks_contain_noupdate "${marks}"
+   if [ -e "${destination}"  ] && nodemarks_contain_noupdate "${marks}"
    then
       log_fluff "\"${url}\" is marked as noupdate (and exists)"
       return
@@ -814,17 +832,17 @@ update_with_nodeline()
    # where it was previously
    #
    local previous
-   local olddstfile
+   local olddestination
 
    previous="`db_get_nodeline_for_uuid "${uuid}"`"
    if [ ! -z "${previous}" ]
    then
-      olddstfile="`nodeline_get_dstfile "${previous}"`"
-      [ -z "${olddstfile}" ] && internal_fail "corrupted db"
+      olddestination="`nodeline_get_destination "${previous}"`"
+      [ -z "${olddestination}" ] && internal_fail "corrupted db"
 
-      log_fluff "Updating \"${dstfile}\" last seen at \"${olddstfile}\"..."
+      log_fluff "Updating \"${destination}\" last seen at \"${olddestination}\"..."
    else
-      log_fluff "Fetching \"${url}\" into \"${dstfile}\"..."
+      log_fluff "Fetching \"${url}\" into \"${destination}\"..."
    fi
    #
    # check if this .sourcetree is actually "responsible" for this
@@ -857,7 +875,7 @@ update_with_nodeline()
    results="`_update_perform_actions "${mode}" \
                                      "${nodeline}" \
                                      "${previous}" \
-                                     "${olddstfile}"`"
+                                     "${olddestination}"`"
    if [ "$?" -ne 0 ]
    then
       exit 1
@@ -870,7 +888,7 @@ update_with_nodeline()
    remember="$(sed -n '3p' <<< "${results}")"
    skip="$(sed -n '4p' <<< "${results}")"
    nodetype="$(sed -n '5p' <<< "${results}")"
-   dstfile="$(sed -n '6p' <<< "${results}")"
+   destination="$(sed -n '6p' <<< "${results}")"
 
    log_debug "contentschanged: ${contentschanged}" \
              "remember: ${remember}" \
@@ -886,13 +904,13 @@ update_with_nodeline()
    if nodemarks_contain_recurse "${marks}"
    then
       # for when it is
-      if [ -d "${dstfile}" ]
+      if [ -d "${destination}" ]
       then
          (
-            _sourcetree_subtree_update "${nextmode}" "${dstfile}"
+            _sourcetree_subtree_update "${nextmode}" "${destination}"
          ) || exit 1
       else
-         log_fluff "Will not recursively update \"${dstfile}\" as it's not a directory"
+         log_fluff "Will not recursively update \"${destination}\" as it's not a directory"
       fi
    fi
 
@@ -1069,6 +1087,21 @@ sourcetree_update_root()
       fi
    fi
 
+   local opwd
+
+   opwd="$PWD"
+   while ! nodeline_config_exists && ! db_exists
+   do
+      case "${PWD}" in
+         "/"|"")
+            log_info "No sourcetree found"
+            return 1
+         ;;
+      esac
+
+      cd ..
+   done
+
    db_ensure_consistency
    db_ensure_compatible_dbtype "${mode}"
 
@@ -1088,6 +1121,7 @@ sourcetree_update_root()
    log_fluff "Set dbtype to \"${mode}\""
 
    db_set_dbtype "${mode}"
+
    # as we are in the local database there is no owner
    nodelines="`nodeline_read_config`"
    update_with_nodelines "${mode}" "" "${nodelines}" || return 1
@@ -1113,37 +1147,17 @@ sourcetree_update_main()
 
    local OPTION_SHARE
    local OPTION_RECURSIVE
+   local OPTION_FIX="DEFAULT"
+   local OPTION_OVERRIDE_BRANCH
 
    local OPTION_FETCH_SEARCH_PATH
    local OPTION_FETCH_CACHE_DIR
    local OPTION_FETCH_MIRROR_DIR
-   local OPTION_FETCH_OVERRIDE_BRANCH
    local OPTION_FETCH_REFRESH
    local OPTION_FETCH_ABSOLUTE_SYMLINKS
+   local OPTION_FETCH_ABSOLUTE_SYMLINKS
 
-   case "`db_get_dbtype`" in
-      share)
-         OPTION_RECURSIVE="YES"
-         OPTION_SHARE="YES"
-      ;;
-
-      recursive)
-         OPTION_RECURSIVE="YES"
-         OPTION_SHARE="NO"
-      ;;
-
-
-      "")
-         OPTION_RECURSIVE="YES"  # probably what one wants
-         OPTION_SHARE="NO"
-      ;;
-
-      *)
-         OPTION_RECURSIVE="NO"
-         OPTION_SHARE="NO"
-      ;;
-   esac
-
+   _db_set_default_options
 
    while [ $# -ne 0 ]
    do
@@ -1194,13 +1208,6 @@ sourcetree_update_main()
             OPTION_FETCH_MIRROR_DIR="$1"
          ;;
 
-         --override-branch)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
-            shift
-
-            OPTION_FETCH_OVERRIDE_BRANCH="$1"
-         ;;
-
          -l|--search-path|--local-search-path|--locals-search-path)
             [ $# -eq 1 ] && fail "missing argument to \"$1\""
             shift
@@ -1208,6 +1215,24 @@ sourcetree_update_main()
             OPTION_FETCH_SEARCH_PATH="$1"
          ;;
 
+
+         #
+         # update options
+         #
+         --override-branch)
+            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            shift
+
+            OPTION_OVERRIDE_BRANCH="$1"
+         ;;
+
+         --fixup)
+            OPTION_FIX="NO"
+         ;;
+
+         --no-fixup)
+            OPTION_FIX="YES"
+         ;;
 
          #
          # more common flags
