@@ -1,0 +1,148 @@
+#! /usr/bin/env bash
+
+expect()
+{
+   local output="$1"
+   local expected="$2"
+
+   if [ "${output}" != "${expected}" ]
+   then
+      exekutor fail "Did expect \"${expected}\" but got \"${output}\""
+   fi
+}
+
+
+run_mulle_sourcetree()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+}
+
+
+main()
+{
+   MULLE_SOURCETREE_FLAGS="$@"
+
+   _options_mini_main "$@"
+
+   set -e
+
+   local directory
+
+   directory="`make_tmp_directory`" || exit 1
+
+
+   mkdir_if_missing "${directory}/a"
+   mkdir_if_missing "${directory}/a/b"
+
+   cd "${directory}"
+
+   if [ -f ".mulle-sourcetree" ]
+   then
+      fail "config should not exist"
+   fi
+
+   if ! run_mulle_sourcetree add "a"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   if run_mulle_sourcetree add "a"
+   then
+      fail "duplicate add succeeded unexpectedly"
+   fi
+
+   if ! [ -f ".mulle-sourcetree" ]
+   then
+      fail "config should exist now"
+   fi
+
+   if ! run_mulle_sourcetree remove "a"
+   then
+      fail "remove failed unexpectedly"
+   fi
+
+   if run_mulle_sourcetree remove "a"
+   then
+      fail "superflous remove succeded unexpectedly"
+   fi
+
+   if [ -f ".mulle-sourcetree" ]
+   then
+      fail "config should not exist now"
+   fi
+
+   #
+   # add a git url
+   #
+   if ! run_mulle_sourcetree add "https://a.com/a.git"
+   then
+      fail "add URL, failed unexpectedly"
+   fi
+
+   run_mulle_sourcetree list
+
+   local address="`run_mulle_sourcetree get a address`"
+   local nodetype="`run_mulle_sourcetree get a nodetype`"
+   local url="`run_mulle_sourcetree get a url`"
+
+   if [ "${nodetype}" != "git" ] || [ "${address}" != "a" ] || [ "${url}" != "https://a.com/a.git" ]
+   then
+      fail "#1 did not work (${address};${nodetype};${url})"
+   fi
+
+   if ! run_mulle_sourcetree add -u "https://a.com/a.git" b
+   then
+      fail "add URL, failed unexpectedly"
+   fi
+
+   run_mulle_sourcetree list
+
+   local address="`run_mulle_sourcetree get b address`"
+   local nodetype="`run_mulle_sourcetree get b nodetype`"
+   local url="`run_mulle_sourcetree get b url`"
+
+   if [ "${nodetype}" != "git" ] || [ "${address}" != "b" ] || [ "${url}" != "https://a.com/a.git" ]
+   then
+      fail "#2 did not work (${address};${nodetype};${url})"
+   fi
+
+
+   if ! run_mulle_sourcetree add --nodetype symlink --url "/a.com/a" c
+   then
+      fail "add URL, failed unexpectedly"
+   fi
+
+   run_mulle_sourcetree list
+
+   local address="`run_mulle_sourcetree get c address`"
+   local nodetype="`run_mulle_sourcetree get c nodetype`"
+   local url="`run_mulle_sourcetree get c url`"
+
+   if [ "${nodetype}" != "symlink" ] || [ "${address}" != "c" ] || [ "${url}" != "/a.com/a" ]
+   then
+      fail "#3 did not work (${address};${nodetype};${url})"
+   fi
+
+   log_info "----- ALL PASSED -----"
+
+   rmdir_safer "${directory}"
+}
+
+
+init()
+{
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env library-path`" || exit 1
+
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
+}
+
+
+init "$@"
+main "$@"
+

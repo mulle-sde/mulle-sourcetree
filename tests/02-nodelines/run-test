@@ -5,10 +5,10 @@ run_test_1()
 {
    local nodeline
 
-   nodeline="url;destination;branch;tag;nodetype;marks;fetchoptions;userinfo;uuid"
+   nodeline="address;nodetype;marks;uuid;url;branch;tag;fetchoptions;userinfo"
 
    local branch
-   local destination
+   local address
    local fetchoptions
    local name
    local nodetype
@@ -20,8 +20,8 @@ run_test_1()
 
    nodeline_parse "${nodeline}"
 
+   [ "${address}"      = "address" ]      || fail "wrong address \"${address}\""
    [ "${url}"          = "url" ]          || fail "wrong name \"${url}\""
-   [ "${destination}"  = "destination" ]  || fail "wrong destination \"${destination}\""
    [ "${branch}"       = "branch" ]       || fail "wrong branch \"${branch}\""
    [ "${tag}"          = "tag" ]          || fail "wrong tag \"${tag}\""
    [ "${nodetype}"     = "nodetype" ]     || fail "wrong nodetype \"${nodetype}\""
@@ -41,7 +41,7 @@ run_test_1()
 run_test_2()
 {
    local branch
-   local destination
+   local address
    local fetchoptions
    local name
    local nodetype
@@ -50,10 +50,10 @@ run_test_2()
    local url
    local userinfo
 
-   nodeline_parse "abc;whatever;;;xyz;;;;uuid-required"
+   nodeline_parse "whatever;xyz;;uuid-required;abc"
 
    [ "${url}"     = "abc" ]          || fail "wrong name \"${url}\""
-   [ "${destination}" = "whatever" ] || fail "wrong destination \"${destination}\""
+   [ "${address}" = "whatever" ]     || fail "wrong address \"${address}\""
    [ -z "${branch}"       ]          || fail "wrong branch \"${branch}\""
    [ -z "${tag}"          ]          || fail "wrong tag \"${tag}\""
    [ "${nodetype}" = "xyz"  ]        || fail "wrong nodetype \"${nodetype}\""

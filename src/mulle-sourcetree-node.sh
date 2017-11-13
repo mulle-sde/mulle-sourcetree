@@ -3,17 +3,17 @@
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
-#   Redistribution and use in nodetype and binary forms, with or without
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of nodetype code must retain the above copyright notice, this
+#   Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -41,12 +41,12 @@ node_uuidgen()
 }
 
 
-node_guess_destination()
+node_guess_address()
 {
-   log_entry "node_guess_destination" "$@"
+   log_entry "node_guess_address" "$@"
 
    local url="$1"
-   local nodetype="${2:-git}"
+   local nodetype="${2:-none}"
 
    [ -z "${url}" ] && fail "URL is empty"
 
@@ -55,8 +55,11 @@ node_guess_destination()
    evaledurl="`eval echo "$url"`"
    [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
 
-   log_fluff "Asking mulle-fetch for default destination for url ($url)"
-   mulle-fetch guess -s "${nodetype}" "${evaledurl}"
+   local result
+
+   result="`${MULLE_FETCH:-mulle-fetch} guess -s "${nodetype}" "${evaledurl}"`"
+   log_fluff "${MULLE_FETCH:-mulle-fetch} returned \"${result}\" as default address for url ($url)"
+   echo "${result}"
 }
 
 
@@ -67,12 +70,16 @@ node_guess_nodetype()
    local url="$1"
 
    local evaledurl
+   local result
 
-   evaledurl="`eval echo "$url"`"
-   [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
-
-   log_fluff "Asking mulle-fetch to determine nodetype from url ($url)"
-   mulle-fetch typeguess "${evaledurl}"
+   evaledurl="`eval echo "${url}"`"
+   if [ ! -z "${evaledurl}" ]
+   then
+      result="`${MULLE_FETCH:-mulle-fetch} typeguess "${evaledurl}"`"
+      log_fluff "${MULLE_FETCH:-mulle-fetch} determined \"${result}\" as nodetype from \
+url ($evaledurl)"
+      echo "${result}"
+   fi
 }
 
 
@@ -86,7 +93,7 @@ node_fetch_operation()
    [ -z "${opname}" ] && internal_fail "opname is empty"
 
    local url="$1"; shift
-   local destination="$1"; shift
+   local address="$1"; shift
    local branch="$1"; shift
    local tag="$1"; shift
    local nodetype="$1"; shift
@@ -105,13 +112,13 @@ node_fetch_operation()
    evaledbranch="`eval echo "$branch"`"
    evaledfetchoptions="`eval echo "$fetchoptions"`"
 
-   eval_exekutor mulle-fetch "${opname}" --scm "'${nodetype}'" \
-                                         --tag "'${evaledtag}'" \
-                                         --branch "'${evaledbranch}'" \
-                                         --options "'${evaledfetchoptions}'" \
-                                         --url "'${evaledurl}'" \
-                                         ${options} \
-                                         "'${destination}'"
+   eval_exekutor ${MULLE_FETCH:-mulle-fetch} "${opname}" --scm "'${nodetype}'" \
+                                                         --tag "'${evaledtag}'" \
+                                                         --branch "'${evaledbranch}'" \
+                                                         --options "'${evaledfetchoptions}'" \
+                                                         --url "'${evaledurl}'" \
+                                                         ${options} \
+                                                         "'${address}'"
 }
 
 
@@ -121,7 +128,7 @@ node_list_operations()
 
    local nodetype="$1"
 
-   mulle-fetch operations -s "${nodetype}"
+   ${MULLE_FETCH:-mulle-fetch} operations -s "${nodetype}"
 }
 
 #
@@ -131,7 +138,7 @@ node_list_operations()
 #   # node_augmentline
 #
 #   local branch
-#   local destination
+#   local address
 #   local fetchoptions
 #   local marks
 #   local nodetype
@@ -149,66 +156,52 @@ node_augment()
       uuid="$(node_uuidgen)"
    fi
 
-   if [ -z "${nodetype}" ]
-   then
-      case "${mode}" in
-         *guesstype*)
-            nodetype="`node_guess_nodetype "${url}"`"
-         ;;
-      esac
+   nodetype="${nodetype:-none}"
 
-      nodetype="${nodetype:-git}"
-   fi
-
-   if [ "${nodetype}" = "git" -a -z "${branch}" ]
-   then
-      branch="master"
-   fi
-
-   if [ -z "${destination}" ]
-   then
-      case "${mode}" in
-         *guessdst*)
-            destination="`node_guess_destination "${url}" "${nodetype}"`"
-         ;;
-      esac
-
-      destination="${destination:-${uuid}}"
-   fi
+   case "${nodetype}" in
+      "none")
+         # nones have no url and that is important
+         if [ ! -z "${url}" ]
+         then
+            log_warning "Url is always empty for nodetype \"${nodetype}\""
+         fi
+         url=
+      ;;
+   esac
 
    case "${mode}" in
       *nosafe*)
       ;;
 
       *)
-         destination="`node_sanitized_destination "${destination}"`" || exit 1
+         address="`node_sanitized_address "${address}"`" || exit 1
       ;;
    esac
 
+
    if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
    then
-      log_trace2 "URL:          \"${url}\""
-      log_trace2 "DESTINATION:  \"${destination}\""
-      log_trace2 "BRANCH:       \"${branch}\""
-      log_trace2 "TAG:          \"${tag}\""
+      log_trace2 "ADDRESS:      \"${address}\""
       log_trace2 "NODETYPE:     \"${nodetype}\""
       log_trace2 "MARKS:        \"${marks}\""
+      log_trace2 "UUID:         \"${uuid}\""
+      log_trace2 "URL:          \"${url}\""
+      log_trace2 "BRANCH:       \"${branch}\""
+      log_trace2 "TAG:          \"${tag}\""
       log_trace2 "FETCHOPTIONS: \"${fetchoptions}\""
       log_trace2 "USERINFO:     \"${userinfo}\""
-      log_trace2 "UUID:         \"${uuid}\""
    fi
 
    # this is done  during auto already
-   # case "${destination}" in
+   # case "${address}" in
    #    ..*|~*|/*)
-   #     fail "destination \"${destination}\" is invalid ($nodeline)"
+   #     fail "address \"${address}\" is invalid ($nodeline)"
    #    ;;
    # esac
 
-   [ -z "${url}" ]          && internal_fail "url is empty"
-   [ -z "${uuid}" ]         && internal_fail "uuid is empty"
-   [ -z "${nodetype}" ]     && internal_fail "destination is empty"
-   [ -z "${destination}" ]  && internal_fail "destination is empty"
+   [ -z "${uuid}" ]     && internal_fail "uuid is empty"
+   [ -z "${nodetype}" ] && internal_fail "nodetype is empty"
+   [ -z "${address}" ]  && internal_fail "address is empty"
 
    :
 }
@@ -656,18 +649,18 @@ nodemarks_remove_noupdate()
 }
 
 
-node_sanitized_destination()
+node_sanitized_address()
 {
-   log_entry "node_sanitized_destination" "$@"
+   log_entry "node_sanitized_address" "$@"
 
-   local destination="$1"
+   local address="$1"
 
    local modified
 
-   modified="`simplified_path "${destination}"`"
+   modified="`simplified_path "${address}"`"
    if is_absolutepath "${modified}"
    then
-      fail "Destination \"${destination}\" is an absolute filepath"
+      fail "Address \"${address}\" is an absolute filepath"
    fi
 
    case "${modified}" in
@@ -676,9 +669,9 @@ node_sanitized_destination()
       ;;
    esac
 
-   if [ "${modified}" != "${destination}" ]
+   if [ "${modified}" != "${address}" ]
    then
-      log_fluff "Destination \"${destination}\" sanitized to \"${modified}\""
+      log_fluff "Destination \"${address}\" sanitized to \"${modified}\""
    fi
    echo "${modified}"
 }
@@ -692,40 +685,36 @@ node_print_nodeline()
       *\;*)
          fail "url \"${url}\" contains semicolon"
       ;;
-
-      "")
-         internal_fail "url \"${url}\" is empty"
-      ;;
    esac
 
-   case "${destination}" in
+   case "${address}" in
       *\;*)
-         fail "destination \"${destination}\" contains semicolon"
+         fail "Address \"${address}\" contains semicolon"
       ;;
 
       "")
-         internal_fail "destination \"${destination}\" is empty"
+         internal_fail "Address \"${address}\" is empty"
       ;;
    esac
 
    case "${branch}" in
       *\;*)
-         fail "branch \"${branch}\" contains semicolon"
+         fail "Branch \"${branch}\" contains semicolon"
       ;;
    esac
 
    case "${tag}" in
       *\;*)
-         fail "tag \"${tag}\" contains semicolon"
+         fail "Tag \"${tag}\" contains semicolon"
       ;;
    esac
 
    case "${nodetype}" in
       *\;*)
-         fail "nodetype \"${nodetype}\" contains semicolon"
+         fail "Nodetype \"${nodetype}\" contains semicolon"
       ;;
       *\,*)
-         fail "nodetype \"${nodetype}\" contains comma"
+         fail "Nodetype \"${nodetype}\" contains comma"
       ;;
       "")
          internal_fail "nodetype is empty"
@@ -734,7 +723,7 @@ node_print_nodeline()
 
    case "${uuid}" in
       *\;*)
-         fail "uuid \"${uuid}\" contains semicolon"
+         fail "UUID \"${uuid}\" contains semicolon"
       ;;
       "")
          internal_fail "uuid is empty"
@@ -743,45 +732,45 @@ node_print_nodeline()
 
    case "${marks}" in
       *\;*)
-         fail "marks \"${marks}\" contains semicolon"
+         fail "Marks \"${marks}\" contain semicolon"
       ;;
 
       ,*|*,,*|*,)
-         fail "marks \"${marks}\" are ugly, remove excess commata"
+         fail "Marks \"${marks}\" are ugly, remove excess commata"
       ;;
    esac
 
    case "${fetchoptions}" in
       *\;*)
-         fail "fetchoptions \"${fetchoptions}\" contains semicolon"
+         fail "Fetchoptions \"${fetchoptions}\" contains semicolon"
       ;;
 
       ,*|*,,*|*,)
-         fail "fetchoptions \"${fetchoptions}\" are ugly, remove excess commata"
+         fail "Fetchoptions \"${fetchoptions}\" are ugly, remove excess commata"
       ;;
    esac
 
-   case "${userinfo}" in
-      *\;*)
-         fail "userinfo \"${userinfo}\" contains semicolon"
-      ;;
-   esac
+   if egrep -q '[^A-Za-z0-9%&/()=+\-_.,$# ]' <<< "${userinfo}"
+   then
+      userinfo="base64:`base64 <<< "${userinfo}"`"
+   fi
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
    then
-      log_trace2 "URL:          \"${url}\""
-      log_trace2 "DESTINATION:  \"${destination}\""
-      log_trace2 "BRANCH:       \"${branch}\""
-      log_trace2 "TAG:          \"${tag}\""
+      log_trace2 "ADDRESS:      \"${address}\""
       log_trace2 "NODETYPE:     \"${nodetype}\""
       log_trace2 "MARKS:        \"${marks}\""
+      log_trace2 "UUID:         \"${uuid}\""
+      log_trace2 "URL:          \"${url}\""
+      log_trace2 "BRANCH:       \"${branch}\""
+      log_trace2 "TAG:          \"${tag}\""
       log_trace2 "FETCHOPTIONS: \"${fetchoptions}\""
       log_trace2 "USERINFO:     \"${userinfo}\""
-      log_trace2 "UUID:         \"${uuid}\""
    fi
 
-   echo "${url};${destination};${branch};${tag};${nodetype};${marks};\
-${fetchoptions};${userinfo};${uuid}"
+   echo "${address};${nodetype};${marks};${uuid};\
+${url};${branch};${tag};${fetchoptions};\
+${userinfo}"
 }
 
 

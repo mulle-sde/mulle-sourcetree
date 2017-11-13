@@ -1,13 +1,13 @@
 language: c
 
 dist: trusty
+sudo: required
 
 script:
-  - curl -sS "https://www.mulle-kybernetik.com/dists/debian-admin-pub.asc" | apt-key add -
-  - echo "deb [arch=all] http://www.mulle-kybernetik.com `lsb_release -c -s` main" \
-> "/etc/apt/sources.list.d/mulle-nat.mulle-kybernetik.com.list"
-  - apt-get update
-  - apt-get -y install mulle-fetch
-  - ./install.sh /tmp
+  - curl -sS "https://www.mulle-kybernetik.com/dists/debian-admin-pub.asc" | sudo apt-key add -
+  - sudo ( echo "deb [arch=all] http://www.mulle-kybernetik.com `lsb_release -c -s` main" > "/etc/apt/sources.list.d/mulle-nat.mulle-kybernetik.com.list" )
+  - sudo apt-get update
+  - sudo apt-get -y install mulle-fetch
+  - sudo ./install.sh /usr/bin
   - cd tests && ./run-test
 

@@ -3,17 +3,17 @@
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
-#   Redistribution and use in nodetype and binary forms, with or without
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of nodetype code must retain the above copyright notice, this
+#   Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -34,9 +34,9 @@ MULLE_SOURCETREE_WALK_SH="included"
 
 sourcetree_walk_usage()
 {
-    cat <<EOF >&2
+   cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} [flags] walk [options] <shell commands
+   ${MULLE_EXECUTABLE_NAME} walk [options] <shell command>
 
    Walk over the nodes described by the config file and execute <shell command>
    for each node. The working directory will be the node (if it is a directory).
@@ -53,16 +53,39 @@ Usage:
    MULLE_DSTFILE and MULLE_ROOT_DIR.
 
 Options:
-   -n <value>    : node types to walk (default: ALL)
-   -p <value>    : specify permissions (missing)
-   -m <value>    : specify marks to match (e.g. build)
-   --depth-first : walk tree depth first
-   --internal    : callback gets internal parameter scheme
-   --lenient     : allow shell command to error
-   --no-cd       : don't cd into node's working directory
-   --no-prefix   : do not prefix MULLE_DSTFILE
-   --no-recurse  : do not recurse
-   --walk-db-dir : walk over information contained in the database instead
+   -n <value>       : node types to walk (default: ALL)
+   -p <value>       : specify permissions (missing)
+   -m <value>       : specify marks to match (e.g. build)
+   --no-depth-first : walk tree breadth first
+   --internal       : callback gets internal parameter scheme
+   --lenient        : allow shell command to error
+   --no-cd          : don't cd into node's working directory
+   --no-prefix      : do not prefix MULLE_DSTFILE
+   --no-recurse     : do not recurse
+   --walk-db-dir    : walk over information contained in the database instead
+EOF
+  exit 1
+}
+
+
+sourcetree_buildorder_main()
+{
+   cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} buildorder
+
+   Print all sourcetree addresss according to the following rules:
+
+   * ignore nodes marked as "nobuild"
+   * ignore nodes marked as "norequire", whose address is missing
+   * ignore nodes marked as "no${UNAME}" (platform dependent of course)
+
+   In a make based project, this can be used to build everything like this:
+
+      ${MULLE_EXECUTABLE_NAME} buildorder | while read address
+      do
+         ( cd "${address}" ; make ) || break
+      done
 EOF
   exit 1
 }
@@ -77,11 +100,11 @@ walk_filter_permissions()
 {
    log_entry "walk_filter_permissions" "$@"
 
-   local destination="$1"
+   local address="$1"
    local permissions="$2"
    local marks="$3"
 
-   [ -z "${destination}" ] && internal_fail "empty destination"
+   [ -z "${address}" ] && internal_fail "empty address"
 
    local match
 
@@ -90,21 +113,21 @@ walk_filter_permissions()
       return
    fi
 
-   if [ ! -e "${destination}" ]
+   if [ ! -e "${address}" ]
    then
-      log_fluff "${destination} does not exist (yet)"
+      log_fluff "${address} does not exist (yet)"
       case "${permissions}" in
          *fail-noexist*)
-            fail "Missing \"${destination}\" is not yet fetched."
+            fail "Missing \"${address}\" is not yet fetched."
          ;;
 
          *warn-noexist*)
-            log_verbose "Repository expected in \"${destination}\" is not yet fetched"
+            log_verbose "Repository expected in \"${address}\" is not yet fetched"
             return 0
          ;;
 
          *skip-noexist*)
-            log_fluff "Repository expected in \"${destination}\" is not yet fetched, skipped"
+            log_fluff "Repository expected in \"${address}\" is not yet fetched, skipped"
             return 1
          ;;
 
@@ -114,24 +137,24 @@ walk_filter_permissions()
       esac
    fi
 
-   if [ ! -L "${destination}" ]
+   if [ ! -L "${address}" ]
    then
       return 0
    fi
 
-   log_fluff "${destination} is a symlink"
+   log_fluff "${address} is a symlink"
    case "${permissions}" in
       *fail-symlink*)
-         fail "Missing \"${destination}\" is a symlink."
+         fail "Missing \"${address}\" is a symlink."
       ;;
 
       *warn-symlink*)
-         log_verbose "\"${destination}\" is a symlink."
+         log_verbose "\"${address}\" is a symlink."
          return 0
       ;;
 
       *skip-symlink*)
-         log_fluff "\"${destination}\" is a symlink, skipped"
+         log_fluff "\"${address}\" is a symlink, skipped"
          return 1
       ;;
    esac
@@ -186,7 +209,7 @@ __call_external()
    MULLE_NODE="${nodeline}" \
    MULLE_URL="${url}" \
    MULLE_DSTFILE="${prefixed}" \
-   MULLE_RAW_DSTFILE="${destination}" \
+   MULLE_RAW_DSTFILE="${address}" \
    MULLE_BRANCH="${branch}" \
    MULLE_TAG="${tag}" \
    MULLE_NODETYPE="${nodetype}" \
@@ -209,7 +232,7 @@ __call_internal()
    local callback="${1}"; shift
 
    NODE="${nodeline}" \
-   RAW_DSTFILE="${destination}" \
+   RAW_DSTFILE="${address}" \
       "${callback}" ${OPTION_CALLBACK_FLAGS} \
                     "${url}" \
                     "${prefixed}" \
@@ -229,7 +252,7 @@ _visit_callback()
    log_entry "_visit_callback" "$@"
 
    local callback="$1"; shift
-   local destination="$1"; shift
+   local address="$1"; shift
    local mode="$1"; shift
 
    local rval
@@ -237,12 +260,12 @@ _visit_callback()
 
    case "${mode}" in
       *external*)
-         if [ -d "${destination}" ]
+         if [ -d "${address}" ]
          then
             case "${mode}" in
                *docd*)
                   (
-                     exekutor cd "${destination}" &&
+                     exekutor cd "${address}" &&
                      __call_external "${callback}" "$@"
                   )
                   return "$?"
@@ -255,14 +278,14 @@ _visit_callback()
       ;;
    esac
 
-   if [ -d "${destination}" ]
+   if [ -d "${address}" ]
    then
       case "${mode}" in
          *docd*)
             # internally we want to preserve state and globals vars
             # so dont subshell
             old="${PWD}"
-            exekutor cd "${destination}" &&
+            exekutor cd "${address}" &&
             __call_internal "${callback}" "$@"
             rval="$?"
             cd "${old}"
@@ -281,7 +304,7 @@ _visit_recurse()
 
    local prefixed="$1"; shift
    local marks="$1"; shift
-   local destination="$1"; shift
+   local address="$1"; shift
 
    local prefix="$1"; shift
    local callback="$1"; shift
@@ -326,7 +349,7 @@ _visit_recurse()
    case "${mode}" in
       *docd*)
          old="${PWD}"
-         cd "${destination}" || return 1
+         cd "${address}" || return 1
       ;;
 
       *prefix*)
@@ -387,7 +410,7 @@ _visit_nodeline()
 
    # nodeline_parse
    local branch
-   local destination
+   local address
    local fetchoptions
    local marks
    local nodetype
@@ -410,9 +433,9 @@ _visit_nodeline()
       return 0
    fi
 
-   if ! walk_filter_permissions "${destination}" "${filterpermissions}"
+   if ! walk_filter_permissions "${address}" "${filterpermissions}"
    then
-      log_fluff "Node \"${url}\": \"${destination}\" doesn't jive with permissions \"${filterpermissions}\""
+      log_fluff "Node \"${url}\": \"${address}\" doesn't jive with permissions \"${filterpermissions}\""
       return 0
    fi
 
@@ -421,14 +444,14 @@ _visit_nodeline()
    local prefixed
 
    # will be used by __call_internal
-   prefixed="${destination}"
+   prefixed="${address}"
    case "${mode}" in
       *docd*)
          # if we cd into, prefixing is pointless
       ;;
 
       *prefix*)
-         prefixed="${prefix}${destination}"
+         prefixed="${prefix}${address}"
       ;;
    esac
 
@@ -439,7 +462,7 @@ _visit_nodeline()
       *depth-first*)
          if ! _visit_recurse "${prefixed}" \
                              "${marks}" \
-                             "${destination}" \
+                             "${address}" \
 \
                              "${prefix}" \
                              "${callback}" \
@@ -455,7 +478,7 @@ _visit_nodeline()
    esac
 
    _visit_callback "${callback}" \
-                   "${destination}" \
+                   "${address}" \
                    "${mode}" \
                    "$@"
    rval=$?
@@ -482,7 +505,7 @@ _visit_nodeline()
 
    _visit_recurse "${prefixed}" \
                   "${marks}" \
-                  "${destination}" \
+                  "${address}" \
 \
                   "${prefix}" \
                   "${callback}" \
@@ -571,7 +594,7 @@ _walk_config_uuids()
       ;;
    esac
 
-   nodelines="`nodeline_read_config "${prefix}"`"
+   nodelines="`nodeline_config_read "${prefix}"`"
    if ! _print_walk_info "${prefix}" "${nodelines}" "${mode}"
    then
       return
@@ -645,7 +668,7 @@ sourcetree_walk_main()
    local OPTION_EXTERNAL_CALL="YES"
    local OPTION_LENIENT="YES"
    local OPTION_PREFIX="YES"
-   local OPTION_DEPTH_FIRST="NO"
+   local OPTION_DEPTH_FIRST="DEFAULT"
 
    _db_set_default_options
 
@@ -765,7 +788,7 @@ sourcetree_walk_main()
    then
       mode="`concat "${mode}" "recurse"`"
    fi
-   if [ "${OPTION_DEPTH_FIRST}" = "YES" ]
+   if [ "${OPTION_DEPTH_FIRST}" != "NO" ] # is default
    then
       mode="`concat "${mode}" "depth-first"`"
    fi
@@ -803,6 +826,36 @@ sourcetree_walk_main()
                          "${mode}" \
                          "$@"
    fi
+}
+
+
+sourcetree_buildorder_main()
+{
+   log_entry "sourcetree_buildorder_main" "$@"
+
+   while [ $# -ne 0 ]
+   do
+      case "$1" in
+         -h|-help|--help)
+            sourcetree_buildorder_usage
+         ;;
+
+         -*)
+            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown buildorder option $1"
+            sourcetree_buildorder_usage
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
+   [ "$#" -eq 0 ] && sourcetree_buildorder_usage
+
+   sourcetree_walk_main -m "nobuild no${UNAME}" "echo '${MULLE_DSTFILE}'"
 }
 
 

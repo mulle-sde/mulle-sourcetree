@@ -3,17 +3,17 @@
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
-#   Redistribution and use in nodetype and binary forms, with or without
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of nodetype code must retain the above copyright notice, this
+#   Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -32,24 +32,35 @@
 MULLE_SOURCETREE_COMMANDS_SH="included"
 
 
+#
+# All commands in here are not recursive!
+#
+
 sourcetree_add_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} add [options] <url> [dst]
+   ${MULLE_EXECUTABLE_NAME} add [options] <address|url>
 
-   Nodes can be git or svn repositories. Nodes can be tar or zip archives.
-   Nodes can also be files. Changes will applied on the
-   next update. The URL must be unique. If you omit the destination, then
-   mulle-sourcetree will try to guess a destination name and place it there.
+   You can add without specifying an URL any existing subdirectory.
+   This will create a node of nodetype "none"
 
+   When specifying a nodetype other than node, you can also add git or
+   svn repositories, be tar or zip archives.
+
+   These will be fetched and possibly unpacked on the next update.
+
+   Examples:
+      ${MULLE_EXECUTABLE_NAME} add ./src
+      ${MULLE_EXECUTABLE_NAME} add --url https://x.com/x external/x
 
 Options:
-   --branch <value>       : branch to use instead of the default (git)
-   --type <value>         : the node type (default: git)
+   --branch <value>       : branch to use instead of the default
+   --nodetype <value>     : the node type (default: none)
    --fetchoptions <value> : options for mulle-fetch --options
    --marks <value>        : key-value sourcetree marks (e.g. build=yes)
-   --tag <value>          : tag to checkout for git
+   --tag <value>          : tag to checkout
+   --url <value>          : url to fetch the node from
    --userinfo <value>     : userinfo for node
 EOF
   exit 1
@@ -60,9 +71,11 @@ sourcetree_remove_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} remove <url>
+   ${MULLE_EXECUTABLE_NAME} remove <address>
 
    Remove a nodes with the given url.
+
+   This command only reads the local config file.
 EOF
   exit 1
 }
@@ -72,13 +85,16 @@ sourcetree_list_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} [options] list
+   ${MULLE_EXECUTABLE_NAME} list [options]
 
    List nodes in the sourcetree.
+
+   This command only reads the local config file.
 
 Options:
    --output-raw           : output as CSV (semicolon separate values)
    --output-cmd           : output as ${MULLE_EXECUTABLE_NAME} command line
+   --output-full          : show url and various fetch options
    --no-output-header     : suppress header in raw and default lists
    --no-output-separator  : suppress separator line if header is printed
 EOF
@@ -94,6 +110,8 @@ Usage:
 
    You can mark or unmark a node with this command. Examine the node values
    with \`${MULLE_EXECUTABLE_NAME} get <url> | sed -n '7p'\`.
+
+   This command only affects the local config file.
 
 Marks:
    [no]build     : the node contains a buildable project (used by buildorder)
@@ -130,18 +148,21 @@ sourcetree_set_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} set [options] <url>
+   ${MULLE_EXECUTABLE_NAME} set [options] <address> [key [value]]*
 
    Change any value of a node with the set command. Changes are applied
-   with the next update.
+   with the next update. You can can specify values with the options or
+   parameter key value pairs, which have precedence.
+
+   This command only reads the local config file.
 
 Options:
    --branch <value>       : branch to use instead of the default (git)
-   --destination <dir>    : destination of the node in the project
+   --address <dir>        : address of the node in the project
    --fetchoptions <value> : options for mulle-fetch --options
    --marks <value>        : key-value sourcetree marks (e.g. build=yes)
    --tag <value>          : tag to checkout for git
-   --type <value>         : the node type (default: git)
+   --nodetype <value>     : the node type
    --url <url>            : url of the node
    --userinfo <value>     : userinfo for node
 EOF
@@ -149,66 +170,138 @@ EOF
 }
 
 
-_sourcetree_get_nodeline_by_url()
+sourcetree_get_usage()
 {
-   local nodelines
+    cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} get <address> [fields]
 
-   nodelines="`nodeline_read_config`"
-   nodeline_find_by_url "${nodelines}" "${url}"
+   Emit config values. The possible value for field are
+
+   address branch fetchoptions marks nodetype tag uuid url userinfo
+
+   This command only reads the local config file.
+EOF
+  exit 1
 }
 
 
-sourcetree_get_nodeline_by_url()
-{
-   if ! _sourcetree_get_nodeline_by_url
-   then
-      fail "No node with url \"${url}\" found"
-   fi
-}
 
-
+#
+#
+#
 sourcetree_add_node()
 {
    log_entry "sourcetree_add_node" "$@"
 
-   local url="$1"
-   local destination="$2"
+   local input="$1"
 
-   if _sourcetree_get_nodeline_by_url "${url}" > /dev/null
-   then
-      fail "Node with \"${url}\" already exists"
-   fi
-
+   local addresss
    local branch="${OPTION_BRANCH}"
    local fetchoptions="${OPTION_FETCHOPTIONS}"
-   local nodetype="${OPTION_NODETYPE}"
    local marks="${OPTION_MARKS}"
+   local nodetype="${OPTION_NODETYPE}"
    local tag="${OPTION_TAG}"
-   local uuid
+   local url="${OPTION_URL}"
    local userinfo="${OPTION_USERINFO}"
+   local uuid
 
+   #
+   # try to figure out nodetype. At this point adre
+   #
+   if [ -z "${nodetype}" -a ! -z "${url}" ]
+   then
+      nodetype="`node_guess_nodetype "${url}"`"
+   fi
+
+   if [ -z "${nodetype}" -a ! -z "${input}" ]
+   then
+      nodetype="`node_guess_nodetype "${input}"`"
+   fi
+
+   if [ -z "${nodetype}" ]
+   then
+      case "${input}" in
+         *:*|~*|/*)
+            fail "Please specify --nodetype"
+         ;;
+
+         *)
+            if [ ! -z "${url}" ]
+            then
+               fail "Please specify --nodetype"
+            fi
+            nodetype="none"
+         ;;
+      esac
+   fi
+
+   #
+   # try to figure out if input is an url
+   # trivially, it is the address if url is empty
+   #
+   if [ -z "${url}" ]
+   then
+      case "${input}" in
+         *:*)
+            url="${input}"
+            address="`node_guess_address "${url}" "${nodetype}"`"
+         ;;
+
+         /*|~*)
+            case "${nodetype}" in
+               none)
+                  address="`symlink_relpath "${input}" "${PWD}"`"
+               ;;
+
+               *)
+                  url="${input}"
+                  address="`node_guess_address "${url}" "${nodetype}"`"
+               ;;
+            esac
+         ;;
+      esac
+   fi
+
+   if [ -z "${address}" ]
+   then
+      address="${input}"
+   fi
+
+   if nodeline_config_has_duplicate "${address}"
+   then
+      fail "There is already a node ${C_RESET_BOLD}${address}${C_ERROR_TEXT} \
+in the sourcetree"
+   fi
+
+   if [ -z "${url}" ]
+   then
+      if ! [ -e "${address}" ]
+      then
+         log_warning "There is no directory or file named \"${address}\""
+      fi
+   else
+      if [ -e "${address}" ]
+      then
+         log_warning "A directory or file named \"${address}\" already exists"
+      fi
+   fi
+
+   #
+   # now just some sanity checks and save it
+   #
    local mode
 
-   if [ "${OPTION_GUESS_NODETYPE}" != "NO" ]
-   then
-      mode="`concat "${mode}" "guesstype"`"
-   fi
-   if [ "${OPTION_GUESS_DESTINATION}" != "NO" ]
-   then
-      mode="`concat "${mode}" "guessdst"`"
-   fi
    if [ "${OPTION_UNSAFE}" = "YES" ]
    then
       mode="`concat "${mode}" "nosafe"`"
    fi
-
    node_augment "${mode}"
 
-   if [ ! -f "${SOURCETREE_CONFIG_FILE}" ]
+
+   if nodeline_config_get_nodeline "${address}" > /dev/null
    then
-      log_fluff "Empty config file, writing first line"
-      redirect_exekutor "${SOURCETREE_CONFIG_FILE}" node_print_nodeline
-      return $?
+      fail "${C_RESET_BOLD}${address}${C_ERROR_TEXT} already exists"
    fi
 
    local contents
@@ -216,13 +309,37 @@ sourcetree_add_node()
    local removed
    local appended
 
-   contents="`cat "${SOURCETREE_CONFIG_FILE}"`"
-   removed="`nodeline_remove_by_url "${contents}" "${url}"`" || exit 1
 
+   contents="`egrep -s -v '^#' "${SOURCETREE_CONFIG_FILE}"`"
    nodeline="`node_print_nodeline`"
-   appended="`add_line "${removed}" "${nodeline}"`"
+   appended="`add_line "${contents}" "${nodeline}"`"
 
    redirect_exekutor "${SOURCETREE_CONFIG_FILE}" echo "${appended}"
+}
+
+
+sourcetree_remove_node()
+{
+   log_entry "sourcetree_remove_node" "$@"
+
+   local address="$1"
+
+   if [ ! -f "${SOURCETREE_CONFIG_FILE}" ]
+   then
+      return 1
+   fi
+
+   local oldnodeline
+
+   oldnodeline="`nodeline_config_get_nodeline "${address}"`" || return 1
+   if [ ! -z "${oldnodeline}" ]
+   then
+      nodeline_config_remove_nodeline "${address}"
+      if [ -z "`nodeline_config_read`" ]
+      then
+         remove_file_if_present "${SOURCETREE_CONFIG_FILE}"
+      fi
+   fi
 }
 
 
@@ -232,6 +349,7 @@ sourcetree_change_nodeline()
 
    local oldnodeline="$1"
    local newnodeline="$2"
+   local address="$3"
 
    if [ "${newnodeline}" = "${oldnodeline}" ]
    then
@@ -239,23 +357,13 @@ sourcetree_change_nodeline()
       return
    fi
 
-   local oldescaped
-   local newescaped
-
-   oldescaped="`escaped_sed_pattern "${oldnodeline}"`"
-   newescaped="`escaped_sed_pattern "${newnodeline}"`"
-
-   log_debug "Editing \"${SOURCETREE_CONFIG_FILE}\""
-   if ! exekutor sed -i '-bak' -e "s/^${oldescaped}$/${newescaped}/" "${SOURCETREE_CONFIG_FILE}"
-   then
-      fail "Edit of config file failed unexpectedly"
-   fi
+   nodeline_config_change_nodeline "${oldnodeline}" "${newnodeline}"
 
    local verifynodelines
    local verifynodeline
 
-   verifynodelines="`nodeline_read_config`"
-   verifynodeline="`nodeline_find_by_url "${verifynodelines}" "${url}"`"
+   verifynodelines="`nodeline_config_read`"
+   verifynodeline="`nodeline_find "${verifynodelines}" "${address}"`"
 
    if [ "${verifynodeline}" != "${newnodeline}" ]
    then
@@ -263,6 +371,17 @@ sourcetree_change_nodeline()
    fi
 }
 
+
+_unfailing_get_nodeline()
+{
+   local address="$1"
+
+   if ! nodeline_config_get_nodeline "${address}"
+   then
+      fail "A node \"${address}\" does not exist"
+   fi
+
+}
 
 #
 # we need to keep the position in the file as it is important
@@ -272,14 +391,14 @@ sourcetree_set_node()
 {
    log_entry "sourcetree_set_node" "$@"
 
-   local url="$1"
+   local address="$1"; shift
 
    local oldnodeline
 
-   oldnodeline="`sourcetree_get_nodeline_by_url "${url}"`" || exit 1
+   oldnodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
 
    local branch
-   local destination
+   local address
    local fetchoptions
    local marks
    local nodetype
@@ -296,7 +415,7 @@ sourcetree_set_node()
    fi
 
    branch="${OPTION_BRANCH:-${branch}}"
-   destination="${OPTION_DESTINATION:-${destination}}"
+   address="${OPTION_ADDRESS:-${address}}"
    fetchoptions="${OPTION_FETCHOPTIONS:-${fetchoptions}}"
    marks="${OPTION_MARKS:-${marks}}"
    nodetype="${OPTION_NODETYPE:-${nodetype}}"
@@ -304,13 +423,46 @@ sourcetree_set_node()
    tag="${OPTION_TAG:-${tag}}"
    userinfo="${OPTION_USERINFO:-${userinfo}}"
 
+   local key
+
+   while [ "$#" -ge 2 ]
+   do
+      key="$1"
+      shift
+
+      case "${key}" in
+         branch|address|fetchoptions|marks|nodetype|tag|url|userinfo)
+            eval ${key}="'$1'"
+            log_debug "Set $key to \"`eval echo \\\$${key}`\""
+         ;;
+         *)
+            log_error "unknown keyword \"$1\""
+            sourcetree_set_usage
+         ;;
+      esac
+      shift
+   done
+
+   if [ "$#" -ne 0 ]
+   then
+      log_error "key \"$1\" without value"
+      sourcetree_set_usage
+   fi
+
    node_augment "${OPTION_AUGMENTMODE}"
 
    local newnodeline
 
    newnodeline="`node_print_nodeline`"
 
-   sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}"
+   if nodeline_config_has_duplicate "${address}" "${uuid}"
+   then
+      fail "There is already a node ${C_RESET_BOLD}${address}${C_ERROR_TEXT} \
+in the sourcetree
+"
+   fi
+
+   sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}" "${address}"
 }
 
 
@@ -318,52 +470,43 @@ sourcetree_get_node()
 {
    log_entry "sourcetree_get_node" "$@"
 
-   local url="$1"
+   local address="$1"; shift
 
-   local oldnodelines
-   local oldnodeline
+   local nodeline
 
-   oldnodelines="`nodeline_read_config`"
-   oldnodeline="`nodeline_find_by_url "${oldnodelines}" "${url}"`"
+   nodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
 
-   if [ "$?" -ne 0 ]
+   local branch
+   local address
+   local fetchoptions
+   local marks
+   local nodetype
+   local tag
+   local url
+   local uuid
+   local userinfo
+
+   nodeline_parse "${nodeline}"
+
+   if [ "$#" -eq 0 ]
    then
-      fail "No node with url \"${url}\" found"
-   fi
-
-   IFS=";"
-   for item in ${oldnodeline}
-   do
-      exekutor echo "${item}"
-   done
-   IFS="${DEFAULT_IFS}"
-}
-
-
-sourcetree_remove_node()
-{
-   log_entry "sourcetree_remove_node" "$@"
-
-   local url="$1"
-
-   if [ ! -f "${SOURCETREE_CONFIG_FILE}" ]
-   then
-      log_warning "${SOURCETREE_CONFIG_FILE} doesn't exist"
+      exekutor echo "${url}"
       return
    fi
 
-   local contents
-   local removed
-
-   contents="`cat "${SOURCETREE_CONFIG_FILE}"`"
-   removed="`nodeline_remove_by_url "${contents}" "${url}"`" || exit 1
-
-   if [ ! -z "${removed}" ]
-   then
-      redirect_exekutor "${SOURCETREE_CONFIG_FILE}" echo "${removed}"
-   else
-      remove_file_if_present "${SOURCETREE_CONFIG_FILE}"
-   fi
+   while [ "$#" -ne 0 ]
+   do
+      case "$1" in
+         branch|address|fetchoptions|marks|nodetype|tag|url|uuid|userinfo)
+            exekutor eval echo \$"${1}"
+         ;;
+         *)
+            log_error "unknown keyword \"$1\""
+            sourcetree_get_usage
+         ;;
+      esac
+      shift
+   done
 }
 
 
@@ -371,18 +514,18 @@ sourcetree_mark_node()
 {
    log_entry "sourcetree_mark_node" "$@"
 
-   local url="$1"
+   local address="$1"
    local mark="$2"
 
-   [ -z "${url}" ] && fail "url is empty"
-   [ -z "${mark}" ] && fail "url is empty"
+   [ -z "${address}" ] && fail "address is empty"
+   [ -z "${mark}" ] && fail "mark is empty"
 
    local oldnodeline
 
-   oldnodeline="`sourcetree_get_nodeline_by_url "${url}"`" || exit 1
+   oldnodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
 
    local branch
-   local destination
+   local address
    local fetchoptions
    local marks
    local nodetype
@@ -440,7 +583,7 @@ sourcetree_mark_node()
    local newnodeline
 
    newnodeline="`node_print_nodeline`"
-   sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}"
+   sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}" "${address}"
 }
 
 
@@ -452,10 +595,10 @@ _sourcetree_list_nodes()
 
    local nodelines
 
-   nodelines="`nodeline_read_config`" || exit 1
+   nodelines="`nodeline_config_read`" || exit 1
 
    local branch
-   local destination
+   local address
    local fetchoptions
    local marks
    local nodetype
@@ -474,11 +617,10 @@ _sourcetree_list_nodes()
 
    case "${mode}" in
       *header*)
-         printf "%s" "url${sep}destination${sep}branch${sep}tag\
-${sep}marks"
+         printf "%s" "address${sep}nodetype${sep}marks${sep}userinfo${sep}url"
          if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
          then
-            printf "%s" "${sep}nodetype${sep}fetchoptions${sep}userinfo"
+            printf "%s" "${sep}branch${sep}tag${sep}fetchoptions"
          fi
          if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
          then
@@ -490,11 +632,10 @@ ${sep}marks"
 
    case "${mode}" in
       *separator*)
-         printf "%s" "---${sep}-------${sep}------${sep}---\
-${sep}-----"
+         printf "%s" "-------${sep}--------${sep}-----${sep}--------${sep}---"
          if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
          then
-            printf "%s" "${sep}--------${sep}------------${sep}--------"
+            printf "%s" "${sep}------${sep}---${sep}------------"
          fi
          if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
          then
@@ -531,10 +672,10 @@ ${sep}-----"
 
                line="${MULLE_EXECUTABLE_NAME} add"
 
-               guess="`node_guess_destination "${url}" "${nodetype}"`"
-               if [ "${guess}" != "${destination}" ]
+               guess="`node_guess_address "${url}" "${nodetype}"`"
+               if [ "${guess}" != "${address}" ]
                then
-                  line="`concat "${line}" "-d '${destination}'"`"
+                  line="`concat "${line}" "-d '${address}'"`"
                fi
                if [ ! -z "${branch}" -a "${branch}" != "master" ]
                then
@@ -568,12 +709,12 @@ ${sep}-----"
 
             *column*)
                # need space for colum if empty
-               printf "%s" "${url:-" "}${sep}${destination:-" "}${sep}\
-${branch:-" "}${sep}${tag:-" "}${sep}${marks:-" "}"
+               printf "%s" "${address:-" "}${sep}${nodetype:- }\
+${sep}${marks:- }${sep}${userinfo:- }${sep}${url:-  }"
                if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
                then
-                  printf "%s" "${sep}${nodetype:-" "}${sep}${fetchoptions:-" "}\
-${sep}${userinfo:-" "}"
+                  printf "%s" "${sep}${branch:- }\
+${sep}${tag:- }${sep}${fetchoptions:- }"
                fi
                if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
                then
@@ -584,12 +725,10 @@ ${sep}${userinfo:-" "}"
 
 
             *)
-               printf "%s" "${url}${sep}${destination}${sep}${branch}${sep}${tag}\
-${sep}${marks}"
+               printf "%s" "${address}${sep}${nodetype}${sep}${marks}${sep}${userinfo}${sep}${url}"
                if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
                then
-                  printf "%s" "${sep}${nodetype}${sep}${fetchoptions}${sep}\
-${userinfo}"
+                  printf "%s" "${sep}${branch}${sep}${tag}${sep}${fetchoptions}"
                fi
                if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
                then
@@ -732,16 +871,16 @@ sourcetree_common_main()
             OPTION_GUESS_NODETYPE="NO"
          ;;
 
-         --guess-destination)
+         --guess-address)
             OPTION_GUESS_DESTINATION="YES"
          ;;
 
-         --no-guess-destination)
+         --no-guess-address)
             OPTION_GUESS_DESTINATION="NO"
          ;;
 
          #
-         #
+         # marks
          #
          --extended-marks)
             OPTION_EXTENDED_MARKS="YES"
@@ -773,18 +912,18 @@ sourcetree_common_main()
          #
          # more common flags
          #
+         -a|-address)
+            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            shift
+
+            OPTION_ADDRESS="$1"
+         ;;
+
          -b|--branch)
             [ $# -eq 1 ] && fail "missing argument to \"$1\""
             shift
 
             OPTION_BRANCH="$1"
-         ;;
-
-         -d|--destination|--destination)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
-            shift
-
-            OPTION_DESTINATION="$1"
          ;;
 
          -e|--output-eval)
@@ -852,7 +991,7 @@ sourcetree_common_main()
 
    [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
 
-   local destination
+   local address
    local url
    local key
    local mark
@@ -862,52 +1001,50 @@ sourcetree_common_main()
 
    case "${COMMAND}" in
       add)
-         url="${OPTION_URL}"
-         if [ -z "${url}" ]
-         then
-            [ $# -eq 0 ] && log_error "missing url argument" && ${USAGE}
-            url="$1"
-            shift
-         fi
-
-         destination="${OPTION_DESTINATION}"
-         if [ -z "${destination}" ]
-         then
-            # destination is optional
-            if [ $# -ne 0 ]
-            then
-               destination="$1"
-               shift
-            fi
-         fi
-         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
-
-         sourcetree_add_node "${url}" "${destination}"
-      ;;
-
-      get|set|remove)
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
-         url="$1"
+         address="$1"
+         [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
-         sourcetree_${COMMAND}_node "${url}"
+
+         sourcetree_add_node "${address}"
       ;;
+
+      remove)
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         address="$1"
+         [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
+         shift
+         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+         sourcetree_${COMMAND}_node "${address}"
+      ;;
+
+      get|set)
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         address="$1"
+         [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
+         shift
+         sourcetree_${COMMAND}_node "${address}" "$@"
+      ;;
+
 
       mark)
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
-         url="$1"
+         address="$1"
+         [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
          shift
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          mark="$1"
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
-         sourcetree_${COMMAND}_node "${url}" "${mark}"
+
+         sourcetree_${COMMAND}_node "${address}" "${mark}"
       ;;
 
       list)
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_${COMMAND}_node "${url}" "${mark}"
+         sourcetree_${COMMAND}_node
       ;;
    esac
 }

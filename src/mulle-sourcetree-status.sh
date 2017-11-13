@@ -3,17 +3,17 @@
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
-#   Redistribution and use in nodetype and binary forms, with or without
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of nodetype code must retain the above copyright notice, this
+#   Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -31,14 +31,14 @@
 #
 MULLE_SOURCETREE_STATUS_SH="included"
 
+
 sourcetree_status_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} [flags] status [options]
+   ${MULLE_EXECUTABLE_NAME} status [options]
 
    Emit status of your sourcetree.
-   Produces a picture of your sourcetree by emitting .dot output.
 
 Options:
    --is-uptodate  : return with 0 if sourcetree does not need to run update
@@ -71,10 +71,11 @@ emit_status()
    fi
 
    #
-   # Dstfile          | Marks     | Output
-   # -----------------|-----------|------------------
-   # not exists       | require   | update
-   # not exists       | norequire | norequire
+   # Dstfile    | Url | Marks     | Output
+   # -----------|-----|-----------|------------------
+   # not exists | no  | -         | missing
+   # not exists | yes | require   | update
+   # not exists | yes | norequire | norequire
    #
 
    if [ ! -e "${directory}" ]
@@ -93,6 +94,17 @@ emit_status()
          fi
          echo "${directory};norequire"
       else
+         if [ -z "${url}" ]
+         then
+            log_fluff "\"${directory}\" does not exist and and is required ($PWD), but url is empty"
+            if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+            then
+               return 2   # indicate brokenness
+            fi
+            echo "${directory};missing"
+            return 0
+         fi
+
          log_fluff "\"${directory}\" does not exist and is required ($PWD)"
          if [ "${OPTION_IS_UPTODATE}" = "YES" ]
          then
@@ -111,11 +123,11 @@ emit_status()
 
    if ! nodeline_config_exists "${prefix}"
    then
-      log_debug "\"${directory}\" does not have a ${SOURCETREE_CONFIG_FILE} ($PWD)"
+      log_fluff "\"${directory}\" does not have a ${SOURCETREE_CONFIG_FILE} ($PWD)"
 
       if [ "${OPTION_IS_UPTODATE}" = "YES" ]
       then
-         return
+         return 0
       fi
 
       echo "${directory};ok"
@@ -126,43 +138,41 @@ emit_status()
    # Config  | Database   | Config > DB | Output
    # --------|------------|-------------|----------
    # exists  | not exists | *           | update
+   # exists  | updating   | *           | incomplete
    # exists  | exists     | -           | ok
    # exists  | exists     | +           | update
    #
 
-   db_is_uptodate "${prefix}"
-   rval="$?"
+   if ! db_is_ready "${prefix}"
+   then
+      echo "${directory};update"
+      return 0
+   fi
 
-   # just for log_fluff :)
-   case "${rval}" in
-      1)
-         log_fluff "\"${directory}\" database is stale ($PWD)"
-         if [ "${OPTION_IS_UPTODATE}" = "YES" ]
-         then
-            exit 1
-         fi
+   if db_is_updating "${prefix}"
+   then
+      log_fluff "\"${directory}\" is marked as updating ($PWD)"
 
-         echo "${directory};update"
-         return 0
-      ;;
+      echo "${directory};incomplete"
+      if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+      then
+         exit 2  # only time we exit with 2 on IS_UPTODATE
+      fi
+      return 1
+   fi
 
-      2)
-         log_debug "\"${directory}\" database is missing ($PWD)"
-         if [ "${OPTION_IS_UPTODATE}" = "YES" ]
-         then
-            exit 1
-         fi
+   if ! db_is_uptodate "${prefix}"
+   then
+      log_fluff "\"${directory}\" database is stale ($PWD)"
 
-         echo "${directory};update"
-         return 0
-      ;;
-   esac
+      echo "${directory};update"
+      return 0
+   fi
 
    if [ "${OPTION_IS_UPTODATE}" = "YES" ]
    then
       return 0
    fi
-
    echo "${directory};ok"
 }
 
@@ -213,14 +223,17 @@ sourcetree_status()
 
    output="`add_line "${output}" "${output2}"`"
 
+   local header
+
    case "${mode}" in
       *header*)
-         output="`add_line "${output}" "Destination;Status"`"
+         header="Address;Status"
          case "${mode}" in
             *separator*)
-               output="`add_line "${output}" "-----------;------"`"
+               header="`add_line "${header}" "-----------;------"`"
             ;;
          esac
+         output="`add_line "${header}" "${output}"`"
       ;;
    esac
 
@@ -247,7 +260,7 @@ sourcetree_status_main()
    local OPTION_RECURSIVE
    local OPTION_IS_UPTODATE="NO"
    local OPTION_OUTPUT_HEADER="DEFAULT"
-   local OPTION_OUTPUT_RAW="YES"
+   local OPTION_OUTPUT_RAW="DEFAULT"
 
    _db_set_default_options
 

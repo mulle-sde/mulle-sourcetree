@@ -3,17 +3,17 @@
 #   Copyright (c) 2015-2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
-#   Redistribution and use in nodetype and binary forms, with or without
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of nodetype code must retain the above copyright notice, this
+#   Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -54,21 +54,23 @@ trap_fail()
 
 
 SHOWN_COMMANDS="\
-   add           : add a node to the tree
-   dotdump       : dump configfile or database as .dot for Graphviz
-   list          : list nodes in tree
-   mark          : add or remove a mark from a node
-   remove        : remove a node from the tree
-   set           : set a node's properties
+   add           : add a node to the configuration
+   buildorder    : emit nodes that are buildable in proper dependency order
+   clean         : remove files added by an update
+   list          : list nodes in the configuration
+   remove        : remove a node from the configuration
+   set           : set a node's properties in the configuration
    status        : query state of the tree
-   update        : update the project with [default]"
+   update        : update the project tree [default]"
 
 HIDDEN_COMMANDS="\
+   dotdump       : create a picture of the tree or the database
    fix           : support to track user modifications in the filesystem
-   get           : get a node's properties
+   get           : get a node's properties from the configuration
    library-path  : print path to ${MULLE_EXECUTABLE_NAME} libexec
-   tag           : tag sourcetreeed repositories
-   walk          : walk over nodes with a callback
+   mark          : add or remove a mark from a node in the configuration
+   walk          : visit all the tree nodes with a callback
+   reset         : clear the database, to force an update
    uname         : ${MULLE_EXECUTABLE_NAME}'s simplified uname(1)
    version       : print ${MULLE_EXECUTABLE_NAME} version"
 
@@ -185,7 +187,7 @@ sourcetree_libexec_path()
    prefix="`dirname "${exedirpath}"`"
    libexecpath="${prefix}/libexec/mulle-sourcetree"
 
-   if [ ! -x "${libexecpath}/mulle-sourcetree-commands.sh" ]
+   if [ ! -x "${libexecpath}/mulle-sourcetree-config.sh" ]
    then
       libexecpath="${exedirpath}/src"
    fi
@@ -199,7 +201,7 @@ sourcetree_libexec_path()
       ;;
    esac
 
-   if [ -x "${libexecpath}/mulle-sourcetree-commands.sh" ]
+   if [ -x "${libexecpath}/mulle-sourcetree-config.sh" ]
    then
       echo "${libexecpath}"
    fi
@@ -372,15 +374,34 @@ main()
    MULLE_EXECUTABLE_FAIL_PREFIX="${MULLE_EXECUTABLE_NAME} ${cmd}"
    [ $# -eq 0 ] || shift
 
+   if [ -z "${MULLE_FETCH}" ]
+   then
+      MULLE_FETCH="mulle-fetch"
+   fi
+
    #
    #
    #
    case "${cmd}" in
       add)
-         # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
 
          sourcetree_add_main "$@"
+      ;;
+
+      buildorder)
+         # shellcheck source=src/mulle-sourcetree-walk.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
+
+         sourcetree_buildorder_main "$@"
+      ;;
+
+      clean)
+         # shellcheck source=src/mulle-sourcetree-db.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombie.sh"
+
+         zombie_clean_main "$@"
       ;;
 
       dotdump)
@@ -398,8 +419,8 @@ main()
       ;;
 
       get)
-         # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
 
          sourcetree_get_main "$@"
       ;;
@@ -413,29 +434,36 @@ main()
       ;;
 
       list)
-         # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
 
          sourcetree_list_main "$@"
       ;;
 
       mark)
-         # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
 
          sourcetree_mark_main "$@"
       ;;
 
       remove)
-         # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
 
          sourcetree_remove_main "$@"
       ;;
 
+      reset)
+         # shellcheck source=src/mulle-sourcetree-db.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
+
+         db_reset_main "$@"
+      ;;
+
       set)
-         # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
 
          sourcetree_set_main "$@"
       ;;

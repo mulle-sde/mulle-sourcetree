@@ -29,7 +29,7 @@ _setup_demo_repo_a()
    exekutor git tag "1.0.0"
 
    redirect_exekutor VERSION echo "2.0.0"
-   run_mulle_sourcetree add "file:///${reporoot}/b"
+   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/b"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: version 2.0.0 (tagged)"
    exekutor git tag "2.0.0"
@@ -53,11 +53,11 @@ setup_demo_repos()
    (
       set -e
       mkdir_if_missing "$1/a" &&
-      exekutor cd "$1/a" && _setup_demo_repo_a "$1"
+      exekutor cd "$1/a"      && _setup_demo_repo_a "$1"
       mkdir_if_missing "$1/b" &&
-      exekutor cd "$1/b" && _setup_demo_repo_b "$1"
+      exekutor cd "$1/b"      && _setup_demo_repo_b "$1"
       set +e
-   )
+   ) || exit 1
 }
 
 
@@ -89,10 +89,12 @@ main()
 
       for a in 1.0.0 2.0.0 1.0.0
       do
-         if ! run_mulle_sourcetree add --tag "${a}" "file://${repos}/a"
+         if ! run_mulle_sourcetree add --nodetype git --tag "${a}" "file://${repos}/a"
          then
            fail "add failed unexpectedly"
          fi
+
+         run_mulle_sourcetree list
 
          if ! run_mulle_sourcetree update --recursive
          then
@@ -111,7 +113,7 @@ main()
             ;;
          esac
 
-         run_mulle_sourcetree remove "file://${repos}/a"
+         run_mulle_sourcetree remove "a"
 
          log_info "----- #${number} PASSED -----"
          number="$(expr $number + 1)"

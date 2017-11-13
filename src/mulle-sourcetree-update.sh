@@ -3,17 +3,17 @@
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
-#   Redistribution and use in nodetype and binary forms, with or without
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of nodetype code must retain the above copyright notice, this
+#   Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -167,11 +167,11 @@ _has_system_include()
 
 mkdir_parent_if_missing()
 {
-   local destination="$1"
+   local address="$1"
 
    local parent
 
-   parent="`dirname -- "${destination}"`"
+   parent="`dirname -- "${address}"`"
    case "${parent}" in
       ""|"\.")
       ;;
@@ -189,7 +189,7 @@ _do_fetch_operation()
    log_entry "_do_fetch_operation" "$@"
 
    local url="$1"            # URL of the node
-   local destination="$2"        # destination of this node (absolute or relative to $PWD)
+   local address="$2"        # address of this node (absolute or relative to $PWD)
    local branch="$3"         # branch of the node
    local tag="$4"            # tag to checkout of the node
    local nodetype="$5"       # nodetype to use for this node
@@ -206,14 +206,14 @@ _do_fetch_operation()
       return 1
    fi
 
-   if [ -e "${destination}" ]
+   if [ -e "${address}" ]
    then
-      bury_node "${uuid}" "${destination}"
+      zombie_bury_node "${address}" "${uuid}"
    fi
 
-   local dstparent
+   local parent
 
-   dstparent="`mkdir_parent_if_missing "${destination}"`"
+   parent="`mkdir_parent_if_missing "${address}"`"
 
    local options
    local rval
@@ -225,7 +225,7 @@ _do_fetch_operation()
    options="`emit_mulle_fetch_eval_options`"
    node_fetch_operation "${opname}" "${options}" \
                                     "${url}" \
-                                    "${destination}" \
+                                    "${address}" \
                                     "${branch}" \
                                     "${tag}" \
                                     "${nodetype}" \
@@ -235,9 +235,9 @@ _do_fetch_operation()
    rval="$?"
    case $rval in
       0)
-         if [ "${OPTION_FIX}" != "NO" ] && [ -d "${destination}" ]
+         if [ "${OPTION_FIX}" != "NO" ] && [ -d "${address}" ]
          then
-            redirect_exekutor "${destination}/${SOURCETREE_FIX_FILE}" echo "${destination}"
+            redirect_exekutor "${address}/${SOURCETREE_FIX_FILE}" echo "${address}"
          fi
       ;;
 
@@ -277,7 +277,7 @@ update_actions_for_nodelines()
    [ -z "${nodeline}" ] && internal_fail "nodeline is empty"
 
    local branch
-   local destination
+   local address
    local fetchoptions
    local marks
    local nodetype
@@ -292,7 +292,7 @@ update_actions_for_nodelines()
                            "${previous}" \
                            "${nodeline}" \
                            "${url}" \
-                           "${destination}" \
+                           "${address}" \
                            "${branch}" \
                            "${tag}" \
                            "${nodetype}" \
@@ -315,7 +315,7 @@ do_operation()
    [ -z "${opname}" ] && internal_fail "operation is empty"
 
    local url="$1"            # URL of the node
-   local destination="$2"        # destination of this node (absolute or relative to $PWD)
+   local address="$2"        # address of this node (absolute or relative to $PWD)
    local branch="$3"         # branch of the node
    local tag="$4"            # tag to checkout of the node
    local nodetype="$5"       # nodetype to use for this node
@@ -334,7 +334,7 @@ do_operation()
    options="`emit_mulle_fetch_eval_options`"
    node_fetch_operation "${opname}" "${options}" \
                                     "${url}" \
-                                    "${destination}" \
+                                    "${address}" \
                                     "${branch}" \
                                     "${tag}" \
                                     "${nodetype}" \
@@ -344,51 +344,44 @@ do_operation()
 
 update_safe_move_node()
 {
-   local url="$1"
-   local marks="$2"
-   local olddestination="$3"
-   local destination="$4"
+   local oldaddress="$1"
+   local address="$2"
+   local marks="$3"
 
-   [ -z "${url}" ]             && internal_fail "empty url"
-   [ -z "${olddestination}" ]  && internal_fail "empty olddestination"
-   [ -z "${destination}" ]     && internal_fail "empty destination"
+   [ -z "${oldaddress}" ]  && internal_fail "empty oldaddress"
+   [ -z "${address}" ]     && internal_fail "empty address"
 
    if nodemarks_contain_nodelete "${marks}"
    then
-      fail "Can't move node ${url} from to \"${olddestination}\" \
-to \"${destination}\" as it is marked nodelete"
+      fail "Can't move node ${url} from to \"${oldaddress}\" \
+to \"${address}\" as it is marked nodelete"
    fi
 
-   log_info "Moving node ${C_MAGENTA}${C_BOLD}${url}${C_INFO} from \"${olddestination}\" to \"${destination}\""
+   log_info "Moving node with URL ${C_MAGENTA}${C_BOLD}${url}${C_INFO} from \"${oldaddress}\" to \"${address}\""
 
-   mkdir_parent_if_missing "${destination}"
-   if ! exekutor mv ${OPTION_COPYMOVEFLAGS} "${olddestination}" "${destination}"  >&2
+   mkdir_parent_if_missing "${address}"
+   if ! exekutor mv ${OPTION_COPYMOVEFLAGS} "${oldaddress}" "${address}"  >&2
    then
-      fail "Move for ${url} failed!"
+      fail "Move of ${C_RESET_BOLD}${oldaddress}${C_ERROR_TEXT} failed!"
    fi
-
 }
 
 
 update_safe_remove_node()
 {
-   local url="$1"
-   local marks="$3"
-   local olddestination="$3"
-   local uuid="$4"
+   local address="$1"
+   local marks="$2"
+   local uuid="$3"
 
-   [ -z "${uuid}" ]            && internal_fail "empty uuid"
-   [ -z "${url}" ]             && internal_fail "empty url"
-   [ -z "${olddestination}" ]  && internal_fail "empty destination"
+   [ -z "${address}" ] && internal_fail "empty address"
+   [ -z "${url}" ]     && internal_fail "empty url"
 
    if nodemarks_contain_nodelete "${marks}"
    then
-      fail "Can't remove \"${olddestination}\" for ${url} \
-as it is marked nodelete"
+      fail "Can't remove \"${address}\" as it is marked nodelete"
    fi
 
-   bury_node "${uuid}" "${olddestination}"
-   db_forget "${uuid}"
+   zombie_bury_node "${address}" "${uuid}"
 }
 
 
@@ -404,7 +397,7 @@ update_actions_for_node()
    local newnodeline="$1" ; shift
 
    local newurl="$1"            # URL of the node
-   local newdestination="$2"    # destination of this node (absolute or relative to $PWD)
+   local newaddress="$2"    # address of this node (absolute or relative to $PWD)
    local newbranch="$3"         # branch of the node
    local newtag="$4"            # tag to checkout of the node
    local newnodetype="$5"       # nodetype to use for this node
@@ -415,10 +408,10 @@ update_actions_for_node()
    #
    local sanitized
 
-   sanitized="`node_sanitized_destination "${newdestination}"`"
-   if [ "${newdestination}" != "${sanitized}" ]
+   sanitized="`node_sanitized_address "${newaddress}"`"
+   if [ "${newaddress}" != "${sanitized}" ]
    then
-      fail "New destination \"${newdestination}\" looks suspicious ($sanitized), chickening out"
+      fail "New address \"${newaddress}\" looks suspicious ($sanitized), chickening out"
    fi
 
    if [ -z "${nodeline}" ]
@@ -430,19 +423,19 @@ update_actions_for_node()
 
    if [ "${nodeline}" = "${newnodeline}" ]
    then
-      if [ -e "${newdestination}" ]
+      if [ -e "${newaddress}" ]
       then
          log_fluff "URL ${url} repository line is unchanged"
          return
       fi
 
-      log_fluff "\"${newdestination}\" is missing, reget."
+      log_fluff "\"${newaddress}\" is missing, reget."
       echo "fetch"
       return
    fi
 
    local branch
-   local destination
+   local address
    local fetchoptions
    local marks
    local nodetype
@@ -460,10 +453,10 @@ update_actions_for_node()
 
    local sanitized
 
-   sanitized="`node_sanitized_destination "${destination}"`"
-   if [ "${destination}" != "${sanitized}" ]
+   sanitized="`node_sanitized_address "${address}"`"
+   if [ "${address}" != "${sanitized}" ]
    then
-      fail "Old destination \"${destination}\" looks suspicious (${sanitized}), chickening out"
+      fail "Old address \"${address}\" looks suspicious (${sanitized}), chickening out"
    fi
 
    log_debug "Change: \"${nodeline}\" -> \"${newnodeline}\""
@@ -483,10 +476,10 @@ update_actions_for_node()
       fi
    fi
 
-   if [ ! -e "${newdestination}" -a ! -e "${destination}" ]
+   if [ ! -e "${newaddress}" -a ! -e "${address}" ]
    then
-      log_fluff "Previous destination \"${destination}\" and \
-current destination \"${newdestination}\" do not exist."
+      log_fluff "Previous address \"${address}\" and \
+current address \"${newaddress}\" do not exist."
 
       echo "fetch"
       return
@@ -497,20 +490,20 @@ current destination \"${newdestination}\" do not exist."
    #
    # Handle positional changes
    #
-   if [ "${destination}" != "${newdestination}" ]
+   if [ "${address}" != "${newaddress}" ]
    then
-      if [ -e "${newdestination}" -a ! -e "${destination}" ]
+      if [ -e "${newaddress}" -a ! -e "${address}" ]
       then
-         log_warning "Destination \"${newdestination}\" already exists and \
-\"${destination}\" is gone. Assuming, that the move was done already."
+         log_warning "The destination of \"${newaddress}\" already exists and \
+\"${address}\" is gone. Assuming, that the move was done already."
          echo "remember" # if nothing else changed
       else
-         log_fluff "Destination has changed from \"${destination}\" to \
-\"${newdestination}\", need to move"
+         log_fluff "Address changed from \"${address}\" to \
+\"${newaddress}\", need to move"
 
-         if [ ! -e "${destination}" ]
+         if [ ! -e "${address}" ]
          then
-            log_warning "Can't find ${destination}. Will fetch again"
+            log_warning "Can't find \"${address}\". Will fetch again"
             echo "fetch"
             return
          fi
@@ -528,9 +521,9 @@ current destination \"${newdestination}\" do not exist."
 
    case "${nodetype}" in
       symlink)
-         if [ -e "${newdestination}" ]
+         if [ -e "${newaddress}" ]
          then
-            log_fluff "\"${newdestination}\" is symlink. Ignoring possible differences."
+            log_fluff "\"${newaddress}\" is symlink. Ignoring possible differences."
             return
          fi
       ;;
@@ -613,7 +606,7 @@ __update_perform_item()
    case "${item}" in
       "checkout"|"upgrade"|"set-url")
          if ! do_operation "${item}" "${url}" \
-                                     "${destination}" \
+                                     "${address}" \
                                      "${branch}" \
                                      "${tag}" \
                                      "${nodetype}" \
@@ -624,8 +617,8 @@ __update_perform_item()
          then
             # as these are shortcuts to remove/fetch, but the
             # fetch part didn't work out we need to remove
-            # the olddestination
-            update_safe_remove_node "${url}" "${marks}" "${olddestination}" "${uuid}"
+            # the oldaddress
+            update_safe_remove_node "${oldaddress}" "${marks}" "${uuid}"
             fail "Failed to ${item} ${url}"
          fi
          contentschanged="YES"
@@ -634,7 +627,7 @@ __update_perform_item()
 
       "fetch")
          do_operation "fetch" "${url}" \
-                              "${destination}" \
+                              "${address}" \
                               "${branch}" \
                               "${tag}" \
                               "${nodetype}" \
@@ -676,12 +669,12 @@ __update_perform_item()
       ;;
 
       "move")
-         update_safe_move_node "${url}" "${marks}" "${olddestination}" "${destination}"
+         update_safe_move_node "${oldaddress}" "${address}" "${marks}"
          remember="YES"
       ;;
 
       "remove")
-         update_safe_remove_node "${url}" "${marks}" "${olddestination}" "${uuid}"
+         update_safe_remove_node "${oldaddress}" "${marks}" "${uuid}"
       ;;
 
       *)
@@ -698,10 +691,10 @@ _update_perform_actions()
    local mode="$1"
    local nodeline="$2"
    local previous="$3"
-   local olddestination="$4"
+   local oldaddress="$4"
 
    local branch
-   local destination
+   local address
    local fetchoptions
    local marks
    local nodetype
@@ -717,19 +710,19 @@ _update_perform_actions()
    if [ "${mode}" = "share" ]
    then
       log_fluff "Use guessed name as directory for shared \"${url}\""
-      destination="`node_guess_destination "${url}" "${nodetype}"`"
-      if [ -z "${destination}" ]
+      address="`node_guess_address "${url}" "${nodetype}"`"
+      if [ -z "${address}" ]
       then
-         destination="${uuid}"
+         address="${uuid}"
       fi
-      destination="`filepath_concat "${SOURCETREE_SHARED_DIR}" "${destination}"`"
+      address="`filepath_concat "${SOURCETREE_SHARED_DIR}" "${address}"`"
    fi
 
    actionitems="`update_actions_for_node "${mode}" \
                                          "${previous}" \
                                          "${nodeline}" \
                                          "${url}" \
-                                         "${destination}" \
+                                         "${address}" \
                                          "${branch}" \
                                          "${tag}" \
                                          "${nodetype}" \
@@ -761,7 +754,7 @@ _update_perform_actions()
    echo "${remember}"
    echo "${skip}"
    echo "${nodetype}"
-   echo "${destination}"
+   echo "${address}"
 }
 
 
@@ -778,7 +771,7 @@ update_with_nodeline()
    [ -z "$nodeline" ] && internal_fail "nodeline is empty"
 
    local branch
-   local destination
+   local address
    local fetchoptions
    local marks
    local nodetype
@@ -789,10 +782,21 @@ update_with_nodeline()
 
    nodeline_parse "${nodeline}"
 
-   if [ -e "${destination}"  ] && nodemarks_contain_noupdate "${marks}"
+   if nodemarks_contain_noupdate "${marks}" || [ -z "${url}" ]
    then
-      log_fluff "\"${url}\" is marked as noupdate (and exists)"
-      return
+      if [ -e "${address}"  ]
+      then
+         log_fluff "\"${address}\" has no URL (or is marked as noupdate) and exists"
+         return
+      fi
+
+      if nodemarks_contain_norequire "${marks}"
+      then
+         log_fluff "\"${address}\" has no URL (or is marked as noupdate) and doesnt exist, \
+but it is not required"
+         return
+      fi
+      fail "\${address}\" is missing, but required"
    fi
 
    local nextmode
@@ -806,7 +810,7 @@ update_with_nodeline()
       share)
          if nodemarks_contain_noshare "${marks}"
          then
-            log_fluff "\"${url}\" is marked as noshare (and we are sharing)"
+            log_fluff "\"${address}\" is marked as noshare (and we are sharing)"
             return
          fi
       ;;
@@ -814,7 +818,7 @@ update_with_nodeline()
       noshare)
          if nodemarks_contain_share "${marks}"
          then
-            log_fluff "\"${url}\" is marked as share (and we are not sharing this time)"
+            log_fluff "\"${address}\" is marked as share (and we are not sharing this time)"
             return
          fi
 
@@ -822,7 +826,7 @@ update_with_nodeline()
          # for inferiors that are marked noshare, we have to fetch
          # everything, if we recurse
          #
-         log_fluff "\"${url}\" is marked as noshare, recursion will get everything"
+         log_fluff "\"${address}\" is marked as noshare, recursion will get everything"
          nextmode="recursive"
       ;;
    esac
@@ -832,17 +836,17 @@ update_with_nodeline()
    # where it was previously
    #
    local previous
-   local olddestination
+   local oldaddress
 
    previous="`db_get_nodeline_for_uuid "${uuid}"`"
    if [ ! -z "${previous}" ]
    then
-      olddestination="`nodeline_get_destination "${previous}"`"
-      [ -z "${olddestination}" ] && internal_fail "corrupted db"
+      oldaddress="`nodeline_get_address "${previous}"`"
+      [ -z "${oldaddress}" ] && internal_fail "corrupted db"
 
-      log_fluff "Updating \"${destination}\" last seen at \"${olddestination}\"..."
+      log_fluff "Updating \"${address}\" last seen at \"${oldaddress}\"..."
    else
-      log_fluff "Fetching \"${url}\" into \"${destination}\"..."
+      log_fluff "Fetching \"${url}\" for \"${address}\"..."
    fi
    #
    # check if this .sourcetree is actually "responsible" for this
@@ -857,10 +861,10 @@ update_with_nodeline()
       then
          if is_node_alive "${uuid}"
          then
-            log_fluff "\"${owner}\" does not feel responsible for \"${url}\""
+            log_fluff "\"${owner}\" does not feel responsible for \"${address}\""
             return
          else
-            log_fluff "\"${owner}\" takes over responsibility for \"${url}\""
+            log_fluff "\"${owner}\" takes over responsibility for \"${address}\""
          fi
       fi
    fi
@@ -875,7 +879,7 @@ update_with_nodeline()
    results="`_update_perform_actions "${mode}" \
                                      "${nodeline}" \
                                      "${previous}" \
-                                     "${olddestination}"`"
+                                     "${oldaddress}"`"
    if [ "$?" -ne 0 ]
    then
       exit 1
@@ -888,7 +892,7 @@ update_with_nodeline()
    remember="$(sed -n '3p' <<< "${results}")"
    skip="$(sed -n '4p' <<< "${results}")"
    nodetype="$(sed -n '5p' <<< "${results}")"
-   destination="$(sed -n '6p' <<< "${results}")"
+   address="$(sed -n '6p' <<< "${results}")"
 
    log_debug "contentschanged: ${contentschanged}" \
              "remember: ${remember}" \
@@ -904,13 +908,13 @@ update_with_nodeline()
    if nodemarks_contain_recurse "${marks}"
    then
       # for when it is
-      if [ -d "${destination}" ]
+      if [ -d "${address}" ]
       then
          (
-            _sourcetree_subtree_update "${nextmode}" "${destination}"
+            _sourcetree_subtree_update "${nextmode}" "${address}"
          ) || exit 1
       else
-         log_fluff "Will not recursively update \"${destination}\" as it's not a directory"
+         log_fluff "Will not recursively update \"${address}\" as it's not a directory"
       fi
    fi
 
@@ -1024,7 +1028,7 @@ _sourcetree_subtree_update()
       # We now read the other shared repos for this repo, like they
       # are ours. So relative is the owner of the fetched stuff.
       #
-      nodelines="`nodeline_read_config "${prefix}"`"
+      nodelines="`nodeline_config_read "${prefix}"`"
       update_with_nodelines "${mode}" "${relative}" "${nodelines}" || return 1
    fi
 
@@ -1059,10 +1063,10 @@ _sourcetree_subtree_update()
 
 
       # as we are in the local database there is no owner
-      nodelines="`nodeline_read_config`"
+      nodelines="`nodeline_config_read`"
       update_with_nodelines "${mode}" "" "${nodelines}" || return 1
 
-      bury_node_zombies
+      zombie_bury_zombies
 
       db_clear_update
       db_set_ready
@@ -1123,7 +1127,7 @@ sourcetree_update_root()
    db_set_dbtype "${mode}"
 
    # as we are in the local database there is no owner
-   nodelines="`nodeline_read_config`"
+   nodelines="`nodeline_config_read`"
    update_with_nodelines "${mode}" "" "${nodelines}" || return 1
 
    if [ "${mode}" = "share" ]
@@ -1133,7 +1137,7 @@ sourcetree_update_root()
 
    rmdir_safer "${SOURCETREE_UPDATE_CACHE}"
 
-   bury_node_zombies
+   zombie_bury_zombies
 
    db_clear_update
    db_set_ready

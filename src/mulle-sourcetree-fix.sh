@@ -3,17 +3,17 @@
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
-#   Redistribution and use in nodetype and binary forms, with or without
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of nodetype code must retain the above copyright notice, this
+#   Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -35,7 +35,7 @@ sourcetree_fix_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} [flags] fix [options]
+   ${MULLE_EXECUTABLE_NAME} fix [options]
 
    Emit commands that would fix the sourcetree node, when nodes have been
    moved by the user.
@@ -54,7 +54,7 @@ locate_fix_file()
 {
    log_entry "locate_fix" "$@"
 
-   local destination="$1"
+   local address="$1"
    local name="$2"
 
    local filename
@@ -68,7 +68,7 @@ locate_fix_file()
 
       fix="`egrep -s -v '^#' "${filename}"`"
 
-      if [ "${fix}" = "${destination}" ]
+      if [ "${fix}" = "${address}" ]
       then
          log_debug "Found a perfect matching fix file \"${match}\""
          echo "${filename}"
@@ -97,13 +97,13 @@ _fixup_dir_exists()
    log_entry "_fixup_dir_exists" "$@"
 
    local url="$1"
-   local destination="$2"
+   local address="$2"
    local name="$3"
 
    local fix
    local fixname
 
-   fix="`egrep -s -v '^#' "${destination}/${SOURCETREE_FIX_FILE}"`"
+   fix="`egrep -s -v '^#' "${address}/${SOURCETREE_FIX_FILE}"`"
    fixname="`basename -- "${fix}"`"
 
    if [ -z "${fixname}" ] # can't determine looks ok
@@ -122,7 +122,7 @@ _fixup_dir_exists()
    local fixfile
    local fixdir
 
-   if fixfile="`locate_fix_file "${destination}" "${name}"`"
+   if fixfile="`locate_fix_file "${address}" "${name}"`"
    then
       fixdir="`dirname -- "${fixfile}"`"
       fixdir="`simplified_path "${fixdir}"`"
@@ -136,13 +136,13 @@ _fixup_dir_not_found()
    log_entry "_fixup_dir_not_found" "$@"
 
    local url="$1"
-   local destination="$2"
+   local address="$2"
    local name="$3"
 
    local fixfile
    local fixdir
 
-   if fixfile="`locate_fix_file "${destination}" "${name}"`"
+   if fixfile="`locate_fix_file "${address}" "${name}"`"
    then
       fixdir="`dirname -- "${fixfile}"`"
       fixdir="`simplified_path "${fixdir}"`"
@@ -179,7 +179,7 @@ walk_fix()
          log_fluff "Dictionary \"${prefixed}\" exists."
          _fixup_dir_exists "${url}" "${prefixed}" "${name}"
       else
-         log_error "${destination} is a file, not sure what to do for ${url}"
+         log_error "${address} is a file, not sure what to do for ${url}"
       fi
    else
       log_verbose "Destination \"${prefixed}\" doesn't exist."

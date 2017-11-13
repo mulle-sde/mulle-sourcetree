@@ -3,17 +3,17 @@
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
-#   Redistribution and use in nodetype and binary forms, with or without
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of nodetype code must retain the above copyright notice, this
+#   Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -33,69 +33,75 @@
 MULLE_SOURCETREE_NODELINE_SH="included"
 
 
-_nodeline_get_url()
+_nodeline_get_address()
 {
    cut -s '-d;' -f 1
 }
 
 
-nodeline_get_url()
+nodeline_get_address()
 {
-   echo "$@" | cut '-d;' -f 1
+  cut -s '-d;' -f 1 <<< "$*"
 }
 
 
-_nodeline_get_destination()
+_nodeline_get_url()
 {
    cut -s '-d;' -f 2
 }
 
-
-nodeline_get_destination()
+nodeline_get_url()
 {
-   echo "$@" | cut -s '-d;' -f 2
+   cut '-d;' -f 2 <<< "$*"
 }
 
 
 nodeline_get_branch()
 {
-   echo "$@" | cut -s '-d;' -f 3
+   cut -s '-d;' -f 3 <<< "$*"
 }
 
 
 nodeline_get_tag()
 {
-   echo "$@" | cut -s '-d;' -f 4
+   cut -s '-d;' -f 4 <<< "$*"
 }
 
 
 nodeline_get_nodetype()
 {
-   echo "$@" | cut -s '-d;' -f 5
-}
-
-
-nodeline_get_uuid()
-{
-   echo "$@" | cut '-d;' -f 6
+   cut -s '-d;' -f 5 <<< "$*"
 }
 
 
 nodeline_get_marks()
 {
-   echo "$@" | cut '-d;' -f 7
+   cut '-d;' -f 6 <<< "$*"
 }
 
 
 nodeline_get_fetchoptions()
 {
-   echo "$@" | cut '-d;' -f 8
+   cut '-d;' -f 7 <<< "$*"
 }
 
 
+# if userinfo was last it could contain unquoted ;
+# but who cares ?
 nodeline_get_userinfo()
 {
-   echo "$@" | cut '-d;' -f 9
+   cut '-d;' -f 8 <<< "$*"
+}
+
+_nodeline_get_uuid()
+{
+   cut -s '-d;' -f 9
+}
+
+
+nodeline_get_uuid()
+{
+   cut '-d;' -f 9 <<< "$*"
 }
 
 
@@ -106,7 +112,7 @@ nodeline_get_userinfo()
 #   # nodeline_parse
 #
 #   local branch
-#   local destination
+#   local address
 #   local fetchoptions
 #   local nodetype
 #   local marks
@@ -117,30 +123,45 @@ nodeline_get_userinfo()
 #
 nodeline_parse()
 {
+   log_entry "nodeline_parse" "$@"
+
    local nodeline="$1"
 
    [ -z "${nodeline}" ] && internal_fail "nodeline_parse: nodeline is empty"
 
    IFS=";" \
-      read -r url destination branch tag nodetype marks \
-            fetchoptions userinfo uuid <<< "${nodeline}"
+      read -r address nodetype marks uuid \
+              url branch tag fetchoptions \
+              userinfo  <<< "${nodeline}"
 
-   [ -z "${url}" ]         && internal_fail "url is empty"
-   [ -z "${destination}" ] && internal_fail "destination is empty"
-   [ -z "${nodetype}" ]    && internal_fail "nodetype is empty"
-   [ -z "${uuid}" ]        && internal_fail "uuid is empty"
+   [ -z "${address}" ]   && internal_fail "address is empty"
+   [ -z "${nodetype}" ]  && internal_fail "nodetype is empty"
+   [ -z "${uuid}" ]      && internal_fail "uuid is empty"
+
+   case "${userinfo}" in
+      base64:*)
+         local decoded
+
+         userinfo="`base64 --decode <<< "${userinfo:7}"`"
+         if [ "$?" -ne 0 ]
+         then
+            internal_fail "userinfo could not be base64 decoded."
+         fi
+      ;;
+   esac
+
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
    then
-      log_trace2 "URL:          \"${url}\""
-      log_trace2 "DESTINATION:  \"${destination}\""
-      log_trace2 "BRANCH:       \"${branch}\""
-      log_trace2 "TAG:          \"${tag}\""
+      log_trace2 "ADDRESS:      \"${address}\""
       log_trace2 "NODETYPE:     \"${nodetype}\""
       log_trace2 "MARKS:        \"${marks}\""
+      log_trace2 "UUID:         \"${uuid}\""
+      log_trace2 "URL:          \"${url}\""
+      log_trace2 "BRANCH:       \"${branch}\""
+      log_trace2 "TAG:          \"${tag}\""
       log_trace2 "FETCHOPTIONS: \"${fetchoptions}\""
       log_trace2 "USERINFO:     \"${userinfo}\""
-      log_trace2 "UUID:         \"${uuid}\""
    fi
 
    :
@@ -169,10 +190,10 @@ nodeline_merge()
    fi
 
    #
-   # additions may contain destination
+   # additions may contain address
    # we replace this with
    #
-   # 1. if we are a master, with the uuid of the url
+   # 1. if we are a master, with the name of the url
    # 2. we erase it
    #
    map=""
@@ -261,9 +282,9 @@ nodeline_config_timestamp()
 #
 # can receive a prefix (for walking)
 #
-nodeline_read_config()
+nodeline_config_read()
 {
-   log_entry "nodeline_read_config" "$@"
+   log_entry "nodeline_config_read" "$@"
 
    [ -z "${SOURCETREE_CONFIG_FILE}" ] && internal_fail "SOURCETREE_CONFIG_FILE is empty"
 
@@ -281,36 +302,37 @@ nodeline_read_config()
 #
 #
 #
-
 nodeline_merge_files()
 {
    log_entry "nodeline_merge_files" "$@"
 
    local srcfile="$1"
-   local destination="$2"
+   local address="$2"
 
    [ -z "${srcfile}" ] && internal_fail "srcfile is empty"
-   [ -z "${destination}" ] && internal_fail "destination is empty"
+   [ -z "${address}" ] && internal_fail "address is empty"
 
-   log_fluff "Merge \"srcfile\" into \"${destination}\""
+   log_fluff "Merge \"srcfile\" into \"${address}\""
 
    local contents
    local additions
    local results
 
    contents="$(nodeline_read_file "${srcfile}")" || exit 1
-   additions="$(nodeline_read_file "${destination}")" || exit 1
+   additions="$(nodeline_read_file "${address}")" || exit 1
 
    results="`nodeline_merge "${contents}" "${additions}"`"
 
-   redirect_exekutor "${destination}" echo "${results}" || fail "failed to merge"
+   redirect_exekutor "${address}" echo "${results}" || fail "failed to merge"
 }
 
 
-nodeline_remove_by_url()
+nodeline_remove()
 {
+   log_entry "nodeline_remove" "$@"
+
    local nodelines="$1"
-   local urltoremove="$2"
+   local addresstoremove="$2"
 
    IFS="
 "
@@ -327,13 +349,14 @@ nodeline_remove_by_url()
          ;;
       esac
 
-      url="`nodeline_get_url "${nodeline}"`" || internal_fail "nodeline_get_url \"${nodeline}\""
-      if [ "${url}" != "${urltoremove}" ]
+      url="`nodeline_get_address "${nodeline}"`" || internal_fail "nodeline_get_address \"${nodeline}\""
+      if [ "${address}" != "${addresstoremove}" ]
       then
          echo "${nodeline}"
       fi
    done
 }
+
 
 
 #
@@ -405,14 +428,14 @@ nodeline_unique()
 }
 
 
-nodeline_find_by_url()
+nodeline_find()
 {
-   log_entry "nodeline_find_by_url" "$@"
+   log_entry "nodeline_find" "$@"
 
    local nodelines="$1"
-   local url="$2"
+   local address="$2"
 
-   [ -z "${url}" ] && internal_fail "url is empty"
+   [ -z "${address}" ] && internal_fail "address is empty"
 
    local nodeline
    local other
@@ -423,8 +446,8 @@ nodeline_find_by_url()
    do
       IFS="${DEFAULT_IFS}"
 
-      other="`nodeline_get_url "${nodeline}"`"
-      if [ "${url}" = "${other}" ]
+      other="`nodeline_get_address "${nodeline}"`"
+      if [ "${address}" = "${other}" ]
       then
          log_debug "Found \"${nodeline}\""
          echo "${nodeline}"
@@ -435,3 +458,96 @@ nodeline_find_by_url()
 
    return 1
 }
+
+
+nodeline_config_get_nodeline()
+{
+   log_entry "nodeline_config_get_nodeline" "$@"
+
+   local address="$1"
+
+   local nodelines
+
+   nodelines="`nodeline_config_read`"
+   nodeline_find "${nodelines}" "${address}"
+}
+
+
+nodeline_has_duplicate()
+{
+   log_entry "nodeline_has_duplicate" "$@"
+
+   local nodelines="$1"
+   local address="$2"
+   local uuid="$3"
+
+   IFS="
+"
+   for nodeline in ${nodelines}
+   do
+      IFS="${DEFAULT_IFS}"
+      if [ "${address}" = "`nodeline_get_address "${nodeline}"`" ]
+      then
+         if [ -z "${uuid}" ] || [ "${uuid}" = "`nodeline_get_uuid "${nodeline}"`" ]
+         then
+            return 0
+         fi
+      fi
+   done
+   IFS="${DEFAULT_IFS}"
+
+   return 1
+}
+
+
+nodeline_config_has_duplicate()
+{
+   log_entry "nodeline_config_has_duplicate" "$@"
+
+   local address="$1"
+   local uuid="$2"
+
+   local nodelines
+
+   nodelines="`nodeline_config_read`"
+   nodeline_has_duplicate "${nodelines}" "${address}" "${uuid}"
+}
+
+
+nodeline_config_remove_nodeline()
+{
+   log_entry "nodeline_config_remove_nodeline" "$@"
+
+   local address="$1"
+
+   local escaped
+
+   log_debug "Removing \"${address}\" from  \"${SOURCETREE_CONFIG_FILE}\""
+   escaped="`escaped_sed_pattern "${address}"`"
+   if ! exekutor sed -i ".bak" "/^${escaped};/d" "${SOURCETREE_CONFIG_FILE}"
+   then
+      internal_fail "sed address corrupt ?"
+   fi
+}
+
+
+nodeline_config_change_nodeline()
+{
+   log_entry "nodeline_config_change_nodeline" "$@"
+
+   local oldnodeline="$1"
+   local newnodeline="$2"
+
+   local oldescaped
+   local newescaped
+
+   oldescaped="`escaped_sed_pattern "${oldnodeline}"`"
+   newescaped="`escaped_sed_pattern "${newnodeline}"`"
+
+   log_debug "Editing \"${SOURCETREE_CONFIG_FILE}\""
+   if ! exekutor sed -i '-bak' -e "s/^${oldescaped}$/${newescaped}/" "${SOURCETREE_CONFIG_FILE}"
+   then
+      fail "Edit of config file failed unexpectedly"
+   fi
+}
+

@@ -19,7 +19,7 @@ _setup_demo_archive_a()
 
    redirect_exekutor VERSION echo "1.0.0"
    run_mulle_sourcetree add "file:///${archives}/b.tar.gz"
-   run_mulle_sourcetree add "file:///${archives}/d.tar.gz" "c/d"
+   run_mulle_sourcetree add --url "file:///${archives}/d.tar.gz" "c/d"
 
    ( cd .. ; tar cfz "${archives}/a.tar.gz" a)
 }
@@ -78,7 +78,7 @@ run_test1()
 {
    local archives="$1"
 
-   if ! run_mulle_sourcetree add -s tar "file://${archives}/a.tar.gz" "root/a"
+   if ! run_mulle_sourcetree add --url "file://${archives}/a.tar.gz" "root/a"
    then
       fail "add failed unexpectedly"
    fi
@@ -112,12 +112,12 @@ root/a;update"
 
    if ! run_mulle_sourcetree status --is-uptodate
    then
-      fail "--is-uptodate #2 says not ok unexpectedly"
+      fail "--is-uptodate #2 says NOT OK unexpectedly"
    fi
 
    (
       cd "root/a/b" &&
-      if ! run_mulle_sourcetree add "file://${archives}/e.tar.gz" "src/e"
+      if ! run_mulle_sourcetree add --url "file://${archives}/e.tar.gz" "src/e"
       then
          fail "add failed unexpectedly"
       fi

@@ -3,17 +3,17 @@
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
-#   Redistribution and use in nodetype and binary forms, with or without
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of nodetype code must retain the above copyright notice, this
+#   Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -31,11 +31,12 @@
 #
 MULLE_SOURCETREE_DOTDUMP_SH="included"
 
+
 sourcetree_dotdump_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} [flags] walk [options] <shell commands>
+   ${MULLE_EXECUTABLE_NAME} dotdump [options]
 
    Produces a picture of your sourcetree by emitting .dot output.
 
@@ -50,6 +51,7 @@ Options:
 EOF
   exit 1
 }
+
 
 html_escape()
 {
@@ -131,7 +133,7 @@ html_print_node()
    title="`basename -- "${prefixed}"`"
    html="$(concat "${html}" "`html_print_title "${html}" "${title}" "${fontcolor}" "${bgcolor}"`")"
    html="$(concat "${html}" "`html_print_row "url" "${url}"`")"
-   html="$(concat "${html}" "`html_print_row "destination" "${prefixed}" "${title}"`")"
+   html="$(concat "${html}" "`html_print_row "address" "${prefixed}" "${title}"`")"
    html="$(concat "${html}" "`html_print_row "branch" "${branch}" "master"`")"
    html="$(concat "${html}" "`html_print_row "tag" "${tag}"`")"
    html="$(concat "${html}" "`html_print_row "nodetype" "${nodetype}" "git"`")"
@@ -215,7 +217,7 @@ walk_dotdump()
    if [ "${OPTION_HTML}" = "YES" ]
    then
       html_print_node "${identifier}" "${url}" \
-                                      "${destination}" \
+                                      "${address}" \
                                       "${branch}" \
                                       "${tag}" \
                                       "${nodetype}" \

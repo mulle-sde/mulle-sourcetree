@@ -24,8 +24,8 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree add "file:///${reporoot}/b"
-   run_mulle_sourcetree add "file:///${reporoot}/d" "c/d"
+   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/b"
+   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/d" "c/d"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: inital version"
 }
@@ -37,7 +37,7 @@ _setup_demo_repo_b()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree add "file:///${reporoot}/d"
+   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/d"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "b: inital version"
 }
@@ -72,7 +72,7 @@ setup_demo_repos()
 
 run_test1()
 {
-   if ! run_mulle_sourcetree add "file://${repos}/a" "root/a"
+   if ! run_mulle_sourcetree add --nodetype git --url "file://${repos}/a" "root/a"
    then
       fail "add failed unexpectedly"
    fi

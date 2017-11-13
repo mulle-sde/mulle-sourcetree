@@ -3,17 +3,17 @@
 #   Copyright (c) 2015-2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
-#   Redistribution and use in nodetype and binary forms, with or without
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of nodetype code must retain the above copyright notice, this
+#   Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -133,7 +133,7 @@ sourcetree_libexec_path()
    prefix="`dirname "${exedirpath}"`"
    libexecpath="${prefix}/libexec/mulle-sourcetree"
 
-   if [ ! -x "${libexecpath}/mulle-sourcetree-commands.sh" ]
+   if [ ! -x "${libexecpath}/mulle-sourcetree-config.sh" ]
    then
       libexecpath="${exedirpath}/src"
    fi
@@ -147,7 +147,7 @@ sourcetree_libexec_path()
       ;;
    esac
 
-   if [ -x "${libexecpath}/mulle-sourcetree-commands.sh" ]
+   if [ -x "${libexecpath}/mulle-sourcetree-config.sh" ]
    then
       echo "${libexecpath}"
    fi
@@ -326,7 +326,7 @@ copy_repositories()
          evaledurl="`eval echo "$url"`"
          [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
 
-         dstdir="`mulle-fetch guess "${evaledurl}"`"
+         dstdir="`${MULLE_FETCH:-mulle-fetch} guess "${evaledurl}"`"
          dstdir="stashes/${dstdir}"
       fi
 

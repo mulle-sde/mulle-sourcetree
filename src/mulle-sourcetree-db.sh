@@ -3,17 +3,17 @@
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
-#   Redistribution and use in nodetype and binary forms, with or without
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of nodetype code must retain the above copyright notice, this
+#   Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -176,14 +176,14 @@ db_get_nodeline_for_uuid()
 }
 
 
-db_get_destination_of_uuid()
+db_get_address_of_uuid()
 {
-   log_entry "db_get_destination_of_uuid" "$@"
+   log_entry "db_get_address_of_uuid" "$@"
 
    local nodeline
 
    nodeline="`db_get_nodeline_for_uuid "$@"`" || exit 1
-   nodeline_get_destination "${nodeline}"
+   nodeline_get_address "${nodeline}"
 }
 
 
@@ -204,7 +204,7 @@ db_get_parentnodeline_for_uuid()
       log_debug "found \"${reposfilepath}\""
       _db_parentnodeline_of_db_file "${reposfilepath}"
    else
-      log_debug "No dst found for ${uuid} in ${SOURCETREE_DB_DIR}"
+      log_debug "No address found for ${uuid} in ${SOURCETREE_DB_DIR}"
    fi
 }
 
@@ -226,7 +226,7 @@ db_get_parentdb_for_uuid()
       log_debug "found \"${reposfilepath}\""
       _db_parentdb_of_db_file "${reposfilepath}"
    else
-      log_debug "No dst found for ${uuid} in ${SOURCETREE_DB_DIR}"
+      log_debug "No address found for ${uuid} in ${SOURCETREE_DB_DIR}"
    fi
 }
 
@@ -248,7 +248,7 @@ db_get_owner_for_uuid()
       log_debug "found \"${reposfilepath}\""
       _db_relative_of_db_file "${reposfilepath}"
    else
-      log_debug "no dst found for ${uuid} in ${SOURCETREE_DB_DIR}"
+      log_debug "no address found for ${uuid} in ${SOURCETREE_DB_DIR}"
    fi
 }
 
@@ -292,11 +292,11 @@ db_get_all_nodelines()
 }
 
 
-db_get_all_destinations()
+db_get_all_addresss()
 {
-   log_entry "db_get_all_destinations" "$@"
+   log_entry "db_get_all_addresss" "$@"
 
-   db_get_all_nodelines | _nodeline_get_destination
+   db_get_all_nodelines | _nodeline_get_address
 }
 
 
@@ -358,6 +358,8 @@ db_is_recursive()
 #
 # dbstate
 # these can be prefixed with ${prefix} to query inferior db state
+# if there is some kind of .db file there we assume that's a database
+# otherwise it's just a graveyard
 #
 db_exists()
 {
@@ -367,14 +369,20 @@ db_exists()
 
    [ -z "${SOURCETREE_DB_DIR}" ] && internal_fail "SOURCETREE_DB_DIR is not set"
 
-   if [ -d "${prefix}${SOURCETREE_DB_DIR}" ]
+   if (
+      shopt -s nullglob
+
+      controlfiles="${prefix}${SOURCETREE_DB_DIR}"/.db*
+
+      [ -z "${controlfiles}" ]
+   )
    then
+      log_debug "\"${PWD}/${prefix}${SOURCETREE_DB_DIR}\" not found"
+      return 1
+   else
       log_debug "\"${PWD}/${prefix}${SOURCETREE_DB_DIR}\" exists"
       return 0
    fi
-
-   log_debug "\"${PWD}/${prefix}${SOURCETREE_DB_DIR}\" not found"
-   return 1
 }
 
 
@@ -395,23 +403,6 @@ db_is_ready()
 }
 
 
-
-db_timestamp()
-{
-   log_entry "db_timestamp" "$@"
-
-   local prefix="$1"
-
-   if [ -f "${prefix}${SOURCETREE_DB_DIR}/.db_done" ]
-   then
-      modification_timestamp "${prefix}${SOURCETREE_DB_DIR}/.db_done"
-   fi
-}
-
-
-#
-#
-#
 db_set_ready()
 {
    log_entry "db_set_dbtype" "$@"
@@ -433,20 +424,46 @@ db_clear_ready()
 }
 
 
+
+db_timestamp()
+{
+   log_entry "db_timestamp" "$@"
+
+   local prefix="$1"
+
+   if [ -f "${prefix}${SOURCETREE_DB_DIR}/.db_done" ]
+   then
+      modification_timestamp "${prefix}${SOURCETREE_DB_DIR}/.db_done"
+   fi
+}
+
+
+
 #
 # update
 #
 db_is_updating()
 {
-   log_entry "db_is_ready" "$@"
+   log_entry "db_is_updating" "$@"
 
-   [ -f "${SOURCETREE_DB_DIR}/.db_update" ]
+   local prefix="$1"
+
+   if [ -f "${prefix}${SOURCETREE_DB_DIR}/.db_update" ]
+   then
+      log_debug "\"${PWD}/${prefix}${SOURCETREE_DB_DIR}/.db_done\" exists"
+      return 0
+   fi
+
+   log_debug "\"${PWD}/${prefix}${SOURCETREE_DB_DIR}/.db_update\" not found"
+   return 1
 }
 
 
 db_set_update()
 {
    log_entry "db_set_update" "$@"
+
+   [ $# -eq 0 ] || internal_fail "api error"
 
    mkdir_if_missing "${SOURCETREE_DB_DIR}"
    redirect_exekutor "${SOURCETREE_DB_DIR}/.db_update"  echo "# intentionally left blank"
@@ -456,6 +473,8 @@ db_set_update()
 db_clear_update()
 {
    log_entry "db_clear_update" "$@"
+
+   [ $# -eq 0 ] || internal_fail "api error"
 
    remove_file_if_present "${SOURCETREE_DB_DIR}/.db_update"
 }
@@ -468,6 +487,8 @@ db_clear_update()
 db_ensure_consistency()
 {
    log_entry "db_ensure_consistency" "$@"
+
+   [ $# -eq 0 ] || internal_fail "api error"
 
    if db_is_updating && [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
    then
@@ -640,3 +661,135 @@ _db_set_default_options()
       ;;
    esac
 }
+
+
+_db_has_graveyard()
+{
+   log_entry "db_exists" "$@"
+
+   local prefix="$1"
+
+   [ -d "${prefix}${SOURCETREE_DB_DIR}/.graveyard" ]
+}
+
+
+_db_is_graveyard_only()
+{
+   if ! _db_has_graveyard
+   then
+      return 1
+   fi
+
+   (
+      shopt -s nullglob
+      files="${prefix}${SOURCETREE_DB_DIR}"/.db*
+
+      [ -z "${files}" ]
+   )
+}
+
+
+db_reset()
+{
+   log_entry "db_reset" "$@"
+
+   local prefix="$1"
+   local keepgraveyard="${2:-YES}"
+
+   [ -z "${SOURCETREE_DB_DIR}" ] && internal_fail "SOURCETREE_DB_DIR is not set"
+
+   if ! db_exists "${prefix}"
+   then
+      return 0
+   fi
+
+   if [ -z "${MULLE_PATH_SH}" ]
+   then
+      # shellcheck source=../../mulle-bashfunctions/src/mulle-path.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh" || exit 1
+   fi
+   if [ -z "${MULLE_FILE_SH}" ]
+   then
+      # shellcheck source=../../mulle-bashfunctions/src/mulle-fike.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh" || exit 1
+   fi
+
+   if [ "${keepgraveyard}" = "NO" ]|| ! _db_has_graveyard
+   then
+      rmdir_safer "${prefix}${SOURCETREE_DB_DIR}"
+      return
+   fi
+
+   (
+      shopt -s nullglob
+
+      files="${prefix}${SOURCETREE_DB_DIR}"/* \
+            "${prefix}${SOURCETREE_DB_DIR}"/.[^g]*
+      if [ ! -z "${files}" ]
+      then
+         exekutor rm "${files}"
+      fi
+   )
+}
+
+
+
+
+db_reset_usage()
+{
+    cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} reset [options]
+
+   Throw away the local database for a fresh update. A graveyard will be kept,
+   unless you use the -g option.
+
+   This command only reads the local database.
+
+Options:
+   -g   : also remove the graveyard (where old zombies are buried)
+EOF
+  exit 1
+}
+
+
+db_reset_main()
+{
+   log_entry "db_reset_main" "$@"
+
+   local OPTION_REMOVE_GRAVEYARD="DEFAULT"
+
+   while [ $# -ne 0 ]
+   do
+      case "$1" in
+         -h|-help|--help)
+            db_reset_usage
+         ;;
+
+
+         -g|--remove-graveyard)
+            OPTION_REMOVE_GRAVEYARD="YES"
+         ;;
+
+         --no-remove-graveyard)
+            OPTION_REMOVE_GRAVEYARD="NO"
+         ;;
+
+         -*)
+            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown clean option $1"
+            db_reset_usage
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
+   [ "$#" -eq 0 ] || db_reset_usage
+
+   db_reset "" "${OPTION_REMOVE_GRAVEYARD}"
+}
+

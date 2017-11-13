@@ -3,17 +3,17 @@
 #   Copyright (c) 2015 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
-#   Redistribution and use in nodetype and binary forms, with or without
+#   Redistribution and use in source and binary forms, with or without
 #   modification, are permitted provided that the following conditions are met:
 #
-#   Redistributions of nodetype code must retain the above copyright notice, this
+#   Redistributions of source code must retain the above copyright notice, this
 #   list of conditions and the following disclaimer.
 #
 #   Redistributions in binary form must reproduce the above copyright notice,
 #   this list of conditions and the following disclaimer in the documentation
 #   and/or other materials provided with the distribution.
 #
-#   Neither the uuid of Mulle kybernetiK nor the names of its contributors
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
 #   may be used to endorse or promote products derived from this software
 #   without specific prior written permission.
 #
@@ -103,30 +103,30 @@ diagnose_node_as_alive()
 
 
 #
+# it must have been ascertained that address is not in use my other nodes
 #
-#
-
-bury_node()
+_zombie_bury()
 {
    log_entry "bury_node" "$@"
 
-   local uuid="$1"
-   local destination="$2"
+   local address="$1"
+   local uuid="$2"
 
    [ $# -eq 2 ] || internal_fail "api error"
 
    [ -z "${uuid}" ] && internal_fail "uuid is empty"
-   [ -z "${destination}" ] && internal_fail "destination is empty"
+   [ -z "${address}" ] && internal_fail "address is empty"
+
    [ -z "${SOURCETREE_DB_DIR}" ] && internal_fail "SOURCETREE_DB_DIR"
 
    local gravepath
 
    gravepath="${SOURCETREE_DB_DIR}/.graveyard/${uuid}"
 
-   if [ -L "${destination}" ]
+   if [ -L "${address}" ]
    then
-      log_verbose "Removing old symlink \"${destination}\""
-      exekutor rm -f "${destination}" >&2
+      log_verbose "Removing old symlink \"${address}\""
+      exekutor rm -f "${address}" >&2
       return
    fi
 
@@ -138,28 +138,50 @@ bury_node()
       mkdir_if_missing "${SOURCETREE_DB_DIR}/.graveyard"
    fi
 
-   log_info "Burying \"${destination}\" in grave \"${gravepath}\""
-   exekutor mv ${OPTION_COPYMOVEFLAGS} "${destination}" "${gravepath}" >&2
+   log_info "Burying \"${address}\" in grave \"${gravepath}\""
+   exekutor mv ${OPTION_COPYMOVEFLAGS} "${address}" "${gravepath}" >&2
 }
 
 
-_bury_zombie()
+zombie_bury_node()
 {
-   log_entry "_bury_zombie" "$@"
+   log_entry "zombie_bury_node" "$@"
 
-   local zombie="$1"
+   local address="$1"
+   local uuid="$2"
 
-   [ -z "${zombie}" ] && internal_fail "zombie is empty"
+   [ -z "${uuid}" ]    && internal_fail "uuid is empty"
+   [ -z "${address}" ] && internal_fail "address is empty"
 
-   local uuid
-   local destination
-   local gravepath
-   local nodeline
+   # forget it now, so it doesn't come up in db_get_all_addresss
+   db_forget "${uuid}"
 
-   nodeline="`db_get_nodeline_of_zombie "${zombie}"`"
+   local inuse
+
+   inuse="`db_get_all_addresss`"
+   if fgrep -q -s -x "${address}" <<< "${inuse}"
+   then
+      log_fluff "Another node is using \"${address}\" now"
+   else
+      if [ -L "${address}"  ]
+      then
+         log_info "Removing unused symlink ${C_MAGENTA}${C_BOLD}${address}${C_INFO}"
+         exekutor rm "${address}" >&2
+      else
+         _zombie_bury "${address}" "${uuid}"
+      fi
+   fi
+}
+
+
+zombie_bury_nodeline()
+{
+   log_entry "zombie_bury_nodeline" "$@"
+
+   local nodeline="$1"
 
    local branch
-   local destination
+   local address
    local fetchoptions
    local nodetype
    local marks
@@ -170,53 +192,46 @@ _bury_zombie()
 
    nodeline_parse "${nodeline}"
 
-   local delete
 
-   delete="YES"
-   if nodemarks_contain_nodelete "${marks}"
+   if [ -e "${address}" ]
    then
-      delete="NO"
-      log_fluff "${url} is marked as nodelete so not burying"
-   fi
-
-   # forget it now, so it doesn't come up in db_get_all_destinations
-   db_forget "${uuid}"
-
-   if [ -e "${destination}" ]
-   then
-      if [ "${delete}" = "YES" ]
+      if nodemarks_contain_nodelete "${marks}"
       then
-         #
-         # need to check, that not another repository now uses the same
-         # destination
-         #
-         local inuse
-
-         inuse="`db_get_all_destinations`"
-         if fgrep -q -s -x "${destination}" <<< "${inuse}"
-         then
-            log_fluff "Another node is using \"${destination}\" now"
-         else
-            if [ -L "${destination}"  ]
-            then
-               log_info "Removing unused symlink ${C_MAGENTA}${C_BOLD}${destination}${C_INFO}"
-               exekutor rm "${destination}" >&2
-            else
-               bury_node "${uuid}" "${destination}"
-            fi
-         fi
+         log_fluff "${url} is marked as nodelete so not burying"
+      else
+         zombie_bury_node "${address}" "${uuid}"
       fi
    else
-      log_fluff "Zombie \"${destination}\" vanished or never existed ($PWD)"
+      db_forget "${uuid}"
+      log_fluff "\"${address}\" vanished or never existed ($PWD)"
    fi
+}
+
+
+zombie_bury_zombie()
+{
+   log_entry "zombie_bury_zombie" "$@"
+
+   local zombie="$1"
+
+   [ -z "${zombie}" ] && internal_fail "zombie is empty"
+
+   local uuid
+   local address
+   local gravepath
+   local nodeline
+
+   nodeline="`db_get_nodeline_of_zombie "${zombie}"`"
+
+   zombie_bury_nodeline "${nodeline}"
 
    remove_file_if_present "${zombie}"
 }
 
 
-bury_node_zombies()
+zombie_bury_zombies()
 {
-   log_entry "bury_node_zombies" "$@"
+   log_entry "zombie_bury_zombies" "$@"
 
    [ -z "${SOURCETREE_DB_DIR}" ] && internal_fail "SOURCETREE_DB_DIR"
 
@@ -235,7 +250,7 @@ bury_node_zombies()
       do
          if [ -f "${zombie}" ]
          then
-            _bury_zombie "${zombie}"
+            zombie_bury_zombie "${zombie}"
          fi
       done
    fi
@@ -245,4 +260,89 @@ bury_node_zombies()
       exekutor rm -rf ${OPTION_COPYMOVEFLAGS} "${zombiepath}" >&2
    fi
 }
+
+
+
+zombie_clean_usage()
+{
+    cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} clean
+
+   Remove sources placed into the projecttree by mulle-sourcetree.
+
+   This command only reads the local database.
+EOF
+  exit 1
+}
+
+
+zombie_clean_all_nodes()
+{
+   if ! db_exists
+   then
+      log_info "Nothing to clean, since no update has run yet"
+      return
+   fi
+
+   # shellcheck source=mulle-sourcetree-nodeline.sh
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombify.sh" || exit 1
+
+   local nodeline
+   local parent
+
+   IFS="
+"
+   for nodeline in `db_get_all_nodelines`
+   do
+      IFS="${DEFAULT_IFS}"
+
+      zombie_bury_nodeline "${nodeline}"
+
+      parent="`dirname -- "${address}"`"
+      case "${parent}" in
+         .|""|..)
+         ;;
+
+         *)
+            rmdir_if_empty "${parent}"
+         ;;
+      esac
+   done
+
+   IFS="${DEFAULT_IFS}"
+}
+
+
+zombie__clean_main()
+{
+   log_entry "zombie__clean_main" "$@"
+
+   local OPTION_REMOVE_GRAVEYARD="DEFAULT"
+
+   while [ $# -ne 0 ]
+   do
+      case "$1" in
+         -h|-help|--help)
+            zombie_clean_usage
+         ;;
+
+         -*)
+            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown clean option $1"
+            zombie_clean_usage
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
+   [ "$#" -eq 0 ] || zombie_clean_usage
+
+   zombie_clean_all_nodes
+}
+
 
