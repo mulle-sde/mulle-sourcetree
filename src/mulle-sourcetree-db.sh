@@ -341,12 +341,12 @@ db_clear_dbtype()
 }
 
 
-db_is_recursive()
+db_is_recurse()
 {
-   log_entry "db_is_recursive" "$@"
+   log_entry "db_is_recurse" "$@"
 
    case "`db_get_dbtype`" in
-      share|recursive)
+      share|recurse)
          return 0
       ;;
    esac
@@ -361,27 +361,22 @@ db_is_recursive()
 # if there is some kind of .db file there we assume that's a database
 # otherwise it's just a graveyard
 #
-db_exists()
+db_dir_exists()
 {
-   log_entry "db_exists" "$@"
+   log_entry "db_dir_exists" "$@"
 
    local prefix="$1"
 
    [ -z "${SOURCETREE_DB_DIR}" ] && internal_fail "SOURCETREE_DB_DIR is not set"
 
-   if (
-      shopt -s nullglob
 
-      controlfiles="${prefix}${SOURCETREE_DB_DIR}"/.db*
-
-      [ -z "${controlfiles}" ]
-   )
+   if [ -d "${prefix}${SOURCETREE_DB_DIR}" ]
    then
-      log_debug "\"${PWD}/${prefix}${SOURCETREE_DB_DIR}\" not found"
-      return 1
-   else
       log_debug "\"${PWD}/${prefix}${SOURCETREE_DB_DIR}\" exists"
       return 0
+   else
+      log_debug "\"${PWD}/${prefix}${SOURCETREE_DB_DIR}\" not found"
+      return 1
    fi
 }
 
@@ -493,9 +488,11 @@ db_ensure_consistency()
    if db_is_updating && [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
    then
       log_error "A previous update was incomplete.
-Suggested resolution (in $PWD):
-    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME}clean${C_ERROR}
-    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME}update${C_ERROR}
+Suggested resolution:
+    ${C_RESET_BOLD}cd '${PWD}'${C_ERROR}
+    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} clean${C_ERROR}
+    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} reset${C_ERROR}
+    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} update${C_ERROR}
 
 Or do you feel lucky ? Then try again with
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} -f ${MULLE_ARGUMENTS}${C_ERROR}
@@ -508,24 +505,24 @@ Well, do ya, punk?"
 
 # DB is "" clean, then anything goes.
 #
-# DB is marked as "normal" or "recursive". Recursive is just a
+# DB is marked as "normal" or "recurse". Recurse is just a
 # hint to output a warning to the user, that originally this
-# DB was created recursively and maybe he forgot OPTION_RECURSIVE.
+# DB was created recurse and maybe he forgot SOURCETREE_MODE.
 #
 #  Mode       | Relative | Description
 # ------------|----------|------------------------------
-#  normal     | ""       | OK
-#  normal     | relpath  | FAIL (not possible)
-#  recursive  | ""       | OK
-#  recursive  | relpath  | FAIL (not possible)
+#  flat       | ""       | OK
+#  flat       | relpath  | FAIL (not possible)
+#  recurse    | ""       | OK
+#  recurse    | relpath  | FAIL (not possible)
 #  share      | *        | FAIL (not possible)
 
 #
-# DB is marked as "share". The db was created with OPTION_SHARE.
+# DB is marked as "share". The db was created with SOURCETREE_MODE.
 #
 #  Mode    | Relative | Description
 # ---------|----------|------------------------------
-#  off     | *        | FAIL (not possible)
+#  flat    | *        | FAIL (not possible)
 #  share   | *        | OK
 #
 #
@@ -549,31 +546,33 @@ db_ensure_compatible_dbtype()
 
       normal)
          case "${mode}" in
-            recursive)
+            recurse)
                if [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
                then
-                  fail "Database was not constructed with the recursive option
+                  fail "Database in \"$PWD\" was not constructed with the recurse option
 This is not really problem. Restate your intention with
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} -f ${MULLE_ARGUMENTS}${C_ERROR}
-or append the -r flag for recursion."
+or append the -r flag for recurse."
                fi
             ;;
 
             share|noshare)
-               fail "Database was constructed with the $mode option. If you
+               fail "Database in \"$PWD\" was constructed with the $mode option. If you
 want to promote it to shared operation do:
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME}clean${C_ERROR}
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME}${MULLE_ARGUMENTS} --share${C_ERROR}"
+   ${C_RESET_BOLD}cd '$PWD'${C_ERROR}
+   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} clean${C_ERROR}
+   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} reset${C_ERROR}
+   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} update --share${C_ERROR}"
             ;;
          esac
          ;;
 
-      recursive)
+      recurse)
          case "${mode}" in
             normal)
                if [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
                then
-                  fail "Database was constructed with the recursive option
+                  fail "Database in \"$PWD\" was constructed with the recurse option.
 This is not really problem. Restate your intention with:
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} -f ${MULLE_ARGUMENTS}${C_ERROR}
 or remove the -r flag for non-recursion."
@@ -581,23 +580,27 @@ or remove the -r flag for non-recursion."
             ;;
 
             share|noshare)
-               fail "Database was not constructed with the share option. If you
+               fail "Database in \"$PWD\" was not constructed with the share option. If you
 want to promote it to shared operation do:
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME}clean${C_ERROR}
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME}${MULLE_ARGUMENTS} --share${C_ERROR}"
+   ${C_RESET_BOLD}cd '$PWD'${C_ERROR}
+   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} clean${C_ERROR}
+   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} reset${C_ERROR}
+   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} update --share${C_ERROR}"
             ;;
          esac
          ;;
 
       share)
          case "${mode}" in
-            recursive|normal)
-               fail "Database was constructed with the shared option. You probably
+            recurse|normal)
+               fail "Database in \"$PWD\" was constructed with the shared option. You probably
 want to run
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} ${MULLE_ARGUMENTS} --share${C_ERROR}
 Or, if you want to revert to non-shared operation do:
-    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME}clean${C_ERROR}
-    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME}update${C_ERROR}"
+    ${C_RESET_BOLD}cd '$PWD'${C_ERROR}
+    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} clean${C_ERROR}
+    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} reset${C_ERROR}
+    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} update${C_ERROR}"
             ;;
          esac
       ;;
@@ -634,38 +637,56 @@ db_is_uptodate()
 
 
 # sets external variables!!
-_db_set_default_options()
+_db_set_default_mode()
 {
-   log_entry "_db_set_default_options" "$@"
+   log_entry "_db_set_default_mode" "$@"
 
-   case "`db_get_dbtype`" in
-      share)
-         OPTION_RECURSIVE="YES"
-         OPTION_SHARE="YES"
-      ;;
+   local usertype="$1"
 
-      recursive)
-         OPTION_RECURSIVE="YES"
-         OPTION_SHARE="NO"
-      ;;
+   local dbtype
+   local actualdbtype
 
+   actualdbtype="`db_get_dbtype`"
 
-      "")
-         OPTION_RECURSIVE="YES"  # probably what one wants
-         OPTION_SHARE="NO"
+   if [ ! -z "${actualdbtype}" -a -z "${MULLE_WALK_SUPRESS}" ]
+   then
+      log_info "Database: ${C_RESET_BOLD}${PWD}/${SOURCETREE_DB_DIR}${C_INFO} ${C_MAGENTA}${C_BOLD}${actualdbtype}${C_INFO}"
+   fi
+
+   dbtype="${usertype}"
+   if [ -z "${dbtype}" ]
+   then
+      dbtype="${actualdbtype}"
+      if [ -z "${dbtype}" ]
+      then
+         dbtype="`egrep -s -v '^#' "${SOURCETREE_DEFAULT_FILE}"`"
+         if [ -z "${dbtype}" ]
+         then
+            dbtype="recurse"
+         fi
+      fi
+   fi
+
+   case "${dbtype}" in
+      share|recurse|flat)
+         SOURCETREE_MODE="${dbtype}"
       ;;
 
       *)
-         OPTION_RECURSIVE="NO"
-         OPTION_SHARE="NO"
+         internal_fail "unknown dbtype \"${dbtype}\""
       ;;
    esac
+
+   if [ ! -z "${SOURCETREE_MODE}" -a -z "${MULLE_WALK_SUPRESS}" ]
+   then
+      log_info "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
+   fi
 }
 
 
 _db_has_graveyard()
 {
-   log_entry "db_exists" "$@"
+   log_entry "db_dir_exists" "$@"
 
    local prefix="$1"
 
@@ -673,19 +694,35 @@ _db_has_graveyard()
 }
 
 
+db_contains_entries()
+{
+   log_entry "db_contains_entries" "$@"
+
+   local prefix="$1"
+
+   (
+      shopt -s nullglob
+
+      # the echo snarfs the newline in the expansion
+      controlfiles="`echo "${prefix}${SOURCETREE_DB_DIR}"/.db*`"
+
+      ! [ -z "${controlfiles}" ] # will have linefeed for some reason don't quote
+   )
+}
+
+
 _db_is_graveyard_only()
 {
-   if ! _db_has_graveyard
+   log_entry "db_contains_entries" "$@"
+
+   local prefix="$1"
+
+   if ! _db_has_graveyard "${prefix}"
    then
       return 1
    fi
 
-   (
-      shopt -s nullglob
-      files="${prefix}${SOURCETREE_DB_DIR}"/.db*
-
-      [ -z "${files}" ]
-   )
+   db_contains_entries "${prefix}"
 }
 
 
@@ -698,7 +735,7 @@ db_reset()
 
    [ -z "${SOURCETREE_DB_DIR}" ] && internal_fail "SOURCETREE_DB_DIR is not set"
 
-   if ! db_exists "${prefix}"
+   if ! db_dir_exists "${prefix}"
    then
       return 0
    fi

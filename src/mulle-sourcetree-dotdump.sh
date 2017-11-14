@@ -105,7 +105,7 @@ html_print_node()
 
    bgcolor="lightgray"
    fontcolor="black"
-   shape="none"
+   shape="local"
 
    case "${nodetype}" in
       script)
@@ -119,6 +119,13 @@ html_print_node()
       ;;
 
       zip|tar)
+         bgcolor="dodgerblue"
+         fontcolor="white"
+      ;;
+
+      svn)
+         bgcolor="coral4"
+         fontcolor="white"
       ;;
 
       git)
@@ -132,18 +139,71 @@ html_print_node()
    # admittedly this is a bit ungainly coded...
    title="`basename -- "${prefixed}"`"
    html="$(concat "${html}" "`html_print_title "${html}" "${title}" "${fontcolor}" "${bgcolor}"`")"
-   html="$(concat "${html}" "`html_print_row "url" "${url}"`")"
-   html="$(concat "${html}" "`html_print_row "address" "${prefixed}" "${title}"`")"
-   html="$(concat "${html}" "`html_print_row "branch" "${branch}" "master"`")"
-   html="$(concat "${html}" "`html_print_row "tag" "${tag}"`")"
-   html="$(concat "${html}" "`html_print_row "nodetype" "${nodetype}" "git"`")"
-   #      html="$(add_line "${html}" "`html_print_row "uuid" "${uuid}"`"")"
-   html="$(concat "${html}" "`html_print_row "marks" "${marks}"`")"
-   html="$(concat "${html}" "`html_print_row "fetchoptions" "${fetchoptions}"`")"
+   html="$(concat "${html}" "`html_print_row "address" "${prefixed}"`")"
+   html="$(concat "${html}" "`html_print_row "nodetype" "${nodetype}"`")"
    html="$(concat "${html}" "`html_print_row "userinfo" "${userinfo}"`")"
+   html="$(concat "${html}" "`html_print_row "marks" "${marks}"`")"
+   html="$(concat "${html}" "`html_print_row "url" "${url}"`")"
+   html="$(concat "${html}" "`html_print_row "branch" "${branch}"`")"
+   html="$(concat "${html}" "`html_print_row "tag" "${tag}"`")"
+   #      html="$(add_line "${html}" "`html_print_row "uuid" "${uuid}"`"")"
+   html="$(concat "${html}" "`html_print_row "fetchoptions" "${fetchoptions}"`")"
    html="$(concat "${html}" "</TABLE>")"
 
-   echo "${identifier} [ label=<${html}>, shape=\"${shape}\", URL=\"${url}\" ]"
+   exekutor echo "${identifier} [ label=<${html}>, shape=\"${shape}\", URL=\"${url}\" ]"
+}
+
+
+print_node()
+{
+   local foldertype="$1"
+   local address="$2"
+   local identifier="$3"
+
+   if [ -z "${identifier}" ]
+   then
+      identifier="\"${address}\""
+   fi
+
+   local shape
+
+   shape="box"
+   if [ ! -e "${address}" ]
+   then
+      shape="invis"
+   else
+      if [ -d "${address}" ]
+      then
+         shape="folder"
+      else
+         shape="note"
+      fi
+   fi
+
+   local penwidth
+   local style
+
+   case "${foldertype}" in
+      root)
+         penwidth="3"
+         style="filled"
+      ;;
+
+      other)
+         penwidth=1
+         style=""
+      ;;
+
+      *)
+         penwidth="2"
+         style="filled"
+      ;;
+   esac
+
+   exekutor echo "${identifier} [ shape=\"${shape}\", \
+penwidth=\"${penwidth}\",  \
+style=\"${style}\" \
+label=\"`basename -- "${address}"`\"]"
 }
 
 
@@ -151,21 +211,29 @@ walk_dotdump()
 {
    log_entry "walk_dotdump" "$@"
 
-   url="$1"
-   prefixed="$2"
-   branch="$3"
-   tag="$4"
-   nodetype="$5"
-   uuid="$6"
-   marks="$7"
-   fetchoptions="$8"
-   useroptions="$9"
+   url="${MULLE_URL}"
+   prefixed="${MULLE_ADDRESS}"
+   branch="${MULLE_BRANCH}"
+   tag="${MULLE_TAG}"
+   nodetype="${MULLE_NODETYPE}"
+   uuid="${MULLE_UUID}"
+   marks="${MULLE_MARKS}"
+   fetchoptions="${MULLE_FETCHOPTIONS}"
+   useroptions="${MULLE_USEROPTIONS}"
 
    local identifier
    local relidentifier
    local previdentifier
    local relative
    local component
+
+   if [ "${OPTION_OUTPUT_EVAL}" = "YES" ]
+   then
+      url="`eval echo "${url}"`"
+      branch="`eval echo "${branch}"`"
+      tag="`eval echo "${tag}"`"
+      fetchoptions="`eval echo "${fetchoptions}"`"
+   fi
 
    relative=""
    IFS="/"
@@ -183,6 +251,17 @@ walk_dotdump()
       relative="`filepath_concat "${relative}" "${component}"`"
       identifier="\"${relative}\""
 
+      local style
+      local label
+
+      style=""
+      label=""
+      if [ -L "${relative}" ]
+      then
+         style="dotted"
+         label="  symlink"
+      fi
+
       if [ -z "${previdentifier}" ]
       then
          relidentifier="${ROOT_IDENTIFIER} -> ${identifier}"
@@ -192,17 +271,21 @@ walk_dotdump()
 
       if ! fgrep -q -s -x "${relidentifier}" <<< "${ALL_RELATIONSHIPS}"
       then
-         echo "${relidentifier}"
+         exekutor echo "${relidentifier} [ style=\"${style}\" label=\"${label}\" ]"
          ALL_RELATIONSHIPS="`add_line "${ALL_RELATIONSHIPS}" "${relidentifier}"`"
       fi
+
+      log_debug "[i] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
 
       if ! fgrep -q -s -x "${identifier}" <<< "${ALL_DIRECTORIES}"
       then
          ALL_DIRECTORIES="`add_line "${ALL_DIRECTORIES}" "${identifier}"`"
+         log_debug "[+] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
+
          if ! fgrep -q -s -x "${identifier}" <<< "${TOEMIT_DIRECTORIES}"
          then
             TOEMIT_DIRECTORIES="`add_line "${TOEMIT_DIRECTORIES}" "${identifier}"`"
-            log_debug "TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
+            log_debug "[+] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
          fi
       fi
 
@@ -212,9 +295,9 @@ walk_dotdump()
 
    identifier="\"${prefixed}\""
    TOEMIT_DIRECTORIES="`fgrep -v -s -x "${identifier}" <<< "${TOEMIT_DIRECTORIES}"`"
-   log_debug "TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
+   log_debug "[-] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
 
-   if [ "${OPTION_HTML}" = "YES" ]
+   if [ "${OPTION_OUTPUT_HTML}" = "YES" ]
    then
       html_print_node "${identifier}" "${url}" \
                                       "${address}" \
@@ -226,17 +309,18 @@ walk_dotdump()
                                       "${userinfo}" \
                                       "${uuid}"
    else
-      echo "${identifier} [ penwidth=2, fillstyle=\"none\" \
-label=\"`basename -- "${prefixed}"`\"]"
+      print_node "default" "${prefixed}" "${identifier}"
    fi
 
    IFS="${DEFAULT_IFS}"
+
+   :
 }
 
 
 emit_root()
 {
-   if [ "${OPTION_HTML}" = "YES" ]
+   if [ "${OPTION_OUTPUT_HTML}" = "YES" ]
    then
       html_print_node "${ROOT_IDENTIFIER}" "${url}" \
                                            "${PWD}" \
@@ -244,7 +328,7 @@ emit_root()
                                            "" \
                                            "root"
    else
-      echo "${ROOT_IDENTIFIER} [ penwidth=3 ]"
+      print_node "root" "${PWD}" "${ROOT_IDENTIFIER}"
    fi
 }
 
@@ -264,9 +348,8 @@ emit_remaining_directories()
       IFS="${DEFAULT_IFS}"
 
       name="$(sed 's/^.\(.*\).$/\1/' <<< "${identifier}")"
-      name="`basename -- "${name}"`"
 
-      echo "${identifier} [ label=\"${name}\", style=\"\" ]"
+      print_node "other" "${name}" "${identifier}"
    done
    IFS="${DEFAULT_IFS}"
 }
@@ -274,10 +357,12 @@ emit_remaining_directories()
 
 sourcetree_dotdump_body()
 {
-   local filternodetypes="$1"
-   local filterpermissions="$2"
-   local filtermarks="$3"
-   local mode="$4"
+   log_entry "sourcetree_dotdump_body" "$@"
+
+   local filternodetypes="$1"; shift
+   local filterpermissions="$1"; shift
+   local filtermarks="$1"; shift
+   local mode="$1"; shift
 
    #
    # ugly hacks to avoid drawing multiple lines
@@ -287,31 +372,30 @@ sourcetree_dotdump_body()
    local TOEMIT_DIRECTORIES=
    local ROOT_IDENTIFIER="\"`basename -- "${PWD}"`\""
 
-   log_debug "TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
+   log_debug "[*] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
+   log_debug "[*] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
 
    case "${mode}" in
       *walkdb*)
-         walk_db_uuids "walk_dotdump" \
-                       "${filternodetypes}" \
+         walk_db_uuids "${filternodetypes}" \
                        "${filterpermissions}" \
                        "${filtermarks}" \
                        "${mode}" \
-                       "" \
+                       "walk_dotdump" \
                        "$@"
       ;;
 
       *)
-         walk_config_uuids "walk_dotdump" \
-                           "${filternodetypes}" \
+         walk_config_uuids "${filternodetypes}" \
                            "${filterpermissions}" \
                            "${filtermarks}" \
                            "${mode}" \
-                           "" \
+                           "walk_dotdump" \
                            "$@"
       ;;
    esac || return 1
 
-   log_debug "TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
+   log_debug "[†] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
 
    emit_root
    emit_remaining_directories "${TOEMIT_DIRECTORIES}"
@@ -320,6 +404,8 @@ sourcetree_dotdump_body()
 
 sourcetree_dotdump()
 {
+   log_entry "sourcetree_dotdump" "$@"
+
    local output
 
    output="`sourcetree_dotdump_body "$@"`" || return 1
@@ -343,15 +429,9 @@ sourcetree_dotdump_main()
    local OPTION_PERMISSIONS="" # empty!
    local OPTION_NODETYPES="ALL"
    local OPTION_WALK_DB="DEFAULT"
-   local OPTION_RECURSIVE
-   local OPTION_HTML="NO"
+   local OPTION_OUTPUT_HTML="NO"
+   local OPTION_OUTPUT_EVAL="NO"
 
-   if db_is_recursive
-   then
-      OPTION_RECURSIVE="YES"
-   else
-      OPTION_RECURSIVE="NO"
-   fi
 
    while [ $# -ne 0 ]
    do
@@ -368,12 +448,20 @@ sourcetree_dotdump_main()
             OPTION_WALK_DB="NO"
          ;;
 
-         --html)
-            OPTION_HTML="YES"
+         --output-eval)
+            OPTION_OUTPUT_EVAL="YES"
          ;;
 
-         --no-html)
-            OPTION_HTML="NO"
+         --no-output-eval)
+            OPTION_OUTPUT_EVAL="NO"
+         ;;
+
+         --output-html)
+            OPTION_OUTPUT_HTML="YES"
+         ;;
+
+         --no-output-html)
+            OPTION_OUTPUT_HTML="NO"
          ;;
          #
          # more common flags
@@ -399,13 +487,7 @@ sourcetree_dotdump_main()
             OPTION_PERMISSIONS="$1"
          ;;
 
-         -r|--recurse|--recursive)
-            OPTION_RECURSIVE="YES"
-         ;;
 
-         --no-recurse|--no-recursive)
-            OPTION_RECURSIVE="NO"
-         ;;
 
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown dotdump option $1"
@@ -422,16 +504,11 @@ sourcetree_dotdump_main()
 
    [ "$#" -eq 0 ] || sourcetree_dotdump_usage
 
-
-   mode="prefix"
-   if [ "${OPTION_RECURSIVE}" = "YES" ]
-   then
-      mode="`concat "${mode}" "recurse"`"
-   fi
+   mode="${SOURCETREE_MODE}"
 
    if [ "${OPTION_WALK_DB}" = "YES" ]
    then
-      if ! db_exists
+      if ! db_dir_exists
       then
          log_info "There is no ${SOURCETREE_DB_DIR} here"
       fi
@@ -442,6 +519,11 @@ sourcetree_dotdump_main()
       then
          log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
       fi
+   fi
+
+   if ! db_is_ready
+   then
+      log_warning "Update has not run yet (mode=${SOURCETREE_MODE})"
    fi
 
    sourcetree_dotdump "${OPTION_NODETYPES}" \

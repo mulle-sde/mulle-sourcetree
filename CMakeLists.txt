@@ -40,7 +40,7 @@ src/mulle-sourcetree-node.sh
 src/mulle-sourcetree-nodeline.sh
 src/mulle-sourcetree-update.sh
 src/mulle-sourcetree-walk.sh
-src/mulle-sourcetree-zombify.sh
+src/mulle-sourcetree-zombie.sh
 )
 
 

@@ -189,7 +189,7 @@ test_update2()
    [ -e ".mulle-sourcetree.db" ] || fail "c: .mulle-sourcetree.db should exist"
    [ -f "foo/VERSION" ]          || fail "c: foo/VERSION should exist"
 
-   if ! run_mulle_sourcetree set --address "bar"  foo
+   if ! run_mulle_sourcetree set --address "bar" foo
    then
       fail "set failed unexpectedly"
    fi
@@ -279,7 +279,7 @@ init()
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombify.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombie.sh" || exit 1
 }
 
 

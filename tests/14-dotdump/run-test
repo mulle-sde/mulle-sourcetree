@@ -77,12 +77,12 @@ run_test1()
       fail "add failed unexpectedly"
    fi
 
-   if ! run_mulle_sourcetree update --recursive # > /dev/null 2>&1
+   if ! run_mulle_sourcetree --recurse update  # > /dev/null 2>&1
    then
       fail "update failed unexpectedly"
    fi
 
-   run_mulle_sourcetree dotdump --html > /dev/null
+   run_mulle_sourcetree dotdump --output-html > /dev/null
    if [ $? -ne 0 ]
    then
       fail "dotdump failed unexpectedly"

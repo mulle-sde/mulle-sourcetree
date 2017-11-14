@@ -551,3 +551,325 @@ nodeline_config_change_nodeline()
    fi
 }
 
+
+nodeline_search_config_dir()
+{
+   log_entry "nodeline_search_config_dir" "$@"
+
+   local directory="${1:-${PWD}}"
+
+   (
+      cd "${directory}" &&
+      while ! nodeline_config_exists
+      do
+         case "${PWD}" in
+            "/"|"")
+               exit 1
+            ;;
+         esac
+
+         cd ..
+      done &&
+      echo "${PWD}"
+   )
+}
+
+
+nodeline_print_header()
+{
+   log_entry "nodeline_print_header" "$@"
+
+   local mode="$1"
+
+   sep=";"
+   case "${mode}" in
+      *output_column*)
+         sep="|"
+      ;;
+   esac
+
+   printf "%s" "address${sep}nodetype${sep}marks${sep}userinfo${sep}url"
+   case "${mode}" in
+      *output_full*)
+         printf "%s" "${sep}branch${sep}tag${sep}fetchoptions"
+      ;;
+   esac
+   case "${mode}" in
+      *output_uuid*)
+         printf "%s" "${sep}uuid"
+      ;;
+   esac
+   printf "\n"
+
+   case "${mode}" in
+      *output_separator*)
+         printf "%s" "-------${sep}--------${sep}-----${sep}--------${sep}---"
+         case "${mode}" in
+            *output_full*)
+               printf "%s" "${sep}------${sep}---${sep}------------"
+            ;;
+         esac
+         case "${mode}" in
+            *output_uuid*)
+               printf "%s" "${sep}----"
+            ;;
+         esac
+         printf "\n"
+      ;;
+   esac
+}
+
+
+nodeline_print()
+{
+   local nodeline=$1; shift
+   local mode="$1"; shift
+
+   local branch
+   local address
+   local fetchoptions
+   local marks
+   local nodetype
+   local tag
+   local url
+   local userinfo
+   local uuid
+
+   nodeline_parse "${nodeline}"
+
+   case "${mode}" in
+      *output_eval*)
+         url="`eval echo "${url}"`"
+         branch="`eval echo "${branch}"`"
+         tag="`eval echo "${tag}"`"
+         fetchoptions="`eval echo "${fetchoptions}"`"
+      ;;
+   esac
+
+   local sep
+
+   sep=";"
+   case "${mode}" in
+      *output_column*)
+         sep="|"
+      ;;
+   esac
+
+   case "${mode}" in
+      *output_cmdline*)
+         local line
+         local guess
+
+         line="${MULLE_EXECUTABLE_NAME} add"
+
+         guess="`node_guess_address "${url}" "${nodetype}"`"
+         if [ ! -z "${branch}" -a "${branch}" != "master" ]
+         then
+            line="`concat "${line}" "--branch '${branch}'"`"
+         fi
+         if [ ! -z "${tag}" ]
+         then
+            line="`concat "${line}" "--tag '${tag}'"`"
+         fi
+         if [ ! -z "${nodetype}" -a "${nodetype}" != "git" ]
+         then
+            line="`concat "${line}" "--nodetype '${nodetype}'"`"
+         fi
+         if [ ! -z "${fetchoptions}" ]
+         then
+            line="`concat "${line}" "--fetchoptions '${fetchoptions}'"`"
+         fi
+         if [ ! -z "${marks}" ]
+         then
+            line="`concat "${line}" "--marks '${marks}'"`"
+         fi
+         if [ ! -z "${userinfo}" ]
+         then
+            line="`concat "${line}" "--userinfo '${userinfo}'"`"
+         fi
+         if [ ! -z "${url}" ]
+         then
+            line="`concat "${line}" "--url '${url}'"`"
+         fi
+
+         line="`concat "${line}" "'${address}'"`"
+
+         echo "${line}"
+      ;;
+
+      *output_column*)
+         # need space for column if empty
+         printf "%s" "${address:-" "}${sep}${nodetype:- }\
+${sep}${marks:- }${sep}${userinfo:- }${sep}${url:-  }"
+         case "${mode}" in
+            *output_full*)
+               printf "%s" "${sep}${branch:- }\
+${sep}${tag:- }${sep}${fetchoptions:- }"
+            ;;
+         esac
+         case "${mode}" in
+            *output_uuid*)
+               printf "%s" "${sep}${uuid:-" "}"
+            ;;
+         esac
+         printf "\n"
+      ;;
+
+
+      *)
+         printf "%s" "${address}${sep}${nodetype}${sep}${marks}${sep}${userinfo}${sep}${url}"
+         case "${mode}" in
+            *output_full*)
+               printf "%s" "${sep}${branch}${sep}${tag}${sep}${fetchoptions}"
+
+            ;;
+         esac
+         case "${mode}" in
+            *output_uuid*)
+               printf "%s" "${sep}${uuid}"
+            ;;
+         esac
+         printf "\n"
+      ;;
+   esac
+}
+
+
+#
+# return the directory, that we should be using for the following defer
+# possibilities
+#
+# NONE:    do not search only pri
+# NEAREST: search up until we find a sourcetree
+# PARENT:  get the enveloping sourcetree of PWD (even if PWD has a sourcetree)
+# ROOT:    get the outermost enveloping sourcetree (can be PWD)
+#
+nodeline_working_directory()
+{
+   log_entry "nodeline_working_directory" "$@"
+
+   local preference="${1:-NONE}"
+
+   local directory
+   local parent
+   local found
+   local defer
+
+   if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-db.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
+   fi
+
+   defer="${MULLE_FLAG_DEFER}"
+   if [ "${defer}" = "DEFAULT" ]
+   then
+      defer="${preference}"
+   fi
+
+   case "${defer}" in
+      NONE)
+         if nodeline_config_exists || db_dir_exists
+         then
+            echo "${PWD}"
+            return 0
+         fi
+
+         log_debug "No config found or db found"
+         return 1
+      ;;
+
+      NEAREST)
+         directory="`nodeline_search_config_dir`"
+         if [ $? -ne 0 ]
+         then
+            log_debug "No config found or db found"
+            return 1
+         fi
+         echo "${directory}"
+         return 0
+      ;;
+
+      PARENT)
+         directory="`nodeline_search_config_dir`"
+         if [ $? -ne 0 ]
+         then
+            log_debug "No config found or db found"
+            return 1
+         fi
+
+         if [ "${directory}" != "${PWD}" ]
+         then
+            echo "${directory}"
+            return 0
+         fi
+
+         parent="`dirname -- "${directory}"`"
+         directory="`nodeline_search_config_dir "${parent}"`"
+         if [ $? -eq 0 ]
+         then
+            echo "${directory}"
+            return 0
+         fi
+
+         log_debug "No parent found"
+         return 1
+      ;;
+
+      ROOT)
+         directory="`nodeline_search_config_dir`"
+         if [ $? -ne 0 ]
+         then
+            log_debug "No config found"
+            return 1
+         fi
+
+         while :
+         do
+            found="${directory}"
+            parent="`dirname -- "${directory}"`"
+            if [ "${parent}" = "/" ]
+            then
+               break
+            fi
+
+            directory="`nodeline_search_config_dir "${parent}"`"
+            if [ $? -ne 0 ]
+            then
+               break
+            fi
+         done
+
+         echo "${found}"
+         return 0
+      ;;
+   esac
+
+   return 1
+}
+
+
+nodeline_defer_if_needed()
+{
+   local preference="${1:-NONE}"
+
+   local directory
+
+   if directory="`nodeline_working_directory "${preference}"`"
+   then
+      if [ "${directory}" != "${PWD}" ]
+      then
+         exekutor cd "${directory}"
+         log_debug "Changed to master \"${directory}\" ($PWD)"
+      fi
+   fi
+
+   if [ ! -z "${directory}" -a -z "${MULLE_WALK_SUPRESS}" ]
+   then
+      if nodeline_config_exists "${directory}/"
+      then
+         log_info "Sourcetree: ${C_RESET_BOLD}${directory}/${SOURCETREE_CONFIG_FILE}${C_INFO}"
+      fi
+   fi
+}
+

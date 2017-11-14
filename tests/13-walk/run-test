@@ -78,7 +78,7 @@ run_test1()
       fail "add failed unexpectedly"
    fi
 
-   if ! run_mulle_sourcetree update --recursive
+   if ! run_mulle_sourcetree --recurse update
    then
       fail "update failed unexpectedly"
    fi
@@ -91,7 +91,7 @@ a/b
 a/b/c
 a/c"
 
-   results="`run_mulle_sourcetree walk --walk-db "echo" '${MULLE_DSTFILE}'`"
+   results="`run_mulle_sourcetree walk --walk-db "echo" "\\\${MULLE_ADDRESS}"`"
    if [ $? -ne 0 ]
    then
       fail "db walk #1 failed unexpectedly"
@@ -106,7 +106,7 @@ a/c"
       fail "db walk #1 returned \"${results}\". Expected was \"${expected}\""
    fi
 
-   results="`run_mulle_sourcetree walk --walk-config "echo" '${MULLE_DSTFILE}'`"
+   results="`run_mulle_sourcetree walk --walk-config "echo" "\\\${MULLE_ADDRESS}"`"
    if [ $? -ne 0 ]
    then
       fail "config walk #1 failed unexpectedly"
@@ -131,7 +131,8 @@ a"
    results="`run_mulle_sourcetree walk --no-depth-first \
                                        --marks build \
                                        --walk-config \
-                                       "echo" '${MULLE_DSTFILE}'`"
+                                       "echo" \
+                                       "\\\${MULLE_ADDRESS}"`"
    if [ $? -ne 0 ]
    then
       fail "config walk #2 failed unexpectedly"

@@ -81,6 +81,22 @@ EOF
 }
 
 
+sourcetree_info_usage()
+{
+    cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} info
+
+   Print the current sourcetree and the database configuration, if any.
+   To check if the current directory is a sourcetree or sourcetree node:
+
+      ${MULLE_EXECUTABLE_NAME} --no-defer info
+
+EOF
+  exit 1
+}
+
+
 sourcetree_list_usage()
 {
     cat <<EOF >&2
@@ -92,9 +108,10 @@ Usage:
    This command only reads the local config file.
 
 Options:
-   --output-raw           : output as CSV (semicolon separate values)
+   --output-raw           : output as CSV (semicolon separated values)
    --output-cmd           : output as ${MULLE_EXECUTABLE_NAME} command line
    --output-full          : show url and various fetch options
+   --output-eval          : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
    --no-output-header     : suppress header in raw and default lists
    --no-output-separator  : suppress separator line if header is printed
 EOF
@@ -231,7 +248,7 @@ sourcetree_add_node()
             then
                fail "Please specify --nodetype"
             fi
-            nodetype="none"
+            nodetype="local"
          ;;
       esac
    fi
@@ -431,7 +448,7 @@ sourcetree_set_node()
       shift
 
       case "${key}" in
-         branch|address|fetchoptions|marks|nodetype|tag|url|userinfo)
+         branch|address|fetchoptions|info|marks|nodetype|tag|url|userinfo)
             eval ${key}="'$1'"
             log_debug "Set $key to \"`eval echo \\\$${key}`\""
          ;;
@@ -593,59 +610,12 @@ _sourcetree_list_nodes()
 
    local mode="$1"
 
+   nodeline_print_header "${mode}"
+
+   local nodeline
    local nodelines
 
    nodelines="`nodeline_config_read`" || exit 1
-
-   local branch
-   local address
-   local fetchoptions
-   local marks
-   local nodetype
-   local tag
-   local url
-   local userinfo
-   local uuid
-   local sep
-
-   sep=";"
-   case "${mode}" in
-      *column*)
-         sep="|"
-      ;;
-   esac
-
-   case "${mode}" in
-      *header*)
-         printf "%s" "address${sep}nodetype${sep}marks${sep}userinfo${sep}url"
-         if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
-         then
-            printf "%s" "${sep}branch${sep}tag${sep}fetchoptions"
-         fi
-         if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
-         then
-            printf "%s" "${sep}uuid"
-         fi
-         printf "\n"
-      ;;
-   esac
-
-   case "${mode}" in
-      *separator*)
-         printf "%s" "-------${sep}--------${sep}-----${sep}--------${sep}---"
-         if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
-         then
-            printf "%s" "${sep}------${sep}---${sep}------------"
-         fi
-         if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
-         then
-            printf "%s" "${sep}----"
-         fi
-         printf "\n"
-      ;;
-   esac
-
-   local line
 
    IFS="
 "
@@ -655,91 +625,57 @@ _sourcetree_list_nodes()
 
       if [ ! -z "${nodeline}" ]
       then
-         nodeline_parse "${nodeline}"
-
-         if [ "${OPTION_OUTPUT_EVAL}" = "YES" ]
-         then
-            url="`eval echo "${url}"`"
-            branch="`eval echo "${branch}"`"
-            tag="`eval echo "${tag}"`"
-            fetchoptions="`eval echo "${fetchoptions}"`"
-         fi
-
-         case "${mode}" in
-            *cmdline*)
-               local line
-               local guess
-
-               line="${MULLE_EXECUTABLE_NAME} add"
-
-               guess="`node_guess_address "${url}" "${nodetype}"`"
-               if [ "${guess}" != "${address}" ]
-               then
-                  line="`concat "${line}" "-d '${address}'"`"
-               fi
-               if [ ! -z "${branch}" -a "${branch}" != "master" ]
-               then
-                  line="`concat "${line}" "--branch '${branch}'"`"
-               fi
-               if [ ! -z "${tag}" ]
-               then
-                  line="`concat "${line}" "--tag '${tag}'"`"
-               fi
-               if [ ! -z "${nodetype}" -a "${nodetype}" != "git" ]
-               then
-                  line="`concat "${line}" "--nodetype '${nodetype}'"`"
-               fi
-               if [ ! -z "${fetchoptions}" ]
-               then
-                  line="`concat "${line}" "--fetchoptions '${fetchoptions}'"`"
-               fi
-               if [ ! -z "${marks}" ]
-               then
-                  line="`concat "${line}" "--marks '${marks}'"`"
-               fi
-               if [ ! -z "${userinfo}" ]
-               then
-                  line="`concat "${line}" "--userinfo '${userinfo}'"`"
-               fi
-
-               line="`concat "${line}" "'${url}'"`"
-
-               echo "${line}"
-            ;;
-
-            *column*)
-               # need space for colum if empty
-               printf "%s" "${address:-" "}${sep}${nodetype:- }\
-${sep}${marks:- }${sep}${userinfo:- }${sep}${url:-  }"
-               if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
-               then
-                  printf "%s" "${sep}${branch:- }\
-${sep}${tag:- }${sep}${fetchoptions:- }"
-               fi
-               if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
-               then
-                  printf "%s" "${sep}${uuid:-" "}"
-               fi
-               printf "\n"
-            ;;
-
-
-            *)
-               printf "%s" "${address}${sep}${nodetype}${sep}${marks}${sep}${userinfo}${sep}${url}"
-               if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
-               then
-                  printf "%s" "${sep}${branch}${sep}${tag}${sep}${fetchoptions}"
-               fi
-               if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
-               then
-                  printf "%s" "${sep}${uuid}"
-               fi
-               printf "\n"
-            ;;
-         esac
+         nodeline_print "${nodeline}" "${mode}"
       fi
    done
    IFS="${DEFAULT_IFS}"
+}
+
+
+_sourcetree_augment_mode_with_output_options()
+{
+   log_entry "_sourcetree_augment_mode_with_output_options" "$@"
+
+   local mode="$1"
+
+   if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
+   then
+      mode="`concat "${mode}" "output_header"`"
+      if [ "${OPTION_OUTPUT_SEPARATOR}" != "NO" ]
+      then
+         mode="`concat "${mode}" "output_separator"`"
+      fi
+   fi
+   if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
+   then
+      mode="`concat "${mode}" "output_full"`"
+   fi
+   if [ "${OPTION_OUTPUT_EVAL}" = "YES" ]
+   then
+      mode="`concat "${mode}" "output_eval"`"
+   fi
+   if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
+   then
+      mode="`concat "${mode}" "output_uuid"`"
+   fi
+
+   case "${OPTION_OUTPUT_FORMAT}" in
+      "RAW")
+         mode="`concat "${mode}" "output_raw"`"
+      ;;
+
+      "COMMANDLINE")
+         mode="`concat "${mode}" "output_cmdline"`"
+      ;;
+
+      ""|*)
+         [ -z "`command -v column`" ] && fail "Tool \"column\" is not available, use --output-raw"
+
+         mode="`concat "${mode}" "output_column"`"
+      ;;
+   esac
+
+   echo "${mode}"
 }
 
 
@@ -749,37 +685,58 @@ sourcetree_list_node()
 
    if [ ! -f "${SOURCETREE_CONFIG_FILE}" ]
    then
-      log_warning "${SOURCETREE_CONFIG_FILE} doesn't exist"
+      log_fluff "${SOURCETREE_CONFIG_FILE} doesn't exist"
       return
    fi
 
-   local mode
+   mode="`_sourcetree_augment_mode_with_output_options`"
 
-   if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
-   then
-      mode="header"
-      if [ "${OPTION_OUTPUT_SEPARATOR}" != "NO" ]
-      then
-         mode="`concat "${mode}" "separator"`"
-      fi
-   fi
-
-   case "${OPTION_OUTPUT_FORMAT}" in
-      "RAW")
-         _sourcetree_list_nodes "${mode}"
-      ;;
-
-      "COMMANDLINE")
-         _sourcetree_list_nodes "cmdline"
-      ;;
-
-      "FORMATTED"|"DEFAULT")
-         [ -z "`command -v column`" ] && fail "Tool \"column\" is not available, use --output-raw"
-
-         mode="`concat "${mode}" "column"`"
+   case "${mode}" in
+      *output_column*)
          _sourcetree_list_nodes "${mode}" | column -t -s '|'
       ;;
+
+      *)
+         _sourcetree_list_nodes "${mode}"
+      ;;
    esac
+}
+
+
+sourcetree_info_node()
+{
+   log_entry "sourcetree_info_node" "$@"
+
+   [ -z "${MULLE_EXECUTABLE_PWD}" ] && internal_fail "MULLE_EXECUTABLE_PWD is empty"
+
+   log_info "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
+
+   case "${SOURCETREE_MODE}" in
+      share)
+         if [ ! -z "${MULLE_SOURCETREE_SHARED_DIR}" ]
+         then
+            log_info "Mode: ${C_RESET_BOLD}${MULLE_SOURCETREE_SHARED_DIR}${C_INFO}"
+         fi
+      ;;
+   esac
+
+   if [ "${MULLE_EXECUTABLE_PWD}" = "${PWD}" ]
+   then
+      log_fluff "Is local (${MULLE_EXECUTABLE_PWD})"
+      return
+   fi
+
+   if nodeline_config_exists "${MULLE_EXECUTABLE_PWD}/"
+   then
+      log_info "${C_RESET_BOLD}`basename -- ${MULLE_EXECUTABLE_PWD}`${C_INFO} is a subtree of its master"
+      return
+   fi
+
+   if db_exists "${MULLE_EXECUTABLE_PWD}/"
+   then
+      log_info "${C_RESET_BOLD}`basename -- ${MULLE_EXECUTABLE_PWD}`${C_INFO} contains a graveyard"
+      return
+   fi
 }
 
 
@@ -912,7 +869,7 @@ sourcetree_common_main()
          #
          # more common flags
          #
-         -a|-address)
+         -a|--address)
             [ $# -eq 1 ] && fail "missing argument to \"$1\""
             shift
 
@@ -1041,7 +998,7 @@ sourcetree_common_main()
          sourcetree_${COMMAND}_node "${address}" "${mark}"
       ;;
 
-      list)
+      list|info)
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree_${COMMAND}_node
@@ -1100,6 +1057,16 @@ sourcetree_mark_main()
 }
 
 
+sourcetree_info_main()
+{
+   log_entry "sourcetree_info_main" "$@"
+
+   USAGE="sourcetree_info_usage"
+   COMMAND="info"
+   sourcetree_common_main "$@"
+}
+
+
 sourcetree_list_main()
 {
    log_entry "sourcetree_list_main" "$@"
@@ -1114,6 +1081,11 @@ sourcetree_commands_initialize()
 {
    log_entry "sourcetree_commands_initialize"
 
+   if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
+   then
+   # shellcheck source=mulle-sourcetree-db.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
+   fi
    if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
    then
       # shellcheck source=mulle-sourcetree-node.sh

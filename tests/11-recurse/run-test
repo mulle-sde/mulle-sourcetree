@@ -30,6 +30,7 @@ _setup_demo_repo_a()
 
    redirect_exekutor VERSION echo "2.0.0"
    run_mulle_sourcetree add --nodetype git "file:///${reporoot}/b"
+   [ -f .mulle-sourcetree ] || fail "failed add"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: version 2.0.0 (tagged)"
    exekutor git tag "2.0.0"
@@ -86,6 +87,7 @@ main()
       cd "${project}"
 
       local a
+      local version
 
       for a in 1.0.0 2.0.0 1.0.0
       do
@@ -96,10 +98,14 @@ main()
 
          run_mulle_sourcetree list
 
-         if ! run_mulle_sourcetree update --recursive
+         if ! run_mulle_sourcetree --recurse update
          then
             fail "update failed unexpectedly"
          fi
+
+
+         version="`cat a/VERSION`"
+         [ "${a}" != "${VERSION}" ] || fail "Checked out version $VERSION instead of $a"
 
          case "${a}" in
             1.0.0)
@@ -140,7 +146,7 @@ init()
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombify.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombie.sh" || exit 1
 }
 
 

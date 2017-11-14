@@ -35,16 +35,12 @@ sourcetree_fix_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} fix [options]
+   ${MULLE_EXECUTABLE_NAME} fix
 
    Emit commands that would fix the sourcetree node, when nodes have been
    moved by the user.
    This will only have a chance of success, if the sourcetree was updated
    initially with the --fix option (which is the default).
-
-Options:
-   --recurse      : recurse
-   --no-recurse   : do not recurse
 EOF
   exit 1
 }
@@ -96,9 +92,8 @@ _fixup_dir_exists()
 {
    log_entry "_fixup_dir_exists" "$@"
 
-   local url="$1"
-   local address="$2"
-   local name="$3"
+   local address="$1"
+   local name="$2"
 
    local fix
    local fixname
@@ -126,7 +121,7 @@ _fixup_dir_exists()
    then
       fixdir="`dirname -- "${fixfile}"`"
       fixdir="`simplified_path "${fixdir}"`"
-      exekutor echo "mulle-sourcetree set -d '${fixdir}' '${url}'"
+      exekutor echo "mulle-sourcetree set -a '${fixdir}' '${address}'"
    fi
 }
 
@@ -135,9 +130,8 @@ _fixup_dir_not_found()
 {
    log_entry "_fixup_dir_not_found" "$@"
 
-   local url="$1"
-   local address="$2"
-   local name="$3"
+   local address="$1"
+   local name="$2"
 
    local fixfile
    local fixdir
@@ -146,12 +140,12 @@ _fixup_dir_not_found()
    then
       fixdir="`dirname -- "${fixfile}"`"
       fixdir="`simplified_path "${fixdir}"`"
-      exekutor echo "mulle-sourcetree set -d '${fixdir}' '${url}'"
+      exekutor echo "mulle-sourcetree set --address '${fixdir}' '${address}'"
       return
    fi
 
-   log_warning "${url} is missing at ${name}"
-   exekutor echo "mulle-sourcetree remove '${url}'"
+   log_warning "${address} is missing at ${name}"
+   exekutor echo "mulle-sourcetree remove '${address}'"
 }
 
 
@@ -159,15 +153,8 @@ walk_fix()
 {
    log_entry "walk_fix" "$@"
 
-   url="$1"
-   prefixed="$2"
-#   branch="$3"
-#   tag="$4"
-#   nodetype="$5"
-#   marks="$6"
-#   fetchoptions="$7"
-#   useroptions="$8"
-#   uuid="$9"
+   url="${MULLE_URL}"
+   prefixed="${MULLE_PREFIX}${MULLE_ADDRESS}"
 
    local name
    name="`basename -- "${prefixed}"`"
@@ -177,14 +164,14 @@ walk_fix()
       if [ -d "${prefixed}" ]
       then
          log_fluff "Dictionary \"${prefixed}\" exists."
-         _fixup_dir_exists "${url}" "${prefixed}" "${name}"
+         _fixup_dir_exists "${prefixed}" "${name}"
       else
-         log_error "${address} is a file, not sure what to do for ${url}"
+         log_warning "${prefixed} is a file, not sure what to do"
       fi
    else
       log_verbose "Destination \"${prefixed}\" doesn't exist."
 
-      _fixup_dir_not_found "${url}" "${prefixed}" "${name}"
+      _fixup_dir_not_found "${prefixed}" "${name}"
    fi
    # mo there
 }
@@ -199,11 +186,11 @@ sourcetree_fix()
    local filtermarks="$3"
    local mode="$4"
 
-   walk_config_uuids "walk_fix" \
-                     "${filternodetypes}" \
+   walk_config_uuids "${filternodetypes}" \
                      "${filterpermissions}" \
                      "${filtermarks}" \
-                     "${mode}"
+                     "${mode}" \
+                     "walk_fix"
 }
 
 
@@ -215,12 +202,9 @@ sourcetree_fix_main()
    local OPTION_PERMISSIONS="" # empty!
    local OPTION_NODETYPES="ALL"
    local OPTION_WALK_DB="DEFAULT"
-   local OPTION_RECURSIVE
    local OPTION_IS_UPTODATE="NO"
    local OPTION_OUTPUT_HEADER="DEFAULT"
    local OPTION_OUTPUT_RAW="YES"
-
-   _db_set_default_options
 
    while [ $# -ne 0 ]
    do
@@ -253,14 +237,6 @@ sourcetree_fix_main()
             OPTION_PERMISSIONS="$1"
          ;;
 
-         -r|--recurse|--recursive)
-            OPTION_RECURSIVE="YES"
-         ;;
-
-         --no-recurse|--no-recursive)
-            OPTION_RECURSIVE="NO"
-         ;;
-
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown fix option $1"
             sourcetree_fix_usage
@@ -286,11 +262,9 @@ sourcetree_fix_main()
       fail "The sourctree isn't updated. Can't fix config entries"
    fi
 
-   mode="prefix"
-   if [ "${OPTION_RECURSIVE}" = "YES" ]
-   then
-      mode="`concat "${mode}" "recurse"`"
-   fi
+   local mode
+
+   mode="${SOURCETREE_MODE}"
 
    sourcetree_fix "${OPTION_NODETYPES}" \
                   "${OPTION_PERMISSIONS}" \

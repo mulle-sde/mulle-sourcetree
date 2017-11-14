@@ -86,7 +86,7 @@ run_test1()
    fi
    log_verbose "----- #2 PASSED -----"
 
-   if ! run_mulle_sourcetree update --recursive # > /dev/null 2>&1
+   if ! run_mulle_sourcetree --recurse update  # > /dev/null 2>&1
    then
       fail "update failed unexpectedly"
    fi

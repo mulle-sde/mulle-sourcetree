@@ -154,82 +154,6 @@ sourcetree_libexec_path()
 }
 
 
-_init()
-{
-   #
-   # minimal setup exit
-   #
-   if [ "$1" = "version" ]
-   then
-      echo "${MULLE_EXECUTABLE_VERSION}"
-      exit 0
-   fi
-
-   MULLE_SOURCETREE_LIBEXEC_DIR="`sourcetree_libexec_path "$0"`"
-   if [ -z "${MULLE_SOURCETREE_LIBEXEC_DIR}" ]
-   then
-      echo "Fatal Error: Could not find libexec for ${MULLE_EXECUTABLE} ($PWD)" >&2
-      exit 1
-   fi
-
-   #
-   # minimal setup exit
-   #
-   if [ "$1" = "library-path" ]
-   then
-      echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
-      exit 0
-   fi
-
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env library-path 2> /dev/null`"
-   if [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ]
-   then
-      if [ -z "`command -v "${executablepath}"`" ]
-      then
-          echo "Fatal Error: Could not find mulle-bashfunctions-env in PATH (not installed ?)" >&2
-      else
-         echo "Fatal Error: Could not find libexec of mulle-bashfunctions-env ($PWD)" >&2
-      fi
-      exit 1
-   fi
-
-   PATH="${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}:$PATH"
-   PATH="${MULLE_SOURCETREE_LIBEXEC_DIR}:$PATH"
-   export PATH
-
-   if [ ! -z "${MULLE_SOURCETREE_LIBEXEC_TRACE}" ]
-   then
-      echo "PATH=$PATH" >&2
-   fi
-
-   #
-   # to make these includes faster don't search via PATH
-   # but have PATH as fallback
-   #
-   local failmsg
-
-   failmsg="failed to load bashfunctions from ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}"
-
-      # shellcheck source=../mulle-bashfunctions/src/mulle-string.sh
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-string.sh"   || fail "${failmsg}"
-      # shellcheck source=../mulle-bashfunctions/src/mulle-logging.sh
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-logging.sh"  || fail "${failmsg}"
-      # shellcheck source=../mulle-bashfunctions/src/mulle-exekutor.sh
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-exekutor.sh" || fail "${failmsg}"
-      # shellcheck source=../mulle-bashfunctions/src/mulle-options.sh
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-options.sh"  || fail "${failmsg}"
-
-
-   #  set -e # more pain then gain in the end
-   #  set -u # doesn't work with my style
-
-   trap trap_fail INT
-   set -o pipefail
-
-   MULLE_ARGUMENTS="$*"
-}
-
-
 #
 # Read the CVS from the .repositories file
 #
@@ -289,11 +213,10 @@ parse_clone()
 }
 
 
-
 copy_repositories()
 {
    local filename="$1"
-   local mark="$2"
+   local marks="$2"
 
    local url
    local branch
@@ -303,7 +226,7 @@ copy_repositories()
 
    ROOT_DIR="${PWD}"
 
-   log_verbose "Copy ${C_RESET_BOLD}${filename}"
+   log_info "Copy ${C_RESET_BOLD}${filename}${C_INFO} contents"
 
    local clone
 
@@ -319,30 +242,41 @@ copy_repositories()
 
       parse_clone "${clone}"
 
+      local evaledurl
+
+      evaledurl="`eval echo "$url"`"
+      [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
+
+      if [ -z "${scm}" ]
+      then
+         scm="`exekutor ${MULLE_FETCH:-mulle-fetch} typeguess "${evaledurl}"`"
+      fi
+      scm="${scm:-git}"
+
+      # mark empty = normal
       if [ -z "${dstdir}" ]
       then
-         local evaledurl
-
-         evaledurl="`eval echo "$url"`"
-         [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
-
-         dstdir="`${MULLE_FETCH:-mulle-fetch} guess "${evaledurl}"`"
-         dstdir="stashes/${dstdir}"
+         dstdir="`exekutor ${MULLE_FETCH:-mulle-fetch} guess -s "${scm}" "${evaledurl}"`"
+         if [ -z "${marks}" ]
+         then
+            dstdir="subproject/${dstdir}"
+         fi
       fi
+
+
+      log_fluff "Adding ${scm} ${C_MAGENTA}${C_BOLD}${dstdir}${C_VERBOSE} ..."
 
       if ! exekutor mulle-sourcetree add -s "${scm}" \
                                          -b "${branch}" \
                                          -t "${tag}" \
-                                         "${url}" "${dstdir}"
+                                         -m "${marks}" \
+                                         -u "${url}" "${dstdir}"
       then
          exit 1
       fi
-      if ! [ -z "${mark}" ]
+
+      if ! [ -z "${marks}" ]
       then
-         if ! exekutor mulle-sourcetree mark "${url}" "${mark}"
-         then
-            exit 1
-         fi
          log_info "Added embedded ${C_MAGENTA}${C_BOLD}${url}${C_INFO} for \
 ${C_RESET_BOLD}${dstdir}${C_INFO}"
       else
@@ -353,17 +287,11 @@ ${C_RESET_BOLD}${dstdir}${C_INFO}"
 }
 
 
-
 convert_bootstrap()
 {
    local directory="$1"
 
-   if [ -f "${SOURCETREE_CONFIG_FILE}" ]
-   then
-      fail "There is already a ${SOURCETREE_CONFIG_FILE} here ($PWD)"
-   fi
-
-   if [ ! -d .bootstrap -a  ! -d .bootstrap.local ]
+   if [ ! -d .bootstrap -a ! -d .bootstrap.local ]
    then
       log_warning "No .bootstrap folders found ($PWD)"
       exit 0
@@ -376,6 +304,15 @@ The master can not be converted. Convert the minions! ($PWD)"
       exit 0
    fi
 
+   if [ -f "${SOURCETREE_CONFIG_FILE}" ]
+   then
+      if [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
+      then
+         fail "There is already a ${SOURCETREE_CONFIG_FILE} here ($PWD)"
+      fi
+      remove_file_if_present "${SOURCETREE_CONFIG_FILE}"
+   fi
+
    local found
 
    found="NO"
@@ -384,12 +321,12 @@ The master can not be converted. Convert the minions! ($PWD)"
    #
    if [ -f ".bootstrap.local/embedded_repositories" ]
    then
-      copy_repositories ".bootstrap.local/embedded_repositories" "nobuild"
+      copy_repositories ".bootstrap.local/embedded_repositories" "nobuild,noshare"
       found="YES"
    else
       if [ -f ".bootstrap/embedded_repositories" ]
       then
-         copy_repositories ".bootstrap/embedded_repositories" "nobuild"
+         copy_repositories ".bootstrap/embedded_repositories" "nobuild,noshare"
          found="YES"
       fi
    fi
@@ -435,7 +372,7 @@ main()
 
    local SOURCETREE_CONFIG_FILE=".mulle-sourcetree"
    local SOURCETREE_DB_DIR=".mulle-sourcetree.db"
-   local SOURCETREE_SHARED_DIR="stashes"
+   local MULLE_SOURCETREE_SHARED_DIR="stashes"
 
    #
    # simple option handling
@@ -506,6 +443,86 @@ main()
    ( cd "${directory}" &&  convert_bootstrap )
 }
 
+
+
+_init()
+{
+   #
+   # minimal setup exit
+   #
+   if [ "$1" = "version" ]
+   then
+      echo "${MULLE_EXECUTABLE_VERSION}"
+      exit 0
+   fi
+
+   MULLE_SOURCETREE_LIBEXEC_DIR="`sourcetree_libexec_path "$0"`"
+   if [ -z "${MULLE_SOURCETREE_LIBEXEC_DIR}" ]
+   then
+      echo "Fatal Error: Could not find libexec for ${MULLE_EXECUTABLE} ($PWD)" >&2
+      exit 1
+   fi
+
+   #
+   # minimal setup exit
+   #
+   if [ "$1" = "library-path" ]
+   then
+      echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
+      exit 0
+   fi
+
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env library-path 2> /dev/null`"
+   if [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ]
+   then
+      if [ -z "`command -v "${executablepath}"`" ]
+      then
+          echo "Fatal Error: Could not find mulle-bashfunctions-env in PATH (not installed ?)" >&2
+      else
+         echo "Fatal Error: Could not find libexec of mulle-bashfunctions-env ($PWD)" >&2
+      fi
+      exit 1
+   fi
+
+   PATH="${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}:$PATH"
+   PATH="${MULLE_SOURCETREE_LIBEXEC_DIR}:$PATH"
+   export PATH
+
+   if [ ! -z "${MULLE_SOURCETREE_LIBEXEC_TRACE}" ]
+   then
+      echo "PATH=$PATH" >&2
+   fi
+
+   #
+   # to make these includes faster don't search via PATH
+   # but have PATH as fallback
+   #
+   local failmsg
+
+   failmsg="failed to load bashfunctions from ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}"
+
+      # shellcheck source=../mulle-bashfunctions/src/mulle-string.sh
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-string.sh"   || fail "${failmsg}"
+      # shellcheck source=../mulle-bashfunctions/src/mulle-logging.sh
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-logging.sh"  || fail "${failmsg}"
+      # shellcheck source=../mulle-bashfunctions/src/mulle-exekutor.sh
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-exekutor.sh" || fail "${failmsg}"
+      # shellcheck source=../mulle-bashfunctions/src/mulle-options.sh
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-options.sh"  || fail "${failmsg}"
+      # shellcheck source=../mulle-bashfunctions/src/mulle-path.sh
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"     || fail "${failmsg}"
+      # shellcheck source=../mulle-bashfunctions/src/mulle-file.sh
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"     || fail "${failmsg}"
+
+
+   #  set -e # more pain then gain in the end
+   #  set -u # doesn't work with my style
+
+   trap trap_fail INT
+   set -o pipefail
+
+   MULLE_ARGUMENTS="$*"
+}
 
 _init "$@" # needs params
 main "$@"

@@ -44,25 +44,22 @@ Usage:
    Unprocessed node information is passed in the following environment
    variables:
 
-   MULLE_URL, MULLE_RAW_DSTFILE, MULLE_BRANCH, MULLE_TAG, MULLE_NODETYPE,
-   MULLE_UUID, MULLE_MARKS, MULLE_FETCHOPTIONS, MULLE_USERINFO
+   MULLE_URL  MULLE_RAW_ADDRESS  MULLE_BRANCH  MULLE_TAG  MULLE_NODETYPE
+   MULLE_UUID  MULLE_MARKS  MULLE_FETCHOPTIONS  MULLE_USERINFO
    MULLE_NODE
 
-   Additional processed information is passed in:
+   Additional information is passed in:
 
-   MULLE_DSTFILE and MULLE_ROOT_DIR.
+   MULLE_ADDRESS  MULLE_MODE  MULLE_PALIAS  MULLE_PREFIX  MULLE_ROOT_DIR.
 
 Options:
    -n <value>       : node types to walk (default: ALL)
    -p <value>       : specify permissions (missing)
    -m <value>       : specify marks to match (e.g. build)
-   --no-depth-first : walk tree breadth first
-   --internal       : callback gets internal parameter scheme
+   --cd             : change directory to node's working directory
    --lenient        : allow shell command to error
-   --no-cd          : don't cd into node's working directory
-   --no-prefix      : do not prefix MULLE_DSTFILE
-   --no-recurse     : do not recurse
-   --walk-db-dir    : walk over information contained in the database instead
+   --no-depth-first : walk tree differently
+   --walk-db        : walk over information contained in the database instead
 EOF
   exit 1
 }
@@ -198,18 +195,27 @@ walk_filter_marks()
 
 
 #
-# useful for running git on the repos or so
+# "cheat" and read values defined in _visit_nodeline
+# w/o passing them explicitly
 #
-__call_external()
+# useful for running git on the repos or so
+# this way the user can pass "echo '${MULLE_URL}'" and
+# the value gets printed
+#
+__call_callback()
 {
-   log_entry "__call_external" "$@"
+   log_entry "__call_callback" "$@"
 
-   local callback="${1}"; shift
+   local mode="$1"; shift
+   local callback="$1"; shift
 
+   MULLE_PREFIX="${prefix}" \
+   MULLE_PALIAS="${palias}" \
    MULLE_NODE="${nodeline}" \
+   MULLE_MODE="${mode}" \
    MULLE_URL="${url}" \
-   MULLE_DSTFILE="${prefixed}" \
-   MULLE_RAW_DSTFILE="${address}" \
+   MULLE_ADDRESS="${prefix}${address}" \
+   MULLE_RAW_ADDRESS="${address}" \
    MULLE_BRANCH="${branch}" \
    MULLE_TAG="${tag}" \
    MULLE_NODETYPE="${nodetype}" \
@@ -217,125 +223,134 @@ __call_external()
    MULLE_MARKS="${marks}" \
    MULLE_FETCHOPTIONS="${fetchoptions}" \
    MULLE_USERINFO="${userinfo}" \
-      eval_exekutor "${callback}" "$@"
+      _eval_exekutor "'${callback}'" "$@"
+
+   rval="$?"
+   if [ "${rval}" -eq 0 ]
+   then
+      return 0
+   fi
+
+   case "${mode}" in
+      *lenient*)
+         log_warning "Command '${callback}' failed for \"${MULLE_ADDRESS}\""
+         return 0
+      ;;
+   esac
+
+   fail "Command '${callback}' failed for \"${MULLE_ADDRESS}\""
+
+   return "$rval"
 }
 
 
 #
-# "cheat" and read values defined in _visit_nodeline
-# w/o passing them
+# clobbers:
 #
-__call_internal()
+# local old
+# local oldshared
+#
+__docd_preamble()
 {
-   log_entry "__call_internal" "$@"
+   local address="$1"
+   local relative
 
-   local callback="${1}"; shift
+   old="${PWD}"
+   oldshared="${MULLE_SOURCETREE_SHARED_DIR}"
+   relative="`compute_relative "${address}"`"
+   MULLE_SOURCETREE_SHARED_DIR="`filepath_concat "${MULLE_SOURCETREE_SHARED_DIR}" "${relative}"`"
+   MULLE_SOURCETREE_SHARED_DIR="`simplified_path "${MULLE_SOURCETREE_SHARED_DIR}"`"
+   exekutor cd "${address}"
+}
 
-   NODE="${nodeline}" \
-   RAW_DSTFILE="${address}" \
-      "${callback}" ${OPTION_CALLBACK_FLAGS} \
-                    "${url}" \
-                    "${prefixed}" \
-                    "${branch}" \
-                    "${tag}" \
-                    "${nodetype}" \
-                    "${marks}" \
-                    "${fetchoptions}" \
-                    "${useroptions}" \
-                    "${uuid}" \
-                    "$@"
+__docd_postamble()
+{
+   exekutor cd "${old}"
+   MULLE_SOURCETREE_SHARED_DIR="${oldshared}"
 }
 
 
+#
+# this never returns non-zero
+# it bails or ignores (lenient)
+#
 _visit_callback()
 {
    log_entry "_visit_callback" "$@"
 
-   local callback="$1"; shift
+   local prefix="$1"; shift
+   local palias="$1"; shift
    local address="$1"; shift
    local mode="$1"; shift
-
-   local rval
-   local old
+   local callback="$1"; shift
 
    case "${mode}" in
-      *external*)
-         if [ -d "${address}" ]
-         then
-            case "${mode}" in
-               *docd*)
-                  (
-                     exekutor cd "${address}" &&
-                     __call_external "${callback}" "$@"
-                  )
-                  return "$?"
-               ;;
-            esac
-         fi
+      *docd*)
+         [ -z "${prefix}" ] || internal_fail "docd should not have a prefix"
+         [ ! -d "${address}" ] && return 0
 
-         __call_external "${callback}" "$@"
-         return $?
+         local old
+         local oldshared
+
+         __docd_preamble "${address}"
+            __call_callback "${mode}" "${callback}" "$@"
+         __docd_postamble
+         return
+      ;;
+
+      *)
+         __call_callback "${mode}" "${callback}" "$@"
       ;;
    esac
-
-   if [ -d "${address}" ]
-   then
-      case "${mode}" in
-         *docd*)
-            # internally we want to preserve state and globals vars
-            # so dont subshell
-            old="${PWD}"
-            exekutor cd "${address}" &&
-            __call_internal "${callback}" "$@"
-            rval="$?"
-            cd "${old}"
-            return $rval
-         ;;
-      esac
-   fi
-
-   __call_internal "${callback}" "$@"
 }
 
 
+#
+# this should always return 0 except
+# if a callback failed and we are not lenient
+#
 _visit_recurse()
 {
    log_entry "_visit_recurse" "$@"
 
-   local prefixed="$1"; shift
-   local marks="$1"; shift
-   local address="$1"; shift
-
    local prefix="$1"; shift
-   local callback="$1"; shift
+   local palias="$1"; shift
+   local address="$1"; shift
+   local marks="$1"; shift
+
    local filternodetypes="$1"; shift
    local filterpermissions="$1"; shift
    local filtermarks="$1"; shift
    local mode="$1" ; shift
+   local callback="$1"; shift
+
+   local  actual
+
+   actual="${prefix}${address}"
 
    case "${mode}" in
-      *recurse*)
-         if nodemarks_contain_norecurse "${marks}"
-         then
-            log_debug "Do not recurse on \"${prefixed}\" due to norecurse mark"
-            return 0
-         fi
-
-         if ! [ -d "${prefixed}" ]
-         then
-            if [ -f "${prefixed}" ]
-            then
-               log_fluff "Do not recurse on \"${prefixed}\" as it's not a directory. ($PWD)"
-            else
-               log_debug "Can not recurse into \"${prefixed}\" as it's not there yet. ($PWD)"
-            fi
-            return 0
-         fi
+      *flat*)
+         log_debug "Non-recursive walk doesn't recurse on \"${actual}\""
+         return 0
       ;;
 
       *)
-         log_debug "Non-recursive walk doesn't recurse on \"${prefixed}\""
-         return 0
+         if nodemarks_contain_norecurse "${marks}"
+         then
+            log_debug "Do not recurse on \"${actual}\" due to norecurse mark"
+            return 0
+         fi
+
+         if ! [ -d "${actual}" ]
+         then
+            if [ -f "${actual}" ]
+            then
+               log_fluff "Do not recurse on \"${actual}\" as it's not a directory. ($PWD)"
+            else
+               log_debug "Can not recurse into \"${actual}\" as it's not there yet. ($PWD)"
+            fi
+            return 0
+         fi
       ;;
    esac
 
@@ -344,49 +359,54 @@ _visit_recurse()
    # so dont subshell
    #
    local old
-   local rval
+   local oldshared
+   local next_prefix
+   local next_palias
+
+   next_prefix="${prefix}"
+   next_palias="${palias}${address}/"
 
    case "${mode}" in
       *docd*)
-         old="${PWD}"
-         cd "${address}" || return 1
+         [ -z "${prefix}" ] || internal_fail "docd should not have a prefix"
+
+         __docd_preamble "${address}" || return 1
       ;;
 
-      *prefix*)
-         prefix="${prefixed}/"
+      *)
+         next_prefix="${prefix}${address}/"
       ;;
    esac
 
    case "${mode}" in
       *walkdb*)
-         _walk_db_uuids "${prefix}" \
-                        "${callback}" \
+         _walk_db_uuids "${next_prefix}" \
+                        "${next_palias}" \
                         "${filternodetypes}" \
                         "${filterpermissions}" \
                         "${filtermarks}" \
                         "${mode}" \
+                        "${callback}" \
                         "$@"
       ;;
 
       *)
-         _walk_config_uuids "${prefix}" \
-                            "${callback}" \
+         _walk_config_uuids "${next_prefix}" \
+                            "${next_palias}" \
                             "${filternodetypes}" \
                             "${filterpermissions}" \
                             "${filtermarks}" \
                             "${mode}" \
+                            "${callback}" \
                             "$@"
       ;;
    esac
-   rval="$?"
 
    case "${mode}" in
       *docd*)
-         cd "${old}" || return 1
+         __docd_postamble || return 1
       ;;
    esac
-
-   return $rval
 }
 
 
@@ -395,13 +415,172 @@ _visit_nodeline()
    log_entry "_visit_nodeline" "$@"
 
    local prefix="$1"; shift
+   local palias="$1"; shift
+   local address="$1"; shift
+   local mode="$1"; shift
+
+   #
+   # depth-first recurses before calling callback
+   #
+   case "${mode}" in
+      *depth-first*)
+         _visit_recurse "${prefix}" \
+                        "${palias}" \
+                        "${address}" \
+                        "${marks}" \
+\
+                        "${filternodetypes}" \
+                        "${filterpermissions}" \
+                        "${filtermarks}" \
+                        "${mode}" \
+                        "${callback}" \
+                        "$@"
+      ;;
+   esac
+
+   if [ ! -z "${callback}" ]
+   then
+      _visit_callback "${prefix}" \
+                      "${palias}" \
+                      "${address}" \
+                      "${mode}" \
+                      "${callback}" \
+                      "$@"
+   else
+      log_debug "No callback, why am I doing this ?"
+   fi
+
+   case "${mode}" in
+      *depth-first*)
+         return
+      ;;
+   esac
+
+   _visit_recurse "${prefix}" \
+                  "${palias}" \
+                  "${address}" \
+                  "${marks}" \
+\
+                  "${filternodetypes}" \
+                  "${filterpermissions}" \
+                  "${filtermarks}" \
+                  "${mode}" \
+                  "${callback}" \
+                  "$@"
+}
+
+
+_visit_share_nodeline()
+{
+   log_entry "_visit_share_nodeline" "$@"
+
+   local prefix="$1"; shift
+   local palias="$1"; shift
+   local address="$1"; shift
+   local mode="$1"; shift
+
+   local shareddir
+   local name
+
+#   [ -z "${MULLE_SOURCETREE_SHARED_DIR}" ] && internal_fail "MULLE_SOURCETREE_SHARED_DIR is empty"
+
+   name="`basename -- "${address}"`"
+   shareddir="`filepath_concat "${MULLE_SOURCETREE_SHARED_DIR}" "${name}"`"
+
+   if fgrep -q -s -x "${shareddir}" <<< "${VISITED}"
+   then
+      log_debug "\"${shareddir}\" is already known"
+      return
+   fi
+   VISITED="`add_line "${VISITED}" "${shareddir}"`"
+
+   #
+   # hacky hack. If shareddir exists visit that
+   # otherwise optimistically look for it where it is in
+   # recursive mode
+   #
+   local next_prefix
+   local next_palias
+   local next_address
+
+   case "${mode}" in
+      *docd*)
+         next_prefix="${prefix}"
+         next_address="${shareddir}"
+      ;;
+
+      *)
+         if [ ! -z "${MULLE_SOURCETREE_SHARED_DIR}" ]
+         then
+            next_prefix="${MULLE_SOURCETREE_SHARED_DIR}/"
+         fi
+         next_address="${name}"
+      ;;
+   esac
+
+   if [ ! -z "${MULLE_SOURCETREE_SHARED_DIR}" ]
+   then
+      next_palias="${MULLE_SOURCETREE_SHARED_DIR}/"
+   fi
+
+   if [ ! -e "${shareddir}" ]
+   then
+      if [ -e "${prefix}${address}" ]
+      then
+         next_prefix="${prefix}"
+         next_address="${address}"
+         log_debug "\"${shareddir}\" doesn't exist yet. Let's try \"${next_prefix}${next_address}\""
+      fi
+   fi
+
+   if ! walk_filter_permissions "${next_address}" "${filterpermissions}"
+   then
+      log_fluff "Node \"${address}\": \"${address}\" doesn't jive with permissions \"${filterpermissions}\""
+      return 0
+   fi
+
+   _visit_nodeline "${next_prefix}" \
+                   "${next_palias}" \
+                   "${next_address}" \
+                   "${mode}" \
+                   "$@" || return 1
+
+   #
+   # then visit leafs in not shared mode
+   # but here we need to do the filter check
+   #
+   local hackedmode
+
+   hackedmode="$(sed 's/share//' <<< "${mode}")"
+   hackedmode="`concat "${hackedmode}" "noshare"`"
+
+   _visit_recurse "${next_prefix}" \
+                  "${next_palias}" \
+                  "${next_address}" \
+                  "${marks}" \
+\
+                  "${filternodetypes}" \
+                  "${filterpermissions}" \
+                  "${filtermarks}" \
+                  "${hackedmode}" \
+                  "${callback}" \
+                  "$@"
+}
+
+
+_visit_filter_nodeline()
+{
+   log_entry "_visit_filter_nodeline" "$@"
+
+   local prefix="$1"; shift
+   local palias="$1"; shift
    local nodeline="$1"; shift
 
-   local callback="${1}"; shift
-   local filternodetypes="${1:-ALL}"; shift
-   local filterpermissions="${1}"; shift
-   local filtermarks="${1:-ANY}"; shift
-   local mode="${1}" ; shift
+   local filternodetypes="$1"; shift
+   local filterpermissions="$1"; shift
+   local filtermarks="$1"; shift
+   local mode="$1" ; shift
+   local callback="$1"; shift
 
    # rest are arguments
 
@@ -423,106 +602,77 @@ _visit_nodeline()
 
    if ! walk_filter_marks "${marks}" "${filtermarks}"
    then
-      log_fluff "Node \"${url}\": \"${marks}\" doesn't jive with marks \"${filtermarks}\""
+      log_fluff "Node \"${address}\": \"${marks}\" doesn't jive with marks \"${filtermarks}\""
       return 0
    fi
 
    if ! walk_filter_nodetypes "${nodetype}" "${filternodetypes}"
    then
-      log_fluff "Node \"${url}\": \"${nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
+      log_fluff "Node \"${address}\": \"${nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
       return 0
    fi
 
    if ! walk_filter_permissions "${address}" "${filterpermissions}"
    then
-      log_fluff "Node \"${url}\": \"${address}\" doesn't jive with permissions \"${filterpermissions}\""
+      log_fluff "Node \"${address}\": \"${address}\" doesn't jive with permissions \"${filterpermissions}\""
       return 0
    fi
 
-   log_debug "Node \"${url}\" passed the filter"
-
-   local prefixed
-
-   # will be used by __call_internal
-   prefixed="${address}"
-   case "${mode}" in
-      *docd*)
-         # if we cd into, prefixing is pointless
-      ;;
-
-      *prefix*)
-         prefixed="${prefix}${address}"
-      ;;
-   esac
+   log_debug "Node \"${address}\" passed the filters"
 
    #
-   # depth-first recurses before calling callback
+   # if we are walking in shared mode, then we fold the address
+   # into the shared directory.
    #
    case "${mode}" in
-      *depth-first*)
-         if ! _visit_recurse "${prefixed}" \
-                             "${marks}" \
-                             "${address}" \
-\
-                             "${prefix}" \
-                             "${callback}" \
-                             "${filternodetypes}" \
-                             "${filterpermissions}" \
-                             "${filtermarks}" \
-                             "${mode}" \
-                             "$@"
+      *share*)
+         if nodemarks_contain_share "${marks}"
          then
-            return 1
+            _visit_share_nodeline "${prefix}" \
+                                  "${palias}" \
+                                  "${address}" \
+                                  "${mode}" \
+                                  "$@"
+            return $?
          fi
       ;;
    esac
 
-   _visit_callback "${callback}" \
+
+   _visit_nodeline "${prefix}" \
+                   "${palias}" \
                    "${address}" \
                    "${mode}" \
                    "$@"
-   rval=$?
-
-   if [ ${rval} -ne 0 ]
-   then
-      case "${mode}" in
-         *lenient*)
-            log_warning "Command '${callback}' failed for \"${prefixed}\""
-         ;;
-
-         *)
-            fail "Command '${callback}' failed for \"${prefixed}\""
-            return 1
-         ;;
-      esac
-   fi
-
-   case "${mode}" in
-      *depth-first*)
-         return
-      ;;
-   esac
-
-   _visit_recurse "${prefixed}" \
-                  "${marks}" \
-                  "${address}" \
-\
-                  "${prefix}" \
-                  "${callback}" \
-                  "${filternodetypes}" \
-                  "${filterpermissions}" \
-                  "${filtermarks}" \
-                  "${mode}" \
-                  "$@"
 }
 
 
+#
+# Mode        | Description
+# ------------|---------------------------------------------------------
+# docd        | When visiting a node that's a directory cd there for the
+#             | callback and recursive walk.
+# ------------|---------------------------------------------------------
+# recursive   | Visit children of nodes
+# ------------|---------------------------------------------------------
+# share       | The addresses are modified as when updating share
+# ------------|---------------------------------------------------------
+#
+#
 _walk_nodelines()
 {
    log_entry "_walk_nodelines" "$@"
 
    local prefix="$1"; shift
+   local palias="$1"; shift
    local nodelines="$1"; shift
+
+   local mode="$4"
+
+   if ! _print_walk_info "${palias}" "${nodelines}" "${mode}"
+   then
+      return
+   fi
 
    IFS="
 "
@@ -532,7 +682,7 @@ _walk_nodelines()
 
       [ -z "${nodeline}" ] && continue
 
-      if ! _visit_nodeline "${prefix}" "${nodeline}" "$@"
+      if ! _visit_filter_nodeline "${prefix}" "${palias}" "${nodeline}" "$@"
       then
          return 1
       fi
@@ -544,6 +694,8 @@ _walk_nodelines()
 
 _print_walk_info()
 {
+   log_entry "_print_walk_info" "$@"
+
    local prefix="$1"
    local nodelines="$2"
    local mode="$3"
@@ -552,20 +704,20 @@ _print_walk_info()
    then
       if [ -z "${prefix}" ]
       then
-         log_info "Nothing to walk over"
-      else
          log_fluff "Nothing to walk over ($PWD)"
+      else
+         log_fluff "Nothing to walk over ($prefix)"
       fi
       return 1
    fi
 
    case "${mode}" in
-      *recurse*)
-         log_verbose "Recursive walk \"${prefix:-.}\""
+      *flat*)
+         log_verbose "Flat walk \"${prefix:-.}\""
       ;;
 
       *)
-         log_verbose "Flat walk \"${prefix:-.}\""
+         log_verbose "Recursive walk \"${prefix:-.}\""
       ;;
    esac
 
@@ -573,34 +725,45 @@ _print_walk_info()
 }
 
 
-#
-# walk_auto_uuid settingname,callback,permissions,SOURCETREE_DB_DIR ...
-#
-_walk_config_uuids()
+assert_prefix()
 {
-   log_entry "_walk_config_uuids" "$@"
-
-   local nodelines
-
-   local prefix="$1"; shift
-   local mode="$5"
+   local prefix="$1"
 
    case "${prefix}" in
       */|"")
       ;;
 
       *)
-         prefix="${prefix}/"
+         internal_fail "need / suffix"
       ;;
    esac
+}
+
+#
+# walk_auto_uuid settingname,callback,permissions,SOURCETREE_DB_DIR ...
+#
+# prefix:  in a configuration where we do not 'cd' this is the current
+#          offset from ${PWD} to the current .mulle-sourcetree
+# palias:  in shared configuration, this is what the user will see as
+#          the prefix. In regular configuration this is the same as
+#          prefix.
+#
+#          Hence we always read with prefix and we always print with palias
+#
+_walk_config_uuids()
+{
+   log_entry "_walk_config_uuids" "$@"
+
+   local prefix="$1"; shift # !
+   local palias="$1"; shift # !
+
+   assert_prefix "${prefix}"
+   assert_prefix "${palias}"
+
+   local nodelines
 
    nodelines="`nodeline_config_read "${prefix}"`"
-   if ! _print_walk_info "${prefix}" "${nodelines}" "${mode}"
-   then
-      return
-   fi
-
-   _walk_nodelines "${prefix}" "${nodelines}" "$@"
+   _walk_nodelines "${prefix}" "${palias}" "${nodelines}" "$@"
 }
 
 
@@ -608,12 +771,12 @@ walk_config_uuids()
 {
    log_entry "walk_config_uuids" "$@"
 
-   _walk_config_uuids "" "$@"
+   _walk_config_uuids "" "" "$@"
 }
 
 
 #
-# walk_db_uuids unused,callback,permissions,SOURCETREE_DB_DIR ...
+# walk_db_uuids
 #
 _walk_db_uuids()
 {
@@ -622,22 +785,13 @@ _walk_db_uuids()
    local nodelines
 
    local prefix="$1"; shift
-   case "${prefix}" in
-      */|"")
-      ;;
+   local palias="$1"; shift
 
-      *)
-         prefix="${prefix}/"
-      ;;
-   esac
+   assert_prefix "${prefix}"
+   assert_prefix "${palias}"
 
    nodelines="`db_get_all_nodelines "${prefix}"`"
-   if ! _print_walk_info "${prefix}" "${nodelines}" "${mode}"
-   then
-      return
-   fi
-
-   _walk_nodelines "${prefix}" "${nodelines}" "$@"
+   _walk_nodelines "${prefix}" "${palias}" "${nodelines}" "$@"
 }
 
 
@@ -645,7 +799,61 @@ walk_db_uuids()
 {
    log_entry "walk_db_uuids" "$@"
 
-   _walk_db_uuids "" "$@"
+   _walk_db_uuids "" "" "$@"
+}
+
+
+sourcetree_walk()
+{
+   log_entry "sourcetree_walk" "$@"
+
+   local filternodetypes="${1:-ALL}"; shift
+   local filterpermissions="${1}"; shift
+   local filtermarks="${1:-ANY}"; shift
+   local mode="${1}" ; shift
+   local callback="${1}"; shift
+
+   [ -z "${mode}" ] && internal_fail "mode can't be empty"
+
+   MULLE_ROOT_DIR="`pwd -P`"
+   export MULLE_ROOT_DIR
+
+   case "${mode}" in
+      *callroot*)
+         local address="."
+         local prefixed="."
+
+         MULLE_WALK_SUPRESS="YES" __call_callback "${mode}" "${callback}" "$@"
+      ;;
+   esac
+
+   case "${mode}" in
+      *walkdb*)
+         walk_db_uuids "${filternodetypes}" \
+                       "${filterpermissions}" \
+                       "${filtermarks}" \
+                       "${mode}" \
+                       "${callback}" \
+                       "$@"
+      ;;
+
+      *)
+         walk_config_uuids "${filternodetypes}" \
+                           "${filterpermissions}" \
+                           "${filtermarks}" \
+                           "${mode}" \
+                           "${callback}" \
+                           "$@"
+      ;;
+   esac
+}
+
+
+sourcetree_walk_config_internal()
+{
+   log_entry "sourcetree_walk_config_internal" "$@"
+
+   sourcetree_walk "" "" "" "$@"
 }
 
 
@@ -655,28 +863,29 @@ sourcetree_walk_main()
 
    local MULLE_ROOT_DIR
 
-   MULLE_ROOT_DIR="`pwd -P`"
-   export MULLE_ROOT_DIR
-
-   local OPTION_MARKS="ANY"
-   local OPTION_PERMISSIONS="" # empty!
-   local OPTION_NODETYPES="ALL"
+   local OPTION_CALLBACK_ROOT="DEFAULT"
    local OPTION_CD="DEFAULT"
-   local OPTION_WALK_DB="DEFAULT"
-   local OPTION_RECURSIVE
-   local OPTION_CALLBACK_FLAGS
+   local OPTION_DEPTH_FIRST="DEFAULT"
    local OPTION_EXTERNAL_CALL="YES"
    local OPTION_LENIENT="YES"
-   local OPTION_PREFIX="YES"
-   local OPTION_DEPTH_FIRST="DEFAULT"
-
-   _db_set_default_options
+   local OPTION_MARKS="ANY"
+   local OPTION_NODETYPES="ALL"
+   local OPTION_PERMISSIONS="" # empty!
+   local OPTION_WALK_DB="DEFAULT"
 
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h|-help|--help)
             sourcetree_walk_usage
+         ;;
+
+         --callback-root)
+            OPTION_CALLBACK_ROOT="YES"
+         ;;
+
+         --no-callback-root)
+            OPTION_CALLBACK_ROOT="NO"
          ;;
 
          --cd)
@@ -695,14 +904,6 @@ sourcetree_walk_main()
             OPTION_WALK_DB="NO"
          ;;
 
-         --internal)
-            OPTION_EXTERNAL_CALL="NO"
-         ;;
-
-         --external)
-            OPTION_EXTERNAL_CALL="YES"
-         ;;
-
          --depth-first)
             OPTION_DEPTH_FIRST="YES"
          ;;
@@ -711,23 +912,17 @@ sourcetree_walk_main()
             OPTION_DEPTH_FIRST="NO"
          ;;
 
-         --no-prefix)
-            OPTION_PREFIX="NO"
+         -l|--lenient)
+            OPTION_LENIENT="YES"
          ;;
 
          --no-lenient)
             OPTION_LENIENT="NO"
          ;;
 
-         --callback-flags)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
-            shift
-
-            OPTION_CALLBACK_FLAGS="$1"
-         ;;
 
          #
-         # more common flags
+         # filter flags
          #
          -m|--marks)
             [ $# -eq 1 ] && fail "missing argument to \"$1\""
@@ -750,18 +945,6 @@ sourcetree_walk_main()
             OPTION_PERMISSIONS="$1"
          ;;
 
-         -l|--lenient)
-            OPTION_LENIENT="YES"
-         ;;
-
-         -r|--recurse|--recursive)
-            OPTION_RECURSIVE="YES"
-         ;;
-
-         --no-recurse|--no-recursive)
-            OPTION_RECURSIVE="NO"
-         ;;
-
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown walk option $1"
             sourcetree_walk_usage
@@ -782,19 +965,13 @@ sourcetree_walk_main()
    callback="$1"
    shift
 
-   mode=""
+   local mode
 
-   if [ "${OPTION_RECURSIVE}" = "YES" ]
-   then
-      mode="`concat "${mode}" "recurse"`"
-   fi
+   mode="${SOURCETREE_MODE}"
+
    if [ "${OPTION_DEPTH_FIRST}" != "NO" ] # is default
    then
       mode="`concat "${mode}" "depth-first"`"
-   fi
-   if [ "${OPTION_PREFIX}" = "YES" ]
-   then
-      mode="`concat "${mode}" "prefix"`"
    fi
    if [ "${OPTION_LENIENT}" = "YES" ]
    then
@@ -808,24 +985,21 @@ sourcetree_walk_main()
    then
       mode="`concat "${mode}" "external"`"
    fi
-
    if [ "${OPTION_WALK_DB}" = "YES" ]
    then
-       mode="`concat "${mode}" "walkdb"`"
-       walk_db_uuids "${callback}" \
-                     "${OPTION_NODETYPES}" \
-                     "${OPTION_PERMISSIONS}" \
-                     "${OPTION_MARKS}" \
-                     "${mode}" \
-                     "$@"
-   else
-       walk_config_uuids "${callback}" \
-                         "${OPTION_NODETYPES}" \
-                         "${OPTION_PERMISSIONS}" \
-                         "${OPTION_MARKS}" \
-                         "${mode}" \
-                         "$@"
+      mode="`concat "${mode}" "walkdb"`"
    fi
+   if [ "${OPTION_CALLBACK_ROOT}" = "YES" ]
+   then
+      mode="`concat "${mode}" "callroot"`"
+   fi
+
+   sourcetree_walk "${OPTION_NODETYPES}" \
+                   "${OPTION_PERMISSIONS}" \
+                   "${OPTION_MARKS}" \
+                   "${mode}" \
+                   "${callback}" \
+                   "$@"
 }
 
 

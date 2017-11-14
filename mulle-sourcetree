@@ -57,8 +57,8 @@ SHOWN_COMMANDS="\
    add           : add a node to the configuration
    buildorder    : emit nodes that are buildable in proper dependency order
    clean         : remove files added by an update
-   list          : list nodes in the configuration
-   remove        : remove a node from the configuration
+   info          : print current sourcetree information
+   print         : list nodes recursively in the configuration
    set           : set a node's properties in the configuration
    status        : query state of the tree
    update        : update the project tree [default]"
@@ -68,8 +68,10 @@ HIDDEN_COMMANDS="\
    fix           : support to track user modifications in the filesystem
    get           : get a node's properties from the configuration
    library-path  : print path to ${MULLE_EXECUTABLE_NAME} libexec
+   list          : list nodes in the current configuration
    mark          : add or remove a mark from a node in the configuration
    walk          : visit all the tree nodes with a callback
+   remove        : remove a node from the configuration
    reset         : clear the database, to force an update
    uname         : ${MULLE_EXECUTABLE_NAME}'s simplified uname(1)
    version       : print ${MULLE_EXECUTABLE_NAME} version"
@@ -130,6 +132,289 @@ EOF
    exit 1
 }
 
+
+main()
+{
+   local MULLE_FLAG_MAGNUM_FORCE="NONE"
+   local MULLE_FLAG_IGNORE_GRAVEYARD="NO"
+
+   # technical flags
+   local MULLE_FLAG_EXEKUTOR_DRY_RUN="NO"
+   local MULLE_FLAG_LOG_LOCAL="NO"
+   local MULLE_FLAG_LOG_DEBUG="NO"
+   local MULLE_FLAG_LOG_EXEKUTOR="NO"
+   local MULLE_FLAG_LOG_FLUFF="NO"
+   local MULLE_FLAG_LOG_SCRIPTS="NO"
+   local MULLE_FLAG_LOG_SETTINGS="NO"
+   local MULLE_FLAG_LOG_VERBOSE="NO"
+   local MULLE_FLAG_LOG_MERGE="NO"
+   local MULLE_TRACE_POSTPONE="NO"
+   local MULLE_FLAG_DEFER="ROOT"
+
+   local FLAG_SOURCETREE_MODE=
+
+   local SOURCETREE_CONFIG_FILE=".mulle-sourcetree"
+   local SOURCETREE_DEFAULT_FILE=".mulle-sourcetree.default"
+   local SOURCETREE_DB_DIR=".mulle-sourcetree.db"
+   local SOURCETREE_FIX_FILE=".mulle-sourcetree.fix"
+
+
+   #
+   # simple option handling
+   #
+   while [ $# -ne 0 ]
+   do
+      if options_technical_flags "$1"
+      then
+         shift
+         continue
+      fi
+
+      case "$1" in
+         -f|--force)
+            MULLE_FLAG_MAGNUM_FORCE="BOTH"
+         ;;
+
+         -h|--help)
+            usage "${MULLE_TRACE}"
+         ;;
+
+         --git-terminal-prompt)
+            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            shift
+
+            GIT_TERMINAL_PROMPT="$1"
+            export GIT_TERMINAL_PROMPT
+         ;;
+
+         --database-dir)
+            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            shift
+
+            SOURCETREE_DB_DIR="$1"
+         ;;
+
+         --config|--config-file)
+            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            shift
+
+            SOURCETREE_CONFIG_FILE="$1"
+         ;;
+
+         -D|--defer|--defer-root)
+            MULLE_FLAG_DEFER="ROOT";
+         ;;
+
+         -r|--recurse|--recursive)
+            FLAG_SOURCETREE_MODE="recurse"
+         ;;
+
+         --flat)
+            FLAG_SOURCETREE_MODE="flat"
+         ;;
+
+         --share)
+            FLAG_SOURCETREE_MODE="share"
+         ;;
+
+         --defer-parent)
+            MULLE_FLAG_DEFER="PARENT";
+         ;;
+
+         -N|--no-defer)
+            MULLE_FLAG_DEFER="NONE";
+         ;;
+
+         --version)
+            echo "${MULLE_EXECUTABLE_VERSION}"
+            exit 0
+         ;;
+
+         -*)
+            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown flag \"$1\""
+            usage "${MULLE_TRACE}"
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
+   options_setup_trace "${MULLE_TRACE}"
+
+   local cmd
+
+   cmd="${1:-update}"
+
+   MULLE_EXECUTABLE_FAIL_PREFIX="${MULLE_EXECUTABLE_NAME} ${cmd}"
+   [ $# -eq 0 ] || shift
+
+   if [ -z "${MULLE_FETCH}" ]
+   then
+      MULLE_FETCH="mulle-fetch"
+   fi
+
+   # shellcheck source=mulle-sourcetree-db.sh
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
+   # shellcheck source=mulle-sourcetree-node.sh
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   # shellcheck source=mulle-sourcetree-nodeline.sh
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
+
+   nodeline_defer_if_needed "ROOT"
+
+   local SOURCETREE_MODE
+
+   _db_set_default_mode "${FLAG_SOURCETREE_MODE}"
+
+   #
+   #
+   #
+   case "${cmd}" in
+      add)
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+
+         sourcetree_add_main "$@"
+      ;;
+
+      buildorder)
+         # shellcheck source=src/mulle-sourcetree-walk.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
+
+          "$@"
+      ;;
+
+      clean)
+         # shellcheck source=src/mulle-sourcetree-db.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombie.sh"
+
+         zombie_clean_main "$@"
+      ;;
+
+      dotdump)
+         # shellcheck source=src/mulle-sourcetree-dotdump.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dotdump.sh"
+
+         sourcetree_dotdump_main "$@"
+      ;;
+
+      fix)
+         # shellcheck source=src/mulle-sourcetree-fix.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-fix.sh"
+
+         sourcetree_fix_main "$@"
+      ;;
+
+      get)
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+
+         sourcetree_get_main "$@"
+      ;;
+
+      help)
+         usage "${MULLE_TRACE}"
+      ;;
+
+      info)
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+
+         sourcetree_info_main "$@"
+      ;;
+
+      library-path)
+         echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
+      ;;
+
+      list)
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+
+         sourcetree_list_main "$@"
+      ;;
+
+      mark)
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+
+         sourcetree_mark_main "$@"
+      ;;
+
+      print)
+         # shellcheck source=src/mulle-sourcetree-walk.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
+
+         sourcetree_walk_main --no-depth-first --callback-root --cd \
+               "${MULLE_EXECUTABLE}" --flat -N list --output-eval
+      ;;
+
+      remove)
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+
+         sourcetree_remove_main "$@"
+      ;;
+
+      reset)
+         # shellcheck source=src/mulle-sourcetree-reset.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-reset.sh"
+
+         sourcetree_reset_main "$@"
+      ;;
+
+      set)
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+
+         sourcetree_set_main "$@"
+      ;;
+
+      status)
+         # shellcheck source=src/mulle-sourcetree-status.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-status.sh"
+
+         sourcetree_status_main "$@"
+      ;;
+
+      uname)
+         echo "${UNAME}"
+      ;;
+
+      update)
+         # shellcheck source=src/mulle-sourcetree-update.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh"
+
+         sourcetree_update_main "$@"
+      ;;
+
+      walk)
+         # shellcheck source=src/mulle-sourcetree-walk.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
+
+         sourcetree_walk_main "$@"
+      ;;
+
+      version)
+         echo "${MULLE_EXECUTABLE_VERSION}"
+         return 0
+      ;;
+
+      *)
+         log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown command \"${cmd}\""
+         usage "${MULLE_TRACE}"
+      ;;
+   esac
+}
+
+########
+###
+### INIT
+###
 
 #
 # stolen from:
@@ -283,227 +568,10 @@ _init()
    MULLE_ARGUMENTS="$*"
 }
 
-
-main()
-{
-   local MULLE_FLAG_MAGNUM_FORCE="NONE"
-   local MULLE_FLAG_IGNORE_GRAVEYARD="NO"
-
-   # technical flags
-   local MULLE_FLAG_EXEKUTOR_DRY_RUN="NO"
-   local MULLE_FLAG_LOG_LOCAL="NO"
-   local MULLE_FLAG_LOG_DEBUG="NO"
-   local MULLE_FLAG_LOG_EXEKUTOR="NO"
-   local MULLE_FLAG_LOG_FLUFF="NO"
-   local MULLE_FLAG_LOG_SCRIPTS="NO"
-   local MULLE_FLAG_LOG_SETTINGS="NO"
-   local MULLE_FLAG_LOG_VERBOSE="NO"
-   local MULLE_FLAG_LOG_MERGE="NO"
-   local MULLE_TRACE_POSTPONE="NO"
-
-   local SOURCETREE_CONFIG_FILE=".mulle-sourcetree"
-   local SOURCETREE_DB_DIR=".mulle-sourcetree.db"
-   local SOURCETREE_SHARED_DIR="stashes"
-   local SOURCETREE_FIX_FILE=".mulle-sourcetree.fix"
-   #
-   # simple option handling
-   #
-   while [ $# -ne 0 ]
-   do
-      if options_technical_flags "$1"
-      then
-         shift
-         continue
-      fi
-
-      case "$1" in
-         -f|--force)
-            MULLE_FLAG_MAGNUM_FORCE="BOTH"
-         ;;
-
-         -h|--help)
-            usage "${MULLE_TRACE}"
-         ;;
-
-         --git-terminal-prompt)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
-            shift
-
-            GIT_TERMINAL_PROMPT="$1"
-            export GIT_TERMINAL_PROMPT
-         ;;
-
-         --database-dir)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
-            shift
-
-            SOURCETREE_DB_DIR="$1"
-         ;;
-
-         --config|--config-file)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
-            shift
-
-            SOURCETREE_CONFIG_FILE="$1"
-         ;;
-
-         --version)
-            echo "${MULLE_EXECUTABLE_VERSION}"
-            exit 0
-         ;;
-
-         -*)
-            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown option \"$1\""
-            usage "${MULLE_TRACE}"
-         ;;
-
-         *)
-            break
-         ;;
-      esac
-
-      shift
-   done
-
-   options_setup_trace "${MULLE_TRACE}"
-
-   local cmd
-
-   cmd="${1:-update}"
-
-   MULLE_EXECUTABLE_FAIL_PREFIX="${MULLE_EXECUTABLE_NAME} ${cmd}"
-   [ $# -eq 0 ] || shift
-
-   if [ -z "${MULLE_FETCH}" ]
-   then
-      MULLE_FETCH="mulle-fetch"
-   fi
-
-   #
-   #
-   #
-   case "${cmd}" in
-      add)
-         # shellcheck source=src/mulle-sourcetree-config.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
-
-         sourcetree_add_main "$@"
-      ;;
-
-      buildorder)
-         # shellcheck source=src/mulle-sourcetree-walk.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
-
-         sourcetree_buildorder_main "$@"
-      ;;
-
-      clean)
-         # shellcheck source=src/mulle-sourcetree-db.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombie.sh"
-
-         zombie_clean_main "$@"
-      ;;
-
-      dotdump)
-         # shellcheck source=src/mulle-sourcetree-dotdump.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dotdump.sh"
-
-         sourcetree_dotdump_main "$@"
-      ;;
-
-      fix)
-         # shellcheck source=src/mulle-sourcetree-fix.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-fix.sh"
-
-         sourcetree_fix_main "$@"
-      ;;
-
-      get)
-         # shellcheck source=src/mulle-sourcetree-config.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
-
-         sourcetree_get_main "$@"
-      ;;
-
-      help)
-         usage "${MULLE_TRACE}"
-      ;;
-
-      library-path)
-         echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
-      ;;
-
-      list)
-         # shellcheck source=src/mulle-sourcetree-config.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
-
-         sourcetree_list_main "$@"
-      ;;
-
-      mark)
-         # shellcheck source=src/mulle-sourcetree-config.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
-
-         sourcetree_mark_main "$@"
-      ;;
-
-      remove)
-         # shellcheck source=src/mulle-sourcetree-config.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
-
-         sourcetree_remove_main "$@"
-      ;;
-
-      reset)
-         # shellcheck source=src/mulle-sourcetree-db.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
-
-         db_reset_main "$@"
-      ;;
-
-      set)
-         # shellcheck source=src/mulle-sourcetree-config.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
-
-         sourcetree_set_main "$@"
-      ;;
-
-      status)
-         # shellcheck source=src/mulle-sourcetree-status.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-status.sh"
-
-         sourcetree_status_main "$@"
-      ;;
-
-      uname)
-         echo "${UNAME}"
-      ;;
-
-      update)
-         # shellcheck source=src/mulle-sourcetree-update.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh"
-
-         sourcetree_update_main "$@"
-      ;;
-
-      walk)
-         # shellcheck source=src/mulle-sourcetree-walk.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
-
-         sourcetree_walk_main "$@"
-      ;;
-
-      version)
-         echo "${MULLE_EXECUTABLE_VERSION}"
-         return 0
-      ;;
-
-      *)
-         log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown command \"${cmd}\""
-         usage "${MULLE_TRACE}"
-      ;;
-   esac
-}
+###
+### INIT
+###
+########
 
 
 _init "$@" # needs params

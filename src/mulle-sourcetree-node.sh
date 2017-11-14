@@ -46,7 +46,7 @@ node_guess_address()
    log_entry "node_guess_address" "$@"
 
    local url="$1"
-   local nodetype="${2:-none}"
+   local nodetype="${2:-local}"
 
    [ -z "${url}" ] && fail "URL is empty"
 
@@ -99,7 +99,6 @@ node_fetch_operation()
    local nodetype="$1"; shift
    local fetchoptions="$1"; shift
 
-   local options
    local rval
    local evaledurl
    local evaledbranch
@@ -156,16 +155,37 @@ node_augment()
       uuid="$(node_uuidgen)"
    fi
 
-   nodetype="${nodetype:-none}"
+   nodetype="${nodetype:-local}"
 
    case "${nodetype}" in
-      "none")
-         # nones have no url and that is important
+      "local")
+         # locals have no url and that is important
          if [ ! -z "${url}" ]
          then
             log_warning "Url is always empty for nodetype \"${nodetype}\""
          fi
          url=
+
+         #
+         # since they are local, they can not be deleted and are always required
+         #
+         local before
+
+         before="${marks}"
+
+         if nodemarks_contain_delete "${marks}"
+         then
+            marks="`nodemarks_remove_delete "${marks}"`"
+         fi
+         if ! nodemarks_contain_require "${marks}"
+         then
+            marks="`nodemarks_add_require "${marks}"`"
+         fi
+
+         if [ "${before}" != "${marks}" ]
+         then
+            log_info "Nodes of nodetype \"${nodetype}\" are always \"nodelete,require\""
+         fi
       ;;
    esac
 

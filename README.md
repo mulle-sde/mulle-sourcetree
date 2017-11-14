@@ -1,32 +1,50 @@
-# mulle-sourcetree, cross platform sourcetree
- compositor
+# mulle-sourcetree, cross platform sourcetree compositor
 
 ![Last version](https://img.shields.io/github/tag/mulle-nat/mulle-sourcetree.svg)
 
 ... for Linux, OS X, FreeBSD, Windows
 
+#### Capabilities
 
-Add archives and repositories to your project and place them freely whereever
-you want.
+* maintains local (file, folder) or external tree nodes (archive, repository)
+* can decorate tree nodes with marks (flags), which can be queried later
+* can store an arbitrary binary blob with each node as userinfo
+* can deal with sourcetrees within sourcetrees (recursive operation)
+* can walk the sourcetree with qualifiers
+* support the repair of the sourcetree after filesystem changes
 
-In the most simple example, this will download `zlib` and unpack it in the
-desired location `external/expat`:
+#### What this enables you to do
 
+* build sub-projects in the correct order
+* build platform specifica without #ifdef or complicated Makefiles
+* acquire required sub-projects dependent on the platform
+
+
+<script type="text/javascript" src="https://asciinema.org/a/147241.js" id="asciicast-147241" async></script>
+
+Organize your projects my adding archives and repositories to your project and placing them freely.
+
+
+## Decorate your source tree with marks
+
+You can decorate the nodes in the sourcetree with marks. Those you can query later on
 ```
-mulle-sourcetree add https://github.com/madler/zlib/archive/v1.2.11.tar.gz external/expat
+mulle-sourcetree add --url https://github.com/madler/zlib.git external/zlib
+mulle-sourcetree mark external/zlib nobuild
+mulle-sourcetree add --url https://github.com/noone/noexist.git external/noexist
+mulle-sourcetree mark external/zlib norequire
+mulle-sourcetree list
 mulle-sourcetree update
+mulle-sourcetree buildorder
 ```
 
+## Have sourcetrees within sourcetrees
 
-## A walkthrough through some of the options
 
-Add two external projects to your sourcetree:
 
-```
-mulle-sourcetree add https://github.com/madler/zlib.git external/zlib
-```
+## Stay in control with dotump
 
-See what you added with `mulle-sourcetree list`:
+Have a graphical overview of your sourcetree with **dotdump**
 
 ```
 url                                                    address     branch  tag  marks
@@ -35,47 +53,12 @@ https://github.com/madler/zlib/archive/v1.2.11.tar.gz  external/expat
 https://github.com/madler/zlib.git                     external/zlib   master
 ```
 
-See what will happen with:
-
 ```
 mulle-sourcetree dotdump > pic.dot
 open pic.dot # view it with Graphviz (http://graphviz.org/)
 ```
 
 ![Picture](pic.png)
-
-
-Now download the external resources, then check the status of your sourcetree:
-
-```
-mulle-sourcetree update
-mulle-sourcetree status
-```
-
-
-```
-address     status
------------     ------
-.               ok
-external/expat  ok
-external/zlib   ok
-```
-
-Move stuff around:
-
-```
-mulle-sourcetree set -d external/old/expat3
-mulle-sourcetree update
-mulle-sourcetree dotdump > pic.dot
-```
-
-Or do it manually with fixup
-
-
-```
-mv external/old/expat3  external/old/whateve
-mulle-sourcetree fix
-```
 
 
 

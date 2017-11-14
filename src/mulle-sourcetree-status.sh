@@ -45,30 +45,47 @@ Options:
    -n <value>     : node types to walk (default: ALL)
    -p <value>     : specify permissions (missing)
    -m <value>     : specify marks to match (e.g. build)
-   --recurse      : recurse
-   --no-recurse   : do not recurse
 EOF
   exit 1
 }
 
 
+#
+# we are arriving here in prefixed mode
+#
 emit_status()
 {
    log_entry "emit_status" "$@"
 
-   local directory="$1"
-   local marks="$2"
+   local prefixed="$1"
+   local paliased="$2"
+   local marks="$3"
+   local mode="$4"
 
    local rval
    local prefix
+   local palias
+   local name
+   local directory
 
-   if [ -z "${directory}" ]
+   if [ -z "${prefixed}" ]
    then
       prefix=""
       directory="."
    else
+      directory="${prefixed}"
+
+      case "${mode}" in
+         *share*)
+            directory="${paliased}"
+         ;;
+      esac
       prefix="${directory}/"
    fi
+
+   local fs
+
+   fs="missing"
 
    #
    # Dstfile    | Url | Marks     | Output
@@ -80,6 +97,11 @@ emit_status()
 
    if [ ! -e "${directory}" ]
    then
+      if [ -L "${directory}" ]
+      then
+         fs="broken"
+      fi
+
       if nodemarks_contain_norequire "${marks}"
       then
          #
@@ -92,7 +114,7 @@ emit_status()
          then
             return 0
          fi
-         echo "${directory};norequire"
+         exekutor echo "${directory};norequire;${fs}"
       else
          if [ -z "${url}" ]
          then
@@ -101,7 +123,7 @@ emit_status()
             then
                return 2   # indicate brokenness
             fi
-            echo "${directory};missing"
+            exekutor echo "${directory};update;${fs}"
             return 0
          fi
 
@@ -110,70 +132,92 @@ emit_status()
          then
             exit 1
          fi
-         echo "${directory};update"
+         exekutor echo "${directory};update;${fs}"
       fi
       return
-   fi
-
-   #
-   # Config     | Database | Config > DB | Output
-   # -----------|----------|-------------|----------
-   # not exists | *        | *           | ok
-   #
-
-   if ! nodeline_config_exists "${prefix}"
-   then
-      log_fluff "\"${directory}\" does not have a ${SOURCETREE_CONFIG_FILE} ($PWD)"
-
-      if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+   else
+      fs="file"
+      if [ -L "${directory}" ]
       then
-         return 0
+         fs="symlink"
+      else
+         if [ -d "${directory}" ]
+         then
+            fs="directory"
+         fi
       fi
-
-      echo "${directory};ok"
-      return
    fi
 
-   #
-   # Config  | Database   | Config > DB | Output
-   # --------|------------|-------------|----------
-   # exists  | not exists | *           | update
-   # exists  | updating   | *           | incomplete
-   # exists  | exists     | -           | ok
-   # exists  | exists     | +           | update
-   #
+   local status
 
-   if ! db_is_ready "${prefix}"
-   then
-      echo "${directory};update"
-      return 0
-   fi
+   status="ok"
 
-   if db_is_updating "${prefix}"
-   then
-      log_fluff "\"${directory}\" is marked as updating ($PWD)"
+   case "${mode}" in
+      *flat*)
+      ;;
 
-      echo "${directory};incomplete"
-      if [ "${OPTION_IS_UPTODATE}" = "YES" ]
-      then
-         exit 2  # only time we exit with 2 on IS_UPTODATE
-      fi
-      return 1
-   fi
+      *)
 
-   if ! db_is_uptodate "${prefix}"
-   then
-      log_fluff "\"${directory}\" database is stale ($PWD)"
+         #
+         # Config     | Database | Config > DB | Output
+         # -----------|----------|-------------|----------
+         # not exists | *        | *           | ok
+         #
 
-      echo "${directory};update"
-      return 0
-   fi
+         if ! nodeline_config_exists "${prefix}"
+         then
+            log_fluff "\"${directory}\" does not have a ${SOURCETREE_CONFIG_FILE} ($PWD)"
+
+            if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+            then
+               return 0
+            fi
+
+            exekutor echo "${directory};ok;${fs}"
+            return
+         fi
+
+         #
+         # Config  | Database   | Config > DB | Output
+         # --------|------------|-------------|----------
+         # exists  | not exists | *           | update
+         # exists  | updating   | *           | incomplete
+         # exists  | exists     | -           | ok
+         # exists  | exists     | +           | update
+         #
+
+         if ! db_is_ready "${prefix}"
+         then
+            status="update"
+         else
+            if db_is_updating "${prefix}"
+            then
+               log_fluff "\"${directory}\" is marked as updating ($PWD)"
+
+               if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+               then
+                  exit 2  # only time we exit with 2 on IS_UPTODATE
+               fi
+
+               exekutor echo "${directory};incomplete;${fs}"
+               return 1
+            fi
+
+            if ! db_is_uptodate "${prefix}"
+            then
+               log_fluff "\"${directory}\" database is stale ($PWD)"
+
+               status="update"
+            fi
+         fi
+      ;;
+   esac
 
    if [ "${OPTION_IS_UPTODATE}" = "YES" ]
    then
       return 0
    fi
-   echo "${directory};ok"
+   exekutor echo "${directory};${status};${fs}"
 }
 
 
@@ -181,19 +225,11 @@ walk_status()
 {
    log_entry "walk_status" "$@"
 
-#   url="$1"
-   prefixed="$2"
-#   branch="$3"
-#   tag="$4"
-#   nodetype="$5"
-    marks="$6"
-#   fetchoptions="$7"
-#   useroptions="$8"
-#   uuid="$9"
-
-   emit_status "${prefixed}" "${marks}"
+   emit_status "${MULLE_PREFIX}${MULLE_RAW_ADDRESS}" \
+               "${MULLE_PALIAS}${MULLE_RAW_ADDRESS}" \
+               "${MULLE_MARKS}" \
+               "${MULLE_MODE}"
 }
-
 
 
 sourcetree_status()
@@ -210,16 +246,23 @@ sourcetree_status()
    local rval
 
    output="`emit_status`"
-   output2="`walk_config_uuids "walk_status" \
-                               "${filternodetypes}" \
+   output2="`walk_config_uuids "${filternodetypes}" \
                                "${filterpermissions}" \
                                "${filtermarks}" \
-                               "${mode}"`" || exit 1
+                               "${mode}" \
+                               "walk_status" \
+                               "$@"`" || exit 1
 
    if [ "${OPTION_IS_UPTODATE}" = "YES" ]
    then
       return 0
    fi
+
+   #
+   # sorting lines is harmless and this remove some duplicates too
+   # which we would otherwise have to filter
+   #
+   output2="$(sort -u <<< "${output2}")"
 
    output="`add_line "${output}" "${output2}"`"
 
@@ -227,10 +270,27 @@ sourcetree_status()
 
    case "${mode}" in
       *header*)
-         header="Address;Status"
+            case "${mode}" in
+               *share*)
+                  header="Address;Status;Filesystem;Position"
+               ;;
+
+               *)
+                  header="Address;Status;Filesystem"
+               ;;
+            esac
+
          case "${mode}" in
             *separator*)
-               header="`add_line "${header}" "-----------;------"`"
+               case "${mode}" in
+                  *share*)
+                    header="`add_line "${header}" "-------;------;----------;---------"`"
+                  ;;
+
+                  *)
+                     header="`add_line "${header}" "-------;------;----------"`"
+                  ;;
+               esac
             ;;
          esac
          output="`add_line "${header}" "${output}"`"
@@ -257,12 +317,9 @@ sourcetree_status_main()
    local OPTION_PERMISSIONS="" # empty!
    local OPTION_NODETYPES="ALL"
    local OPTION_WALK_DB="DEFAULT"
-   local OPTION_RECURSIVE
    local OPTION_IS_UPTODATE="NO"
    local OPTION_OUTPUT_HEADER="DEFAULT"
    local OPTION_OUTPUT_RAW="DEFAULT"
-
-   _db_set_default_options
 
    while [ $# -ne 0 ]
    do
@@ -326,14 +383,6 @@ sourcetree_status_main()
             OPTION_PERMISSIONS="$1"
          ;;
 
-         -r|--recurse|--recursive)
-            OPTION_RECURSIVE="YES"
-         ;;
-
-         --no-recurse|--no-recursive)
-            OPTION_RECURSIVE="NO"
-         ;;
-
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown status option $1"
             sourcetree_status_usage
@@ -363,14 +412,11 @@ sourcetree_status_main()
          return 1
       fi
 
-      log_warning "Update has not run yet"
+      log_warning "Update has not run yet (mode=${SOURCETREE_MODE})"
    fi
 
-   mode="prefix"
-   if [ "${OPTION_RECURSIVE}" = "YES" ]
-   then
-      mode="`concat "${mode}" "recurse"`"
-   fi
+   mode="${SOURCETREE_MODE}"
+
    if [ "${OPTION_OUTPUT_RAW}" != "YES" ]
    then
       mode="`concat "${mode}" "output-formatted"`"

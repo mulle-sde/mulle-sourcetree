@@ -97,7 +97,7 @@ run_test1()
    then
       fail "add failed unexpectedly"
    fi
-   if ! run_mulle_sourcetree update --share --recursive --share-prefix shared
+   if ! MULLE_SOURCETREE_SHARED_DIR="shared" run_mulle_sourcetree --recurse --share update
    then
       fail "update failed unexpectedly"
    fi
@@ -114,7 +114,8 @@ run_test2()
    then
       fail "add failed unexpectedly"
    fi
-   if ! run_mulle_sourcetree update --share --share-prefix shared
+
+   if ! MULLE_SOURCETREE_SHARED_DIR="shared" run_mulle_sourcetree --share update
    then
       fail "update failed unexpectedly"
    fi
@@ -134,7 +135,7 @@ run_test3()
    then
       fail "add failed unexpectedly"
    fi
-   if ! run_mulle_sourcetree ${flags} update --share --share-prefix shared
+   if ! MULLE_SOURCETREE_SHARED_DIR="shared" run_mulle_sourcetree ${flags} --share  update
    then
       fail "update failed unexpectedly"
    fi
@@ -216,7 +217,7 @@ init()
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombify.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombie.sh" || exit 1
 }
 
 

@@ -86,14 +86,14 @@ run_test1()
    local result
    local expected
 
-   result="`run_mulle_sourcetree status --recursive --output-raw --no-output-header`"
+   result="`run_mulle_sourcetree --recurse status --output-raw --no-output-header`"
    if [ $? -ne 0 ] # > /dev/null 2>&1
    then
       fail "status failed unexpectedly"
    fi
 
-   expected=".;update
-root/a;update"
+   expected=".;update;directory
+root/a;update;missing"
 
    if [ "${result}" != "${expected}" ]
    then
@@ -105,7 +105,7 @@ root/a;update"
       fail "--is-uptodate #1 says OK unexpectedly"
    fi
 
-   if ! run_mulle_sourcetree update --recursive
+   if ! run_mulle_sourcetree --recurse update
    then
       fail "update #1 failed unexpectedly"
    fi
@@ -128,7 +128,7 @@ root/a;update"
       fail "--is-uptodate #3 says ok unexpectedly"
    fi
 
-   if ! run_mulle_sourcetree update --recursive
+   if ! run_mulle_sourcetree --recurse update
    then
       fail "update #2 failed unexpectedly"
    fi
