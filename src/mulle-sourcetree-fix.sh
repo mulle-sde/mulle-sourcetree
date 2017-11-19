@@ -153,25 +153,29 @@ walk_fix()
 {
    log_entry "walk_fix" "$@"
 
+   local url
+   local destination
+
    url="${MULLE_URL}"
-   prefixed="${MULLE_PREFIX}${MULLE_ADDRESS}"
+   destination="${MULLE_DESTINATION}"
 
    local name
-   name="`basename -- "${prefixed}"`"
 
-   if [ -e "${prefixed}" ]
+   name="`basename -- "${destination}"`"
+
+   if [ -e "${destination}" ]
    then
-      if [ -d "${prefixed}" ]
+      if [ -d "${destination}" ]
       then
-         log_fluff "Dictionary \"${prefixed}\" exists."
-         _fixup_dir_exists "${prefixed}" "${name}"
+         log_fluff "Dictionary \"${destination}\" exists."
+         _fixup_dir_exists "${destination}" "${name}"
       else
-         log_warning "${prefixed} is a file, not sure what to do"
+         log_warning "${destination} is a file, not sure what to do"
       fi
    else
-      log_verbose "Destination \"${prefixed}\" doesn't exist."
+      log_verbose "Destination \"${destination}\" doesn't exist."
 
-      _fixup_dir_not_found "${prefixed}" "${name}"
+      _fixup_dir_not_found "${destination}" "${name}"
    fi
    # mo there
 }
@@ -252,12 +256,12 @@ sourcetree_fix_main()
 
    [ "$#" -eq 0 ] || sourcetree_fix_usage
 
-   if ! nodeline_config_exists
+   if ! cfg_exists "/"
    then
       log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
    fi
 
-   if ! db_is_ready
+   if ! db_is_ready "/"
    then
       fail "The sourctree isn't updated. Can't fix config entries"
    fi

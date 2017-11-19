@@ -146,7 +146,7 @@ run_test1()
       ;;
 
       *)
-         fail "got \"${result}\""
+         fail "got \"${result}\" ($PWD)"
       ;;
    esac
    log_verbose "----- #7 PASSED -----"
@@ -163,6 +163,8 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
+   MULLE_SDE_VIRTUAL_ROOT="${directory}"
+   export MULLE_SDE_VIRTUAL_ROOT
 
    local project
 

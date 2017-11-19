@@ -21,28 +21,121 @@ main()
    set -e
 
    directory="`make_tmp_directory`" || exit 1
-
-   SOURCETREE_DB_DIR="${directory}"
+   cd "${directory}"
+   SOURCETREE_DB_DIR="db"
 
    local nodeline
    local sourcenodeline
 
-   db_remember 1 "text"
-   nodeline="`db_get_nodeline_for_uuid 1`"
+   # just store some cruft in nodeline, easier for testing
+   db_memorize "/" 1 "text" "" "text"
+
+   nodeline="`db_fetch_nodeline_for_uuid "/" 1`"
+   expect "${nodeline}" "text"
+   nodeline="`db_fetch_filename_for_uuid "/" 1`"
    expect "${nodeline}" "text"
    log_verbose "----- #1 PASSED -----"
 
-   db_remember 2 "other"
-   nodeline="`db_get_nodeline_for_uuid 1`"
+   db_memorize "/" 2 "other" "owner" "owner/other"
+
+   nodeline="`db_fetch_nodeline_for_uuid "/" 1`"
    expect "${nodeline}" "text"
-   nodeline="`db_get_nodeline_for_uuid 2`"
+   nodeline="`db_fetch_nodeline_for_uuid "/" 2`"
    expect "${nodeline}" "other"
+   nodeline="`db_fetch_filename_for_uuid "/" 2`"
+   expect "${nodeline}" "owner/other"
    log_verbose "----- #2 PASSED -----"
 
-   nodeline="`db_get_nodeline_for_uuid 3`"
-   expect "${nodeline}" ""
+   if db_fetch_nodeline_for_uuid "/" 3
+   then
+      fail "did find something unexpectedly"
+   fi
 
    log_verbose "----- #3 PASSED -----"
+
+   #
+   # forget one
+   #
+   if ! db_forget "/" 2
+   then
+      fail "could not forget 2"
+   fi
+
+   if db_fetch_nodeline_for_uuid "/" 2
+   then
+      fail "did not forget"
+   fi
+
+   log_verbose "----- #4 PASSED -----"
+
+
+   #
+   # for zombiefication we need a proper nodeline
+   # with a nodetype
+   if ! db_forget "/" 1
+   then
+      fail "did not forget"
+   fi
+
+   db_memorize "/" 1 "address;git;;1" "the_owner" "the_owner/address"
+
+   mkdir -p the_owner/address
+
+   #
+   # zombify but keeping it alive
+   #
+   if ! db_zombify_nodes "/"
+   then
+      fail "failed to zombify"
+   fi
+
+   if ! db_fetch_nodeline_for_uuid "/" 1 > /dev/null
+   then
+      fail "zombie doesn't respond anymore"
+   fi
+
+   db_set_uuid_alive "/" 1
+
+   if ! db_bury_zombies "/"
+   then
+      fail "failed to bury"
+   fi
+
+   if ! db_fetch_nodeline_for_uuid "/" 1 > /dev/null
+   then
+      fail "alive node unfairly reaped before its time"
+   fi
+
+   [ -d "the_owner/address" ] || fail  "directory vanished"
+
+   log_verbose "----- #5 PASSED -----"
+
+   #
+   # zombify and bury
+   #
+   if ! db_zombify_nodes "/"
+   then
+      fail "failed to zombify"
+   fi
+
+   if ! db_fetch_nodeline_for_uuid "/" 1 > /dev/null
+   then
+      fail "zombie doesn't respond anymore"
+   fi
+
+   if ! db_bury_zombies "/"
+   then
+      fail "failed to bury"
+   fi
+
+   if db_fetch_nodeline_for_uuid "/" 1
+   then
+      fail "survived the zombie apocalypse"
+   fi
+
+   [ ! -d "the_owner/address" ] || fail  "directory still there"
+
+   log_verbose "----- #6 PASSED -----"
 
    log_info "----- ALL PASSED -----"
 
@@ -59,7 +152,9 @@ init()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
 }
 
 

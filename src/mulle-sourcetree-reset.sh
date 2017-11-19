@@ -55,7 +55,8 @@ sourcetree_db_reset()
       return 0
    fi
 
-   if [ "${keepgraveyard}" = "NO" ]|| ! _db_has_graveyard
+   if [ "${keepgraveyard}" = "NO" ]|| !
+db_has_graveyard
    then
       rmdir_safer "${prefix}${SOURCETREE_DB_DIR}"
       return
@@ -78,7 +79,7 @@ walk_reset()
 {
    log_entry "walk_reset" "$@"
 
-   sourcetree_db_reset "${MULLE_PREFIX}${MULLE_RAW_ADDRESS}" "$@"
+   sourcetree_db_reset "${MULLE_PROJECTDIR}${MULLE_RAW_ADDRESS}" "$@"
 }
 
 

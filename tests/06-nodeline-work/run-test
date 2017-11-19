@@ -42,7 +42,6 @@ setup_demo_repos()
 }
 
 
-
 run_test()
 {
    local uuidgen
@@ -51,29 +50,29 @@ run_test()
 
    uuid="`uuidgen`"
    (
-      update_with_nodeline "normal" "" "ringo/starr;git;;${uuid};${repos}/a;release"
+      update_with_nodeline "ringo/starr;git;;${uuid};${repos}/a;release" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
    [ -f "ringo/starr/VERSION" ] || fail "ringo/starr/VERSION not there"
    log_verbose "----- #1 PASSED -----"
 
    (
-      update_with_nodeline "normal" "" "ringo/star;git;;${uuid};${repos}/a;release"
+      update_with_nodeline "ringo/star;git;;${uuid};${repos}/a;release" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
-   [ ! -f "ringo/starr/VERSION" ] || fail "ringo/starr/VERSION not gone"
-   [ -f "ringo/star/VERSION" ]    || fail "ringo/star/VERSION not there"
+   [ -f "ringo/starr/VERSION" ] && fail "ringo/starr/VERSION not gone"
+   [ -f "ringo/star/VERSION" ]  || fail "ringo/star/VERSION not there"
    log_verbose "----- #2 PASSED -----"
 
    (
-      update_with_nodeline "normal" "" "ringo/starr;git;;${uuid};${repos}/a;unknown"
+      update_with_nodeline "ringo/starr;git;;${uuid};${repos}/a;unknown" "flat" "/" "/"
    ) && fail "worked unexpectedly"
 
    [ -f "ringo/star/VERSION" ]    && fail "branch unknown should have wiped ringo/star/VERSION"
    log_verbose "----- #3 PASSED -----"
 
    (
-      update_with_nodeline "normal" "" "ringo/starr;git;;${uuid};${repos}/a;release;2.0.0"
+      update_with_nodeline "ringo/starr;git;;${uuid};${repos}/a;release;2.0.0" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
    [ `cat ringo/starr/VERSION` = 2.0.0 ] || fail "Wrong checkout"
@@ -81,7 +80,7 @@ run_test()
    log_verbose "----- #4 PASSED -----"
 
    (
-      update_with_nodeline "normal" "" "ringo/starr;git;;${uuid};${repos}/a;release;1.0.0"
+      update_with_nodeline "ringo/starr;git;;${uuid};${repos}/a;release;1.0.0" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
    [ `cat ringo/starr/VERSION` = 1.0.0 ] || fail "Wrong checkout"
@@ -100,6 +99,10 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
+   MULLE_SDE_VIRTUAL_ROOT="${directory}"
+   export MULLE_SDE_VIRTUAL_ROOT
+
+   local SOURCETREE_FIX_FILE=".mulle-sourcetree.fix"
 
    local project
    local repos
@@ -133,11 +136,12 @@ init()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombie.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh"      || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh"   || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombie.sh"   || exit 1
 }
 
 

@@ -94,7 +94,7 @@ html_print_node()
    local identifier="$1"; shift
 
    local url="$1"
-   local prefixed="$2"
+   local address="$2"
    local branch="$3"
    local tag="$4"
    local nodetype="$5"
@@ -102,6 +102,20 @@ html_print_node()
    local fetchoptions="$7"
    local useroptions="$8"
    local uuid="$9"
+
+   case "${identifier}" in
+      "")
+         identifier="\"${address}\""
+      ;;
+
+      \"*\")
+      ;;
+
+      *)
+         internal_fail "identifier \"${identifier}\" must be quoted"
+      ;;
+   esac
+
 
    bgcolor="lightgray"
    fontcolor="black"
@@ -137,9 +151,9 @@ html_print_node()
    html="<TABLE>"
 
    # admittedly this is a bit ungainly coded...
-   title="`basename -- "${prefixed}"`"
+   title="`basename -- "${destination}"`"
    html="$(concat "${html}" "`html_print_title "${html}" "${title}" "${fontcolor}" "${bgcolor}"`")"
-   html="$(concat "${html}" "`html_print_row "address" "${prefixed}"`")"
+   html="$(concat "${html}" "`html_print_row "address" "${address}"`")"
    html="$(concat "${html}" "`html_print_row "nodetype" "${nodetype}"`")"
    html="$(concat "${html}" "`html_print_row "userinfo" "${userinfo}"`")"
    html="$(concat "${html}" "`html_print_row "marks" "${marks}"`")"
@@ -157,23 +171,43 @@ html_print_node()
 print_node()
 {
    local foldertype="$1"
-   local address="$2"
+   local destination="$2"
    local identifier="$3"
+   local address="$4"
 
-   if [ -z "${identifier}" ]
-   then
-      identifier="\"${address}\""
-   fi
+   case "${identifier}" in
+      "")
+         identifier="\"${destination}\""
+      ;;
+      \"*\")
+      ;;
+      *)
+         internal_fail "identifier \"${identifier}\" must be quoted"
+      ;;
+   esac
 
    local shape
+   local color
 
+   color="black"
    shape="box"
-   if [ ! -e "${address}" ]
+
+   if [ ! -e "${destination}" ]
    then
       shape="invis"
    else
-      if [ -d "${address}" ]
+      color="dodgerblue"
+      if [ -d "${destination}" ]
       then
+         if [ -f "${destination}/${SOURCETREE_CONFIG_FILE}" ]
+         then
+            if db_is_ready "${destination}"
+            then
+               color="limegreen"
+            else
+               color="darkorchid"
+            fi
+         fi
          shape="folder"
       else
          shape="note"
@@ -186,22 +220,22 @@ print_node()
    case "${foldertype}" in
       root)
          penwidth="3"
-         style="filled"
       ;;
 
       other)
+         color="honeydew4"
          penwidth=1
          style=""
       ;;
 
       *)
          penwidth="2"
-         style="filled"
       ;;
    esac
 
    exekutor echo "${identifier} [ shape=\"${shape}\", \
 penwidth=\"${penwidth}\",  \
+color=\"${color}\" \
 style=\"${style}\" \
 label=\"`basename -- "${address}"`\"]"
 }
@@ -211,15 +245,16 @@ walk_dotdump()
 {
    log_entry "walk_dotdump" "$@"
 
-   url="${MULLE_URL}"
-   prefixed="${MULLE_ADDRESS}"
-   branch="${MULLE_BRANCH}"
-   tag="${MULLE_TAG}"
-   nodetype="${MULLE_NODETYPE}"
-   uuid="${MULLE_UUID}"
-   marks="${MULLE_MARKS}"
-   fetchoptions="${MULLE_FETCHOPTIONS}"
-   useroptions="${MULLE_USEROPTIONS}"
+   local url="${MULLE_URL}"
+   local address="${MULLE_ADDRESS}"
+   local branch="${MULLE_BRANCH}"
+   local tag="${MULLE_TAG}"
+   local nodetype="${MULLE_NODETYPE}"
+   local uuid="${MULLE_UUID}"
+   local marks="${MULLE_MARKS}"
+   local fetchoptions="${MULLE_FETCHOPTIONS}"
+   local useroptions="${MULLE_USEROPTIONS}"
+   local destination="${MULLE_DESTINATION}"
 
    local identifier
    local relidentifier
@@ -238,7 +273,7 @@ walk_dotdump()
    relative=""
    IFS="/"
 
-   for component in ${prefixed}
+   for component in ${destination}
    do
       IFS="${DEFAULT_IFS}"
 
@@ -293,7 +328,7 @@ walk_dotdump()
    done
    IFS="${DEFAULT_IFS}"
 
-   identifier="\"${prefixed}\""
+   identifier="\"${destination}\""
    TOEMIT_DIRECTORIES="`fgrep -v -s -x "${identifier}" <<< "${TOEMIT_DIRECTORIES}"`"
    log_debug "[-] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
 
@@ -309,7 +344,7 @@ walk_dotdump()
                                       "${userinfo}" \
                                       "${uuid}"
    else
-      print_node "default" "${prefixed}" "${identifier}"
+      print_node "default" "${destination}" "${identifier}" "${address}"
    fi
 
    IFS="${DEFAULT_IFS}"
@@ -328,7 +363,7 @@ emit_root()
                                            "" \
                                            "root"
    else
-      print_node "root" "${PWD}" "${ROOT_IDENTIFIER}"
+      print_node "root" "." "${ROOT_IDENTIFIER}" "."
    fi
 }
 
@@ -349,7 +384,7 @@ emit_remaining_directories()
 
       name="$(sed 's/^.\(.*\).$/\1/' <<< "${identifier}")"
 
-      print_node "other" "${name}" "${identifier}"
+      print_node "other" "${name}" "${identifier}"  "${name}"
    done
    IFS="${DEFAULT_IFS}"
 }
@@ -515,13 +550,13 @@ sourcetree_dotdump_main()
 
       mode="`concat "${mode}" "walkdb"`"
    else
-      if ! nodeline_config_exists
+      if ! cfg_exists "/"
       then
          log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
       fi
    fi
 
-   if ! db_is_ready
+   if ! db_is_ready "/"
    then
       log_warning "Update has not run yet (mode=${SOURCETREE_MODE})"
    fi

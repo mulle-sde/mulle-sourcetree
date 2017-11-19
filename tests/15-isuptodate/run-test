@@ -55,8 +55,6 @@ _setup_demo_archive_e()
 }
 
 
-
-
 setup_demo_archives()
 {
    (
@@ -140,7 +138,6 @@ root/a;update;missing"
 }
 
 
-
 main()
 {
    MULLE_SOURCETREE_FLAGS="$@"
@@ -175,6 +172,9 @@ main()
 
 init()
 {
+   MULLE_SDE_VIRTUAL_ROOT="fake"
+   export MULLE_SDE_VIRTUAL_ROOT
+
    MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env library-path`" || exit 1
 
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
@@ -182,11 +182,11 @@ init()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dotdump.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"     || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dotdump.sh"  || exit 1
 }
 
 

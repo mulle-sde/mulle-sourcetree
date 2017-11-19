@@ -62,6 +62,23 @@ EOF
 }
 
 
+__concat_projectdir_address()
+{
+   local projectdir="$1"
+   local address="$2"
+
+   case "${projectdir}" in
+      "/")
+         echo "${address}"
+      ;;
+
+      *)
+         filepath_concat "${projectdir}" "${address}"
+      ;;
+   esac
+}
+
+
 emit_mulle_fetch_eval_options()
 {
    local options
@@ -217,7 +234,7 @@ _do_fetch_operation()
 
    if [ -e "${address}" ]
    then
-      zombie_bury_node "${address}" "${uuid}"
+      fail "Should have cleaned \"${address}\" before"
    fi
 
    local parent
@@ -278,11 +295,11 @@ update_actions_for_nodelines()
 
    [ "$#" -ne 3  ] && internal_fail "api error"
 
-   local mode="$1"
-   local previous="$2"
+   local style="$1"
+   local previousnodeline="$2"
    local nodeline="$3"
 
-   [ -z "${mode}" ]   && internal_fail "mode is empty"
+   [ -z "${style}" ]   && internal_fail "style is empty"
    [ -z "${nodeline}" ] && internal_fail "nodeline is empty"
 
    local branch
@@ -297,9 +314,18 @@ update_actions_for_nodelines()
 
    nodeline_parse "${nodeline}"
 
-   update_actions_for_node "${mode}" \
-                           "${previous}" \
+   local previousfilename
+   local filename
+
+   filename="${address}"
+   previousfilename="`nodeline_get_address "${previousnodeline}"`"
+
+   # just address address as filename ?
+   update_actions_for_node "${style}" \
                            "${nodeline}" \
+                           "${filename}" \
+                           "${previousnodeline}" \
+                           "${previousfilename}" \
                            "${address}" \
                            "${nodetype}" \
                            "${marks}" \
@@ -325,14 +351,14 @@ do_operation()
    [ -z "${opname}" ] && internal_fail "operation is empty"
 
    local url="$1"            # URL of the node
-   local address="$2"        # address of this node (absolute or relative to $PWD)
+   local destination="$2"       # destination
    local branch="$3"         # branch of the node
    local tag="$4"            # tag to checkout of the node
    local nodetype="$5"       # nodetype to use for this node
-#   local marks="$6"          # marks on node
+#   local marks="$6"         # marks on node
    local fetchoptions="$7"   # options to use on nodetype
-#   local useroptions="$8"    # options to use on nodetype
-#   local uuid="$9"           # uuid of the node
+#   local useroptions="$8"   # options to use on nodetype
+#   local uuid="$9"          # uuid of the node
 
 
    if [ ! -z "${OPTION_OVERRIDE_BRANCH}" ]
@@ -347,7 +373,7 @@ do_operation()
 
    node_fetch_operation "${opname}" "${options}" \
                                     "${url}" \
-                                    "${address}" \
+                                    "${destination}" \
                                     "${branch}" \
                                     "${tag}" \
                                     "${nodetype}" \
@@ -359,25 +385,26 @@ update_safe_move_node()
 {
    log_entry "update_safe_move_node" "$@"
 
-   local oldaddress="$1"
-   local address="$2"
+   local previousfilename="$1"
+   local filename="$2"
    local marks="$3"
 
-   [ -z "${oldaddress}" ]  && internal_fail "empty oldaddress"
-   [ -z "${address}" ]     && internal_fail "empty address"
+   [ -z "${previousfilename}" ] && internal_fail "empty previousfilename"
+   [ -z "${filename}" ]         && internal_fail "empty filename"
 
    if nodemarks_contain_nodelete "${marks}"
    then
-      fail "Can't move node ${url} from to \"${oldaddress}\" \
-to \"${address}\" as it is marked nodelete"
+      fail "Can't move node ${url} from to \"${previousfilename}\" \
+to \"${filename}\" as it is marked nodelete"
    fi
 
-   log_info "Moving node with URL ${C_MAGENTA}${C_BOLD}${url}${C_INFO} from \"${oldaddress}\" to \"${address}\""
+   log_info "Moving node with URL ${C_MAGENTA}${C_BOLD}${url}${C_INFO} \
+from \"${previousfilename}\" to \"${filename}\""
 
-   mkdir_parent_if_missing "${address}"
-   if ! exekutor mv ${OPTION_COPYMOVEFLAGS} "${oldaddress}" "${address}"  >&2
+   mkdir_parent_if_missing "${filename}"
+   if ! exekutor mv ${OPTION_COPYMOVEFLAGS} "${previousfilename}" "${filename}"  >&2
    then
-      fail "Move of ${C_RESET_BOLD}${oldaddress}${C_ERROR_TEXT} failed!"
+      fail "Move of ${C_RESET_BOLD}${previousfilename}${C_ERROR_TEXT} failed!"
    fi
 }
 
@@ -386,21 +413,35 @@ update_safe_remove_node()
 {
    log_entry "update_safe_remove_node" "$@"
 
-   local address="$1"
+   local dbaddress="$1"
    local marks="$2"
    local uuid="$3"
+   local database="$4"
 
-   [ -z "${address}" ] && internal_fail "empty address"
-   [ -z "${url}" ]     && internal_fail "empty url"
+   [ -z "${dbaddress}" ] && internal_fail "empty dbaddress"
+   [ -z "${uuid}" ]      && internal_fail "empty uuid"
 
    if nodemarks_contain_nodelete "${marks}"
    then
-      fail "Can't remove \"${address}\" as it is marked nodelete"
+      fail "Can't remove \"${dbaddress}\" as it is marked nodelete"
    fi
 
-   zombie_bury_node "${address}" "${uuid}"
+   db_forget "${database}" "${uuid}"
+   db_bury "${database}" "${uuid}" "${dbaddress}"
 }
 
+
+update_safe_clobber()
+{
+   log_entry "update_safe_clobber" "$@"
+
+   local dbaddress="$1"
+   local database="$2"
+
+   [ -z "${dbaddress}" ] && internal_fail "empty dbaddress"
+
+   db_bury "${database}" "`node_uuidgen`" "${dbaddress}"
+}
 
 ##
 ## this produces actions, does not care about marks
@@ -409,11 +450,13 @@ update_actions_for_node()
 {
    log_entry "update_actions_for_node" "$@"
 
-   local mode="$1"; shift
-   local nodeline="$1" ; shift
+   local style="$1"; shift
    local newnodeline="$1" ; shift
+   local newfilename="$1"; shift
+   local previousnodeline="$1" ; shift
+   local previousfilename="$1"; shift
 
-   local newaddress="$1"    # address of this node (absolute or relative to $PWD)
+   local newaddress="$1"    # address of this node
    local newnodetype="$2"   # nodetype to use for this node
    local newmarks="$3"      # nodetype to use for this node
    local newuuid="$4"       # uuid of the node
@@ -429,20 +472,25 @@ update_actions_for_node()
    sanitized="`node_sanitized_address "${newaddress}"`"
    if [ "${newaddress}" != "${sanitized}" ]
    then
-      fail "New address \"${newaddress}\" looks suspicious ($sanitized), chickening out"
+      fail "New address \"${newaddress}\" looks suspicious ($sanitized), \
+chickening out"
    fi
 
+   #
+   # but in terms of filesystem checks, we use "newfilename" from now on
+   #
    local newexists
 
    newexists="NO"
-   if [ -e "${newaddress}" ]
+   if [ -e "${newfilename}" ]
    then
       newexists="YES"
    else
-      if [ -L "${newaddress}" ]
+      if [ -L "${newfilename}" ]
       then
-         log_fluff "Node \"${newaddress}\" references a broken symlink. Clobbering it"
-         remove_file_if_present "${newaddress}"
+         log_fluff "Node \"${newfilename}\" references a broken symlink \
+\"${newfilename}\". Clobbering it"
+         remove_file_if_present "${newfilename}"
       fi
    fi
 
@@ -453,26 +501,46 @@ update_actions_for_node()
    # there is a previous record and we know its contents. We have to fetch it
    # and remember it otherwise we don't know what we have.
    #
-   if [ -z "${nodeline}" ]
+   if [ -z "${previousnodeline}" ]
    then
       if [ "${newexists}" = "YES" ]
       then
+         # hmm, but why ?
+         # 1. it's some old cruft that we should clobber
+         # 2. it's a minion that resides in the place for shared repos
+         #    where we assume that the minion is the same as the shared repo
+         #    (a minion is a local copy of a subproject). That was checked
+         #    before though.
+         # 3. it's a shared repo, that's been already placed there. Though
+         #    at this point in time, that should have already been checked
+         #    against
+
          if nodemarks_contain_nodelete "${newmarks}"
          then
-            log_fluff "Node is new but \"${newaddress}\" exists. \
-As it is marked \"nodelete\" don't fetch."
-            echo "checkout"
+            case "${newnodetype}" in
+               local)
+                  log_fluff "Local node is present at \"${newfilename}\". \
+Very well just remember it."
+               ;;
+               *)
+                  log_fluff "Node is new but \"${newfilename}\" exists. \
+As node is marked \"nodelete\" just remember it."
+               ;;
+            esac
+
+            echo "remember"
             return
          fi
 
-         log_fluff "Node is new, but \"${newaddress}\" exists. Clobber it."
+         log_fluff "Node is new, but \"${newfilename}\" exists. Clobber it."
+         echo "clobber"
       else
          if [ -z "${url}" ]
          then
-            fail "Node \"${newaddress}\" has no URL and it doesn't exist"
+            fail "Node \"${newfilename}\" has no URL and it doesn't exist"
          fi
 
-         log_fluff "Node \"${newaddress}\" is missing, so fetch"
+         log_fluff "Node \"${newfilename}\" is missing, so fetch"
       fi
 
       echo "fetch"
@@ -492,9 +560,9 @@ As it is marked \"nodelete\" don't fetch."
    #
    # easy and cheap cop out
    #
-   if [ "${nodeline}" = "${newnodeline}" ]
+   if [ "${previousnodeline}" = "${newnodeline}" ]
    then
-      log_fluff "Node \"${newaddress}\" is unchanged"
+      log_fluff "Node \"${newfilename}\" is unchanged"
       return
    fi
 
@@ -508,7 +576,7 @@ As it is marked \"nodelete\" don't fetch."
    local useroptions
    local uuid
 
-   nodeline_parse "${nodeline}"
+   nodeline_parse "${previousnodeline}"
 
    if [ "${uuid}" != "${newuuid}" ]
    then
@@ -520,17 +588,18 @@ As it is marked \"nodelete\" don't fetch."
    sanitized="`node_sanitized_address "${address}"`"
    if [ "${address}" != "${sanitized}" ]
    then
-      fail "Old address \"${address}\" looks suspicious (${sanitized}), chickening out"
+      fail "Old address \"${address}\" looks suspicious (${sanitized}), \
+chickening out"
    fi
 
-   log_debug "Change: \"${nodeline}\" -> \"${newnodeline}\""
+   log_debug "Change: \"${previousnodeline}\" -> \"${newnodeline}\""
 
-   local oldexists
+   local previousexists
 
-   oldexists="NO"
-   if [ -e "${address}" ]
+   previousexists="NO"
+   if [ -e "${previousfilename}" ]
    then
-      oldexists="YES"
+      previousexists="YES"
    fi
 
    #
@@ -540,10 +609,11 @@ As it is marked \"nodelete\" don't fetch."
    then
       if ! [ "${nodetype}" = "symlink" -a "${newnodetype}" = "git" ]
       then
-         log_fluff "Scm has changed from \"${nodetype}\" to \"${newnodetype}\", need to fetch"
+         log_fluff "Scm has changed from \"${nodetype}\" to \
+\"${newnodetype}\", need to fetch"
 
          # nodelete check here ?
-         if [ "${oldexists}" = "YES" ]
+         if [ "${previousexists}" = "YES" ]
          then
             echo "remove"
          fi
@@ -555,10 +625,10 @@ As it is marked \"nodelete\" don't fetch."
    #
    # Nothing there ?
    #
-   if [ "${newexists}" = "NO" -a "${oldexists}" = "NO" ]
+   if [ "${newexists}" = "NO" -a "${previousexists}" = "NO" ]
    then
-      log_fluff "Previous address \"${address}\" and \
-current address \"${newaddress}\" do not exist anymore."
+      log_fluff "Previous destination \"${previousfilename}\" and \
+current destination \"${newfilename}\" do not exist."
       echo "fetch"
       return
    fi
@@ -568,17 +638,17 @@ current address \"${newaddress}\" do not exist anymore."
    #
    # Handle positional changes
    #
-   if [ "${address}" != "${newaddress}" ]
+   if [ "${previousfilename}" != "${newfilename}" ]
    then
       if [ "${newexists}" = "YES" ]
       then
-         if [ "${oldexists}" = "YES" ]
+         if [ "${previousexists}" = "YES" ]
          then
-            log_warning "Destinations new \"${newaddress}\" and \
-old \"${address}\" exist. Doing nothing."
+            log_warning "Destinations new \"${newfilename}\" and \
+old \"${previousfilename}\" exist. Doing nothing."
          else
-            log_fluff "Destinations new \"${newaddress}\" and \
-old \"${address}\" exist. Looks like a manual move. Doing nothing."
+            log_fluff "Destinations new \"${newfilename}\" and \
+old \"${previousfilename}\" exist. Looks like a manual move. Doing nothing."
          fi
          actions="remember"
       else
@@ -587,7 +657,7 @@ old \"${address}\" exist. Looks like a manual move. Doing nothing."
          # for the case where both are absent.
          #
          log_fluff "Address changed from \"${address}\" to \
-\"${newaddress}\", need to move"
+\"${newfilename}\", need to move"
          actions="move"
       fi
    fi
@@ -603,7 +673,8 @@ old \"${address}\" exist. Looks like a manual move. Doing nothing."
       symlink)
          if [ "${newexists}" = "YES" ]
          then
-            log_fluff "\"${newaddress}\" is symlink. Ignoring possible differences in URL related info."
+            log_fluff "\"${newfilename}\" is symlink. Ignoring possible \
+differences in URL related info."
             echo "${actions}"
             return
          fi
@@ -612,7 +683,8 @@ old \"${address}\" exist. Looks like a manual move. Doing nothing."
 
    if [ -z "${url}" ]
    then
-      log_fluff "\"${newaddress}\" has no URL. Ignoring possible differences in URL related info."
+      log_fluff "\"${newfilename}\" has no URL. Ignoring possible differences \
+in URL related info."
       echo "${actions}"
       return
    fi
@@ -628,11 +700,13 @@ old \"${address}\" exist. Looks like a manual move. Doing nothing."
       have_checkout="$(fgrep -s -x "checkout" <<< "${available}")" || :
       if [ ! -z "${have_checkout}" ]
       then
-         log_fluff "Branch has changed from \"${branch}\" to \"${newbranch}\", need to checkout"
+         log_fluff "Branch has changed from \"${branch}\" to \
+\"${newbranch}\", need to checkout"
          actions="`add_line "${actions}" "checkout"`"
       else
-         log_fluff "Branch has changed from \"${branch}\" to \"${newbranch}\", need to fetch"
-         if [ "${oldexists}" = "YES" ]
+         log_fluff "Branch has changed from \"${branch}\" to \
+\"${newbranch}\", need to fetch"
+         if [ "${previousexists}" = "YES" ]
          then
             echo "remove"
          fi
@@ -649,11 +723,13 @@ old \"${address}\" exist. Looks like a manual move. Doing nothing."
       have_checkout="$(fgrep -s -x "checkout" <<< "${available}")" || :
       if [ ! -z "${have_checkout}" ]
       then
-         log_fluff "Tag has changed from \"${tag}\" to \"${newtag}\", need to checkout"
+         log_fluff "Tag has changed from \"${tag}\" to \"${newtag}\", need \
+to checkout"
          actions="`add_line "${actions}" "checkout"`"
       else
-         log_fluff "Tag has changed from \"${tag}\" to \"${newtag}\", need to fetch"
-         if [ "${oldexists}" = "YES" ]
+         log_fluff "Tag has changed from \"${tag}\" to \"${newtag}\", need \
+to fetch"
+         if [ "${previousexists}" = "YES" ]
          then
             echo "remove"
          fi
@@ -672,12 +748,14 @@ old \"${address}\" exist. Looks like a manual move. Doing nothing."
       have_set_url="$(fgrep -s -x "set-url" <<< "${available}")" || :
       if [ ! -z "${have_upgrade}" -a ! -z "${have_set_url}" ]
       then
-         log_fluff "URL has changed from \"${url}\" to \"${newurl}\", need to set remote url and fetch"
+         log_fluff "URL has changed from \"${url}\" to \"${newurl}\", need to \
+set remote url and fetch"
          actions="`add_line "${actions}" "set-url"`"
          actions="`add_line "${actions}" "upgrade"`"
       else
-         log_fluff "URL has changed from \"${url}\" to \"${newurl}\", need to fetch"
-         if [ "${oldexists}" = "YES" ]
+         log_fluff "URL has changed from \"${url}\" to \"${newurl}\", need to \
+fetch"
+         if [ "${previousexists}" = "YES" ]
          then
             echo "remove"
          fi
@@ -704,7 +782,7 @@ __update_perform_item()
    case "${item}" in
       "checkout"|"upgrade"|"set-url")
          if ! do_operation "${item}" "${url}" \
-                                     "${address}" \
+                                     "${filename}" \
                                      "${branch}" \
                                      "${tag}" \
                                      "${nodetype}" \
@@ -715,8 +793,8 @@ __update_perform_item()
          then
             # as these are shortcuts to remove/fetch, but the
             # fetch part didn't work out we need to remove
-            # the oldaddress
-            update_safe_remove_node "${oldaddress}" "${marks}" "${uuid}"
+            # the previousaddress
+            update_safe_remove_node "${dbaddress}" "${marks}" "${uuid}" "${database}"
             fail "Failed to ${item} ${url}"
          fi
          contentschanged="YES"
@@ -725,7 +803,7 @@ __update_perform_item()
 
       "fetch")
          do_operation "fetch" "${url}" \
-                              "${address}" \
+                              "${filename}" \
                               "${branch}" \
                               "${tag}" \
                               "${nodetype}" \
@@ -751,7 +829,7 @@ __update_perform_item()
                then
                   log_info "${C_MAGENTA}${C_BOLD}${uuid}${C_INFO} is not required."
 
-                  merge_line_into_file "${SOURCETREE_DB_DIR}/.missing" "${uuid}"
+                  db_add_missing "${database}" "${uuid}" "${nodeline}"
                   skip="YES"
                   return 1
                fi
@@ -767,12 +845,16 @@ __update_perform_item()
       ;;
 
       "move")
-         update_safe_move_node "${oldaddress}" "${address}" "${marks}"
+         update_safe_move_node "${previousfilename}" "${filename}" "${marks}"
          remember="YES"
       ;;
 
+      "clobber")
+         update_safe_clobber "${dbaddress}" "${database}"
+      ;;
+
       "remove")
-         update_safe_remove_node "${oldaddress}" "${marks}" "${uuid}"
+         update_safe_remove_node "${previousdbaddress}" "${marks}" "${uuid}" "${database}"
       ;;
 
       *)
@@ -786,10 +868,12 @@ _update_perform_actions()
 {
    log_entry "_update_perform_actions" "$@"
 
-   local mode="$1"
+   local style="$1"
    local nodeline="$2"
-   local previous="$3"
-   local oldaddress="$4"  # used in _perform
+   local filename="$3"
+   local previousnodeline="$4"
+   local previousfilename="$5"
+   local database="$6"  # used in _perform
 
    local branch
    local address
@@ -805,23 +889,14 @@ _update_perform_actions()
 
    local actionitems
 
-   if [ "${mode}" = "share" ]
-   then
-      if [ ! -z "${url}" ] && nodemarks_contain_share "${marks}"
-      then
-         address="`node_guess_address "${url}" "${nodetype}"`"
-         if [ -z "${address}" ]
-         then
-            address="${uuid}"
-         fi
-         address="`filepath_concat "${MULLE_SOURCETREE_SHARED_DIR}" "${address}"`"
-         log_fluff "Use guessed address \"${address}\" for shared URL \"${url}\""
-      fi
-   fi
+   local filename
+   local dbfilename
 
-   actionitems="`update_actions_for_node "${mode}" \
-                                         "${previous}" \
+   actionitems="`update_actions_for_node "${style}" \
                                          "${nodeline}" \
+                                         "${filename}" \
+                                         "${previousnodeline}" \
+                                         "${previousfilename}" \
                                          "${address}" \
                                          "${nodetype}" \
                                          "${marks}" \
@@ -830,7 +905,7 @@ _update_perform_actions()
                                          "${branch}" \
                                          "${tag}"`" || exit 1
 
-   log_debug "${C_INFO}Actions for \"${url}\": ${actionitems:-local}"
+   log_debug "${C_INFO}Actions for \"${address}\": ${actionitems:-local}"
 
    local skip="NO"
    local contentschanged="NO"
@@ -856,20 +931,38 @@ _update_perform_actions()
    echo "${remember}"
    echo "${skip}"
    echo "${nodetype}"
-   echo "${address}"
+   echo "${dbaddress}"
 }
 
 
+#
+# Only allowable combinations are shown
+#
+# Style   | Projectdir | Database   || Owner
+# --------|------------|------------||---------------
+# flat    | /          | /          || -
+#
+# recurse | /          | /          || -
+# recurse | foo        | foo        || -
+#
+# share   | /          | /          || -
+# share   | foo        | /          || foo
+# share   | foo        | foo        || -
+#
+# partial | /          | /          || -
+# partial | foo        | foo        || -
+#
 update_with_nodeline()
 {
    log_entry "update_with_nodeline" "$@"
 
-   local mode="$1"
-   local owner="$2"
-   local nodeline="$3"
+   local nodeline="$1"
+   local style="$2"
+   local projectdir="$3"
+   local database="$4"
 
-   [ "$#" -ne 3 ]     && internal_fail "api error"
-   [ -z "$mode" ]     && internal_fail "mode is empty"
+   [ "$#" -ne 4 ]     && internal_fail "api error"
+   [ -z "$style" ]    && internal_fail "style is empty"
    [ -z "$nodeline" ] && internal_fail "nodeline is empty"
 
    local branch
@@ -884,88 +977,129 @@ update_with_nodeline()
 
    nodeline_parse "${nodeline}"
 
+   #
+   # during shared operation we may revisit stuff, which is boring
+   #
+   local filename
+   local dbaddress
+
+   #
+   # the address is what is relative to the current projectdir (configfile)
+   # the dbaddress is what is relative to the current database
+   # the filename is relative to the current PWD
+   #
+   if [ "${style}" = "share" -a ! -z "${url}" ] && \
+      nodemarks_contain_share "${marks}"
+   then
+      filename="`node_guess_address "${url}" "${nodetype}"`"
+      if [ -z "${filename}" ]
+      then
+         filename="${uuid}"
+      fi
+      filename="`filepath_concat "${MULLE_SOURCETREE_SHARED_DIR}" "${address}"`"
+      log_fluff "Use guessed address \"${filename}\" for shared URL \"${url}\""
+
+      # use shared root database for shared nodes
+      database="/"
+      dbaddress="${filename}"
+   else
+      filename="`__concat_projectdir_address "${projectdir}" "${address}"`"
+      dbaddress="${address}"
+   fi
+
    if nodemarks_contain_noupdate "${marks}"
    then
-      if [ -e "${address}"  ]
+      if [ -e "${filename}"  ]
       then
-         log_fluff "\"${address}\" has no URL (or is marked as noupdate) and exists"
+         log_fluff "\"${filename}\" is marked as noupdate and exists"
          return
       fi
 
       if nodemarks_contain_norequire "${marks}"
       then
-         log_fluff "\"${address}\" has no URL (or is marked as noupdate) and doesnt exist, \
+         log_fluff "\"${filename}\" is marked as noupdate and doesnt exist, \
 but it is not required"
          return
       fi
-      fail "\${address}\" is missing, but required"
+      fail "\${filename}\" is missing, but required"
    fi
 
-   local nextmode
-
-   nextmode="${mode}"
-
-   case "${mode}" in
-      flat)
-      ;;
-
-      share)
-         if nodemarks_contain_noshare "${marks}"
-         then
-            log_fluff "\"${address}\" is marked as noshare (and we are sharing)"
-            return
-         fi
-      ;;
-
-      noshare)
-         if nodemarks_contain_share "${marks}"
-         then
-            log_fluff "\"${address}\" is marked as share (and we are not sharing this time)"
-            return
-         fi
-
-         #
-         # for inferiors that are marked noshare, we have to fetch
-         # everything, if we recurse
-         #
-         log_fluff "\"${address}\" is marked as noshare, recursion will get everything"
-         nextmode="recurse"
-      ;;
-   esac
-
    #
-   # check if this nodeline is known, and if yes
-   # where it was previously
+   # check if this nodeline is known
    #
-   local previous
-   local oldaddress
+   local previousnodeline
+   local previousaddress
 
-   previous="`db_get_nodeline_for_uuid "${uuid}"`"
-   if [ ! -z "${previous}" ]
-   then
-      oldaddress="`nodeline_get_address "${previous}"`"
-      [ -z "${oldaddress}" ] && internal_fail "corrupted db"
-   fi
+   previousnodeline="`db_fetch_nodeline_for_uuid "${database}" "${uuid}"`"
 
    #
    # check if this .sourcetree is actually "responsible" for this
    # shared node (otherwise let someone else do it)
+   # this can happen, when someone else shares the a node, which would
+   # have the same name as a previous share
    #
-   if [ ! -z "${previous}" -a "${mode}" = "share" ]
+   if [ ! -z "${previousnodeline}" ]
    then
-      local oldowner
-
-      oldowner="`db_get_owner_for_uuid "${uuid}"`"
-      if [ "${owner}" != "${oldowner}" ]
+      if [ "${style}" = "share" ]
       then
-         if is_node_alive "${uuid}"
+         local oldowner
+
+         oldowner="`db_fetch_owner_for_uuid "${database}" "${uuid}"`"
+         if [ "${projectdir}" != "${oldowner}" ]
          then
-            log_fluff "\"${owner}\" does not feel responsible for \"${address}\""
-            return
-         else
-            log_fluff "\"${owner}\" takes over responsibility for \"${address}\""
+            if db_is_uuid_alive "${uuid}"
+            then
+               log_fluff "\"${projectdir}\" does not feel responsible for \"${address}\""
+               return
+            else
+               log_fluff "\"${projectdir}\" takes over responsibility for \"${address}\""
+            fi
          fi
       fi
+   fi
+
+   #
+   # If we find something in the database  for the same address,
+   # check if it is not ours.
+   # But it could be old. If its not old, it has preference.
+   #
+   local otheruuid
+
+   otheruuid="`db_fetch_uuid_for_address "${database}" "${filename}"`"
+   if [ ! -z "${otheruuid}" ] && db_is_uuid_alive "${database}" "${otheruuid}"
+   then
+      if [ "${otheruuid}" != "${uuid}" ]
+      then
+         # this is address is already taken
+         log_fluff "Address \"${filename}\" is already used by \
+node \"${otheruuid}\" in database \"${database}\". Skip it."
+         return 0
+      fi
+   else
+      log_debug "Address \"${filename}\" is unique in database \"${database}\""
+   fi
+
+   local previousfilename
+
+   #
+   # find out, where it was previously located relative to "projectdir"
+   #
+   if [ ! -z "${previousnodeline}" ]
+   then
+      previousfilename="`db_fetch_filename_for_uuid "${database}" "${uuid}"`"
+      [ -z "${previousfilename}" ] && internal_fail "corrupted db"
+
+      #
+      # previousfilename is relative to database, but we want relative
+      # to project directory too
+      #
+      local  rootdir
+
+      rootdir="`db_get_rootdir "${database}"`"
+      previousfilename="`filepath_concat "${rootdir}" "${previousfilename}"`"
+
+      rootdir="`cfg_rootdir "${projectdir}"`"
+      previousaddress="`relative_path_between "${rootdir}" "${previousfilename}"`"
    fi
 
    local magic
@@ -974,11 +1108,14 @@ but it is not required"
    local skip
    local nodetype
    local results
+   local dbaddress
 
-   results="`_update_perform_actions "${mode}" \
+   results="`_update_perform_actions "${style}" \
                                      "${nodeline}" \
-                                     "${previous}" \
-                                     "${oldaddress}"`"
+                                     "${filename}" \
+                                     "${previousnodeline}" \
+                                     "${previousfilename}" \
+                                     "${database}"`"
    if [ "$?" -ne 0 ]
    then
       exit 1
@@ -991,7 +1128,7 @@ but it is not required"
    remember="$(sed -n '3p' <<< "${results}")"
    skip="$(sed -n '4p' <<< "${results}")"
    nodetype="$(sed -n '5p' <<< "${results}")"
-   address="$(sed -n '6p' <<< "${results}")"
+   dbaddress="$(sed -n '6p' <<< "${results}")"
 
    log_debug "contentschanged: ${contentschanged}" \
              "remember: ${remember}" \
@@ -1004,36 +1141,32 @@ but it is not required"
       return 0
    fi
 
-   if nodemarks_contain_recurse "${marks}"
-   then
-      # for when it is
-      if [ -d "${address}" ]
-      then
-         (
-            _sourcetree_subtree_update "${nextmode}" "${address}"
-         ) || exit 1
-      else
-         log_fluff "Will not recursively update \"${address}\" as it's not a directory"
-      fi
-   fi
-
    if [ "${remember}" = "YES" ]
    then
       # branch could be overwritten
       log_debug "${C_INFO}Remembering ${nodeline} ..."
 
-      nodeline="`node_print_nodeline`"
-      db_remember "${uuid}" "${nodeline}" "${PARENT_NODELINE}" "${PARENT_SOURCETREE}" "${owner}"
+      local filename
 
-      if [ "${OPTION_FIX}" != "NO" ] && [ -d "${address}" ]
+      nodeline="`node_print_nodeline`"
+      db_memorize "${database}" "${uuid}" "${nodeline}" "${projectdir}" "${dbaddress}"
+
+      if [ "${OPTION_FIX}" != "NO" ] && [ -d "${filename}" ]
       then
-         redirect_exekutor "${address}/${SOURCETREE_FIX_FILE}" echo "${address}"
+         local  output
+
+         [ -z "${SOURCETREE_FIX_FILE}" ] && internal_fail "SOURCETREE_FIX_FILE is empty"
+         output="`filepath_concat "${filename}" "${SOURCETREE_FIX_FILE}"`"
+
+         log_fluff "Writing fix info into \"${output}\""
+
+         redirect_exekutor "${output}" echo "`basename -- "${address}"`"
       fi
    else
       log_debug "Don't need to remember \"${nodeline}\" (should be unchanged)"
    fi
 
-   diagnose_node_as_alive "${uuid}"
+   db_set_uuid_alive "${database}" "${uuid}"
 }
 
 
@@ -1041,19 +1174,20 @@ update_with_nodelines()
 {
    log_entry "update_with_nodelines" "$@"
 
-   local mode="$1"
-   local owner="$2"
-   local nodelines="$3"
+   local nodelines="$1"
+   local style="$2"
+   local projectdir="$3"
+   local database="$4"
 
-   [ -z "${mode}" ] && internal_fail "mode is empty"
+   [ -z "${style}" ] && internal_fail "style is empty"
 
    if [ -z "${nodelines}" ]
    then
-      log_fluff "There is nothing to do"
+      log_fluff "There is nothing to do for \"${style}\""
       return 0
    fi
 
-   log_debug "\"${mode}\" update \"${nodelines}\" for db \"${owner:-ROOT}\" ($PWD)"
+   log_debug "\"${style}\" update \"${nodelines}\" for db \"${projectdir:-ROOT}\" ($PWD)"
 
    local nodeline
 
@@ -1068,181 +1202,238 @@ update_with_nodelines()
          continue
       fi
 
-      update_with_nodeline "${mode}" "${owner}" "${nodeline}"
+      update_with_nodeline "${nodeline}" "${style}" "${projectdir}" "${database}"
    done
 
    IFS="${DEFAULT_IFS}"
 }
 
 
-__sourcetree_subtree_update()
+recursive_update_with_nodeline()
 {
-   local mode="$1"
+   log_entry "recursive_update_with_nodeline" "$@"
 
-   log_verbose "Recursively updating \"`basename -- "${PWD}"`\""
+   local nodeline="$1"
+   local style="$2"
+   local projectdir="$3"
+   local database="$4"
 
-   db_clear_ready
-   db_set_update
-   db_set_dbtype "recurse"
+   [ "$#" -ne 4 ]     && internal_fail "api error"
+   [ -z "$style" ]    && internal_fail "style is empty"
+   [ -z "$nodeline" ] && internal_fail "nodeline is empty"
 
-   zombify_nodes
+   local branch
+   local address
+   local fetchoptions
+   local marks
+   local nodetype
+   local tag
+   local url
+   local userinfo
+   local uuid
 
-   case "${mode}" in
-      "share")
-         mode="noshare"
-         #
-         # The inferior is in our shared folder, but it needs some
-         # non-shared stuff. We are in his folder. Everything is easy
-         #
-      ;;
+   nodeline_parse "${nodeline}"
+   if nodemarks_contain_norecurse "${marks}"
+   then
+      return
+   fi
 
-      "recurse")
-         #
-         # We are in the inferior folder. Everything is easy.
-         #
-      ;;
+# try to throw away old database
+#
+#   if ! cfg_exists "${address}"
+#   then
+#      return
+#   fi
 
-      *)
-         internal_fail "${mode} is unexpected here to say the least"
-      ;;
-   esac
+   local filename
+
+   filename="`db_fetch_filename_for_uuid "${database}" "${uuid}"`"
+   projectdir="`__concat_projectdir_address "${database}" "${filename}"`"
+
+   #
+   # usually database is in projectdir, except when we update with share
+   # and the node is shared. But this switch is not done here
+   # but in update_with_nodeline
+   #
+   if [ ! -d "${projectdir}" ]
+   then
+      log_fluff "Will not recursively update \"${projectdir}\" as it's not \
+a directory"
+      return
+   fi
+
+   database="${projectdir}"
+   if nodemarks_contain_noshare "${marks}"
+   then
+      style="noshare"
+   fi
+
+   sourcetree_update "${style}" "${projectdir}" "${database}"
+}
+
+
+recursive_update_with_nodelines()
+{
+   log_entry "recursive_update_with_nodelines" "$@"
+
+   local nodelines="$1"
+   local style="$2"
+   local projectdir="$3"
+   local database="$4"
+
+   [ -z "${style}" ] && internal_fail "style is empty"
+
+   if [ -z "${nodelines}" ]
+   then
+      log_fluff "There is nothing to do"
+      return 0
+   fi
+
+   log_debug "\"${style}\" update \"${nodelines}\" for db \"${projectdir:-ROOT}\" ($PWD)"
+
+   local nodeline
+
+   IFS="
+"
+   for nodeline in ${nodelines}
+   do
+      IFS="${DEFAULT_IFS}"
+
+      if [ -z "${nodeline}" ]
+      then
+         continue
+      fi
+
+      # needed for root database only
+      if [ "${database}" = "/" ]
+      then
+         if fgrep -q -s -x "${nodeline}" <<< "${VISITED}"
+         then
+            continue
+         fi
+         VISITED="`add_line "${VISITED}" "${nodeline}"`"
+      fi
+
+      recursive_update_with_nodeline "${nodeline}" \
+                                     "${style}" \
+                                     "${projectdir}" \
+                                     "${database}"
+   done
+
+   IFS="${DEFAULT_IFS}"
+}
+
+
+sourcetree_update()
+{
+   local style="$1"
+   local projectdir="$2"
+   local database="$3"
+
+   db_zombify_nodes "${database}"
+
+   log_verbose "Doing a \"${style}\" update."
+   log_fluff "Set dbtype to \"${style}\""
+
+   if [ "${style}" = "share" -a "${database}" != "/" ]
+   then
+      # remember that not everything is saved here
+      db_set_dbtype "${database}" "partial"
+   else
+      db_set_dbtype "${database}" "${style}"
+   fi
+
 
    local nodelines
 
-   # as we are in the local database there is no owner
-   nodelines="`nodeline_config_read`"
-   update_with_nodelines "${mode}" "" "${nodelines}" || return 1
+   nodelines="`cfg_read "${projectdir}"`"
+   update_with_nodelines "${nodelines}" "${style}" "${projectdir}" "${database}" || return 1
 
-   zombie_bury_zombies
+   db_bury_zombies "${database}"
 
-   db_clear_update
-   if db_contains_entries
+
+   case "${style}" in
+      flat)
+      ;;
+
+      *)
+         #
+         # Run this in a loop for the benefit of the root database, where
+         # shared nodes might be pushed into from a recursive update
+         #
+         nodelines="`db_fetch_all_nodelines "${database}" | sort`"
+         recursive_update_with_nodelines "${nodelines}" \
+                                         "${style}" \
+                                         "${projectdir}" \
+                                         "${database}"  || return 1
+
+         if [ "${database}" = "/" -a ! -z "${nodelines}" ]
+         then
+            memofile="`db_set_memo "${database}" "${nodelines}"`"
+
+            while :
+            do
+               #
+               # Unsorted, the order of the recursive updates would depend on
+               # the (random) uuid.
+               # I don't see how this would be any problem. Yet let's sort
+               # stuff anyway, for reproducability.
+               #
+               nodelines="`db_fetch_all_nodelines "${database}" | sort`"
+               nodelines="`fgrep -v -x -f "${memofile}" <<< "${nodelines}"`"
+               if [ -z "${nodelines}" ]
+               then
+                  break
+               fi
+
+               recursive_update_with_nodelines "${nodelines}" \
+                                               "${style}" \
+                                               "${projectdir}" \
+                                               "${database}"  || return 1
+               db_add_memo "${database}" "${nodelines}"
+            done
+         fi
+      ;;
+   esac
+
+   db_clear_update "${database}"
+   if db_contains_entries "${database}"
    then
-      db_set_ready
+      db_set_ready "${database}"
    fi
 }
 
 
 #
-# Mode        | Result
-# ------------|-----------------------
-# flat        | FAIL
-# recurse     | OK
-# share       | OK
-# noshare     | FAIL
-
-_sourcetree_subtree_update()
-{
-   log_entry "_sourcetree_subtree_update" "$@" "($PWD)"
-
-   local mode="$1"
-   local relative="$2"
-
-   [ -z "${mode}" ]                    && internal_fail "mode is empty"
-   [ -z "${relative}" ]                && internal_fail "relative is empty"
-
-   [ -z "${SOURCETREE_UPDATE_CACHE}" ] && internal_fail "don't call sourcetree_subtree_update yourself"
-
-   case "${mode}" in
-      flat|noshare)
-         return 0
-      ;;
-   esac
-
-   log_verbose "Update ${C_RESET_BOLD}${relative}${C_VERBOSE} \
-(mode=${C_MAGENTA}${C_BOLD}${mode}${C_VERBOSE})"
-
-   local prefix
-
-   prefix="${relative}"
-   case "${prefix}" in
-      ""|*/)
-      ;;
-
-      *)
-         prefix="${prefix}/"
-      ;;
-   esac
-
-   if ! nodeline_config_exists "${prefix}" && ! db_dir_exists "${prefix}"
-   then
-      log_debug "Nothing to do in \"${relative}\""
-      return
-   fi
-
-   (
-      cd "${relative}" &&
-      db_ensure_consistency &&
-      db_ensure_compatible_dbtype "${mode}"
-   ) || exit 1
-
-   if [ "${mode}" = "share" ]
-   then
-      local nodelines
-
-      #
-      # The inferior is in out shared folder .
-      # We now read the other shared repos for this repo, like they
-      # are ours. So relative is the owner of the fetched stuff.
-      #
-      nodelines="`nodeline_config_read "${prefix}"`"
-      update_with_nodelines "${mode}" "${relative}" "${nodelines}" || return 1
-   fi
-
-   (
-      cd "${relative}" &&
-
-      __sourcetree_subtree_update "${mode}"
-   ) || exit 1
-}
-
-
+# STYLES:
+#
+# flat:      run through nodelines, fetch what is missing
+# recurse:   do flat first, then run through db and do recurse in each folder
+#            that has a config file (repeat)
+# share:     the trick for "share" is, that we use a joined database
+#            for nodes marked share and again (local) databases for those
+#            marked noshare like in recurse.
+#
 sourcetree_update_root()
 {
    log_entry "sourcetree_update_root" "$@" "($PWD)"
 
-   local mode
+   local style
 
-   mode="${SOURCETREE_MODE}"
+   style="${SOURCETREE_MODE}"
 
-   db_ensure_consistency
-   db_ensure_compatible_dbtype "${mode}"
+   db_ensure_consistency "/"
+   db_ensure_compatible_dbtype "/" "${style}"
 
+   # TODO: make this a MULLE_FETCH_ENVIRONMENT variable
    local SOURCETREE_UPDATE_CACHE
 
    SOURCETREE_UPDATE_CACHE="`absolutepath "${SOURCETREE_DB_DIR}/.update-cache"`"
 
-   db_clear_ready
-   db_set_update
-
-   zombify_nodes
-
    rmdir_safer "${SOURCETREE_UPDATE_CACHE}"
    mkdir_if_missing "${SOURCETREE_UPDATE_CACHE}"
 
-   log_verbose "Doing a \"${mode}\" update."
-   log_fluff "Set dbtype to \"${mode}\""
-
-   db_set_dbtype "${mode}"
-
-   # as we are in the local database there is no owner
-   nodelines="`nodeline_config_read`"
-   update_with_nodelines "${mode}" "" "${nodelines}" || return 1
-
-   if [ "${mode}" = "share" ]
-   then
-      update_with_nodelines "noshare" "" "${nodelines}" || return 1
-   fi
-
-   rmdir_safer "${SOURCETREE_UPDATE_CACHE}"
-
-   zombie_bury_zombies
-
-   db_clear_update
-   if db_contains_entries
-   then
-      db_set_ready
-   fi
+   sourcetree_update "${style}" "/" "/"
 }
 
 
@@ -1354,8 +1545,8 @@ sourcetree_update_main()
 
    local mulle_fetch_version
 
-   mulle_fetch_version="`mulle-fetch version`"
-   [ -z "${mulle_fetch_version}" ] && "mulle-fetch not installed"
+   mulle_fetch_version="`${MULLE_FETCH:-mulle-fetch} version`"
+   [ -z "${mulle_fetch_version}" ] && fail "${MULLE_FETCH:-mulle-fetch} not installed"
 
    [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
 

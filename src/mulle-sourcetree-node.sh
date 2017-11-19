@@ -69,6 +69,8 @@ node_guess_nodetype()
 
    local url="$1"
 
+   [ -z "${url}" ] && fail "URL is empty"
+
    local evaledurl
    local result
 
@@ -99,6 +101,8 @@ node_fetch_operation()
    local nodetype="$1"; shift
    local fetchoptions="$1"; shift
 
+   [ -z "${url}" ] && fail "URL is empty"
+
    local rval
    local evaledurl
    local evaledbranch
@@ -111,6 +115,8 @@ node_fetch_operation()
    evaledbranch="`eval echo "$branch"`"
    evaledfetchoptions="`eval echo "$fetchoptions"`"
 
+   log_info "Fetching ${C_MAGENTA}${C_BOLD}${address}${C_INFO} from \
+${C_RESET_BOLD}${evaledurl}${C_INFO}"
    eval_exekutor ${MULLE_FETCH:-mulle-fetch} "${opname}" --scm "'${nodetype}'" \
                                                          --tag "'${evaledtag}'" \
                                                          --branch "'${evaledbranch}'" \
@@ -794,12 +800,12 @@ ${userinfo}"
 }
 
 
-nodetype_intersect_nodetypes()
+nodetypes_contain()
 {
-   log_entry "nodetype_intersect_nodetypes" "$@"
+   log_entry "nodetypes_contain" "$@"
 
-   local nodetype="$1"
-   local nodetypes="$2"
+   local nodetypes="$1"
+   local nodetype="$2"
 
    local key
 

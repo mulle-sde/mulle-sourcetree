@@ -33,56 +33,68 @@
 MULLE_SOURCETREE_NODELINE_SH="included"
 
 
+# first field no -s
 _nodeline_get_address()
 {
-   cut -s '-d;' -f 1
+   cut '-d;' -f 1
 }
 
 
 nodeline_get_address()
 {
-  cut -s '-d;' -f 1 <<< "$*"
+  cut '-d;' -f 1 <<< "$*"
 }
-
-
-_nodeline_get_url()
-{
-   cut -s '-d;' -f 2
-}
-
-nodeline_get_url()
-{
-   cut '-d;' -f 2 <<< "$*"
-}
-
-
-nodeline_get_branch()
-{
-   cut -s '-d;' -f 3 <<< "$*"
-}
-
-
-nodeline_get_tag()
-{
-   cut -s '-d;' -f 4 <<< "$*"
-}
-
 
 nodeline_get_nodetype()
 {
-   cut -s '-d;' -f 5 <<< "$*"
+   cut -s '-d;' -f 2 <<< "$*"
 }
 
 
 nodeline_get_marks()
 {
-   cut '-d;' -f 6 <<< "$*"
+   cut '-d;' -f 3 <<< "$*"
+}
+
+
+_nodeline_get_uuid()
+{
+   cut -s '-d;' -f 4
+}
+
+
+nodeline_get_uuid()
+{
+   cut '-d;' -f 4 <<< "$*"
+}
+
+
+_nodeline_get_url()
+{
+   cut -s '-d;' -f 5
+}
+
+nodeline_get_url()
+{
+   cut '-d;' -f 5 <<< "$*"
+}
+
+
+nodeline_get_branch()
+{
+   cut -s '-d;' -f 6 <<< "$*"
+}
+
+
+nodeline_get_tag()
+{
+   cut -s '-d;' -f 7 <<< "$*"
 }
 
 
 nodeline_get_fetchoptions()
 {
-   cut '-d;' -f 7 <<< "$*"
+   cut '-d;' -f 8 <<< "$*"
 }
 
 
@@ -90,19 +102,9 @@ nodeline_get_fetchoptions()
 # but who cares ?
 nodeline_get_userinfo()
 {
-   cut '-d;' -f 8 <<< "$*"
-}
-
-_nodeline_get_uuid()
-{
-   cut -s '-d;' -f 9
-}
-
-
-nodeline_get_uuid()
-{
    cut '-d;' -f 9 <<< "$*"
 }
+
 
 
 #
@@ -169,164 +171,8 @@ nodeline_parse()
 
 
 #
-# Merge two "repositories" files contents. Find duplicates by matching
-# against urls(!) not uuids
-#
-nodeline_merge()
-{
-   log_entry "nodeline_merge" "$@"
-
-   local contents="$1"
-   local additions="$2"
-
-   local nodeline
-   local map
-   local url
-   local uuid
-
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" -o "$MULLE_FLAG_LOG_MERGE" = "YES"  ]
-   then
-      log_trace2 "Merging repositories \"${additions}\" into \"${contents}\""
-   fi
-
-   #
-   # additions may contain address
-   # we replace this with
-   #
-   # 1. if we are a master, with the name of the url
-   # 2. we erase it
-   #
-   map=""
-   IFS="
-"
-   for nodeline in ${additions}
-   do
-      IFS="${DEFAULT_IFS}"
-
-      url="`nodeline_get_url "${nodeline}"`" || internal_fail "nodeline_get_url \"${url}\""
-      map="`assoc_array_set "${map}" "${url}" "${nodeline}"`"
-   done
-
-   IFS="
-"
-   for nodeline in ${contents}
-   do
-      IFS="${DEFAULT_IFS}"
-
-      url="`nodeline_get_url "${nodeline}"`" || internal_fail "nodeline_get_url \"${nodeline}\""
-      map="`assoc_array_set "${map}" "${url}" "${nodeline}"`"
-   done
-   IFS="${DEFAULT_IFS}"
-
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" -o "$MULLE_FLAG_LOG_MERGE" = "YES"  ]
-   then
-      log_trace2 "----------------------"
-      log_trace2 "merged \"nodelines\":"
-      log_trace2 "----------------------"
-      log_trace2 "`assoc_array_all_values "${map}"`"
-      log_trace2 "----------------------"
-   fi
-   assoc_array_all_values "${map}"
-}
-
-
-nodeline_read_file()
-{
-   log_entry "nodeline_read_file" "$@"
-
-   local filename="$1"
-
-   [ -z "${filename}" ] && internal_fail "file is empty"
-
-   egrep -s -v '^#' "${filename}"
-}
-
-#
-# these can be prefixed for external queries
-#
-
-nodeline_config_exists()
-{
-   log_entry "nodeline_config_exists" "$@"
-
-   local prefix="$1"
-
-   [ -z "${prefix}${SOURCETREE_CONFIG_FILE}" ] && internal_fail "SOURCETREE_CONFIG_FILE is empty"
-
-   if [ -f "${prefix}${SOURCETREE_CONFIG_FILE}" ]
-   then
-      log_debug "\"${PWD}/${prefix}${SOURCETREE_CONFIG_FILE}\" exists"
-      return 0
-   fi
-
-   log_debug "\"${PWD}/${prefix}${SOURCETREE_CONFIG_FILE}\" not found"
-   return 1
-}
-
-
-nodeline_config_timestamp()
-{
-   log_entry "nodeline_config_timestamp" "$@"
-
-   local prefix="$1"
-
-   [ -z "${prefix}${SOURCETREE_CONFIG_FILE}" ] && internal_fail "SOURCETREE_CONFIG_FILE is empty"
-
-   if [ -f "${prefix}${SOURCETREE_CONFIG_FILE}" ]
-   then
-      modification_timestamp "${prefix}${SOURCETREE_CONFIG_FILE}"
-   fi
-}
-
-
-#
-# can receive a prefix (for walking)
-#
-nodeline_config_read()
-{
-   log_entry "nodeline_config_read" "$@"
-
-   [ -z "${SOURCETREE_CONFIG_FILE}" ] && internal_fail "SOURCETREE_CONFIG_FILE is empty"
-
-   local prefix="$1"
-
-   if [ -f "${prefix}${SOURCETREE_CONFIG_FILE}" ]
-   then
-      egrep -s -v '^#' "${prefix}${SOURCETREE_CONFIG_FILE}"
-   else
-      log_debug "No config file \"${prefix}${SOURCETREE_CONFIG_FILE}\" found ($PWD)"
-   fi
-}
-
-
 #
 #
-#
-nodeline_merge_files()
-{
-   log_entry "nodeline_merge_files" "$@"
-
-   local srcfile="$1"
-   local address="$2"
-
-   [ -z "${srcfile}" ] && internal_fail "srcfile is empty"
-   [ -z "${address}" ] && internal_fail "address is empty"
-
-   log_fluff "Merge \"srcfile\" into \"${address}\""
-
-   local contents
-   local additions
-   local results
-
-   contents="$(nodeline_read_file "${srcfile}")" || exit 1
-   additions="$(nodeline_read_file "${address}")" || exit 1
-
-   results="`nodeline_merge "${contents}" "${additions}"`"
-
-   redirect_exekutor "${address}" echo "${results}" || fail "failed to merge"
-}
-
-
 nodeline_remove()
 {
    log_entry "nodeline_remove" "$@"
@@ -355,76 +201,6 @@ nodeline_remove()
          echo "${nodeline}"
       fi
    done
-}
-
-
-
-#
-# take a list of nodelines
-# unique them with another list of repositories by url
-# output uniqued list
-#
-# another:  b;b
-# input:    b
-# output:   b;b
-#
-nodeline_unique()
-{
-   log_entry "nodeline_unique" "$@"
-
-   local input="$1"
-   local another="$2"
-
-   local nodeline
-   local map
-   local uuid
-   local output
-
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" -o "$MULLE_FLAG_LOG_MERGE" = "YES"  ]
-   then
-      log_trace2 "Uniquing \"${input}\" with \"${another}\""
-   fi
-
-   map=""
-   IFS="
-"
-   for nodeline in ${another}
-   do
-      IFS="${DEFAULT_IFS}"
-
-      if [ ! -z "${nodeline}" ]
-      then
-         url="`nodeline_get_url "${nodeline}"`" || internal_fail "nodeline_get_url \"${nodeline}\""
-         map="`assoc_array_set "${map}" "${url}" "${nodeline}"`"
-      fi
-   done
-
-   output=""
-   IFS="
-"
-   for nodeline in ${input}
-   do
-      IFS="${DEFAULT_IFS}"
-
-      if [ ! -z "${nodeline}" ]
-      then
-         url="`nodeline_get_url "${nodeline}"`" || internal_fail "nodeline_get_url \"${nodeline}\""
-         uniqued="`assoc_array_get "${map}" "${url}"`"
-         output="`add_line "${output}" "${uniqued:-${nodeline}}"`"
-      fi
-   done
-   IFS="${DEFAULT_IFS}"
-
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" -o "$MULLE_FLAG_LOG_MERGE" = "YES"  ]
-   then
-      log_trace2 "----------------------"
-      log_trace2 "uniqued \"repositories\":"
-      log_trace2 "----------------------"
-      log_trace2 "${output}"
-      log_trace2 "----------------------"
-   fi
-
-   echo "${output}"
 }
 
 
@@ -460,18 +236,6 @@ nodeline_find()
 }
 
 
-nodeline_config_get_nodeline()
-{
-   log_entry "nodeline_config_get_nodeline" "$@"
-
-   local address="$1"
-
-   local nodelines
-
-   nodelines="`nodeline_config_read`"
-   nodeline_find "${nodelines}" "${address}"
-}
-
 
 nodeline_has_duplicate()
 {
@@ -500,79 +264,17 @@ nodeline_has_duplicate()
 }
 
 
-nodeline_config_has_duplicate()
+nodeline_read_file()
 {
-   log_entry "nodeline_config_has_duplicate" "$@"
+   log_entry "nodeline_read_file" "$@"
 
-   local address="$1"
-   local uuid="$2"
+   local filename="$1"
 
-   local nodelines
+   [ -z "${filename}" ] && internal_fail "file is empty"
 
-   nodelines="`nodeline_config_read`"
-   nodeline_has_duplicate "${nodelines}" "${address}" "${uuid}"
+   egrep -s -v '^#' "${filename}"
 }
 
-
-nodeline_config_remove_nodeline()
-{
-   log_entry "nodeline_config_remove_nodeline" "$@"
-
-   local address="$1"
-
-   local escaped
-
-   log_debug "Removing \"${address}\" from  \"${SOURCETREE_CONFIG_FILE}\""
-   escaped="`escaped_sed_pattern "${address}"`"
-   if ! exekutor sed -i ".bak" "/^${escaped};/d" "${SOURCETREE_CONFIG_FILE}"
-   then
-      internal_fail "sed address corrupt ?"
-   fi
-}
-
-
-nodeline_config_change_nodeline()
-{
-   log_entry "nodeline_config_change_nodeline" "$@"
-
-   local oldnodeline="$1"
-   local newnodeline="$2"
-
-   local oldescaped
-   local newescaped
-
-   oldescaped="`escaped_sed_pattern "${oldnodeline}"`"
-   newescaped="`escaped_sed_pattern "${newnodeline}"`"
-
-   log_debug "Editing \"${SOURCETREE_CONFIG_FILE}\""
-   if ! exekutor sed -i '-bak' -e "s/^${oldescaped}$/${newescaped}/" "${SOURCETREE_CONFIG_FILE}"
-   then
-      fail "Edit of config file failed unexpectedly"
-   fi
-}
-
-
-nodeline_search_config_dir()
-{
-   log_entry "nodeline_search_config_dir" "$@"
-
-   local directory="${1:-${PWD}}"
-
-   (
-      cd "${directory}" &&
-      while ! nodeline_config_exists
-      do
-         case "${PWD}" in
-            "/"|"")
-               exit 1
-            ;;
-         esac
-
-         cd ..
-      done &&
-      echo "${PWD}"
-   )
-}
 
 
 nodeline_print_header()
@@ -732,144 +434,5 @@ ${sep}${tag:- }${sep}${fetchoptions:- }"
          printf "\n"
       ;;
    esac
-}
-
-
-#
-# return the directory, that we should be using for the following defer
-# possibilities
-#
-# NONE:    do not search only pri
-# NEAREST: search up until we find a sourcetree
-# PARENT:  get the enveloping sourcetree of PWD (even if PWD has a sourcetree)
-# ROOT:    get the outermost enveloping sourcetree (can be PWD)
-#
-nodeline_working_directory()
-{
-   log_entry "nodeline_working_directory" "$@"
-
-   local preference="${1:-NONE}"
-
-   local directory
-   local parent
-   local found
-   local defer
-
-   if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-db.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
-   fi
-
-   defer="${MULLE_FLAG_DEFER}"
-   if [ "${defer}" = "DEFAULT" ]
-   then
-      defer="${preference}"
-   fi
-
-   case "${defer}" in
-      NONE)
-         if nodeline_config_exists || db_dir_exists
-         then
-            echo "${PWD}"
-            return 0
-         fi
-
-         log_debug "No config found or db found"
-         return 1
-      ;;
-
-      NEAREST)
-         directory="`nodeline_search_config_dir`"
-         if [ $? -ne 0 ]
-         then
-            log_debug "No config found or db found"
-            return 1
-         fi
-         echo "${directory}"
-         return 0
-      ;;
-
-      PARENT)
-         directory="`nodeline_search_config_dir`"
-         if [ $? -ne 0 ]
-         then
-            log_debug "No config found or db found"
-            return 1
-         fi
-
-         if [ "${directory}" != "${PWD}" ]
-         then
-            echo "${directory}"
-            return 0
-         fi
-
-         parent="`dirname -- "${directory}"`"
-         directory="`nodeline_search_config_dir "${parent}"`"
-         if [ $? -eq 0 ]
-         then
-            echo "${directory}"
-            return 0
-         fi
-
-         log_debug "No parent found"
-         return 1
-      ;;
-
-      ROOT)
-         directory="`nodeline_search_config_dir`"
-         if [ $? -ne 0 ]
-         then
-            log_debug "No config found"
-            return 1
-         fi
-
-         while :
-         do
-            found="${directory}"
-            parent="`dirname -- "${directory}"`"
-            if [ "${parent}" = "/" ]
-            then
-               break
-            fi
-
-            directory="`nodeline_search_config_dir "${parent}"`"
-            if [ $? -ne 0 ]
-            then
-               break
-            fi
-         done
-
-         echo "${found}"
-         return 0
-      ;;
-   esac
-
-   return 1
-}
-
-
-nodeline_defer_if_needed()
-{
-   local preference="${1:-NONE}"
-
-   local directory
-
-   if directory="`nodeline_working_directory "${preference}"`"
-   then
-      if [ "${directory}" != "${PWD}" ]
-      then
-         exekutor cd "${directory}"
-         log_debug "Changed to master \"${directory}\" ($PWD)"
-      fi
-   fi
-
-   if [ ! -z "${directory}" -a -z "${MULLE_WALK_SUPRESS}" ]
-   then
-      if nodeline_config_exists "${directory}/"
-      then
-         log_info "Sourcetree: ${C_RESET_BOLD}${directory}/${SOURCETREE_CONFIG_FILE}${C_INFO}"
-      fi
-   fi
 }
 

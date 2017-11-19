@@ -51,36 +51,56 @@ EOF
 
 
 #
+# 0 : OK
+# 1 : needs update
+# 2 : config file missing
+#
+sourcetree_is_uptodate()
+{
+   log_entry "sourcetree_is_uptodate" "$@"
+
+   local database="$1"
+   local projectdir="$2"
+
+   [ -z "${database}" ] && internal_fail "database is empty"
+   [ -z "${projectdir}" ] && internal_fail "projectdir is empty"
+
+   local configtimestamp
+   local dbtimestamp
+
+   configtimestamp="`cfg_timestamp "${projectdir}"`"
+   if [ -z "${configtimestamp}" ]
+   then
+      return 2
+   fi
+
+   dbtimestamp="`db_timestamp "${database}"`"
+
+   log_debug "Timestamps: config=${configtimestamp} db=${dbtimestamp:-0}"
+
+   [ "${configtimestamp}" -le "${dbtimestamp:-0}" ]
+}
+
+
+#
 # we are arriving here in prefixed mode
 #
 emit_status()
 {
    log_entry "emit_status" "$@"
 
-   local prefixed="$1"
-   local paliased="$2"
-   local marks="$3"
-   local mode="$4"
+   local address="$1"
+   local directory="$2"
+   local datasource="$3"
+   local projectdir="$4"
+   local marks="$5"
+   local mode="$6"
 
-   local rval
-   local prefix
-   local palias
-   local name
-   local directory
-
-   if [ -z "${prefixed}" ]
+   if [ -z "${directory}" ]
    then
-      prefix=""
+      datasource="/"
       directory="."
-   else
-      directory="${prefixed}"
-
-      case "${mode}" in
-         *share*)
-            directory="${paliased}"
-         ;;
-      esac
-      prefix="${directory}/"
+      projectdir="/"
    fi
 
    local fs
@@ -163,8 +183,7 @@ emit_status()
          # -----------|----------|-------------|----------
          # not exists | *        | *           | ok
          #
-
-         if ! nodeline_config_exists "${prefix}"
+         if ! cfg_exists "${datasource}"
          then
             log_fluff "\"${directory}\" does not have a ${SOURCETREE_CONFIG_FILE} ($PWD)"
 
@@ -186,11 +205,11 @@ emit_status()
          # exists  | exists     | +           | update
          #
 
-         if ! db_is_ready "${prefix}"
+         if ! db_is_ready "${directory}"
          then
             status="update"
          else
-            if db_is_updating "${prefix}"
+            if db_is_updating "${directory}"
             then
                log_fluff "\"${directory}\" is marked as updating ($PWD)"
 
@@ -203,7 +222,7 @@ emit_status()
                return 1
             fi
 
-            if ! db_is_uptodate "${prefix}"
+            if ! sourcetree_is_uptodate "${directory}" "${projectdir}"
             then
                log_fluff "\"${directory}\" database is stale ($PWD)"
 
@@ -225,8 +244,10 @@ walk_status()
 {
    log_entry "walk_status" "$@"
 
-   emit_status "${MULLE_PREFIX}${MULLE_RAW_ADDRESS}" \
-               "${MULLE_PALIAS}${MULLE_RAW_ADDRESS}" \
+   emit_status "${MULLE_ADDRESS}" \
+               "${MULLE_DESTINATION}" \
+               "${MULLE_DATASOURCE}" \
+               "${MULLE_PROJECTDIR}" \
                "${MULLE_MARKS}" \
                "${MULLE_MODE}"
 }
@@ -398,13 +419,13 @@ sourcetree_status_main()
 
    [ "$#" -eq 0 ] || sourcetree_status_usage
 
-   if ! nodeline_config_exists
+   if ! cfg_exists "/"
    then
       log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
       return 0
    fi
 
-   if ! db_is_ready
+   if ! db_is_ready "/"
    then
       if [ "${OPTION_IS_UPTODATE}" = "YES" ]
       then
@@ -416,7 +437,6 @@ sourcetree_status_main()
    fi
 
    mode="${SOURCETREE_MODE}"
-
    if [ "${OPTION_OUTPUT_RAW}" != "YES" ]
    then
       mode="`concat "${mode}" "output-formatted"`"

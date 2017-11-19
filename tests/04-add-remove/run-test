@@ -34,6 +34,8 @@ main()
 
    directory="`make_tmp_directory`" || exit 1
 
+   MULLE_SDE_VIRTUAL_ROOT="${directory}"
+   export MULLE_SDE_VIRTUAL_ROOT
 
    mkdir_if_missing "${directory}/a"
    mkdir_if_missing "${directory}/a/b"
@@ -45,12 +47,12 @@ main()
       fail "config should not exist"
    fi
 
-   if ! run_mulle_sourcetree add "a"
+   if ! run_mulle_sourcetree -N add "a"
    then
       fail "add failed unexpectedly"
    fi
 
-   if run_mulle_sourcetree add "a"
+   if run_mulle_sourcetree -N add "a"
    then
       fail "duplicate add succeeded unexpectedly"
    fi
@@ -60,12 +62,12 @@ main()
       fail "config should exist now"
    fi
 
-   if ! run_mulle_sourcetree remove "a"
+   if ! run_mulle_sourcetree -N remove "a"
    then
       fail "remove failed unexpectedly"
    fi
 
-   if run_mulle_sourcetree remove "a"
+   if run_mulle_sourcetree -N remove "a"
    then
       fail "superflous remove succeded unexpectedly"
    fi
@@ -78,32 +80,32 @@ main()
    #
    # add a git url
    #
-   if ! run_mulle_sourcetree add "https://a.com/a.git"
+   if ! run_mulle_sourcetree -N add "https://a.com/a.git"
    then
       fail "add URL, failed unexpectedly"
    fi
 
-   run_mulle_sourcetree list
+   run_mulle_sourcetree -N list
 
-   local address="`run_mulle_sourcetree get a address`"
-   local nodetype="`run_mulle_sourcetree get a nodetype`"
-   local url="`run_mulle_sourcetree get a url`"
+   local address="`run_mulle_sourcetree -N get a address`"
+   local nodetype="`run_mulle_sourcetree -N get a nodetype`"
+   local url="`run_mulle_sourcetree -N get a url`"
 
    if [ "${nodetype}" != "git" ] || [ "${address}" != "a" ] || [ "${url}" != "https://a.com/a.git" ]
    then
       fail "#1 did not work (${address};${nodetype};${url})"
    fi
 
-   if ! run_mulle_sourcetree add -u "https://a.com/a.git" b
+   if ! run_mulle_sourcetree -N add -u "https://a.com/a.git" b
    then
       fail "add URL, failed unexpectedly"
    fi
 
-   run_mulle_sourcetree list
+   run_mulle_sourcetree -N list
 
-   local address="`run_mulle_sourcetree get b address`"
-   local nodetype="`run_mulle_sourcetree get b nodetype`"
-   local url="`run_mulle_sourcetree get b url`"
+   local address="`run_mulle_sourcetree -N get b address`"
+   local nodetype="`run_mulle_sourcetree -N get b nodetype`"
+   local url="`run_mulle_sourcetree -N get b url`"
 
    if [ "${nodetype}" != "git" ] || [ "${address}" != "b" ] || [ "${url}" != "https://a.com/a.git" ]
    then
@@ -111,16 +113,16 @@ main()
    fi
 
 
-   if ! run_mulle_sourcetree add --nodetype symlink --url "/a.com/a" c
+   if ! run_mulle_sourcetree -N add --nodetype symlink --url "/a.com/a" c
    then
       fail "add URL, failed unexpectedly"
    fi
 
-   run_mulle_sourcetree list
+   run_mulle_sourcetree -N list
 
-   local address="`run_mulle_sourcetree get c address`"
-   local nodetype="`run_mulle_sourcetree get c nodetype`"
-   local url="`run_mulle_sourcetree get c url`"
+   local address="`run_mulle_sourcetree -N get c address`"
+   local nodetype="`run_mulle_sourcetree -N get c nodetype`"
+   local url="`run_mulle_sourcetree -N get c url`"
 
    if [ "${nodetype}" != "symlink" ] || [ "${address}" != "c" ] || [ "${url}" != "/a.com/a" ]
    then

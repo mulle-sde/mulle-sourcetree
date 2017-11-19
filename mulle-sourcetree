@@ -68,6 +68,7 @@ HIDDEN_COMMANDS="\
    fix           : support to track user modifications in the filesystem
    get           : get a node's properties from the configuration
    library-path  : print path to ${MULLE_EXECUTABLE_NAME} libexec
+   path          : print path to project
    list          : list nodes in the current configuration
    mark          : add or remove a mark from a node in the configuration
    walk          : visit all the tree nodes with a callback
@@ -107,8 +108,12 @@ Usage:
    and archives.
 
 Flags:
+   -e        : bypass mulle-sde check
+   -N        : bypass search for enclosing source tree
+   --flat    : flat operation
+   --recurse : recursive operation
+   --share   : share operation
 EOF
-
    options_technical_flags_usage
 
    cat <<EOF
@@ -150,6 +155,7 @@ main()
    local MULLE_FLAG_LOG_MERGE="NO"
    local MULLE_TRACE_POSTPONE="NO"
    local MULLE_FLAG_DEFER="ROOT"
+   local FLAG_OUTSIDE_ENV="NO"
 
    local FLAG_SOURCETREE_MODE=
 
@@ -157,7 +163,6 @@ main()
    local SOURCETREE_DEFAULT_FILE=".mulle-sourcetree.default"
    local SOURCETREE_DB_DIR=".mulle-sourcetree.db"
    local SOURCETREE_FIX_FILE=".mulle-sourcetree.fix"
-
 
    #
    # simple option handling
@@ -171,6 +176,10 @@ main()
       fi
 
       case "$1" in
+         -e)
+            FLAG_OUTSIDE_ENV="YES"
+         ;;
+
          -f|--force)
             MULLE_FLAG_MAGNUM_FORCE="BOTH"
          ;;
@@ -245,6 +254,11 @@ main()
 
    options_setup_trace "${MULLE_TRACE}"
 
+   if [ "${FLAG_OUTSIDE_ENV}" = "NO" -a -z "${MULLE_SDE_VIRTUAL_ROOT}" ]
+   then
+      fail "To run mulle-sourcetree outside of mulle-sde, pass the -e flag"
+   fi
+
    local cmd
 
    cmd="${1:-update}"
@@ -257,18 +271,24 @@ main()
       MULLE_FETCH="mulle-fetch"
    fi
 
+   # shellcheck source=../mulle-bashfunctions/src/mulle-options.sh
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"  || fail "${failmsg}"
+
    # shellcheck source=mulle-sourcetree-db.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
    # shellcheck source=mulle-sourcetree-node.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
    # shellcheck source=mulle-sourcetree-nodeline.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
+   # shellcheck source=mulle-sourcetree-cfg.sh
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh" || exit 1
 
-   nodeline_defer_if_needed "ROOT"
+
+   cfg_defer_if_needed "ROOT" || exit 1
 
    local SOURCETREE_MODE
 
-   _db_set_default_mode "${FLAG_SOURCETREE_MODE}"
+   _db_set_default_mode "/" "${FLAG_SOURCETREE_MODE}" || exit 1
 
    #
    #
@@ -285,7 +305,7 @@ main()
          # shellcheck source=src/mulle-sourcetree-walk.sh
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
 
-          "$@"
+         sourcetree_buildorder_main "$@"
       ;;
 
       clean)
@@ -345,12 +365,23 @@ main()
          sourcetree_mark_main "$@"
       ;;
 
+      path)
+         # shellcheck source=src/mulle-sourcetree-walk.sh
+         echo "$PWD"
+      ;;
+
       print)
          # shellcheck source=src/mulle-sourcetree-walk.sh
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
 
+         # promote flat to recurse, except when user says so
+         if [ "${SOURCETREE_MODE}" = "flat" -a -z "${FLAG_SOURCETREE_MODE}" ]
+         then
+            SOURCETREE_MODE="recurse"
+         fi
+
          sourcetree_walk_main --no-depth-first --callback-root --cd \
-               "${MULLE_EXECUTABLE}" --flat -N list --output-eval
+               "${MULLE_EXECUTABLE}" --flat -N list --output-banner --output-eval
       ;;
 
       remove)
@@ -531,20 +562,6 @@ _init()
       fi
       exit 1
    fi
-
-   PATH="${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}:$PATH"
-   PATH="${MULLE_SOURCETREE_LIBEXEC_DIR}:$PATH"
-   export PATH
-
-   if [ ! -z "${MULLE_SOURCETREE_LIBEXEC_TRACE}" ]
-   then
-      echo "PATH=$PATH" >&2
-   fi
-
-   #
-   # to make these includes faster don't search via PATH
-   # but have PATH as fallback
-   #
    local failmsg
 
    failmsg="failed to load bashfunctions from ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}"

@@ -30,7 +30,7 @@ _setup_demo_repo_a()
    exekutor git commit -m "a: 2.0.0" VERSION
    exekutor git tag "2.0.0"
 
-   exekutor git branch -d master
+#   exekutor git branch -d master
 }
 
 
@@ -222,6 +222,8 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
+   MULLE_SDE_VIRTUAL_ROOT="${directory}"
+   export MULLE_SDE_VIRTUAL_ROOT
 
    local project
    local repos

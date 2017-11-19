@@ -56,7 +56,7 @@ Usage:
 
 Options:
    --branch <value>       : branch to use instead of the default
-   --nodetype <value>     : the node type (default: none)
+   --nodetype <value>     : the node type (default: local)
    --fetchoptions <value> : options for mulle-fetch --options
    --marks <value>        : key-value sourcetree marks (e.g. build=yes)
    --tag <value>          : tag to checkout
@@ -108,12 +108,13 @@ Usage:
    This command only reads the local config file.
 
 Options:
-   --output-raw           : output as CSV (semicolon separated values)
-   --output-cmd           : output as ${MULLE_EXECUTABLE_NAME} command line
-   --output-full          : show url and various fetch options
-   --output-eval          : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
    --no-output-header     : suppress header in raw and default lists
    --no-output-separator  : suppress separator line if header is printed
+   --output-banner        : print a banner with config information
+   --output-cmd           : output as ${MULLE_EXECUTABLE_NAME} command line
+   --output-eval          : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
+   --output-full          : show url and various fetch options
+   --output-raw           : output as CSV (semicolon separated values)
 EOF
   exit 1
 }
@@ -213,7 +214,6 @@ sourcetree_add_node()
 
    local input="$1"
 
-   local addresss
    local branch="${OPTION_BRANCH}"
    local fetchoptions="${OPTION_FETCHOPTIONS}"
    local marks="${OPTION_MARKS}"
@@ -221,7 +221,6 @@ sourcetree_add_node()
    local tag="${OPTION_TAG}"
    local url="${OPTION_URL}"
    local userinfo="${OPTION_USERINFO}"
-   local uuid
 
    #
    # try to figure out nodetype. At this point adre
@@ -253,6 +252,8 @@ sourcetree_add_node()
       esac
    fi
 
+   local address
+
    #
    # try to figure out if input is an url
    # trivially, it is the address if url is empty
@@ -267,7 +268,7 @@ sourcetree_add_node()
 
          /*|~*)
             case "${nodetype}" in
-               none)
+               local)
                   address="`symlink_relpath "${input}" "${PWD}"`"
                ;;
 
@@ -285,7 +286,7 @@ sourcetree_add_node()
       address="${input}"
    fi
 
-   if nodeline_config_has_duplicate "${address}"
+   if cfg_has_duplicate "/" "${address}"
    then
       fail "There is already a node ${C_RESET_BOLD}${address}${C_ERROR_TEXT} \
 in the sourcetree"
@@ -316,7 +317,7 @@ in the sourcetree"
    node_augment "${mode}"
 
 
-   if nodeline_config_get_nodeline "${address}" > /dev/null
+   if cfg_get_nodeline "/" "${address}" > /dev/null
    then
       fail "${C_RESET_BOLD}${address}${C_ERROR_TEXT} already exists"
    fi
@@ -331,7 +332,7 @@ in the sourcetree"
    nodeline="`node_print_nodeline`"
    appended="`add_line "${contents}" "${nodeline}"`"
 
-   redirect_exekutor "${SOURCETREE_CONFIG_FILE}" echo "${appended}"
+   cfg_write "/" "${appended}"
 }
 
 
@@ -341,21 +342,13 @@ sourcetree_remove_node()
 
    local address="$1"
 
-   if [ ! -f "${SOURCETREE_CONFIG_FILE}" ]
-   then
-      return 1
-   fi
-
    local oldnodeline
 
-   oldnodeline="`nodeline_config_get_nodeline "${address}"`" || return 1
+   oldnodeline="`cfg_get_nodeline "/" "${address}"`" || return 1
    if [ ! -z "${oldnodeline}" ]
    then
-      nodeline_config_remove_nodeline "${address}"
-      if [ -z "`nodeline_config_read`" ]
-      then
-         remove_file_if_present "${SOURCETREE_CONFIG_FILE}"
-      fi
+      cfg_remove_nodeline "/" "${address}"
+      cfg_file_remove_if_empty "/"
    fi
 }
 
@@ -374,12 +367,12 @@ sourcetree_change_nodeline()
       return
    fi
 
-   nodeline_config_change_nodeline "${oldnodeline}" "${newnodeline}"
+   cfg_change_nodeline "/" "${oldnodeline}" "${newnodeline}"
 
    local verifynodelines
    local verifynodeline
 
-   verifynodelines="`nodeline_config_read`"
+   verifynodelines="`cfg_read "/"`"
    verifynodeline="`nodeline_find "${verifynodelines}" "${address}"`"
 
    if [ "${verifynodeline}" != "${newnodeline}" ]
@@ -393,7 +386,7 @@ _unfailing_get_nodeline()
 {
    local address="$1"
 
-   if ! nodeline_config_get_nodeline "${address}"
+   if ! cfg_get_nodeline "/" "${address}"
    then
       fail "A node \"${address}\" does not exist"
    fi
@@ -472,7 +465,7 @@ sourcetree_set_node()
 
    newnodeline="`node_print_nodeline`"
 
-   if nodeline_config_has_duplicate "${address}" "${uuid}"
+   if cfg_has_duplicate "/"  "${uuid}" "${address}"
    then
       fail "There is already a node ${C_RESET_BOLD}${address}${C_ERROR_TEXT} \
 in the sourcetree
@@ -615,7 +608,7 @@ _sourcetree_list_nodes()
    local nodeline
    local nodelines
 
-   nodelines="`nodeline_config_read`" || exit 1
+   nodelines="`cfg_read "/"`" || exit 1
 
    IFS="
 "
@@ -689,6 +682,11 @@ sourcetree_list_node()
       return
    fi
 
+   if [ "${OPTION_OUTPUT_BANNER}" = "YES" ]
+   then
+      sourcetree_info_node
+   fi
+
    mode="`_sourcetree_augment_mode_with_output_options`"
 
    case "${mode}" in
@@ -709,34 +707,44 @@ sourcetree_info_node()
 
    [ -z "${MULLE_EXECUTABLE_PWD}" ] && internal_fail "MULLE_EXECUTABLE_PWD is empty"
 
-   log_info "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
+
+   local dbstate
+
+   dbstate="absent"
+   if db_dir_exists "/"
+   then
+      if db_is_ready "/"
+      then
+         dbstate="ready"
+      else
+         dbstate="incomplete"
+      fi
+
+      local state
+      state="`db_get_dbtype "/"`"
+
+      dbstate="`comma_concat "${dbstate}" "${state}"`"
+      if db_has_graveyard "/"
+      then
+         dbstate="`comma_concat "${dbstate}" "graveyard"`"
+      fi
+   fi
+
+   printf "%b\n" "${C_INFO}--------------------------------------------------${C_RESET}"
+   printf "%b\n" "${C_INFO}Sourcetree: ${C_MAGENTA}${C_BOLD}${PWD}${C_RESET}"
+   printf "%b\n" "${C_INFO}Database: ${C_MAGENTA}${C_BOLD}${dbstate}${C_RESET}"
 
    case "${SOURCETREE_MODE}" in
       share)
          if [ ! -z "${MULLE_SOURCETREE_SHARED_DIR}" ]
          then
-            log_info "Mode: ${C_RESET_BOLD}${MULLE_SOURCETREE_SHARED_DIR}${C_INFO}"
+            printf "%b\n" "{C_INFO}Shared directory: \
+${C_RESET_BOLD}${MULLE_SOURCETREE_SHARED_DIR}${C_RESET}"
          fi
       ;;
    esac
 
-   if [ "${MULLE_EXECUTABLE_PWD}" = "${PWD}" ]
-   then
-      log_fluff "Is local (${MULLE_EXECUTABLE_PWD})"
-      return
-   fi
-
-   if nodeline_config_exists "${MULLE_EXECUTABLE_PWD}/"
-   then
-      log_info "${C_RESET_BOLD}`basename -- ${MULLE_EXECUTABLE_PWD}`${C_INFO} is a subtree of its master"
-      return
-   fi
-
-   if db_exists "${MULLE_EXECUTABLE_PWD}/"
-   then
-      log_info "${C_RESET_BOLD}`basename -- ${MULLE_EXECUTABLE_PWD}`${C_INFO} contains a graveyard"
-      return
-   fi
+   printf "%b\n" "${C_INFO}--------------------------------------------------${C_RESET}"
 }
 
 
@@ -768,6 +776,7 @@ sourcetree_common_main()
    local OPTION_OUTPUT_SEPARATOR="DEFAULT"
    local OPTION_GUESS_NODETYPE="DEFAULT"
    local OPTION_EXTENDED_MARKS="DEFAULT"
+   local OPTION_OUTPUT_BANNER="DEFAULT"
    local OPTION_GUESS_DSTFILE="DEFAULT_IFS"
    local OPTION_UNSAFE="NO"
    local OPTION_OUTPUT_UUID="DEFAULT"
@@ -866,6 +875,23 @@ sourcetree_common_main()
             OPTION_OUTPUT_UUID="NO"
          ;;
 
+         --output-banner)
+            OPTION_OUTPUT_BANNER="YES"
+         ;;
+
+         --no-output-banner)
+            OPTION_OUTPUT_BANNER="NO"
+         ;;
+
+         --output-eval)
+            OPTION_OUTPUT_EVAL="YES"
+         ;;
+
+         --no-output-eval)
+            OPTION_OUTPUT_EVAL="NO"
+         ;;
+
+
          #
          # more common flags
          #
@@ -881,14 +907,6 @@ sourcetree_common_main()
             shift
 
             OPTION_BRANCH="$1"
-         ;;
-
-         -e|--output-eval)
-            OPTION_OUTPUT_EVAL="YES"
-         ;;
-
-         --no-output-eval)
-            OPTION_OUTPUT_EVAL="NO"
          ;;
 
          -f|--fetchoptions)
@@ -1090,8 +1108,16 @@ sourcetree_commands_initialize()
    then
       # shellcheck source=mulle-sourcetree-node.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   fi
+   if [ -z "${MULLE_SOURCETREE_NODELINE_SH}" ]
+   then
       # shellcheck source=mulle-sourcetree-nodeline.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
+   fi
+   if [ -z "${MULLE_SOURCETREE_CFG_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-cfg.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh" || exit 1
    fi
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]

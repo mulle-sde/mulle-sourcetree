@@ -97,14 +97,14 @@ run_test1()
    then
       fail "add failed unexpectedly"
    fi
-   if ! MULLE_SOURCETREE_SHARED_DIR="shared" run_mulle_sourcetree --recurse --share update
+   if ! MULLE_SOURCETREE_SHARED_DIR="shared" run_mulle_sourcetree --share update
    then
       fail "update failed unexpectedly"
    fi
 
-   [ -d "shared/a" ] || fail "a should exist"
-   [ -d "shared/b" ] || fail "b should exist"
-   [ -d "shared/c" ] || fail "c should exist"
+   [ -d "shared/a" ] || fail "shared/a should exist"
+   [ -d "shared/b" ] || fail "shared/b should exist"
+   [ -d "shared/c" ] || fail "shared/c should exist"
 }
 
 
@@ -120,11 +120,10 @@ run_test2()
       fail "update failed unexpectedly"
    fi
 
-   [ -d "shared/a" ] || fail "a should exist"
-   [ -d "shared/b" ] || fail "b should exist"
-   [ -d "shared/c" ] || fail "c should exist"
+   [ -d "shared/a" ] || fail "shared/a should exist"
+   [ -d "shared/b" ] || fail "shared/b should exist"
+   [ -d "shared/c" ] || fail "shared/c should exist"
 }
-
 
 
 run_test3()
@@ -135,19 +134,24 @@ run_test3()
    then
       fail "add failed unexpectedly"
    fi
-   if ! MULLE_SOURCETREE_SHARED_DIR="shared" run_mulle_sourcetree ${flags} --share  update
+
+   run_mulle_sourcetree list
+
+   if ! MULLE_SOURCETREE_SHARED_DIR="shared" run_mulle_sourcetree ${flags} --share update
    then
       fail "update failed unexpectedly"
    fi
 
    if [ -z ${flags} ]
    then
-      [ -d "shared/a" ]   || fail "a should exist"
-      [ ! -d "shared/b" ] || fail "b should not exist"
-      [ -d "shared/c" ]   || fail "c should exist"
+      [ -d "shared/a" ]     || fail "shared/a should exist"
+      [ -d "shared/b" ]     && fail "shared/b should not exist"
+      [ -d "shared/c" ]     || fail "shared/c should exist"
 
-      [ -d "shared/a/b" ]   || fail "a/b should exist"
-      [ -d "shared/a/b/c" ] || fail "a/b/c should exist"
+      [ -d "shared/a/b" ]   || fail "shared/a/b should exist"
+
+      # this is debatable i don't know
+      # [ -d "shared/a/b/c" ] || fail "shared/a/b/c should exist"
    fi
 }
 
@@ -162,6 +166,8 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
+   MULLE_SDE_VIRTUAL_ROOT="${directory}"
+   export MULLE_SDE_VIRTUAL_ROOT
 
    local project
 
