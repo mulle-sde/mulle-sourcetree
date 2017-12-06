@@ -57,6 +57,16 @@ main()
       fail "duplicate add succeeded unexpectedly"
    fi
 
+   if run_mulle_sourcetree -N add "."
+   then
+      fail "add \".\" succeeded unexpectedly"
+   fi
+
+   if run_mulle_sourcetree -N add -s local "/"
+   then
+      fail "/ add succeeded unexpectedly"
+   fi
+
    if ! [ -f ".mulle-sourcetree" ]
    then
       fail "config should exist now"
@@ -64,12 +74,17 @@ main()
 
    if ! run_mulle_sourcetree -N remove "a"
    then
-      fail "remove failed unexpectedly"
+      fail "remove \"a\" failed unexpectedly"
    fi
 
    if run_mulle_sourcetree -N remove "a"
    then
-      fail "superflous remove succeded unexpectedly"
+      fail "superflous remove \"a\" succeded unexpectedly"
+   fi
+
+   if run_mulle_sourcetree -N remove "."
+   then
+      fail "remove \".\" succeeded unexpectedly"
    fi
 
    if [ -f ".mulle-sourcetree" ]

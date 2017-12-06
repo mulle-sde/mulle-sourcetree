@@ -162,6 +162,10 @@ html_print_node()
    html="$(concat "${html}" "`html_print_row "tag" "${tag}"`")"
    #      html="$(add_line "${html}" "`html_print_row "uuid" "${uuid}"`"")"
    html="$(concat "${html}" "`html_print_row "fetchoptions" "${fetchoptions}"`")"
+   if [ ! -z "${MULLE_ORIGINATOR}" ]
+   then
+      html="$(concat "${html}" "`html_print_row "original" "${MULLE_ORIGINATOR}"`")"
+   fi
    html="$(concat "${html}" "</TABLE>")"
 
    exekutor echo "${identifier} [ label=<${html}>, shape=\"${shape}\", URL=\"${url}\" ]"
@@ -197,22 +201,26 @@ print_node()
       shape="invis"
    else
       color="dodgerblue"
-      if [ -d "${destination}" ]
+      if [ "${OPTION_OUTPUT_STATE}" = "YES" ]
       then
-         if [ -f "${destination}/${SOURCETREE_CONFIG_FILE}" ]
+         if [ -d "${destination}" ]
          then
-            if db_is_ready "${destination}"
+            if [ -f "${destination}/${SOURCETREE_CONFIG_FILE}" ]
             then
-               color="limegreen"
-            else
-               color="darkorchid"
+               if db_is_ready "${destination}"
+               then
+                  color="limegreen"
+               else
+                  color="darkorchid"
+               fi
             fi
+            shape="folder"
+         else
+            shape="note"
          fi
-         shape="folder"
-      else
-         shape="note"
       fi
    fi
+
 
    local penwidth
    local style
@@ -291,10 +299,13 @@ walk_dotdump()
 
       style=""
       label=""
-      if [ -L "${relative}" ]
+      if [ "${OPTION_OUTPUT_STATE}" = "YES" ]
       then
-         style="dotted"
-         label="  symlink"
+         if [ -L "${relative}" ]
+         then
+            style="dotted"
+            label="  symlink"
+         fi
       fi
 
       if [ -z "${previdentifier}" ]
@@ -363,9 +374,10 @@ emit_root()
                                            "" \
                                            "root"
    else
-      print_node "root" "." "${ROOT_IDENTIFIER}" "."
+      print_node "root" "." "${ROOT_IDENTIFIER}" "`basename -- "${PWD}"`"
    fi
 }
+
 
 emit_remaining_directories()
 {
@@ -466,7 +478,7 @@ sourcetree_dotdump_main()
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_OUTPUT_HTML="NO"
    local OPTION_OUTPUT_EVAL="NO"
-
+   local OPTION_OUTPUT_STATE="NO"
 
    while [ $# -ne 0 ]
    do
@@ -489,6 +501,14 @@ sourcetree_dotdump_main()
 
          --no-output-eval)
             OPTION_OUTPUT_EVAL="NO"
+         ;;
+
+         --output-state)
+            OPTION_OUTPUT_STATE="YES"
+         ;;
+
+         --no-output-state)
+            OPTION_OUTPUT_STATE="NO"
          ;;
 
          --output-html)

@@ -204,7 +204,6 @@ EOF
 }
 
 
-
 #
 #
 #
@@ -326,7 +325,6 @@ in the sourcetree"
    local nodeline
    local removed
    local appended
-
 
    contents="`egrep -s -v '^#' "${SOURCETREE_CONFIG_FILE}"`"
    nodeline="`node_print_nodeline`"
@@ -599,7 +597,7 @@ sourcetree_mark_node()
 
 _sourcetree_list_nodes()
 {
-   log_entry "sourcetree_list_nodes" "$@"
+   log_entry "_sourcetree_list_nodes" "$@"
 
    local mode="$1"
 
@@ -678,7 +676,10 @@ sourcetree_list_node()
 
    if [ ! -f "${SOURCETREE_CONFIG_FILE}" ]
    then
-      log_fluff "${SOURCETREE_CONFIG_FILE} doesn't exist"
+      if [ -z "${IS_PRINTING}" ]
+      then
+         log_info "There is no sourcetree here (${PWD})"
+      fi
       return
    fi
 
@@ -736,10 +737,10 @@ sourcetree_info_node()
 
    case "${SOURCETREE_MODE}" in
       share)
-         if [ ! -z "${MULLE_SOURCETREE_SHARED_DIR}" ]
+         if [ ! -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
          then
             printf "%b\n" "{C_INFO}Shared directory: \
-${C_RESET_BOLD}${MULLE_SOURCETREE_SHARED_DIR}${C_RESET}"
+${C_RESET_BOLD}${MULLE_SOURCETREE_SHARE_DIR}${C_RESET}"
          fi
       ;;
    esac

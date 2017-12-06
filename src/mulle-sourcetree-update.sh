@@ -962,6 +962,7 @@ update_with_nodeline()
    local database="$4"
 
    [ "$#" -ne 4 ]     && internal_fail "api error"
+
    [ -z "$style" ]    && internal_fail "style is empty"
    [ -z "$nodeline" ] && internal_fail "nodeline is empty"
 
@@ -996,7 +997,7 @@ update_with_nodeline()
       then
          filename="${uuid}"
       fi
-      filename="`filepath_concat "${MULLE_SOURCETREE_SHARED_DIR}" "${address}"`"
+      filename="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${address}"`"
       log_fluff "Use guessed address \"${filename}\" for shared URL \"${url}\""
 
       # use shared root database for shared nodes
@@ -1045,14 +1046,14 @@ but it is not required"
          local oldowner
 
          oldowner="`db_fetch_owner_for_uuid "${database}" "${uuid}"`"
-         if [ "${projectdir}" != "${oldowner}" ]
+         if [ "${database}" != "${oldowner}" ]
          then
-            if db_is_uuid_alive "${uuid}"
+            if db_is_uuid_alive "${database}" "${uuid}"
             then
                log_fluff "\"${projectdir}\" does not feel responsible for \"${address}\""
                return
             else
-               log_fluff "\"${projectdir}\" takes over responsibility for \"${address}\""
+               log_fluff "\"${projectdir}\" takes over responsibility for \"${address}\" from \"${oldowner}\""
             fi
          fi
       fi
@@ -1332,7 +1333,7 @@ sourcetree_update()
 
    db_zombify_nodes "${database}"
 
-   log_verbose "Doing a \"${style}\" update."
+   log_verbose "Doing a \"${style}\" update for \"${projectdir}\"."
    log_fluff "Set dbtype to \"${style}\""
 
    if [ "${style}" = "share" -a "${database}" != "/" ]
@@ -1396,6 +1397,7 @@ sourcetree_update()
       ;;
    esac
 
+   db_set_shareddir "${database}" "${MULLE_SOURCETREE_SHARE_DIR}"
    db_clear_update "${database}"
    if db_contains_entries "${database}"
    then

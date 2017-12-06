@@ -51,15 +51,21 @@ node_guess_address()
    [ -z "${url}" ] && fail "URL is empty"
 
    local evaledurl
-
-   evaledurl="`eval echo "$url"`"
-   [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
-
    local result
 
-   result="`${MULLE_FETCH:-mulle-fetch} guess -s "${nodetype}" "${evaledurl}"`"
-   log_fluff "${MULLE_FETCH:-mulle-fetch} returned \"${result}\" as default address for url ($url)"
-   echo "${result}"
+   evaledurl="`eval echo "$url"`"
+
+   case "${evaledurl}" in
+      "")
+         fail "URL \"${url}\" evaluates to empty"
+      ;;
+
+      *)
+         result="`${MULLE_FETCH:-mulle-fetch} guess -s "${nodetype}" "${evaledurl}"`"
+         log_fluff "${MULLE_FETCH:-mulle-fetch} returned \"${result}\" as default address for url ($url)"
+         echo "${result}"
+      ;;
+   esac
 }
 
 
@@ -75,13 +81,17 @@ node_guess_nodetype()
    local result
 
    evaledurl="`eval echo "${url}"`"
-   if [ ! -z "${evaledurl}" ]
-   then
-      result="`${MULLE_FETCH:-mulle-fetch} typeguess "${evaledurl}"`"
-      log_fluff "${MULLE_FETCH:-mulle-fetch} determined \"${result}\" as nodetype from \
+   case "${evaledurl}" in
+      "")
+      ;;
+
+      *)
+         result="`${MULLE_FETCH:-mulle-fetch} typeguess "${evaledurl}"`"
+         log_fluff "${MULLE_FETCH:-mulle-fetch} determined \"${result}\" as nodetype from \
 url ($evaledurl)"
-      echo "${result}"
-   fi
+         echo "${result}"
+      ;;
+   esac
 }
 
 
@@ -190,7 +200,7 @@ node_augment()
 
          if [ "${before}" != "${marks}" ]
          then
-            log_info "Nodes of nodetype \"${nodetype}\" are always \"nodelete,require\""
+            log_verbose "Node of nodetype \"${nodetype}\" gained marks \"nodelete,require\""
          fi
       ;;
    esac
@@ -228,6 +238,9 @@ node_augment()
    [ -z "${uuid}" ]     && internal_fail "uuid is empty"
    [ -z "${nodetype}" ] && internal_fail "nodetype is empty"
    [ -z "${address}" ]  && internal_fail "address is empty"
+
+   # does not work
+   [ "${address}" = "." ]  && fail "Node address is '.'"
 
    :
 }
@@ -385,6 +398,14 @@ nodemarks_add_delete()
    nodemarks_remove "$1" "nodelete"
 }
 
+nodemarks_add_dependency()
+{
+   log_entry "nodemarks_add_dependency" "$@"
+
+   nodemarks_remove "$1" "nodependency"
+}
+
+
 nodemarks_add_recurse()
 {
    log_entry "nodemarks_add_recurse" "$@"
@@ -434,6 +455,15 @@ nodemarks_contain_delete()
 
    ! _nodemarks_contain "$1" "nodelete"
 }
+
+
+nodemarks_contain_dependency()
+{
+   log_entry "nodemarks_contain_dependency" "$@"
+
+   ! _nodemarks_contain "$1" "nodependency"
+}
+
 
 nodemarks_contain_recurse()
 {
@@ -485,6 +515,13 @@ nodemarks_remove_delete()
    nodemarks_add "$1" "nodelete"
 }
 
+nodemarks_remove_dependency()
+{
+   log_entry "nodemarks_remove_dependency" "$@"
+
+   nodemarks_add "$1" "nodependency"
+}
+
 nodemarks_remove_recurse()
 {
    log_entry "nodemarks_remove_recurse" "$@"
@@ -531,12 +568,18 @@ nodemarks_add_nobuild()
    nodemarks_add "$1" "nobuild"
 }
 
-
 nodemarks_add_nodelete()
 {
    log_entry "nodemarks_add_nodelete" "$@"
 
    nodemarks_add "$1" "nodelete"
+}
+
+nodemarks_add_nodependency()
+{
+   log_entry "nodemarks_add_nodependency" "$@"
+
+   nodemarks_add "$1" "nodependency"
 }
 
 nodemarks_add_norecurse()
@@ -589,6 +632,13 @@ nodemarks_contain_nodelete()
    _nodemarks_contain "$1" "nodelete"
 }
 
+nodemarks_contain_nodependency()
+{
+   log_entry "nodemarks_contain_nodependency" "$@"
+
+   _nodemarks_contain "$1" "nodependency"
+}
+
 nodemarks_contain_norecurse()
 {
    log_entry "nodemarks_contain_norecurse" "$@"
@@ -638,6 +688,15 @@ nodemarks_remove_nodelete()
 
    nodemarks_remove "$1" "nodelete"
 }
+
+
+nodemarks_remove_nodependency()
+{
+   log_entry "nodemarks_remove_nodependency" "$@"
+
+   nodemarks_remove "$1" "nodependency"
+}
+
 
 nodemarks_remove_norecurse()
 {

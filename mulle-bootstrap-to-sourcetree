@@ -372,7 +372,7 @@ main()
 
    local SOURCETREE_CONFIG_FILE=".mulle-sourcetree"
    local SOURCETREE_DB_DIR=".mulle-sourcetree.db"
-   local MULLE_SOURCETREE_SHARED_DIR=""
+   local MULLE_SOURCETREE_SHARE_DIR=""
 
    #
    # simple option handling

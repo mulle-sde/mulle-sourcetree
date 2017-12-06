@@ -36,42 +36,10 @@ sourcetree_db_reset()
 {
    log_entry "sourcetree_db_reset" "$@"
 
-   local prefix="$1"
+   local database="$1"
    local keepgraveyard="${2:-YES}"
 
-   case "${prefix}" in
-      ""|*/)
-      ;;
-
-      *)
-         prefix="${prefix}/"
-      ;;
-   esac
-
-   [ -z "${SOURCETREE_DB_DIR}" ] && internal_fail "SOURCETREE_DB_DIR is not set"
-
-   if ! db_dir_exists "${prefix}"
-   then
-      return 0
-   fi
-
-   if [ "${keepgraveyard}" = "NO" ]|| !
-db_has_graveyard
-   then
-      rmdir_safer "${prefix}${SOURCETREE_DB_DIR}"
-      return
-   fi
-
-   (
-      shopt -s nullglob
-
-      files="${prefix}${SOURCETREE_DB_DIR}"/* \
-            "${prefix}${SOURCETREE_DB_DIR}"/.[^g]*
-      if [ ! -z "${files}" ]
-      then
-         exekutor rm "${files}"
-      fi
-   )
+   db_reset "${database}" "${keepgraveyard}"
 }
 
 
@@ -79,7 +47,7 @@ walk_reset()
 {
    log_entry "walk_reset" "$@"
 
-   sourcetree_db_reset "${MULLE_PROJECTDIR}${MULLE_RAW_ADDRESS}" "$@"
+   sourcetree_db_reset "${MULLE_DESTINATION}" "$@"
 }
 
 
@@ -92,11 +60,12 @@ Usage:
    Throw away the local database for a fresh update. A graveyard will be kept,
    unless you use the -g option.
 
-   This command only reads the local database.
+   You can use the -r flag, to clean recursively:
+
+      ${MULLE_EXECUTABLE_NAME} -r reset
 
 Options:
    -g   : also remove the graveyard (where old zombies are buried)
-   -r   : recursively reset all sub databases
 EOF
   exit 1
 }

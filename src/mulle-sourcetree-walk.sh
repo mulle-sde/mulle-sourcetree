@@ -253,7 +253,10 @@ __call_callback()
    log_entry "__call_callback" "$@"
 
    local mode="$1"; shift
+   local originator="$1"; shift
    local callback="$1"; shift
+
+   [ -z "${callback}" ] && internal_fail "callback is empty"
 
    MULLE_ADDRESS="${address}" \
    MULLE_BRANCH="${branch}" \
@@ -264,6 +267,7 @@ __call_callback()
    MULLE_MODE="${mode}" \
    MULLE_NODE="${nodeline}" \
    MULLE_NODETYPE="${nodetype}" \
+   MULLE_ORIGINATOR="${originator}" \
    MULLE_PROJECTDIR="`__concat_datasource_address "${datasource}" "${address}"`" \
    MULLE_TAG="${tag}" \
    MULLE_URL="${url}" \
@@ -305,18 +309,18 @@ __docd_preamble()
 
    # these two are semi public
    old="${PWD}"
-   oldshared="${MULLE_SOURCETREE_SHARED_DIR}"
+   oldshared="${MULLE_SOURCETREE_SHARE_DIR}"
 
    relative="`compute_relative "${directory}"`"
-   MULLE_SOURCETREE_SHARED_DIR="`filepath_concat "${MULLE_SOURCETREE_SHARED_DIR}" "${relative}"`"
-   MULLE_SOURCETREE_SHARED_DIR="`simplified_path "${MULLE_SOURCETREE_SHARED_DIR}"`"
+   MULLE_SOURCETREE_SHARE_DIR="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${relative}"`"
+   MULLE_SOURCETREE_SHARE_DIR="`simplified_path "${MULLE_SOURCETREE_SHARE_DIR}"`"
    exekutor cd "${directory}"
 }
 
 __docd_postamble()
 {
    exekutor cd "${old}"
-   MULLE_SOURCETREE_SHARED_DIR="${oldshared}"
+   MULLE_SOURCETREE_SHARE_DIR="${oldshared}"
 }
 
 
@@ -356,6 +360,7 @@ _visit_callback()
 
    local datasource="$1"; shift
    local virtual="$1"; shift
+   local originator="$1"; shift
 
    shift 3
 
@@ -379,7 +384,7 @@ _visit_callback()
          if [ -d "${directory}" ]
          then
             __docd_preamble "${directory}"
-               __call_callback "${mode}" "${callback}" "$@"
+               __call_callback "${mode}" "${originator}" "${callback}" "$@"
             __docd_postamble
          else
             log_fluff "\"${directory}\" not there, so no callback"
@@ -388,7 +393,7 @@ _visit_callback()
       ;;
 
       *)
-         __call_callback "${mode}" "${callback}" "$@"
+         __call_callback "${mode}" "${originator}" "${callback}" "$@"
       ;;
    esac
 }
@@ -414,6 +419,7 @@ _visit_recurse()
 
    local datasource="$1"; shift
    local virtual="$1"; shift
+   local originator="$1" ; shift
 
    local filternodetypes="$1"; shift
    local filterpermissions="$1"; shift
@@ -421,6 +427,8 @@ _visit_recurse()
    local mode="$1" ; shift
 
    local actual
+
+   [ ! -z "${address}" ] || internal_fail "Empty address"
 
    actual="`__concat_datasource_address "${datasource}" "${address}"`"
    virtual="`filepath_concat "${virtual}" "${address}"`"
@@ -493,7 +501,7 @@ _visit_node()
 {
    log_entry "_visit_node" "$@"
 
-   local mode="$6"
+   local mode="$7"
 
    #
    # pre-order callback first before recursion
@@ -521,8 +529,7 @@ _visit_share_node()
 
    local mode="$4"
 
-
-#   [ -z "${MULLE_SOURCETREE_SHARED_DIR}" ] && internal_fail "MULLE_SOURCETREE_SHARED_DIR is empty"
+#   [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ] && internal_fail "MULLE_SOURCETREE_SHARE_DIR is empty"
 
    local shareddir
    local actual
@@ -531,7 +538,7 @@ _visit_share_node()
 
    original="${address}"
    name="`basename -- "${address}"`"
-   address="`filepath_concat "${MULLE_SOURCETREE_SHARED_DIR}" "${name}"`"
+   address="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${name}"`"
 
    if fgrep -q -s -x "${address}" <<< "${VISITED}"
    then
@@ -548,15 +555,15 @@ _visit_share_node()
    then
       log_debug "Visiting \"${original}\" as \"${address}\" doesn't exist yet"
       address="${original}"
-      _visit_node "${datasource}" \
-                  "" \
-                  "$@"
-      return $?
+      datasource="/"
    fi
 
-   _visit_node "/" \
-               "" \
-               "$@"
+   local originator
+
+   # ugly hack for dotdump
+   originator="`__concat_datasource_address "${datasource}" "${original}"`"
+
+   _visit_node "${datasource}" "" "${originator}" "$@"
 }
 
 
@@ -576,13 +583,13 @@ _visit_filter_nodeline()
 
    local nodeline="$1"; shift
 
-   local datasource="$1"
-   local virtual="$2"
+   local datasource="$1"; shift
+   local virtual="$1"; shift
 
-   local filternodetypes="$3"
-   local filterpermissions="$4"
-   local filtermarks="$5"
-   local mode="$6"
+   local filternodetypes="$1"
+   local filterpermissions="$2"
+   local filtermarks="$3"
+   local mode="$4"
 
    # rest are arguments
 
@@ -620,6 +627,19 @@ _visit_filter_nodeline()
       return 0
    fi
 
+   # avoid duplicate root call
+   # ***machen wir nicht mehr***
+   # if [ "${datasource}" = "/" -a "${address}" = "." ]
+   # then
+   #    case "${mode}" in
+   #       *callroot*)
+   #          log_fluff "Avoided duplicate root walk for \"${address}\""
+   #          return 0
+   #       ;;
+   #    esac
+   # fi
+
+
    log_debug "Node \"${address}\" passed the filters"
 
    #
@@ -633,7 +653,7 @@ _visit_filter_nodeline()
       *share*)
          if nodemarks_contain_share "${marks}"
          then
-            _visit_share_node "$@"
+            _visit_share_node "${datasource}" "${virtual}" "$@"
             return $?
          fi
 
@@ -642,8 +662,7 @@ _visit_filter_nodeline()
       ;;
    esac
 
-
-   _visit_node "$@"
+   _visit_node "${datasource}" "${virtual}" "" "$@"
 }
 
 
@@ -820,7 +839,7 @@ _visit_root_callback()
 
    local virtual=""
    local datasource="/"
-
+   local originator=""
    local branch
    local address="."
    local fetchoptions
@@ -833,11 +852,10 @@ _visit_root_callback()
 
    _visit_callback "${datasource}" \
                    "${virtual}" \
+                   "${originator}" \
                    "" \
                    "" \
                    "" \
-                   "${mode}"  \
-                   "${callback}" \
                    "$@"
 }
 
@@ -918,7 +936,7 @@ sourcetree_walk_main()
 
    local OPTION_CALLBACK_ROOT="DEFAULT"
    local OPTION_CD="DEFAULT"
-   local OPTION_DEPTH_FIRST="DEFAULT"
+   local OPTION_DEPTH_FIRST="YES"
    local OPTION_EXTERNAL_CALL="YES"
    local OPTION_LENIENT="YES"
    local OPTION_MARKS="ANY"
@@ -973,7 +991,6 @@ sourcetree_walk_main()
             OPTION_LENIENT="NO"
          ;;
 
-
          #
          # filter flags
          #
@@ -1022,7 +1039,7 @@ sourcetree_walk_main()
 
    mode="${SOURCETREE_MODE}"
 
-   if [ "${OPTION_DEPTH_FIRST}" != "NO" ] # is default
+   if [ "${OPTION_DEPTH_FIRST}" = "NO" ] # is default
    then
       mode="`concat "${mode}" "pre-order"`"
    fi
@@ -1060,11 +1077,21 @@ sourcetree_buildorder_main()
 {
    log_entry "sourcetree_buildorder_main" "$@"
 
+   local OPTION_MARKS="NO"
+
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h|-help|--help)
             sourcetree_buildorder_usage
+         ;;
+
+         --marks)
+            OPTION_MARKS="YES"
+         ;;
+
+         --no-marks)
+            OPTION_MARKS="NO"
          ;;
 
          -*)
@@ -1082,7 +1109,14 @@ sourcetree_buildorder_main()
 
    [ "$#" -eq 0 ] || sourcetree_buildorder_usage
 
-   sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE}" "echo" '${MULLE_DESTINATION}'
+   if [ "${OPTION_MARKS}" = "YES" ]
+   then
+      sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE}" \
+         "echo" '"${MULLE_DESTINATION};${MULLE_MARKS}"'
+   else
+      sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE}" \
+         "echo" '"${MULLE_DESTINATION}"'
+   fi
 }
 
 

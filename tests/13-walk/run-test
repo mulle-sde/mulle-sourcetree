@@ -114,7 +114,9 @@ a/c"
       fail "db walk #1 returned \"${results}\". Expected was \"${expected}\""
    fi
 
-   results="`run_mulle_sourcetree walk --walk-config "echo" "\\\${MULLE_DESTINATION}"`"
+   results="`run_mulle_sourcetree walk --depth-first \
+                                       --walk-config \
+                                       "echo" "\\\${MULLE_DESTINATION}"`"
    if [ $? -ne 0 ]
    then
       fail "config walk #1 failed unexpectedly"

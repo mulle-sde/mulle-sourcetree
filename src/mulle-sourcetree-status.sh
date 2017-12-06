@@ -74,11 +74,65 @@ sourcetree_is_uptodate()
       return 2
    fi
 
-   dbtimestamp="`db_timestamp "${database}"`"
+   dbtimestamp="`db_get_timestamp "${database}"`"
 
    log_debug "Timestamps: config=${configtimestamp} db=${dbtimestamp:-0}"
 
    [ "${configtimestamp}" -le "${dbtimestamp:-0}" ]
+}
+
+
+#
+# ensure that databases produced last time are
+# compatible
+#
+sourcetree_is_db_compatible()
+{
+   log_entry "sourcetree_is_db_compatible" "$@"
+
+   local database="$1"
+   local mode="$2"
+
+   [ -z "${database}" ] && internal_fail "database is empty"
+
+   local dbtype
+
+   dbtype="`db_get_dbtype "${database}"`"
+   case "${mode}" in
+      *flat*)
+         case "${dbtype}" in
+            flat|recurse)
+               return 0
+            ;;
+         esac
+         return 1
+      ;;
+
+      *recurse*)
+         case "${dbtype}" in
+            recurse)
+               return 0
+            ;;
+         esac
+         return 1
+      ;;
+
+      *share*)
+         case "${dbtype}" in
+            partial)
+               if [ "${database}" != "/" ]
+               then
+                  return 0
+               fi
+            ;;
+
+            share)
+               return 0
+            ;;
+         esac
+         return 1
+      ;;
+   esac
 }
 
 
@@ -141,7 +195,7 @@ emit_status()
             log_fluff "\"${directory}\" does not exist and and is required ($PWD), but url is empty"
             if [ "${OPTION_IS_UPTODATE}" = "YES" ]
             then
-               return 2   # indicate brokenness
+               exit 2   # indicate brokenness
             fi
             exekutor echo "${directory};update;${fs}"
             return 0
@@ -166,6 +220,18 @@ emit_status()
             fs="directory"
          fi
       fi
+   fi
+
+
+   if db_dir_exists "${datasource}" && \
+      ! sourcetree_is_db_compatible "${datasource}" "${mode}"
+   then
+      if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+      then
+         exit 1
+      fi
+      exekutor echo "${directory};update;${fs}"
+      return 0
    fi
 
    local status
@@ -205,11 +271,11 @@ emit_status()
          # exists  | exists     | +           | update
          #
 
-         if ! db_is_ready "${directory}"
+         if ! db_is_ready "${datasource}"
          then
             status="update"
          else
-            if db_is_updating "${directory}"
+            if db_is_updating "${datasource}"
             then
                log_fluff "\"${directory}\" is marked as updating ($PWD)"
 
@@ -219,10 +285,10 @@ emit_status()
                fi
 
                exekutor echo "${directory};incomplete;${fs}"
-               return 1
+               return 0
             fi
 
-            if ! sourcetree_is_uptodate "${directory}" "${projectdir}"
+            if ! sourcetree_is_uptodate "${datasource}" "${projectdir}"
             then
                log_fluff "\"${directory}\" database is stale ($PWD)"
 
@@ -430,7 +496,7 @@ sourcetree_status_main()
       if [ "${OPTION_IS_UPTODATE}" = "YES" ]
       then
          log_fluff "db is not marked as ready"
-         return 1
+         exit 1
       fi
 
       log_warning "Update has not run yet (mode=${SOURCETREE_MODE})"

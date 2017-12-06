@@ -43,8 +43,8 @@ __cfg_common_configfile()
          configfile="${SOURCETREE_CONFIG_FILE}"
       ;;
 
-      "")
-         internal_fail "configfile must not be empty. use '/' for root"
+      ""|.*)
+         internal_fail "configfile must not be empty or start with '.' . use '/' for root"
       ;;
 
       */)
@@ -65,8 +65,8 @@ __cfg_common_rootdir()
          rootdir=""
       ;;
 
-      "")
-         internal_fail "database must not be empty. use '/' for root"
+      ""|.*)
+         internal_fail "configfile must not be empty or start with '.' . use '/' for root"
       ;;
 
       */)
@@ -223,7 +223,7 @@ cfg_file_remove_if_empty()
 
    __cfg_common_configfile "$@"
 
-   if [ -z "`cfg_read "${configfile}"`" ]
+   if [ -z "`__cfg_read`" ]
    then
       remove_file_if_present "${configfile}"
    fi

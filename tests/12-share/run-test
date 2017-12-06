@@ -97,7 +97,7 @@ run_test1()
    then
       fail "add failed unexpectedly"
    fi
-   if ! MULLE_SOURCETREE_SHARED_DIR="shared" run_mulle_sourcetree --share update
+   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
    then
       fail "update failed unexpectedly"
    fi
@@ -115,7 +115,7 @@ run_test2()
       fail "add failed unexpectedly"
    fi
 
-   if ! MULLE_SOURCETREE_SHARED_DIR="shared" run_mulle_sourcetree --share update
+   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
    then
       fail "update failed unexpectedly"
    fi
@@ -137,7 +137,7 @@ run_test3()
 
    run_mulle_sourcetree list
 
-   if ! MULLE_SOURCETREE_SHARED_DIR="shared" run_mulle_sourcetree ${flags} --share update
+   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree ${flags} --share update
    then
       fail "update failed unexpectedly"
    fi

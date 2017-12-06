@@ -31,8 +31,6 @@
 #
 MULLE_SOURCETREE_DB_SH="included"
 
-
-
 #
 #
 #
@@ -64,8 +62,8 @@ __db_common_rootdir()
          rootdir=""
       ;;
 
-      "")
-         internal_fail "database must not be empty. use '/' for root"
+      ""|.*)
+         internal_fail "database must not be empty or start with '.' . use '/' for root"
       ;;
 
       */)
@@ -89,8 +87,8 @@ __db_common_databasedir()
          databasedir="${SOURCETREE_DB_DIR}"
       ;;
 
-      "")
-         internal_fail "database must not be empty. use '/' for root"
+      ""|.*)
+         internal_fail "database must not be empty or start with '.' . use '/' for root"
       ;;
 
       */)
@@ -157,6 +155,12 @@ db_memorize()
    [ -z "${nodeline}" ] && internal_fail "nodeline is missing"
    [ -z "${uuid}" ]     && internal_fail "uuid is missing"
    [ -z "${filename}" ] && internal_fail "filename is missing"
+
+   case "${owner}" in
+      .*/)
+         internal_fail "owner starts with \".\""
+      ;;
+   esac
 
    local content
    local dbfilepath
@@ -347,6 +351,7 @@ db_fetch_owner_for_uuid()
    then
       return 1
    fi
+
    echo "${owner}"
    return 0
 }
@@ -644,9 +649,9 @@ db_clear_ready()
 }
 
 
-db_timestamp()
+db_get_timestamp()
 {
-   log_entry "db_timestamp" "$@"
+   log_entry "db_get_timestamp" "$@"
 
    local database
    local databasedir
@@ -712,6 +717,37 @@ db_clear_update()
 }
 
 
+db_set_shareddir()
+{
+   log_entry "db_set_shareddir" "$@"
+
+   [ $# -eq 2 ] || internal_fail "api error"
+
+   local database
+   local databasedir
+
+   __db_common_databasedir "$@"
+
+   local shareddir="$2"
+
+   mkdir_if_missing "${databasedir}"
+   redirect_exekutor "${databasedir}/.db_shareddir"  echo "${shareddir}"
+}
+
+
+db_get_shareddir()
+{
+   log_entry "db_get_shareddir" "$@"
+
+   [ $# -eq 1 ] || internal_fail "api error"
+
+   local database
+   local databasedir
+
+   __db_common_databasedir "$@"
+
+   cat "${databasedir}/.db_shareddir" 2> /dev/null || :
+}
 
 #
 # If a previous update crashed, we wan't to let the user know.
@@ -892,6 +928,12 @@ _db_set_default_mode()
          SOURCETREE_MODE="${dbtype}"
       ;;
 
+      partial)
+         # partial means it's created by a parent share
+         # but itself is not shared, but inherently partially recurse
+         SOURCETREE_MODE="recurse"
+      ;;
+
       *)
          internal_fail "unknown dbtype \"${dbtype}\""
       ;;
@@ -907,8 +949,7 @@ _db_set_default_mode()
 
 db_has_graveyard()
 {
-   log_entry "
-db_has_graveyard" "$@"
+   log_entry "db_has_graveyard" "$@"
 
    local database
    local databasedir
@@ -981,8 +1022,7 @@ db_reset()
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh" || exit 1
    fi
 
-   if [ "${keepgraveyard}" = "NO" ]|| !
-db_has_graveyard "${database}"
+   if [ "${keepgraveyard}" = "NO" ] || ! db_has_graveyard "${database}"
    then
       rmdir_safer "${databasedir}"
       return

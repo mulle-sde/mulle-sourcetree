@@ -226,6 +226,13 @@ main()
             FLAG_SOURCETREE_MODE="share"
          ;;
 
+         --share-dir)
+            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            shift
+
+            MULLE_SOURCETREE_SHARE_DIR="$1"
+         ;;
+
          --defer-parent)
             MULLE_FLAG_DEFER="PARENT";
          ;;
@@ -254,9 +261,14 @@ main()
 
    options_setup_trace "${MULLE_TRACE}"
 
-   if [ "${FLAG_OUTSIDE_ENV}" = "NO" -a -z "${MULLE_SDE_VIRTUAL_ROOT}" ]
+   if [ -z "${MULLE_SDE_VIRTUAL_ROOT}" ]
    then
-      fail "To run mulle-sourcetree outside of mulle-sde, pass the -e flag"
+      if [ "${FLAG_OUTSIDE_ENV}" = "NO" ]
+      then
+         fail "To run mulle-sourcetree outside of mulle-sde, pass the -e flag"
+      fi
+      MULLE_SDE_VIRTUAL_ROOT="${PWD}"
+      export MULLE_SDE_VIRTUAL_ROOT
    fi
 
    local cmd
@@ -272,16 +284,16 @@ main()
    fi
 
    # shellcheck source=../mulle-bashfunctions/src/mulle-options.sh
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"  || fail "${failmsg}"
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"             || exit 1
 
    # shellcheck source=mulle-sourcetree-db.sh
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
    # shellcheck source=mulle-sourcetree-node.sh
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    # shellcheck source=mulle-sourcetree-nodeline.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
    # shellcheck source=mulle-sourcetree-cfg.sh
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh"      || exit 1
 
 
    cfg_defer_if_needed "ROOT" || exit 1
@@ -289,6 +301,19 @@ main()
    local SOURCETREE_MODE
 
    _db_set_default_mode "/" "${FLAG_SOURCETREE_MODE}" || exit 1
+
+   #
+   # try to recover old user choice for shared directory
+   #
+   if [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
+   then
+      MULLE_SOURCETREE_SHARE_DIR="`db_get_shareddir "/"`" || exit 1
+   else
+      if [ "${MULLE_SOURCETREE_SHARE_DIR}" = "." ]
+      then
+         MULLE_SOURCETREE_SHARE_DIR=""
+      fi
+   fi
 
    #
    #
@@ -365,7 +390,7 @@ main()
          sourcetree_mark_main "$@"
       ;;
 
-      path)
+      pwd)
          # shellcheck source=src/mulle-sourcetree-walk.sh
          echo "$PWD"
       ;;
@@ -380,6 +405,7 @@ main()
             SOURCETREE_MODE="recurse"
          fi
 
+         IS_PRINTING="YES"; export IS_PRINTING
          sourcetree_walk_main --no-depth-first --callback-root --cd \
                "${MULLE_EXECUTABLE}" --flat -N list --output-banner --output-eval
       ;;
@@ -538,7 +564,7 @@ _init()
    MULLE_SOURCETREE_LIBEXEC_DIR="`sourcetree_libexec_path "$0"`"
    if [ -z "${MULLE_SOURCETREE_LIBEXEC_DIR}" ]
    then
-      echo "Fatal Error: Could not find libexec for ${MULLE_EXECUTABLE} ($PWD)" >&2
+      echo "$0 fatal error: Could not find libexec ($PWD)" >&2
       exit 1
    fi
 
