@@ -137,24 +137,64 @@ run_test3()
 
    run_mulle_sourcetree list
 
-   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree ${flags} --share update
+   MULLE_SOURCETREE_SHARE_DIR="shared"
+   export MULLE_SOURCETREE_SHARE_DIR
+
+   if !  run_mulle_sourcetree ${flags} --share update
    then
       fail "update failed unexpectedly"
    fi
 
    if [ -z ${flags} ]
    then
-      [ -d "shared/a" ]     || fail "shared/a should exist"
-      [ -d "shared/b" ]     && fail "shared/b should not exist"
-      [ -d "shared/c" ]     || fail "shared/c should exist"
+      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/a" ]   || fail "${MULLE_SOURCETREE_SHARE_DIR}/a should exist"
+      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/b" ]   && fail "${MULLE_SOURCETREE_SHARE_DIR}/b should not exist"
+      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/c" ]   || fail "${MULLE_SOURCETREE_SHARE_DIR}/c should exist"
 
-      [ -d "shared/a/b" ]   || fail "shared/a/b should exist"
+      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/a/b" ] || fail "${MULLE_SOURCETREE_SHARE_DIR}/a/b should exist"
 
       # this is debatable i don't know
       # [ -d "shared/a/b/c" ] || fail "shared/a/b/c should exist"
    fi
+   MULLE_SOURCETREE_SHARE_DIR=
 }
 
+
+#
+# test absolute MULLE_SOURCETREE_SHARE_DIR
+#
+run_test4()
+{
+   local flags="$1"
+
+   if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   run_mulle_sourcetree list
+
+   MULLE_SOURCETREE_SHARE_DIR="${MULLE_SDE_VIRTUAL_ROOT}/shared_global"
+   export MULLE_SOURCETREE_SHARE_DIR
+
+   if ! run_mulle_sourcetree ${flags} --share update
+   then
+      fail "update failed unexpectedly"
+   fi
+
+   if [ -z ${flags} ]
+   then
+      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/a" ]   || fail "${MULLE_SOURCETREE_SHARE_DIR}/a should exist"
+      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/b" ]   && fail "${MULLE_SOURCETREE_SHARE_DIR}/b should not exist"
+      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/c" ]   || fail "${MULLE_SOURCETREE_SHARE_DIR}/c should exist"
+
+      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/a/b" ] || fail "${MULLE_SOURCETREE_SHARE_DIR}/a/b should exist"
+
+      # this is debatable i don't know
+      # [ -d "shared/a/b/c" ] || fail "shared/a/b/c should exist"
+   fi
+   MULLE_SOURCETREE_SHARE_DIR=
+}
 
 
 main()
@@ -166,7 +206,7 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_SDE_VIRTUAL_ROOT="${directory}"
+   MULLE_SDE_VIRTUAL_ROOT="${directory}/"
    export MULLE_SDE_VIRTUAL_ROOT
 
    local project
@@ -204,6 +244,15 @@ main()
       run_test3
    ) || exit 1
    log_verbose "----- #3 PASSED -----"
+
+   (
+      rmdir_safer "${project}" &&
+      mkdir_if_missing "${project}" &&
+      cd "${project}" &&
+      run_test4
+   ) || exit 1
+   log_verbose "----- #3 PASSED -----"
+
    log_info "----- ALL PASSED -----"
 
    rmdir_safer "${directory}"
@@ -219,11 +268,11 @@ init()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombie.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh"   || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombie.sh"   || exit 1
 }
 
 

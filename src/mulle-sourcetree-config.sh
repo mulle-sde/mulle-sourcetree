@@ -732,14 +732,14 @@ sourcetree_info_node()
    fi
 
    printf "%b\n" "${C_INFO}--------------------------------------------------${C_RESET}"
-   printf "%b\n" "${C_INFO}Sourcetree: ${C_MAGENTA}${C_BOLD}${PWD}${C_RESET}"
+   printf "%b\n" "${C_INFO}Sourcetree: ${C_RESET_BOLD}${PWD}${C_RESET}"
    printf "%b\n" "${C_INFO}Database: ${C_MAGENTA}${C_BOLD}${dbstate}${C_RESET}"
 
    case "${SOURCETREE_MODE}" in
       share)
          if [ ! -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
          then
-            printf "%b\n" "{C_INFO}Shared directory: \
+            printf "%b\n" "${C_INFO}Shared directory: \
 ${C_RESET_BOLD}${MULLE_SOURCETREE_SHARE_DIR}${C_RESET}"
          fi
       ;;

@@ -279,8 +279,22 @@ walk_dotdump()
    fi
 
    relative=""
-   IFS="/"
 
+   #
+   # replace a known path with a variable
+   #
+   if [ ! -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
+   then
+      if string_has_prefix "${destination}" "${MULLE_SOURCETREE_SHARE_DIR}"
+      then
+         local tmp
+
+         tmp="`string_remove_prefix "${destination}" "${MULLE_SOURCETREE_SHARE_DIR}" `"
+         destination="${MULLE_SOURCETREE_SHARE_DIR}/${tmp}"
+      fi
+   fi
+
+   IFS="/"
    for component in ${destination}
    do
       IFS="${DEFAULT_IFS}"

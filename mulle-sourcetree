@@ -261,15 +261,23 @@ main()
 
    options_setup_trace "${MULLE_TRACE}"
 
-   if [ -z "${MULLE_SDE_VIRTUAL_ROOT}" ]
-   then
-      if [ "${FLAG_OUTSIDE_ENV}" = "NO" ]
-      then
-         fail "To run mulle-sourcetree outside of mulle-sde, pass the -e flag"
-      fi
-      MULLE_SDE_VIRTUAL_ROOT="${PWD}"
-      export MULLE_SDE_VIRTUAL_ROOT
-   fi
+   case "${MULLE_SDE_VIRTUAL_ROOT}" in
+      "")
+         if [ "${FLAG_OUTSIDE_ENV}" = "NO" ]
+         then
+            fail "To run mulle-sourcetree outside of mulle-sde, pass the -e flag"
+         fi
+         MULLE_SDE_VIRTUAL_ROOT="${PWD}/"
+         export MULLE_SDE_VIRTUAL_ROOT
+      ;;
+
+      */)
+      ;;
+
+      *)
+         fail "MULLE_SDE_VIRTUAL_ROOT \"${MULLE_SDE_VIRTUAL_ROOT}\" must end with /"
+      ;;
+   esac
 
    local cmd
 

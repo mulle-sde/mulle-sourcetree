@@ -776,32 +776,8 @@ Well, do ya, punk?"
 }
 
 
-# DB is "" clean, then anything goes.
 #
-# DB is marked as "normal" or "recurse". Recurse is just a
-# hint to output a warning to the user, that originally this
-# DB was created recurse and maybe he forgot SOURCETREE_MODE.
-#
-#  Mode       | Relative | Description
-# ------------|----------|------------------------------
-#  flat       | ""       | OK
-#  flat       | relpath  | FAIL (not possible)
-#  recurse    | ""       | OK
-#  recurse    | relpath  | FAIL (not possible)
-#  share      | *        | FAIL (not possible)
-
-#
-# DB is marked as "share". The db was created with SOURCETREE_MODE.
-#
-#  Mode    | Relative | Description
-# ---------|----------|------------------------------
-#  flat    | *        | FAIL (not possible)
-#  share   | *        | OK
-#
-#
-
-#
-# Other modes like print or clean are not checked
+# if DB is "" clean, then anything goes.
 #
 db_ensure_compatible_dbtype()
 {
@@ -813,76 +789,30 @@ db_ensure_compatible_dbtype()
    local dbtype
 
    dbtype="`db_get_dbtype "${database}"`"
-   case "${dbtype}" in
-      "")
-         return
-      ;;
+   if [ -z "${dbtype}" -o "${dbtype}" = "${mode}" ]
+   then
+      return
+   fi
 
-      normal)
-         case "${mode}" in
-            recurse)
-               if [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
-               then
-                  fail "Database in \"$PWD\" was not constructed with the \
-recurse option
+   if [ "${dbtype}" = "flat" -a "${mode}" = "recurse" ]
+   then
+      if [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
+      then
+         fail "Database in \"$PWD\" was constructed flat, not with the \
+recurse option.
 This is not really problem. Restate your intention with
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} -f ${MULLE_ARGUMENTS}${C_ERROR}
 or append the -r flag for recurse."
-               fi
-            ;;
+      fi
+      return
+   fi
 
-            share|noshare)
-               fail "Database in \"$PWD\" was constructed with the $mode \
-option. If you want to promote it to shared operation do:
+   fail "Database in \"$PWD\" was constructed as $mode \.
+If you want to change that do:
    ${C_RESET_BOLD}cd '$PWD'${C_ERROR}
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} clean${C_ERROR}
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} reset${C_ERROR}
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} update --share${C_ERROR}"
-            ;;
-         esac
-         ;;
-
-      recurse)
-         case "${mode}" in
-            normal)
-               if [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
-               then
-                  fail "Database in \"$PWD\" was constructed with the \
-recurse option.
-This is not really problem. Restate your intention with:
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} -f ${MULLE_ARGUMENTS}${C_ERROR}
-or remove the -r flag for non-recursion."
-               fi
-            ;;
-
-            share|noshare)
-               fail "Database in \"$PWD\" was not constructed with the \
-share option.
-If you want to promote it to shared operation do:
-   ${C_RESET_BOLD}cd '$PWD'${C_ERROR}
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} clean${C_ERROR}
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} reset${C_ERROR}
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} update --share${C_ERROR}"
-            ;;
-         esac
-         ;;
-
-      share)
-         case "${mode}" in
-            recurse|normal)
-               fail "Database in \"$PWD\" was constructed with the shared \
-option.
-You probably want to run
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} ${MULLE_ARGUMENTS} --share${C_ERROR}
-Or, if you want to revert to non-shared operation do:
-    ${C_RESET_BOLD}cd '$PWD'${C_ERROR}
-    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} clean${C_ERROR}
-    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} reset${C_ERROR}
-    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} update${C_ERROR}"
-            ;;
-         esac
-      ;;
-   esac
+   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} update --mode${C_ERROR}"
 }
 
 
@@ -960,6 +890,20 @@ db_has_graveyard()
 }
 
 
+db_graveyard_dir()
+{
+   log_entry "db_has_graveyard" "$@"
+
+   local database
+   local databasedir
+
+   __db_common_databasedir "$@"
+
+   echo "${databasedir}/.graveyard"
+}
+
+
+
 db_contains_entries()
 {
    log_entry "db_contains_entries" "$@"
@@ -1022,22 +966,19 @@ db_reset()
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh" || exit 1
    fi
 
-   if [ "${keepgraveyard}" = "NO" ] || ! db_has_graveyard "${database}"
+   if [ "${keepgraveyard}" = "YES" ] && db_has_graveyard "${database}"
    then
-      rmdir_safer "${databasedir}"
-      return
+      local oldplace
+      local newplace
+
+      oldplace="${databasedir}/.graveyard"
+      newplace="`dirname -- "${databasedir}"`/`uuidgen`.graveyard"
+
+      mv "${oldplace}" "${newplace}"
    fi
 
-   (
-      shopt -s nullglob
-
-      files="${databasedir}"/* \
-            "${databasedir}"/.[^g]*
-      if [ ! -z "${files}" ]
-      then
-         exekutor rm "${files}"
-      fi
-   )
+   rmdir_safer "${databasedir}"
+   return
 }
 
 
@@ -1051,6 +992,7 @@ __db_zombiedir()
    zombiedir="${databasedir}/.zombies"
 }
 
+
 __db_zombiefile()
 {
    local databasedir="$1"
@@ -1058,79 +1000,6 @@ __db_zombiefile()
 
    zombiefile="${databasedir}/.zombies/${uuid}"
 }
-
-
-db_zombify_nodes()
-{
-   log_entry "db_zombify_nodes" "$@"
-
-   local database
-   local databasedir
-
-   __db_common_databasedir "$@"
-
-   log_fluff "Marking all nodes as zombies for now ($PWD/${database})"
-
-   local zombiedir
-
-   __db_zombiedir "${databasedir}"
-   rmdir_safer "${zombiedir}"
-
-   if dir_has_files "${databasedir}" f
-   then
-      mkdir_if_missing "${zombiedir}"
-
-      exekutor cp ${OPTION_COPYMOVEFLAGS} "${databasedir}/"* "${zombiedir}/" >&2
-   fi
-}
-
-
-_db_bury_zombiefile()
-{
-   log_entry "_db_bury_zombiefile" "$@"
-   log_entry "_db_bury_zombiefile" "$@"
-
-   local database="$1"
-   local zombiefile="$2"
-
-   local nodeline
-   local owner
-
-   local nodeline
-   local owner
-   local entry
-   local filename
-
-   entry="`cat "${zombiefile}"`"
-
-   __db_parse_dbentry "${entry}"
-
-   db_safe_bury_dbentry "${database}" "${nodeline}" "${owner}" "${filename}"
-
-   remove_file_if_present "${zombiefile}"
-}
-
-
-db_bury_zombie()
-{
-   log_entry "db_bury_zombie" "$@"
-
-   local database
-   local databasedir
-
-   __db_common_databasedir "$@"
-
-   local uuid="$2"
-
-   [ -z "${uuid}" ] && internal_fail "uuid is empty"
-
-   local zombiefile
-
-   __db_zombiefile "${databasedir}" "${uuid}"
-
-   _db_bury_zombiefile "${database}" "${zombiefile}"
-}
-
 
 
 db_is_uuid_alive()
@@ -1186,6 +1055,82 @@ db_is_address_inuse()
 
    inuse="`db_fetch_all_filenames "${database}"`"
    fgrep -q -s -x "${filename}" <<< "${inuse}"
+}
+
+
+db_zombify_nodes()
+{
+   log_entry "db_zombify_nodes" "$@"
+
+   local database
+   local databasedir
+
+   __db_common_databasedir "$@"
+
+   log_fluff "Marking all nodes as zombies for now ($PWD/${database})"
+
+   local zombiedir
+
+   __db_zombiedir "${databasedir}"
+   rmdir_safer "${zombiedir}"
+
+   if dir_has_files "${databasedir}" f
+   then
+      mkdir_if_missing "${zombiedir}"
+
+      exekutor cp ${OPTION_COPYMOVEFLAGS} "${databasedir}/"* "${zombiedir}/" >&2
+   fi
+}
+
+
+_db_bury_zombiefile()
+{
+   log_entry "_db_bury_zombiefile" "$@"
+
+   local database="$1"
+   local zombiefile="$2"
+
+   local nodeline
+   local owner
+
+   local nodeline
+   local owner
+   local entry
+   local filename
+
+   entry="`cat "${zombiefile}"`"
+
+   __db_parse_dbentry "${entry}"
+
+   db_safe_bury_dbentry "${database}" "${nodeline}" "${owner}" "${filename}"
+
+   remove_file_if_present "${zombiefile}"
+}
+
+
+db_bury_zombie()
+{
+   log_entry "db_bury_zombie" "$@"
+
+   local database
+   local databasedir
+
+   __db_common_databasedir "$@"
+
+   local uuid="$2"
+
+   [ -z "${uuid}" ] && internal_fail "uuid is empty"
+
+   local zombiefile
+
+   __db_zombiefile "${databasedir}" "${uuid}"
+
+   if [ -e "${zombiefile}" ]
+   then
+      _db_bury_zombiefile "${database}" "${zombiefile}"
+   else
+      log_fluff "There is no zombie for \"${uuid}\""
+   fi
 }
 
 
@@ -1251,7 +1196,7 @@ db_bury_zombies()
 
       for zombiefile in `ls -1 "${zombiedir}/"* 2> /dev/null`
       do
-          _db_bury_zombiefile "${database}" "${zombiefile}"
+         _db_bury_zombiefile "${database}" "${zombiefile}"
       done
    fi
 

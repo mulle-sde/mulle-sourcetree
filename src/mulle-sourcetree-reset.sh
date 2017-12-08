@@ -36,7 +36,7 @@ sourcetree_db_reset()
 {
    log_entry "sourcetree_db_reset" "$@"
 
-   local database="$1"
+   local database="${1:-/}"
    local keepgraveyard="${2:-YES}"
 
    db_reset "${database}" "${keepgraveyard}"
@@ -117,7 +117,7 @@ sourcetree_reset_main()
       fi
 
       sourcetree_walk_config_internal "${SOURCETREE_MODE}" \
-            _reset_walk "${OPTION_REMOVE_GRAVEYARD}"
+            walk_reset "${OPTION_REMOVE_GRAVEYARD}"
    fi
 
    sourcetree_db_reset "" "${OPTION_REMOVE_GRAVEYARD}"

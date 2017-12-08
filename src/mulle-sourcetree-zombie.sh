@@ -59,7 +59,11 @@ EOF
 
 zombie_clean_all_nodes()
 {
-   if ! db_dir_exists
+   log_entry "zombie_clean_all_nodes" "$@"
+
+   local database="$1"
+
+   if ! db_dir_exists "${database}"
    then
       log_info "Nothing to clean, since no update has run yet"
       return
@@ -70,11 +74,28 @@ zombie_clean_all_nodes()
 
    IFS="
 "
-   for nodeline in `db_fetch_all_nodelines`
+   for nodeline in `db_fetch_all_nodelines "${database}"`
    do
       IFS="${DEFAULT_IFS}"
 
-      db_safe_bury_zombieline "${nodeline}"
+      if [ -z "${nodeline}" ]
+      then
+         continue
+      fi
+
+      local branch
+      local address
+      local fetchoptions
+      local nodetype
+      local marks
+      local tag
+      local url
+      local uuid
+      local userinfo
+
+      nodeline_parse "${nodeline}"
+
+      db_bury_zombie "${database}" "${uuid}"
 
       parent="`dirname -- "${address}"`"
       case "${parent}" in
@@ -119,7 +140,7 @@ zombie_clean_main()
 
    [ "$#" -eq 0 ] || zombie_clean_usage
 
-   zombie_clean_all_nodes
+   zombie_clean_all_nodes "/"
 }
 
 

@@ -130,7 +130,6 @@ emit_mulle_fetch_eval_options()
 ##
 ## CLONE
 ##
-
 _has_system_include()
 {
    local uuid="$1"
@@ -1097,10 +1096,20 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
       local  rootdir
 
       rootdir="`db_get_rootdir "${database}"`"
-      previousfilename="`filepath_concat "${rootdir}" "${previousfilename}"`"
+      if [ -z "${rootdir}" ]
+      then
+         previousfilename="${previousfilename}"
+      else
+         previousfilename="`filepath_concat "${rootdir}" "${previousfilename}"`"
+      fi
 
       rootdir="`cfg_rootdir "${projectdir}"`"
-      previousaddress="`relative_path_between "${rootdir}" "${previousfilename}"`"
+      if [ -z "${rootdir}" ]
+      then
+         previousaddress="${previousfilename}"
+      else
+         previousaddress="`relative_path_between "${rootdir}" "${previousfilename}"`"
+      fi
    fi
 
    local magic
@@ -1286,7 +1295,7 @@ recursive_update_with_nodelines()
 
    if [ -z "${nodelines}" ]
    then
-      log_fluff "There is nothing to do"
+      log_fluff "There is nothing to do for \"${style}\""
       return 0
    fi
 

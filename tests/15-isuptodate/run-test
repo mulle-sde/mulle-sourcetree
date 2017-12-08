@@ -172,7 +172,7 @@ main()
 
 init()
 {
-   MULLE_SDE_VIRTUAL_ROOT="fake"
+   MULLE_SDE_VIRTUAL_ROOT="fake/"
    export MULLE_SDE_VIRTUAL_ROOT
 
    MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env library-path`" || exit 1
