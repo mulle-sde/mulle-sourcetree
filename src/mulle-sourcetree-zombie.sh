@@ -125,6 +125,14 @@ zombie_clean_main()
             zombie_clean_usage
          ;;
 
+         -g|--remove-graveyard)
+            OPTION_REMOVE_GRAVEYARD="YES"
+         ;;
+
+         --no-remove-graveyard)
+            OPTION_REMOVE_GRAVEYARD="NO"
+         ;;
+
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown clean option $1"
             zombie_clean_usage
@@ -140,7 +148,15 @@ zombie_clean_main()
 
    [ "$#" -eq 0 ] || zombie_clean_usage
 
-   zombie_clean_all_nodes "/"
+   (
+      db_zombify_nodes "/" &&
+      db_bury_zombies "/"
+   ) || return 1
+
+   if [ "${OPTION_REMOVE_GRAVEYARD}" = "YES" ]
+   then
+      zombie_clean_all_nodes "/"
+   fi
 }
 
 

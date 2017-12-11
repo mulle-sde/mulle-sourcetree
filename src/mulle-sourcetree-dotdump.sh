@@ -44,7 +44,6 @@ Options:
    -n <value>    : node types to walk (default: ALL)
    -p <value>    : specify permissions (missing)
    -m <value>    : specify marks to match (e.g. build)
-   --no-recurse  : do not recurse
    --walk-config : traverse the config file (default)
    --walk-db     : walk over information contained in the database instead
    --output-html : emit HTML Graphviz nodes, for more information
@@ -61,6 +60,8 @@ html_escape()
 
 html_print_title()
 {
+   log_entry "html_print_title" "$@"
+
    local html="$1"
    local title="$2"
    local fontcolor="$3"
@@ -76,6 +77,8 @@ html_print_title()
 
 html_print_row()
 {
+   log_entry "html_print_row" "$@"
+
    local key="$1"
    local value="$2"
    local defaultvalue="$3"
@@ -91,7 +94,10 @@ html_print_row()
 
 html_print_node()
 {
+   log_entry "html_print_node" "$@"
+
    local identifier="$1"; shift
+   local isshared="$1"; shift
 
    local url="$1"
    local address="$2"
@@ -168,16 +174,77 @@ html_print_node()
    fi
    html="$(concat "${html}" "</TABLE>")"
 
-   exekutor echo "${identifier} [ label=<${html}>, shape=\"${shape}\", URL=\"${url}\" ]"
+   exekutor echo "   ${identifier} [ label=<${html}>, shape=\"${shape}\", URL=\"${url}\" ]"
+}
+
+
+_get_fs_status()
+{
+   log_entry "_get_fs_status" "$@"
+
+   local destination="$1"
+
+   if [ ! -e "${destination}" ]
+   then
+      log_debug "${destination} does not exist"
+      echo "missing"
+      return
+   fi
+
+   if [ ! -d "${destination}" ]
+   then
+     log_debug "${destination} is a file (not a folder)"
+     echo "file"
+     return
+   fi
+
+   # rewrite
+   case "${destination}" in
+      "/")
+         echo "folder"
+         return
+      ;;
+
+      ".")
+         destination="/"
+      ;;
+   esac
+
+   if ! cfg_exists "${destination}"
+   then
+     log_debug "${destination} has no cfg (is a folder)"
+     echo "folder"
+     return
+   fi
+
+   if ! db_dir_exists "${destination}" ]
+   then
+     log_debug "${destination} has no db (but is a sourcetree)"
+     echo "config"
+     return
+   fi
+
+   if ! db_is_ready "${destination}"
+   then
+     log_debug "${destination} db not ready"
+     echo "database"
+     return
+   fi
+
+   log_debug "${destination} db ready"
+   echo "ready"
 }
 
 
 print_node()
 {
+   log_entry "print_node" "$@"
+
    local foldertype="$1"
    local destination="$2"
    local identifier="$3"
    local address="$4"
+   local isshared="$5"
 
    case "${identifier}" in
       "")
@@ -192,35 +259,84 @@ print_node()
 
    local shape
    local color
+   local state
 
-   color="black"
-   shape="box"
+   state="`_get_fs_status "${destination}" `"
 
-   if [ ! -e "${destination}" ]
+   if [ "${isshared}" = "NO" ]
    then
-      shape="invis"
-   else
-      color="dodgerblue"
-      if [ "${OPTION_OUTPUT_STATE}" = "YES" ]
-      then
-         if [ -d "${destination}" ]
-         then
-            if [ -f "${destination}/${SOURCETREE_CONFIG_FILE}" ]
-            then
-               if db_is_ready "${destination}"
-               then
-                  color="limegreen"
-               else
-                  color="darkorchid"
-               fi
-            fi
+      case "${state}" in
+         ready)
+            color="limegreen"
             shape="folder"
-         else
-            shape="note"
-         fi
-      fi
-   fi
+         ;;
 
+         database)
+            color="darkorchid"
+            shape="folder"
+         ;;
+
+         config)
+            color="goldenrod"
+            shape="folder"
+         ;;
+
+         folder)
+            color="dodgerblue"
+            shape="folder"
+         ;;
+
+         file)
+            color="dodgerblue"
+            shape="note"
+         ;;
+
+         missing)
+            color="black"
+            shape="folder"  # nicer default than node
+         ;;
+
+         ""|*)
+            internal_fail "state is empty"
+         ;;
+      esac
+   else
+      case "${state}" in
+         ready)
+            color="limegreen"
+            shape="folder"
+         ;;
+
+         database)
+            color="darkorchid"
+            shape="folder"
+         ;;
+
+         config)
+            color="goldenrod"
+            shape="folder"
+         ;;
+
+         folder)
+            color="magenta"
+            shape="folder"
+         ;;
+
+         file)
+            color="dodgerblue"
+            shape="note"
+         ;;
+
+         missing)
+            color="maroon"
+            shape="folder"  # nicer default than node or invis
+         ;;
+
+         ""|*)
+            internal_fail "state is empty"
+         ;;
+      esac
+   fi
 
    local penwidth
    local style
@@ -241,9 +357,9 @@ print_node()
       ;;
    esac
 
-   exekutor echo "${identifier} [ shape=\"${shape}\", \
-penwidth=\"${penwidth}\",  \
-color=\"${color}\" \
+   exekutor echo "   ${identifier} [ shape=\"${shape}\", \
+penwidth=\"${penwidth}\", \
+color=\"${color}\", \
 style=\"${style}\" \
 label=\"`basename -- "${address}"`\"]"
 }
@@ -265,10 +381,14 @@ walk_dotdump()
    local destination="${MULLE_DESTINATION}"
 
    local identifier
-   local relidentifier
    local previdentifier
    local relative
    local component
+   local isshared
+
+   log_debug "address:     ${MULLE_ADDRESS}"
+   log_debug "destination: ${MULLE_DESTINATION}"
+   log_debug "virtual:     ${MULLE_VIRTUAL}"
 
    if [ "${OPTION_OUTPUT_EVAL}" = "YES" ]
    then
@@ -279,6 +399,8 @@ walk_dotdump()
    fi
 
    relative=""
+   isshared="NO"
+   isglobalshared="NO"
 
    #
    # replace a known path with a variable
@@ -287,12 +409,20 @@ walk_dotdump()
    then
       if string_has_prefix "${destination}" "${MULLE_SOURCETREE_SHARE_DIR}"
       then
+         isshared="YES"
+
          local tmp
 
-         tmp="`string_remove_prefix "${destination}" "${MULLE_SOURCETREE_SHARE_DIR}" `"
-         destination="${MULLE_SOURCETREE_SHARE_DIR}/${tmp}"
+         if is_absolutepath "${MULLE_SOURCETREE_SHARE_DIR}"
+         then
+            isglobalshared="YES"
+            tmp="`string_remove_prefix "${destination}" "${MULLE_SOURCETREE_SHARE_DIR}" `"
+            destination="`filepath_concat '${MULLE_SOURCETREE_SHARE_DIR}' "${tmp}"`"
+         fi
       fi
    fi
+
+   log_debug "destination: ${destination}"
 
    IFS="/"
    for component in ${destination}
@@ -308,6 +438,8 @@ walk_dotdump()
       relative="`filepath_concat "${relative}" "${component}"`"
       identifier="\"${relative}\""
 
+      log_debug "identifier: ${identifier}"
+
       local style
       local label
 
@@ -322,17 +454,26 @@ walk_dotdump()
          fi
       fi
 
-      if [ -z "${previdentifier}" ]
+      # this if makes no sense but fixes a bug
+      if [ "${previdentifier}" != "${identifier}" ]
       then
-         relidentifier="${ROOT_IDENTIFIER} -> ${identifier}"
-      else
-         relidentifier="${previdentifier} -> ${identifier}"
-      fi
+         local relidentifier
 
-      if ! fgrep -q -s -x "${relidentifier}" <<< "${ALL_RELATIONSHIPS}"
-      then
-         exekutor echo "${relidentifier} [ style=\"${style}\" label=\"${label}\" ]"
-         ALL_RELATIONSHIPS="`add_line "${ALL_RELATIONSHIPS}" "${relidentifier}"`"
+         if [ -z "${previdentifier}" ]
+         then
+            if [ "${isglobalshared}" = "NO" ]
+            then
+               relidentifier="${ROOT_IDENTIFIER} -> ${identifier}"
+            fi
+         else
+            relidentifier="${previdentifier} -> ${identifier}"
+         fi
+
+         if ! fgrep -q -s -x "${relidentifier}" <<< "${ALL_RELATIONSHIPS}"
+         then
+            exekutor echo "   ${relidentifier} [ style=\"${style}\", label=\"${label}\" ]"
+            ALL_RELATIONSHIPS="`add_line "${ALL_RELATIONSHIPS}" "${relidentifier}"`"
+         fi
       fi
 
       log_debug "[i] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
@@ -359,7 +500,9 @@ walk_dotdump()
 
    if [ "${OPTION_OUTPUT_HTML}" = "YES" ]
    then
-      html_print_node "${identifier}" "${url}" \
+      html_print_node "${identifier}" \
+                      "${isshared}"   \
+                                      "${url}" \
                                       "${address}" \
                                       "${branch}" \
                                       "${tag}" \
@@ -367,9 +510,14 @@ walk_dotdump()
                                       "${marks}" \
                                       "${fetchoptions}" \
                                       "${userinfo}" \
-                                      "${uuid}"
+                                      "${uuid}" \
+
    else
-      print_node "default" "${destination}" "${identifier}" "${address}"
+      print_node "default" \
+                 "${destination}" \
+                 "${identifier}" \
+                 "${address}" \
+                 "${isshared}"
    fi
 
    IFS="${DEFAULT_IFS}"
@@ -380,15 +528,23 @@ walk_dotdump()
 
 emit_root()
 {
+   log_entry "emit_root" "$@"
+
    if [ "${OPTION_OUTPUT_HTML}" = "YES" ]
    then
-      html_print_node "${ROOT_IDENTIFIER}" "${url}" \
-                                           "${PWD}" \
-                                           "" \
-                                           "" \
-                                           "root"
+      html_print_node "${ROOT_IDENTIFIER}" \
+                      "NO" \
+                           "${url}" \
+                           "${PWD}" \
+                           "" \
+                           "" \
+                           "root"
    else
-      print_node "root" "." "${ROOT_IDENTIFIER}" "`basename -- "${PWD}"`"
+      print_node "root" \
+                 "." \
+                 "${ROOT_IDENTIFIER}" \
+                 "`basename -- "${PWD}"`" \
+                 "NO"
    fi
 }
 
@@ -410,7 +566,11 @@ emit_remaining_directories()
 
       name="$(sed 's/^.\(.*\).$/\1/' <<< "${identifier}")"
 
-      print_node "other" "${name}" "${identifier}"  "${name}"
+      print_node "other" \
+                 "${name}" \
+                 "${identifier}"  \
+                 "${name}" \
+                 "NO"
    done
    IFS="${DEFAULT_IFS}"
 }
@@ -476,7 +636,7 @@ digraph sourcetree
 {
    node [ shape="box"; style="filled" ]
 
-   ${output}
+${output}
 }
 EOF
 }
@@ -555,8 +715,6 @@ sourcetree_dotdump_main()
 
             OPTION_PERMISSIONS="$1"
          ;;
-
-
 
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown dotdump option $1"

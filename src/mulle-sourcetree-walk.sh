@@ -305,22 +305,29 @@ __docd_preamble()
 {
    local directory="$1"
 
-   local relative
+   oldshared=
+   if ! is_absolutepath "${MULLE_SOURCETREE_SHARE_DIR}"
+   then
+      oldshared="${MULLE_SOURCETREE_SHARE_DIR}"
 
-   # these two are semi public
+      local relative
+
+      relative="`compute_relative "${directory}"`"
+      MULLE_SOURCETREE_SHARE_DIR="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${relative}"`"
+      MULLE_SOURCETREE_SHARE_DIR="`simplified_path "${MULLE_SOURCETREE_SHARE_DIR}"`"
+   fi
+
    old="${PWD}"
-   oldshared="${MULLE_SOURCETREE_SHARE_DIR}"
-
-   relative="`compute_relative "${directory}"`"
-   MULLE_SOURCETREE_SHARE_DIR="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${relative}"`"
-   MULLE_SOURCETREE_SHARE_DIR="`simplified_path "${MULLE_SOURCETREE_SHARE_DIR}"`"
    exekutor cd "${directory}"
 }
 
 __docd_postamble()
 {
    exekutor cd "${old}"
-   MULLE_SOURCETREE_SHARE_DIR="${oldshared}"
+   if [ ! -z "${oldshared}" ]
+   then
+      MULLE_SOURCETREE_SHARE_DIR="${oldshared}"
+   fi
 }
 
 
@@ -430,44 +437,51 @@ _visit_recurse()
 
    [ ! -z "${address}" ] || internal_fail "Empty address"
 
-   actual="`__concat_datasource_address "${datasource}" "${address}"`"
-   virtual="`filepath_concat "${virtual}" "${address}"`"
+   log_debug "address:    ${address}"
+   log_debug "virtual:    ${virtual}"
+   log_debug "datasource: ${datasource}"
+   log_debug "originator: ${originator}"
 
    case "${mode}" in
       *flat*)
-         log_debug "Non-recursive walk doesn't recurse on \"${actual}\""
+         log_debug "Non-recursive walk doesn't recurse on \"${address}\""
          return 0
-      ;;
-
-      *)
-         if nodemarks_contain_norecurse "${marks}"
-         then
-            log_debug "Do not recurse on \"${actual}\" due to norecurse mark"
-            return 0
-         fi
-
-         if ! [ -d "${actual}" ]
-         then
-            if [ -f "${actual}" ]
-            then
-               log_fluff "Do not recurse on \"${actual}\" as it's not a directory. ($PWD)"
-            else
-               log_debug "Can not recurse into \"${actual}\" as it's not there yet. ($PWD)"
-            fi
-            return 0
-         fi
       ;;
    esac
 
+   if nodemarks_contain_norecurse "${marks}"
+   then
+      log_debug "Do not recurse on \"${address}\" due to norecurse mark"
+      return 0
+   fi
+
+   local next_datasource
+   local next_virtual
+
+   next_virtual="`filepath_concat "${virtual}" "${address}"`"
+   next_datasource="`__concat_datasource_address "${datasource}" "${address}"`"
+
+   if ! [ -d "${next_datasource}" ]
+   then
+      if [ -f "${next_datasource}" ]
+      then
+         log_fluff "Do not recurse on \"${next_datasource}\" as it's not a directory. ($PWD)"
+      else
+         log_debug "Can not recurse into \"${next_datasource}\" as it's not there yet. ($PWD)"
+      fi
+      return 0
+   fi
+
+   #
    #
    # internally we want to preserve state and globals vars
    # so dont subshell
    #
-
+   #
    case "${mode}" in
       *walkdb*)
-         _walk_db_uuids "${actual}" \
-                        "${virtual}" \
+         _walk_db_uuids "${next_datasource}" \
+                        "${next_virtual}" \
                         "${filternodetypes}" \
                         "${filterpermissions}" \
                         "${filtermarks}" \
@@ -476,8 +490,8 @@ _visit_recurse()
       ;;
 
       *)
-         _walk_config_uuids "${actual}" \
-                            "${virtual}" \
+         _walk_config_uuids "${next_datasource}" \
+                            "${next_virtual}" \
                             "${filternodetypes}" \
                             "${filterpermissions}" \
                             "${filtermarks}" \
@@ -540,6 +554,9 @@ _visit_share_node()
    name="`basename -- "${address}"`"
    address="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${name}"`"
 
+   log_debug "address:  ${address}"
+   log_debug "original: ${original}"
+
    if fgrep -q -s -x "${address}" <<< "${VISITED}"
    then
       return
@@ -568,8 +585,8 @@ _visit_share_node()
 
 
 #
-# datasource
-# virtual
+# datasource          // place of the config/db where we read the nodeline from
+# virtual             // same but relative to project and possibly remapped
 # filternodetypes
 # filterpermissions
 # filtermarks
@@ -596,7 +613,10 @@ _visit_filter_nodeline()
    [ -z "${nodeline}" ]  && internal_fail "nodeline is empty"
    [ -z "${mode}" ]      && internal_fail "mode is empty"
 
-   # nodeline_parse
+   #
+   # These values are now defined for all the "_" prefix functions
+   # that we call from now on!
+   #
    local branch
    local address
    local fetchoptions
@@ -627,19 +647,6 @@ _visit_filter_nodeline()
       return 0
    fi
 
-   # avoid duplicate root call
-   # ***machen wir nicht mehr***
-   # if [ "${datasource}" = "/" -a "${address}" = "." ]
-   # then
-   #    case "${mode}" in
-   #       *callroot*)
-   #          log_fluff "Avoided duplicate root walk for \"${address}\""
-   #          return 0
-   #       ;;
-   #    esac
-   # fi
-
-
    log_debug "Node \"${address}\" passed the filters"
 
    #
@@ -648,6 +655,7 @@ _visit_filter_nodeline()
    #
    case "${mode}" in
       *noshare*)
+         internal_fail "shouldn't exist anymore"
       ;;
 
       *share*)
@@ -657,8 +665,8 @@ _visit_filter_nodeline()
             return $?
          fi
 
-         # if marked noshare, change mode now
-         mode="$(sed -e 's/share/noshare/' <<< "${mode}")"
+         # if marked share, change mode now
+         mode="$(sed -e 's/share/recurse/' <<< "${mode}")"
       ;;
    esac
 

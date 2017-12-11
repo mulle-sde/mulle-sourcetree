@@ -319,7 +319,7 @@ update_actions_for_nodelines()
    filename="${address}"
    previousfilename="`nodeline_get_address "${previousnodeline}"`"
 
-   # just address address as filename ?
+   # just address as filename ?
    update_actions_for_node "${style}" \
                            "${nodeline}" \
                            "${filename}" \
@@ -483,6 +483,7 @@ chickening out"
    newexists="NO"
    if [ -e "${newfilename}" ]
    then
+      log_fluff "\"${newfilename}\" already exists"
       newexists="YES"
    else
       if [ -L "${newfilename}" ]
@@ -502,6 +503,8 @@ chickening out"
    #
    if [ -z "${previousnodeline}" ]
    then
+      log_debug "This is a new node"
+
       if [ "${newexists}" = "YES" ]
       then
          # hmm, but why ?
@@ -554,7 +557,7 @@ As node is marked \"nodelete\" just remember it."
    # contain another branch or tag.
    #
 
-   log_debug "This is an update"
+   log_debug "This is a node update"
 
    #
    # easy and cheap cop out
@@ -562,6 +565,14 @@ As node is marked \"nodelete\" just remember it."
    if [ "${previousnodeline}" = "${newnodeline}" ]
    then
       log_fluff "Node \"${newfilename}\" is unchanged"
+
+      if [ "${newexists}" = "YES" ]
+      then
+         return
+      fi
+
+      # someone removed it, fetch again
+      echo "fetch"
       return
    fi
 
@@ -634,6 +645,7 @@ current destination \"${newfilename}\" do not exist."
 
    local actions
 
+   actions=
    #
    # Handle positional changes
    #
@@ -904,7 +916,7 @@ _update_perform_actions()
                                          "${branch}" \
                                          "${tag}"`" || exit 1
 
-   log_debug "${C_INFO}Actions for \"${address}\": ${actionitems:-local}"
+   log_debug "${C_INFO}Actions for \"${address}\": ${actionitems:-none}"
 
    local skip="NO"
    local contentschanged="NO"

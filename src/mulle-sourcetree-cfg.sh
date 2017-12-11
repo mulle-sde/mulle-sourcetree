@@ -102,11 +102,11 @@ cfg_exists()
 
    if [ -f "${configfile}" ]
    then
-      log_debug "\"${PWD}/${configfile}\" exists"
+      log_debug "\"${configfile}\" exists"
       return 0
    fi
 
-   log_debug "\"${PWD}/${configfile}\" not found"
+   log_debug "\"${configfile}\" not found"
    return 1
 }
 
@@ -439,9 +439,9 @@ cfg_defer_if_needed()
 
    if directory="`cfg_determine_working_directory "${preference}"`"
    then
-      if [ "${directory}" != "${PWD}" ]
+      if [ "${directory}" != "`pwd -P`" ]
       then
-         log_info "Using master \"${directory}\" for operations"
+         log_info "Using \"${directory}\" as sourcetree root"
          exekutor cd "${directory}"
       fi
    fi

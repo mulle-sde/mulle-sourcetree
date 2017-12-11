@@ -72,6 +72,11 @@ main()
       fail "config should exist now"
    fi
 
+   if ! run_mulle_sourcetree -N add "b"
+   then
+      fail "add of b failed unexpectedly"
+   fi
+
    if ! run_mulle_sourcetree -N remove "a"
    then
       fail "remove \"a\" failed unexpectedly"
@@ -85,6 +90,16 @@ main()
    if run_mulle_sourcetree -N remove "."
    then
       fail "remove \".\" succeeded unexpectedly"
+   fi
+
+   if [ ! -f ".mulle-sourcetree" ]
+   then
+      fail "config should still exist now"
+   fi
+
+   if ! run_mulle_sourcetree -N remove "b"
+   then
+      fail "remove \"a\" failed unexpectedly"
    fi
 
    if [ -f ".mulle-sourcetree" ]

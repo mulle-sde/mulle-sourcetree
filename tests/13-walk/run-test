@@ -17,6 +17,10 @@ run_mulle_sourcetree()
 # repository has a .mulle-sourcetree in 2.0.0
 # repository has no .mulle-sourcetree in 3.0.0
 #
+
+# a->b(->c)
+# a->c
+
 _setup_demo_repo_a()
 {
    local reporoot="$1"
@@ -28,8 +32,10 @@ _setup_demo_repo_a()
    run_mulle_sourcetree mark b "nobuild"
    run_mulle_sourcetree add --nodetype git "file:///${reporoot}/c"
    exekutor git add VERSION .mulle-sourcetree
-   exekutor git commit -m "a: inital version"
+   exekutor git commit -m "a: initial version"
 }
+
+# b->c
 
 _setup_demo_repo_b()
 {
@@ -40,7 +46,7 @@ _setup_demo_repo_b()
    redirect_exekutor VERSION echo "1.1.0"
    run_mulle_sourcetree add --nodetype git "file:///${reporoot}/c"
    exekutor git add VERSION .mulle-sourcetree
-   exekutor git commit -m "b: inital version"
+   exekutor git commit -m "b: initial version"
 }
 
 
@@ -52,7 +58,7 @@ _setup_demo_repo_c()
 
    redirect_exekutor VERSION echo "1.0.0"
    exekutor git add VERSION
-   exekutor git commit -m "c: inital version"
+   exekutor git commit -m "c: initial version"
 }
 
 
@@ -113,6 +119,7 @@ a/c"
    then
       fail "db walk #1 returned \"${results}\". Expected was \"${expected}\""
    fi
+   log_verbose "----- #1 PASSED -----"
 
    results="`run_mulle_sourcetree walk --depth-first \
                                        --walk-config \
@@ -134,6 +141,7 @@ a"
    then
       fail "config walk #1 returned \"${results}\". Expected was \"${expected}\""
    fi
+   log_verbose "----- #2 PASSED -----"
 
    #
    # example how to get the repositories in build order
@@ -155,6 +163,24 @@ a/c"
    then
       fail "config walk #2 returned \"${results}\". Expected was \"${expected}\""
    fi
+   log_verbose "----- #3 PASSED -----"
+
+
+   #
+   # Finally do a shared walk
+   #
+   expected="a
+b
+c"
+
+   results="`run_mulle_sourcetree --share walk "echo" "\\\${MULLE_DESTINATION}"`"
+   if [ $? -ne 0 ]
+   then
+      fail "config walk #3 failed unexpectedly"
+   fi
+
+   log_verbose "----- #4 PASSED -----"
+
 }
 
 
@@ -182,7 +208,6 @@ main()
       cd "${project}" &&
       run_test1
    ) || exit 1
-   log_verbose "----- #1 PASSED -----"
 
    log_info "----- ALL PASSED -----"
 

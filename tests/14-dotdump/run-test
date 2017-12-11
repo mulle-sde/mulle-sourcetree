@@ -12,10 +12,71 @@ run_mulle_sourcetree()
    exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
 }
 
+
+expect_content()
+{
+   local output="$1"
+   local expect="$2"
+
+   if [ ! -f "${output}" ]
+   then
+      if [ -z "${expect}" ]
+      then
+         return
+      fi
+      fail "Did not produce \"${output}\" as expected"
+   else
+      if [ -z "${expect}" ]
+      then
+         fail "Did produce \"${output}\" unexpectedly. Nothing was expected"
+      fi
+   fi
+
+   if [ -f "${expect}.${UNAME}" ]
+   then
+      expect="${expect}.${UNAME}"
+   fi
+
+   if [ ! -f "${expect}" ]
+   then
+      internal_fail "\"${expect}\" is missing from test"
+   fi
+
+   local diffs
+
+   diffs="`diff "${output}" "${expect}"`"
+   if [ $? -ne 0 ]
+   then
+      log_error "Unexpected output generated"
+      cat <<EOF >&2
+----------------
+Output: ($output)
+----------------
+`cat "${output}"`
+----------------
+Expected: ($expect)
+----------------
+`cat "${expect}"`
+----------------
+Diff:
+----------------
+${diffs}
+----------------
+EOF
+      exit 1
+   fi
+}
+
+
 #
 # repository has no .mulle-sourcetree in 1.0.0
 # repository has a .mulle-sourcetree in 2.0.0
 # repository has no .mulle-sourcetree in 3.0.0
+#
+
+#
+# a->b(->d)
+# a->c->d
 #
 _setup_demo_repo_a()
 {
@@ -24,12 +85,17 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/b"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/d" "c/d"
+   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/b" || exit 1
+   run_mulle_sourcetree add --nodetype git --url "file:///${reporoot}/d" "c/d" || exit 1
+   run_mulle_sourcetree list
+
    exekutor git add VERSION .mulle-sourcetree
-   exekutor git commit -m "a: inital version"
+   exekutor git commit -m "a: initial version"
 }
 
+#
+# b->d
+#
 _setup_demo_repo_b()
 {
    local reporoot="$1"
@@ -37,9 +103,9 @@ _setup_demo_repo_b()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/d"
+   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/d" || exit 1
    exekutor git add VERSION .mulle-sourcetree
-   exekutor git commit -m "b: inital version"
+   exekutor git commit -m "b: initial version"
 }
 
 
@@ -51,22 +117,36 @@ _setup_demo_repo_d()
 
    redirect_exekutor VERSION echo "1.0.0"
    exekutor git add VERSION
-   exekutor git commit -m "d: inital version"
+   exekutor git commit -m "d: initial version"
 }
 
 
 setup_demo_repos()
 {
    (
-      set -e
       mkdir_if_missing "$1/a" &&
       exekutor cd "$1/a" && _setup_demo_repo_a "$1"
       mkdir_if_missing "$1/b" &&
       exekutor cd "$1/b" && _setup_demo_repo_b "$1"
       mkdir_if_missing "$1/d" &&
       exekutor cd "$1/d" && _setup_demo_repo_d "$1"
-      set +e
    ) || exit 1
+}
+
+
+run_dump()
+{
+   local mode="$1"
+   local directory="$2"
+   local output="${3:-${mode}.dot}"
+
+   run_mulle_sourcetree --${mode} dotdump > "${output}"
+   if [ $? -ne 0 ]
+   then
+      fail "dotdump failed unexpectedly"
+   fi
+
+   expect_content "${output}" "${directory}/${output}"
 }
 
 
@@ -82,11 +162,26 @@ run_test1()
       fail "update failed unexpectedly"
    fi
 
+   run_mulle_sourcetree print  >&2
+
+   MULLE_SOURCETREE_SHARE_DIR="stashes"
+   export MULLE_SOURCETREE_SHARE_DIR
+
    run_mulle_sourcetree dotdump --output-html > /dev/null
    if [ $? -ne 0 ]
    then
       fail "dotdump failed unexpectedly"
    fi
+
+   local expect
+
+   run_dump "flat" "${testdir}"
+   run_dump "recurse" "${testdir}"
+   run_dump "share" "${testdir}" "share_local.dot"
+
+   MULLE_SOURCETREE_SHARE_DIR="${MULLE_SDE_VIRTUAL_ROOT}share_global"
+   export MULLE_SOURCETREE_SHARE_DIR
+   run_dump "share" "${testdir}" "share_global.dot"
 }
 
 
@@ -108,8 +203,13 @@ main()
    project="${directory}/project"
    repos="${directory}/repositories"
 
-   setup_demo_repos "${repos}" > /dev/null 2>&1 || exit 1
+   setup_demo_repos "${repos}" || exit 1
 
+   log_verbose "----- TEST START -----"
+
+   local testdir
+
+   testdir="${PWD}"
    (
       rmdir_safer "${project}" &&
       mkdir_if_missing "${project}" &&
