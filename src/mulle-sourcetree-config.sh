@@ -595,145 +595,26 @@ sourcetree_mark_node()
 }
 
 
-_sourcetree_list_nodes()
-{
-   log_entry "_sourcetree_list_nodes" "$@"
-
-   local mode="$1"
-
-   nodeline_print_header "${mode}"
-
-   local nodeline
-   local nodelines
-
-   nodelines="`cfg_read "/"`" || exit 1
-
-   IFS="
-"
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}"
-
-      if [ ! -z "${nodeline}" ]
-      then
-         nodeline_print "${nodeline}" "${mode}"
-      fi
-   done
-   IFS="${DEFAULT_IFS}"
-}
-
-
-_sourcetree_augment_mode_with_output_options()
-{
-   log_entry "_sourcetree_augment_mode_with_output_options" "$@"
-
-   local mode="$1"
-
-   if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
-   then
-      mode="`concat "${mode}" "output_header"`"
-      if [ "${OPTION_OUTPUT_SEPARATOR}" != "NO" ]
-      then
-         mode="`concat "${mode}" "output_separator"`"
-      fi
-   fi
-   if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
-   then
-      mode="`concat "${mode}" "output_full"`"
-   fi
-   if [ "${OPTION_OUTPUT_EVAL}" = "YES" ]
-   then
-      mode="`concat "${mode}" "output_eval"`"
-   fi
-   if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
-   then
-      mode="`concat "${mode}" "output_uuid"`"
-   fi
-
-   case "${OPTION_OUTPUT_FORMAT}" in
-      "RAW")
-         mode="`concat "${mode}" "output_raw"`"
-      ;;
-
-      "COMMANDLINE")
-         mode="`concat "${mode}" "output_cmdline"`"
-      ;;
-
-      ""|*)
-         [ -z "`command -v column`" ] && fail "Tool \"column\" is not available, use --output-raw"
-
-         mode="`concat "${mode}" "output_column"`"
-      ;;
-   esac
-
-   echo "${mode}"
-}
-
-
-sourcetree_list_node()
-{
-   log_entry "sourcetree_list_node" "$@"
-
-   if [ ! -f "${SOURCETREE_CONFIG_FILE}" ]
-   then
-      if [ -z "${IS_PRINTING}" ]
-      then
-         log_info "There is no sourcetree here (${PWD})"
-      fi
-      return
-   fi
-
-   if [ "${OPTION_OUTPUT_BANNER}" = "YES" ]
-   then
-      sourcetree_info_node
-   fi
-
-   mode="`_sourcetree_augment_mode_with_output_options`"
-
-   case "${mode}" in
-      *output_column*)
-         _sourcetree_list_nodes "${mode}" | column -t -s '|'
-      ;;
-
-      *)
-         _sourcetree_list_nodes "${mode}"
-      ;;
-   esac
-}
-
-
 sourcetree_info_node()
 {
    log_entry "sourcetree_info_node" "$@"
 
    [ -z "${MULLE_EXECUTABLE_PWD}" ] && internal_fail "MULLE_EXECUTABLE_PWD is empty"
 
+   local database="${1:-/}"
 
    local dbstate
 
-   dbstate="absent"
-   if db_dir_exists "/"
-   then
-      if db_is_ready "/"
-      then
-         dbstate="ready"
-      else
-         dbstate="incomplete"
-      fi
-
-      local state
-      state="`db_get_dbtype "/"`"
-
-      dbstate="`comma_concat "${dbstate}" "${state}"`"
-      if db_has_graveyard "/"
-      then
-         dbstate="`comma_concat "${dbstate}" "graveyard"`"
-      fi
-   fi
+   dbstate="`db_state_description "${database}" `"
 
    printf "%b\n" "${C_INFO}--------------------------------------------------${C_RESET}"
    printf "%b\n" "${C_INFO}Sourcetree: ${C_RESET_BOLD}${PWD}${C_RESET}"
    printf "%b\n" "${C_INFO}Database: ${C_MAGENTA}${C_BOLD}${dbstate}${C_RESET}"
+
+   if [ ! -z "${MULLE_SDE_VIRTUAL_ROOT}" ]
+   then
+      printf "%b\n" "${C_INFO}Virtual Root: ${C_MAGENTA}${C_BOLD}${MULLE_SDE_VIRTUAL_ROOT}${C_RESET}"
+   fi
 
    case "${SOURCETREE_MODE}" in
       share)

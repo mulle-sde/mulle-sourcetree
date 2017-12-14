@@ -154,6 +154,7 @@ main()
    local MULLE_FLAG_LOG_VERBOSE="NO"
    local MULLE_FLAG_LOG_MERGE="NO"
    local MULLE_TRACE_POSTPONE="NO"
+
    local MULLE_FLAG_DEFER="ROOT"
    local FLAG_OUTSIDE_ENV="NO"
 
@@ -186,6 +187,10 @@ main()
 
          -h|--help)
             usage "${MULLE_TRACE}"
+         ;;
+
+         -ls|--list-settings)
+            MULLE_FLAG_LOG_SETTINGS="YES"
          ;;
 
          --git-terminal-prompt)
@@ -267,15 +272,12 @@ main()
          then
             fail "To run mulle-sourcetree outside of mulle-sde, pass the -e flag"
          fi
-         MULLE_SDE_VIRTUAL_ROOT="${PWD}/"
+         MULLE_SDE_VIRTUAL_ROOT="${PWD}"
          export MULLE_SDE_VIRTUAL_ROOT
       ;;
 
       */)
-      ;;
-
-      *)
-         fail "MULLE_SDE_VIRTUAL_ROOT \"${MULLE_SDE_VIRTUAL_ROOT}\" must end with /"
+         fail "MULLE_SDE_VIRTUAL_ROOT \"${MULLE_SDE_VIRTUAL_ROOT}\" must not end with /"
       ;;
    esac
 
@@ -312,20 +314,42 @@ main()
 
    #
    # try to recover old user choice for shared directory
+   # this will override the ENVIRONMENT for consistency
    #
-   if [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
+   local share_dir
+
+   share_dir="`db_get_shareddir "/"`" || exit 1
+   if [ ! -z "${share_dir}" ]
    then
-      MULLE_SOURCETREE_SHARE_DIR="`db_get_shareddir "/"`" || exit 1
-   else
-      if [ "${MULLE_SOURCETREE_SHARE_DIR}" = "." ]
-      then
-         MULLE_SOURCETREE_SHARE_DIR=""
-      fi
+      MULLE_SOURCETREE_SHARE_DIR="${share_dir}"
+   fi
+
+   if [ "${MULLE_SOURCETREE_SHARE_DIR}" = "." ]
+   then
+      MULLE_SOURCETREE_SHARE_DIR=""
    fi
 
    #
+   # check that and absolute MULLE_SOURCETREE_SHARE_DIR does not go outside
+   # MULLE_SDE_VIRTUAL_ROOT
    #
-   #
+   case "${MULLE_SOURCETREE_SHARE_DIR}" in
+      *..*)
+        fail "MULLE_SOURCETREE_SHARE_DIR contains .."
+      ;;
+
+      /*)
+         local relative
+
+         relative="`symlink_relpath "${MULLE_SOURCETREE_SHARE_DIR}" "${MULLE_SDE_VIRTUAL_ROOT}" `"
+         case "${relative}" in
+            *..*)
+               fail "MULLE_SOURCETREE_SHARE_DIR ($MULLE_SOURCETREE_SHARE_DIR}) lies outside of MULLE_SDE_VIRTUAL_ROOT ($PWD)"
+            ;;
+         esac
+      ;;
+   esac
+
    case "${cmd}" in
       add)
          # shellcheck source=src/mulle-sourcetree-config.sh
@@ -342,10 +366,10 @@ main()
       ;;
 
       clean)
-         # shellcheck source=src/mulle-sourcetree-db.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombie.sh"
+         # shellcheck source=src/mulle-sourcetree-clean.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-clean.sh"
 
-         zombie_clean_main "$@"
+         sourcetree_clean_main "$@"
       ;;
 
       dotdump)
@@ -386,7 +410,7 @@ main()
 
       list)
          # shellcheck source=src/mulle-sourcetree-config.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-list.sh"
 
          sourcetree_list_main "$@"
       ;;
@@ -401,21 +425,6 @@ main()
       pwd)
          # shellcheck source=src/mulle-sourcetree-walk.sh
          echo "$PWD"
-      ;;
-
-      print)
-         # shellcheck source=src/mulle-sourcetree-walk.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
-
-         # promote flat to recurse, except when user says so
-         if [ "${SOURCETREE_MODE}" = "flat" -a -z "${FLAG_SOURCETREE_MODE}" ]
-         then
-            SOURCETREE_MODE="recurse"
-         fi
-
-         IS_PRINTING="YES"; export IS_PRINTING
-         sourcetree_walk_main --no-depth-first --callback-root --cd \
-               "${MULLE_EXECUTABLE}" --flat -N list --output-banner --output-eval
       ;;
 
       remove)

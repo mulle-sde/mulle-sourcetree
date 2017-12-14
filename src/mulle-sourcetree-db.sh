@@ -62,7 +62,7 @@ __db_common_rootdir()
          rootdir=""
       ;;
 
-      ""|.*)
+      ""|.|./*)
          internal_fail "database must not be empty or start with '.' . use '/' for root"
       ;;
 
@@ -72,6 +72,28 @@ __db_common_rootdir()
 
       *)
          rootdir="$1"
+      ;;
+   esac
+}
+
+
+__db_common_absolute_rootdir()
+{
+   case "$1" in
+      "/")
+         rootdir="${PWD}"
+      ;;
+
+      ""|.|./*)
+         internal_fail "database must not be empty or start with '.' . use '/' for root"
+      ;;
+
+      */)
+         rootdir="${PWD}/$(sed 's|/$||g' <<< "$1")"
+      ;;
+
+      *)
+         rootdir="${PWD}/$1"
       ;;
    esac
 }
@@ -87,7 +109,7 @@ __db_common_databasedir()
          databasedir="${SOURCETREE_DB_DIR}"
       ;;
 
-      ""|.*)
+      ""|.|./*)
          internal_fail "database must not be empty or start with '.' . use '/' for root"
       ;;
 
@@ -217,6 +239,8 @@ db_forget()
 }
 
 
+#
+# This buries a directory in the project by moving it into the graveyard.
 #
 # it must have been ascertained that filename is not in use by other nodes
 # filename is relative to database here
@@ -436,6 +460,52 @@ db_fetch_uuid_for_address()
 }
 
 
+db_fetch_uuid_for_filename()
+{
+   log_entry "db_fetch_uuid_for_filename" "$@"
+
+   local database
+   local databasedir
+
+   __db_common_databasedir "$@"
+
+   local searchfilename="$2"
+
+   [ -z "${searchfilename}" ] && internal_fail "filename is empty"
+
+   if ! dir_has_files "${databasedir}" f
+   then
+      return 1
+   fi
+
+   local nodeline
+   local owner
+   local filename
+   local dbentry
+
+   IFS="
+"
+   for candidate in `fgrep -l -x -s "${searchfilename}" "${databasedir}"/*`
+   do
+      IFS="${DEFAULT_IFS}"
+
+      dbentry="`cat "${candidate}" `"
+
+      __db_parse_dbentry "${dbentry}"
+
+      if [ "${searchfilename}" = "${filename}" ]
+      then
+         _nodeline_get_uuid <<< "${nodeline}"
+         return 0
+      fi
+   done
+
+   IFS="${DEFAULT_IFS}"
+   return 1
+}
+
+
+
 db_fetch_all_filenames()
 {
    log_entry "db_fetch_all_filenames" "$@"
@@ -455,6 +525,21 @@ db_fetch_all_filenames()
          tail -1 "${i}"
       done
    )
+}
+
+
+db_relative_filename()
+{
+   log_entry "db_relative_filename" "$@"
+
+   local database
+   local rootdir
+
+   __db_common_absolute_rootdir "$@"
+
+   local filename=$2
+
+   symlink_relpath "${filename}" "${rootdir}"
 }
 
 
@@ -602,6 +687,14 @@ db_dir_exists()
 }
 
 
+db_environment()
+{
+   echo "${MULLE_SDE_VIRTUAL_ROOT}
+${databasedir}
+${MULLE_SOURCETREE_SHARE_DIR}"
+}
+
+
 db_is_ready()
 {
    log_entry "db_is_ready" "$@"
@@ -611,14 +704,28 @@ db_is_ready()
 
    __db_common_databasedir "$@"
 
-   if [ -f "${databasedir}/.db_done" ]
+   local dbdonefile
+
+   dbdonefile="${databasedir}/.db_done"
+   if [ ! -f "${dbdonefile}" ]
    then
-      log_debug "\"${PWD}/${databasedir}/.db_done\" exists"
-      return 0
+      log_debug "\"${dbdonefile}\" not found ($PWD)"
+      return 1
    fi
 
-   log_debug "\"${PWD}/${databasedir}/.db_done\" not found"
-   return 1
+   local oldenvironment
+   local environment
+
+   oldenvironment="`cat "${dbdonefile}" `"
+   environment="`db_environment`"
+
+   if [ "${oldenvironment}" != "${environment}" ]
+   then
+      log_debug "\"${database}\" was made in a different environment. Needs reset"
+      return 2
+   fi
+
+   return 0
 }
 
 
@@ -632,7 +739,7 @@ db_set_ready()
    __db_common_databasedir "$@"
 
    mkdir_if_missing "${databasedir}"
-   redirect_exekutor "${databasedir}/.db_done"  echo "# intentionally left blank"
+   redirect_exekutor "${databasedir}/.db_done" db_environment
 }
 
 
@@ -872,6 +979,10 @@ _db_set_default_mode()
    if [ ! -z "${SOURCETREE_MODE}" ]
    then
       log_verbose "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
+      if [ "${SOURCETREE_MODE}" = share ]
+      then
+         log_verbose "Shared directory: ${C_RESET_BOLD}${MULLE_SOURCETREE_SHARE_DIR}${C_INFO}"
+      fi
    fi
 }
 
@@ -1039,7 +1150,7 @@ db_set_uuid_alive()
 
       remove_file_if_present "${zombiefile}" || fail "failed to delete zombie ${zombiefile}"
    else
-      log_fluff "\"${uuid}\" is alive as `absolutepath "${zombiefile}"` is not present"
+      log_fluff "\"${uuid}\" is alive as no zombie is present"
    fi
 }
 
@@ -1203,3 +1314,42 @@ db_bury_zombies()
    rmdir_safer "${zombiedir}"
 }
 
+
+db_state_description()
+{
+   log_entry "db_state_description" "$@"
+
+   local database="${1:-/}"
+
+   local dbstate
+
+   dbstate="absent"
+   if db_dir_exists "${database}"
+   then
+      db_is_ready "${database}"
+      case "$?" in
+         0)
+            dbstate="ready"
+         ;;
+
+         1)
+            dbstate="incomplete"
+         ;;
+
+         2)
+            dbstate="incompatible"
+         ;;
+      esac
+
+      local state
+      state="`db_get_dbtype "${database}"`"
+
+      dbstate="`comma_concat "${dbstate}" "${state}"`"
+      if db_has_graveyard "${database}"
+      then
+         dbstate="`comma_concat "${dbstate}" "graveyard"`"
+      fi
+   fi
+
+   echo "${dbstate}"
+}

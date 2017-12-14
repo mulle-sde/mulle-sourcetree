@@ -224,12 +224,20 @@ _get_fs_status()
      return
    fi
 
-   if ! db_is_ready "${destination}"
-   then
-     log_debug "${destination} db not ready"
-     echo "database"
-     return
-   fi
+   db_is_ready "${destination}"
+   case $? in
+      1)
+         log_debug "${destination} db not ready"
+         echo "database"
+         return
+      ;;
+
+      2)
+         log_debug "${destination} db needs reset"
+         echo "reset"
+         return
+      ;;
+   esac
 
    log_debug "${destination} db ready"
    echo "ready"

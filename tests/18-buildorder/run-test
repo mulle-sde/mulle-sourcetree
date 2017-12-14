@@ -71,7 +71,7 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_SDE_VIRTUAL_ROOT="${directory}/"
+   MULLE_SDE_VIRTUAL_ROOT="${directory}"
    export MULLE_SDE_VIRTUAL_ROOT
 
    local project

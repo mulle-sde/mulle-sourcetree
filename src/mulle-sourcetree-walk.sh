@@ -258,6 +258,15 @@ __call_callback()
 
    [ -z "${callback}" ] && internal_fail "callback is empty"
 
+   local evaluator
+
+   if [ "${OPTION_EVAL_EXEKUTOR}" = "YES" ]
+   then
+      evaluator="_eval_exekutor"
+   else
+      evaluator="eval"
+   fi
+
    MULLE_ADDRESS="${address}" \
    MULLE_BRANCH="${branch}" \
    MULLE_DATASOURCE="${datasource}" \
@@ -274,7 +283,7 @@ __call_callback()
    MULLE_USERINFO="${userinfo}" \
    MULLE_UUID="${uuid}" \
    MULLE_VIRTUAL="${virtual}" \
-      _eval_exekutor "'${callback}'" "$@"
+      "${evaluator}" "'${callback}'" "$@"
 
    rval="$?"
    if [ "${rval}" -eq 0 ]
@@ -951,6 +960,7 @@ sourcetree_walk_main()
    local OPTION_NODETYPES="ALL"
    local OPTION_PERMISSIONS="" # empty!
    local OPTION_WALK_DB="DEFAULT"
+   local OPTION_EVAL_EXEKUTOR="YES"
 
    while [ $# -ne 0 ]
    do
@@ -961,6 +971,10 @@ sourcetree_walk_main()
 
          --callback-root)
             OPTION_CALLBACK_ROOT="YES"
+         ;;
+
+         -N|--no-eval-exekutor)
+            OPTION_EVAL_EXEKUTOR="NO"
          ;;
 
          --no-callback-root)

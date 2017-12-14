@@ -84,7 +84,6 @@ sourcetree_reset_main()
             sourcetree_reset_usage
          ;;
 
-
          -g|--remove-graveyard)
             OPTION_REMOVE_GRAVEYARD="YES"
          ;;

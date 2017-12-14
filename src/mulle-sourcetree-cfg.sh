@@ -43,7 +43,7 @@ __cfg_common_configfile()
          configfile="${SOURCETREE_CONFIG_FILE}"
       ;;
 
-      ""|.*)
+      ""|.|./*)
          internal_fail "configfile must not be empty or start with '.' . use '/' for root"
       ;;
 
@@ -65,7 +65,7 @@ __cfg_common_rootdir()
          rootdir=""
       ;;
 
-      ""|.*)
+      ""|.|./*)
          internal_fail "configfile must not be empty or start with '.' . use '/' for root"
       ;;
 

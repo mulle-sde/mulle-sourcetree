@@ -217,7 +217,7 @@ main()
 
 init()
 {
-   MULLE_SDE_VIRTUAL_ROOT="fake/"
+   MULLE_SDE_VIRTUAL_ROOT="fake"
    export MULLE_SDE_VIRTUAL_ROOT
 
 

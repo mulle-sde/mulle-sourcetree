@@ -82,6 +82,7 @@ sourcetree_is_uptodate()
 }
 
 
+
 #
 # ensure that databases produced last time are
 # compatible
@@ -157,7 +158,29 @@ emit_status()
       projectdir="/"
    fi
 
+   log_debug "address:    ${address}"
+   log_debug "directory:  ${directory}"
+   log_debug "datasource: ${datasource}"
+   log_debug "projectdir: ${projectdir}"
+   log_debug "marks:      ${marks}"
+   log_debug "mode:       ${mode}"
+
    local fs
+   local configexists
+   local dbexists
+
+   configexists="NO"
+   dbexists="NO"
+
+   if cfg_exists "${projectdir}"
+   then
+      configexists="YES"
+   fi
+
+   if db_dir_exists "${projectdir}"
+   then
+      dbexists="YES"
+   fi
 
    fs="missing"
 
@@ -188,7 +211,7 @@ emit_status()
          then
             return 0
          fi
-         exekutor echo "${directory};norequire;${fs}"
+         exekutor echo "${directory};norequire;${fs};${configexists};${dbexists}"
       else
          if [ -z "${url}" ]
          then
@@ -197,7 +220,7 @@ emit_status()
             then
                exit 2   # indicate brokenness
             fi
-            exekutor echo "${directory};update;${fs}"
+            exekutor echo "${directory};update;${fs};${configexists};${dbexists}"
             return 0
          fi
 
@@ -206,7 +229,7 @@ emit_status()
          then
             exit 1
          fi
-         exekutor echo "${directory};update;${fs}"
+         exekutor echo "${directory};update;${fs};${configexists};${dbexists}"
       fi
       return
    else
@@ -222,15 +245,14 @@ emit_status()
       fi
    fi
 
-
-   if db_dir_exists "${datasource}" && \
+   if [ "${dbexists}" = "YES" ] && \
       ! sourcetree_is_db_compatible "${datasource}" "${mode}"
    then
       if [ "${OPTION_IS_UPTODATE}" = "YES" ]
       then
          exit 1
       fi
-      exekutor echo "${directory};update;${fs}"
+      exekutor echo "${directory};update;${fs};${configexists};${dbexists}"
       return 0
    fi
 
@@ -249,7 +271,7 @@ emit_status()
          # -----------|----------|-------------|----------
          # not exists | *        | *           | ok
          #
-         if ! cfg_exists "${datasource}"
+         if [ "${configexists}" = "NO" ]
          then
             log_fluff "\"${directory}\" does not have a ${SOURCETREE_CONFIG_FILE} ($PWD)"
 
@@ -258,7 +280,7 @@ emit_status()
                return 0
             fi
 
-            exekutor echo "${directory};ok;${fs}"
+            exekutor echo "${directory};ok;${fs};${configexists};${dbexists}"
             return
          fi
 
@@ -284,7 +306,7 @@ emit_status()
                   exit 2  # only time we exit with 2 on IS_UPTODATE
                fi
 
-               exekutor echo "${directory};incomplete;${fs}"
+               exekutor echo "${directory};incomplete;${fs};${configexists};${dbexists}"
                return 0
             fi
 
@@ -302,7 +324,7 @@ emit_status()
    then
       return 0
    fi
-   exekutor echo "${directory};${status};${fs}"
+   exekutor echo "${directory};${status};${fs};${configexists};${dbexists}"
 }
 
 
@@ -357,27 +379,11 @@ sourcetree_status()
 
    case "${mode}" in
       *header*)
-            case "${mode}" in
-               *share*)
-                  header="Address;Status;Filesystem;Position"
-               ;;
-
-               *)
-                  header="Address;Status;Filesystem"
-               ;;
-            esac
+         header="Address;Status;Filesystem;Config;Database"
 
          case "${mode}" in
             *separator*)
-               case "${mode}" in
-                  *share*)
-                    header="`add_line "${header}" "-------;------;----------;---------"`"
-                  ;;
-
-                  *)
-                     header="`add_line "${header}" "-------;------;----------"`"
-                  ;;
-               esac
+               header="`add_line "${header}" "-------;------;----------;------;--------"`"
             ;;
          esac
          output="`add_line "${header}" "${output}"`"

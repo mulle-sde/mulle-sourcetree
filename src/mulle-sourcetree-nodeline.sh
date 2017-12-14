@@ -283,6 +283,15 @@ nodeline_print_header()
 
    local mode="$1"
 
+   case "${mode}" in
+      *output_header*)
+      ;;
+
+      ""|*)
+         return
+      ;;
+   esac
+
    sep=";"
    case "${mode}" in
       *output_column*)
@@ -291,6 +300,7 @@ nodeline_print_header()
    esac
 
    printf "%s" "address${sep}nodetype${sep}marks${sep}userinfo${sep}url"
+
    case "${mode}" in
       *output_full*)
          printf "%s" "${sep}branch${sep}tag${sep}fetchoptions"
@@ -324,8 +334,10 @@ nodeline_print_header()
 
 nodeline_print()
 {
-   local nodeline=$1; shift
-   local mode="$1"; shift
+   log_entry "nodeline_print" "$@"
+
+   local nodeline=$1
+   local mode="$2"
 
    local branch
    local address
@@ -336,6 +348,7 @@ nodeline_print()
    local url
    local userinfo
    local uuid
+
 
    nodeline_parse "${nodeline}"
 

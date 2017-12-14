@@ -90,8 +90,9 @@ run_test1()
       fail "status failed unexpectedly"
    fi
 
-   expected=".;update;directory
-root/a;update;missing"
+   expected=".;update;directory;YES;NO
+root/a;update;missing;NO;NO"
+root/a;update;missing;NO;NO"
 
    if [ "${result}" != "${expected}" ]
    then
@@ -172,7 +173,7 @@ main()
 
 init()
 {
-   MULLE_SDE_VIRTUAL_ROOT="fake/"
+   MULLE_SDE_VIRTUAL_ROOT="fake"
    export MULLE_SDE_VIRTUAL_ROOT
 
    MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env library-path`" || exit 1

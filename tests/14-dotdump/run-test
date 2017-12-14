@@ -162,8 +162,6 @@ run_test1()
       fail "update failed unexpectedly"
    fi
 
-   run_mulle_sourcetree print  >&2
-
    MULLE_SOURCETREE_SHARE_DIR="stashes"
    export MULLE_SOURCETREE_SHARE_DIR
 
@@ -179,7 +177,7 @@ run_test1()
    run_dump "recurse" "${testdir}"
    run_dump "share" "${testdir}" "share_local.dot"
 
-   MULLE_SOURCETREE_SHARE_DIR="${MULLE_SDE_VIRTUAL_ROOT}share_global"
+   MULLE_SOURCETREE_SHARE_DIR="${MULLE_SDE_VIRTUAL_ROOT}/share_global"
    export MULLE_SOURCETREE_SHARE_DIR
    run_dump "share" "${testdir}" "share_global.dot"
 }
@@ -195,7 +193,7 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_SDE_VIRTUAL_ROOT="${directory}/"
+   MULLE_SDE_VIRTUAL_ROOT="${directory}"
    export MULLE_SDE_VIRTUAL_ROOT
 
    local project

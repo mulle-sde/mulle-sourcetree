@@ -83,6 +83,7 @@ emit_mulle_fetch_eval_options()
 {
    local options
 
+   # this implictily sets --symlink
    if [ "${OPTION_FETCH_SYMLINK}" = "YES" ]
    then
       options="`concat "${options}" "--symlink-returns-2"`"
@@ -397,8 +398,7 @@ update_safe_move_node()
 to \"${filename}\" as it is marked nodelete"
    fi
 
-   log_info "Moving node with URL ${C_MAGENTA}${C_BOLD}${url}${C_INFO} \
-from \"${previousfilename}\" to \"${filename}\""
+   log_info "Moving \"${previousfilename}\" to \"${filename}\""
 
    mkdir_parent_if_missing "${filename}"
    if ! exekutor mv ${OPTION_COPYMOVEFLAGS} "${previousfilename}" "${filename}"  >&2
@@ -412,21 +412,21 @@ update_safe_remove_node()
 {
    log_entry "update_safe_remove_node" "$@"
 
-   local dbaddress="$1"
+   local filename="$1"
    local marks="$2"
    local uuid="$3"
    local database="$4"
 
-   [ -z "${dbaddress}" ] && internal_fail "empty dbaddress"
-   [ -z "${uuid}" ]      && internal_fail "empty uuid"
+   [ -z "${filename}" ] && internal_fail "empty filename"
+   [ -z "${uuid}" ]     && internal_fail "empty uuid"
 
    if nodemarks_contain_nodelete "${marks}"
    then
-      fail "Can't remove \"${dbaddress}\" as it is marked nodelete"
+      fail "Can't remove \"${filename}\" as it is marked nodelete"
    fi
 
    db_forget "${database}" "${uuid}"
-   db_bury "${database}" "${uuid}" "${dbaddress}"
+   db_bury "${database}" "${uuid}" "${filename}"
 }
 
 
@@ -434,12 +434,12 @@ update_safe_clobber()
 {
    log_entry "update_safe_clobber" "$@"
 
-   local dbaddress="$1"
+   local filename="$1"
    local database="$2"
 
-   [ -z "${dbaddress}" ] && internal_fail "empty dbaddress"
+   [ -z "${filename}" ] && internal_fail "empty filename"
 
-   db_bury "${database}" "`node_uuidgen`" "${dbaddress}"
+   db_bury "${database}" "`node_uuidgen`" "${filename}"
 }
 
 ##
@@ -524,6 +524,7 @@ chickening out"
                   log_fluff "Local node is present at \"${newfilename}\". \
 Very well just remember it."
                ;;
+
                *)
                   log_fluff "Node is new but \"${newfilename}\" exists. \
 As node is marked \"nodelete\" just remember it."
@@ -805,7 +806,7 @@ __update_perform_item()
             # as these are shortcuts to remove/fetch, but the
             # fetch part didn't work out we need to remove
             # the previousaddress
-            update_safe_remove_node "${dbaddress}" "${marks}" "${uuid}" "${database}"
+            update_safe_remove_node "${previousfilename}" "${marks}" "${uuid}" "${database}"
             fail "Failed to ${item} ${url}"
          fi
          contentschanged="YES"
@@ -861,11 +862,11 @@ __update_perform_item()
       ;;
 
       "clobber")
-         update_safe_clobber "${dbaddress}" "${database}"
+         update_safe_clobber "${filename}" "${database}"
       ;;
 
       "remove")
-         update_safe_remove_node "${previousdbaddress}" "${marks}" "${uuid}" "${database}"
+         update_safe_remove_node "${previousfilename}" "${marks}" "${uuid}" "${database}"
       ;;
 
       *)
@@ -918,9 +919,9 @@ _update_perform_actions()
 
    log_debug "${C_INFO}Actions for \"${address}\": ${actionitems:-none}"
 
-   local skip="NO"
    local contentschanged="NO"
    local remember="NO"
+   local skip="NO"
 
    local item
 
@@ -942,9 +943,51 @@ _update_perform_actions()
    echo "${remember}"
    echo "${skip}"
    echo "${nodetype}"
-   echo "${dbaddress}"
 }
 
+
+#
+# return 0 responsible
+# return 1 not reponsible
+#
+# is_responsible_for_share()
+# {
+#    log_entry "is_responsible_for_share" "$@"
+
+#    local database="$1"
+#    local address="$2"
+
+#    local rootuuid
+
+#    rootuuid="`db_fetch_uuid_for_filename "/" "${address}"`"
+#    if [ -z "${rootuuid}" ]
+#    then
+#       log_fluff "Root database does not know about \"${address}\""
+#       return 0
+#    fi
+
+#    local oldowner
+
+#    oldowner="`db_fetch_owner_for_uuid "/" "${rootuuid}"`"
+
+#    #
+#    # check root DB
+#    #
+#    if [ "${database}" != "${oldowner}" ]
+#    then
+#       if db_is_uuid_alive "/" "${rootuuid}"
+#       then
+#          log_fluff "\"${projectdir}\" does not feel responsible for \"${address}\""
+#          return 2
+#       else
+#          log_fluff "\"${projectdir}\" takes over responsibility for \"${address}\" from \"${oldowner}\""
+#          return 0
+#       fi
+#    fi
+
+#    log_fluff "\"${projectdir}\" is now owner of shared \"${address}\""
+#    return 0
+# }
 
 #
 # Only allowable combinations are shown
@@ -993,31 +1036,23 @@ update_with_nodeline()
    # during shared operation we may revisit stuff, which is boring
    #
    local filename
-   local dbaddress
 
    #
    # the address is what is relative to the current projectdir (configfile)
-   # the dbaddress is what is relative to the current database
-   # the filename is relative to the current PWD
+   # the filename is an absolute path
    #
-   if [ "${style}" = "share" -a ! -z "${url}" ] && \
-      nodemarks_contain_share "${marks}"
+   if [ "${style}" = "share" ] && nodemarks_contain_share "${marks}"
    then
-      filename="`node_guess_address "${url}" "${nodetype}"`"
-      if [ -z "${filename}" ]
-      then
-         filename="${uuid}"
-      fi
       filename="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${address}"`"
-      log_fluff "Use guessed address \"${filename}\" for shared URL \"${url}\""
-
+      #
       # use shared root database for shared nodes
+      #
       database="/"
-      dbaddress="${filename}"
    else
       filename="`__concat_projectdir_address "${projectdir}" "${address}"`"
-      dbaddress="${address}"
    fi
+
+   filename="`absolutepath "${filename}" `"
 
    if nodemarks_contain_noupdate "${marks}"
    then
@@ -1033,95 +1068,58 @@ update_with_nodeline()
 but it is not required"
          return
       fi
-      fail "\${filename}\" is missing, but required"
+      fail "\${filename}\" is missing, marked as noupdate, but required"
    fi
 
    #
-   # check if this nodeline is known
+   # If we find something in the database for the same address,
+   # check if it is ours. This could be a new entry/edit whatever.
+   # But it could be old. If its not old, it has preference.
+   #
+   # If we are in share mode, then the database is "/" here, so no worries
+   # We don't have to check the owner, because the uuid will be different
+   # to ours. (since it's coming from a different config)
+   # Search for absolute path, as that is what gets store into the DB
+   #
+   local otheruuid
+
+   otheruuid="`db_fetch_uuid_for_filename "${database}" "${filename}"`"
+   if [ ! -z "${otheruuid}" ]
+   then
+      if db_is_uuid_alive "${database}" "${otheruuid}"
+      then
+         if [ "${otheruuid}" != "${uuid}" ]
+         then
+            # this is address is already taken
+            log_fluff "Filename \"${filename}\" is already used by \
+node \"${otheruuid}\" in database \"${database}\". Skip it."
+            return 0
+         fi
+         log_debug "Filename \"${filename}\" belongs to this node"
+      else
+         log_debug "Zombie filename \"${filename}\" gets usurped"
+      fi
+   else
+      log_debug "Filename \"${filename}\" is unique in database \"${database}\""
+   fi
+
+   #
+   # check if this nodeline is already known (this being an update)
    #
    local previousnodeline
+   local previousfilename
    local previousaddress
 
    previousnodeline="`db_fetch_nodeline_for_uuid "${database}" "${uuid}"`"
 
    #
-   # check if this .sourcetree is actually "responsible" for this
-   # shared node (otherwise let someone else do it)
-   # this can happen, when someone else shares the a node, which would
-   # have the same name as a previous share
-   #
-   if [ ! -z "${previousnodeline}" ]
-   then
-      if [ "${style}" = "share" ]
-      then
-         local oldowner
-
-         oldowner="`db_fetch_owner_for_uuid "${database}" "${uuid}"`"
-         if [ "${database}" != "${oldowner}" ]
-         then
-            if db_is_uuid_alive "${database}" "${uuid}"
-            then
-               log_fluff "\"${projectdir}\" does not feel responsible for \"${address}\""
-               return
-            else
-               log_fluff "\"${projectdir}\" takes over responsibility for \"${address}\" from \"${oldowner}\""
-            fi
-         fi
-      fi
-   fi
-
-   #
-   # If we find something in the database  for the same address,
-   # check if it is not ours.
-   # But it could be old. If its not old, it has preference.
-   #
-   local otheruuid
-
-   otheruuid="`db_fetch_uuid_for_address "${database}" "${filename}"`"
-   if [ ! -z "${otheruuid}" ] && db_is_uuid_alive "${database}" "${otheruuid}"
-   then
-      if [ "${otheruuid}" != "${uuid}" ]
-      then
-         # this is address is already taken
-         log_fluff "Address \"${filename}\" is already used by \
-node \"${otheruuid}\" in database \"${database}\". Skip it."
-         return 0
-      fi
-   else
-      log_debug "Address \"${filename}\" is unique in database \"${database}\""
-   fi
-
-   local previousfilename
-
-   #
-   # find out, where it was previously located relative to "projectdir"
+   # find out, where it was previously located
    #
    if [ ! -z "${previousnodeline}" ]
    then
       previousfilename="`db_fetch_filename_for_uuid "${database}" "${uuid}"`"
+
       [ -z "${previousfilename}" ] && internal_fail "corrupted db"
-
-      #
-      # previousfilename is relative to database, but we want relative
-      # to project directory too
-      #
-      local  rootdir
-
-      rootdir="`db_get_rootdir "${database}"`"
-      if [ -z "${rootdir}" ]
-      then
-         previousfilename="${previousfilename}"
-      else
-         previousfilename="`filepath_concat "${rootdir}" "${previousfilename}"`"
-      fi
-
-      rootdir="`cfg_rootdir "${projectdir}"`"
-      if [ -z "${rootdir}" ]
-      then
-         previousaddress="${previousfilename}"
-      else
-         previousaddress="`relative_path_between "${rootdir}" "${previousfilename}"`"
-      fi
    fi
 
    local magic
@@ -1130,7 +1128,6 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    local skip
    local nodetype
    local results
-   local dbaddress
 
    results="`_update_perform_actions "${style}" \
                                      "${nodeline}" \
@@ -1150,7 +1147,6 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    remember="$(sed -n '3p' <<< "${results}")"
    skip="$(sed -n '4p' <<< "${results}")"
    nodetype="$(sed -n '5p' <<< "${results}")"
-   dbaddress="$(sed -n '6p' <<< "${results}")"
 
    log_debug "contentschanged: ${contentschanged}" \
              "remember: ${remember}" \
@@ -1171,7 +1167,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
       local filename
 
       nodeline="`node_print_nodeline`"
-      db_memorize "${database}" "${uuid}" "${nodeline}" "${projectdir}" "${dbaddress}"
+      db_memorize "${database}" "${uuid}" "${nodeline}" "${projectdir}" "${filename}"
 
       if [ "${OPTION_FIX}" != "NO" ] && [ -d "${filename}" ]
       then
@@ -1269,8 +1265,16 @@ recursive_update_with_nodeline()
 
    local filename
 
-   filename="`db_fetch_filename_for_uuid "${database}" "${uuid}"`"
-   projectdir="`__concat_projectdir_address "${database}" "${filename}"`"
+   filename="`db_fetch_filename_for_uuid "${database}" "${uuid}" `"
+   relative="`db_relative_filename "${database}" "${filename}" `"
+
+   case "${relative}" in
+      ../*)
+         log_debug "Went into global share \"${relative}\""
+      ;;
+   esac
+
+   projectdir="`__concat_projectdir_address "${database}" "${relative}" `"
 
    #
    # usually database is in projectdir, except when we update with share
@@ -1357,7 +1361,12 @@ sourcetree_update()
    log_verbose "Doing a \"${style}\" update for \"${projectdir}\"."
    log_fluff "Set dbtype to \"${style}\""
 
-   if [ "${style}" = "share" -a "${database}" != "/" ]
+   #
+   # if the share directory is absolute, then the inferior
+   # database is also complete
+   #
+   if [ "${style}" = "share" -a "${database}" != "/" ] &&
+      ! is_absolutepath "${MULLE_SOURCETREE_SHARE_DIR}"
    then
       # remember that not everything is saved here
       db_set_dbtype "${database}" "partial"
@@ -1365,14 +1374,12 @@ sourcetree_update()
       db_set_dbtype "${database}" "${style}"
    fi
 
-
    local nodelines
 
    nodelines="`cfg_read "${projectdir}"`"
    update_with_nodelines "${nodelines}" "${style}" "${projectdir}" "${database}" || return 1
 
    db_bury_zombies "${database}"
-
 
    case "${style}" in
       flat)
