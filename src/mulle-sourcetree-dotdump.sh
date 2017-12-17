@@ -178,6 +178,17 @@ html_print_node()
 }
 
 
+#
+# returns one of:
+#
+#  config
+#  database
+#  file
+#  folder
+#  missing
+#  ready
+#  reset
+#
 _get_fs_status()
 {
    log_entry "_get_fs_status" "$@"
@@ -198,33 +209,45 @@ _get_fs_status()
      return
    fi
 
+   local datasource
+
    # rewrite
    case "${destination}" in
-      "/")
-         echo "folder"
-         return
+      ".")
+         datasource="${SOURCETREE_START}"
       ;;
 
-      ".")
-         destination="/"
+      /*/)
+      ;;
+
+      /*)
+         datasource="${destination}/"
+      ;;
+
+      */)
+         datasource="/${destination}"
+      ;;
+
+      *)
+         datasource="/${destination}/"
       ;;
    esac
 
-   if ! cfg_exists "${destination}"
+   if ! cfg_exists "${datasource}"
    then
      log_debug "${destination} has no cfg (is a folder)"
      echo "folder"
      return
    fi
 
-   if ! db_dir_exists "${destination}" ]
+   if ! db_dir_exists "${datasource}" ]
    then
      log_debug "${destination} has no db (but is a sourcetree)"
      echo "config"
      return
    fi
 
-   db_is_ready "${destination}"
+   db_is_ready "${datasource}"
    case $? in
       1)
          log_debug "${destination} db not ready"
@@ -258,8 +281,10 @@ print_node()
       "")
          identifier="\"${destination}\""
       ;;
+
       \"*\")
       ;;
+
       *)
          internal_fail "identifier \"${identifier}\" must be quoted"
       ;;
@@ -284,7 +309,7 @@ print_node()
             shape="folder"
          ;;
 
-         config)
+         config|reset)
             color="goldenrod"
             shape="folder"
          ;;
@@ -304,7 +329,7 @@ print_node()
             shape="folder"  # nicer default than node
          ;;
 
-         ""|*)
+         *)
             internal_fail "state is empty"
          ;;
       esac
@@ -340,7 +365,7 @@ print_node()
             shape="folder"  # nicer default than node or invis
          ;;
 
-         ""|*)
+         *)
             internal_fail "state is empty"
          ;;
       esac
@@ -745,18 +770,18 @@ sourcetree_dotdump_main()
    then
       if ! db_dir_exists
       then
-         log_info "There is no ${SOURCETREE_DB_DIR} here"
+         log_info "There is no ${SOURCETREE_DB_NAME} here"
       fi
 
       mode="`concat "${mode}" "walkdb"`"
    else
-      if ! cfg_exists "/"
+      if ! cfg_exists "${SOURCETREE_START}"
       then
          log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
       fi
    fi
 
-   if ! db_is_ready "/"
+   if ! db_is_ready "${SOURCETREE_START}"
    then
       log_warning "Update has not run yet (mode=${SOURCETREE_MODE})"
    fi

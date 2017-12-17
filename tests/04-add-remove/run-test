@@ -34,8 +34,8 @@ main()
 
    directory="`make_tmp_directory`" || exit 1
 
-   MULLE_SDE_VIRTUAL_ROOT="${directory}"
-   export MULLE_SDE_VIRTUAL_ROOT
+   MULLE_VIRTUAL_ROOT="${directory}"
+   export MULLE_VIRTUAL_ROOT
 
    mkdir_if_missing "${directory}/a"
    mkdir_if_missing "${directory}/a/b"
@@ -84,7 +84,7 @@ main()
 
    if run_mulle_sourcetree -N remove "a"
    then
-      fail "superflous remove \"a\" succeded unexpectedly"
+      fail "superflous remove \"a\" succeeded unexpectedly"
    fi
 
    if run_mulle_sourcetree -N remove "."

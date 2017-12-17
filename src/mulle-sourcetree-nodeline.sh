@@ -287,7 +287,7 @@ nodeline_print_header()
       *output_header*)
       ;;
 
-      ""|*)
+      *)
          return
       ;;
    esac
@@ -371,40 +371,43 @@ nodeline_print()
    esac
 
    case "${mode}" in
-      *output_cmdline*)
+      *output_cmd*)
          local line
+
+         line="${MULLE_EXECUTABLE_NAME} -N add"
+
          local guess
 
-         line="${MULLE_EXECUTABLE_NAME} add"
+         guess="`node_guess_nodetype "${url}"`"
 
-         guess="`node_guess_address "${url}" "${nodetype}"`"
-         if [ ! -z "${branch}" -a "${branch}" != "master" ]
-         then
-            line="`concat "${line}" "--branch '${branch}'"`"
-         fi
-         if [ ! -z "${tag}" ]
-         then
-            line="`concat "${line}" "--tag '${tag}'"`"
-         fi
-         if [ ! -z "${nodetype}" -a "${nodetype}" != "git" ]
+         if [ "${nodetype}" != "git" -o "${guess}" != "git" ]
          then
             line="`concat "${line}" "--nodetype '${nodetype}'"`"
          fi
-         if [ ! -z "${fetchoptions}" ]
+         if [ ! -z "${url}" ]
          then
-            line="`concat "${line}" "--fetchoptions '${fetchoptions}'"`"
+            line="`concat "${line}" "--url '${url}'"`"
          fi
          if [ ! -z "${marks}" ]
          then
             line="`concat "${line}" "--marks '${marks}'"`"
          fi
+
+         if [ ! -z "${branch}" -a "${branch}" != "master" ]
+         then
+            line="`concat "${line}" "--branch '${branch}'"`"
+         fi
+         if [ ! -z "${fetchoptions}" ]
+         then
+            line="`concat "${line}" "--fetchoptions '${fetchoptions}'"`"
+         fi
+         if [ ! -z "${tag}" ]
+         then
+            line="`concat "${line}" "--tag '${tag}'"`"
+         fi
          if [ ! -z "${userinfo}" ]
          then
             line="`concat "${line}" "--userinfo '${userinfo}'"`"
-         fi
-         if [ ! -z "${url}" ]
-         then
-            line="`concat "${line}" "--url '${url}'"`"
          fi
 
          line="`concat "${line}" "'${address}'"`"

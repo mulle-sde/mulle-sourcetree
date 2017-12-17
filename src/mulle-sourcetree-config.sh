@@ -124,12 +124,15 @@ sourcetree_mark_usage()
 {
    cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} mark <url> <mark>
+   ${MULLE_EXECUTABLE_NAME} mark <node> <mark>
 
-   You can mark or unmark a node with this command. Examine the node values
-   with \`${MULLE_EXECUTABLE_NAME} get <url> | sed -n '7p'\`.
+   You can mark or unmark a node with this command. Only negative marks
+   are actually stored in the node. All positive marks are implicit.
 
-   This command only affects the local config file.
+   Examine the nodes marks with
+       \`${MULLE_EXECUTABLE_NAME} -N list\`.
+
+   This command only affects the config file.
 
 Marks:
    [no]build     : the node contains a buildable project (used by buildorder)
@@ -150,13 +153,36 @@ EOF
    cat <<EOF >&2
    [no]update    : the node takes part in the update
 
-   A node contains all positive marks, as only negative marks are actually
-   stored in the node.
-
    Example:
-      ${MULLE_EXECUTABLE_NAME} mark https://foo.com/bar nobuild
+      ${MULLE_EXECUTABLE_NAME} mark src/bar nobuild
 EOF
 
+  exit 1
+}
+
+
+
+sourcetree_unmark_usage()
+{
+   cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} unmark <node> <mark>
+
+   Remove a negative mark from a node. A node stores only negative marks,
+   prefixed by "no". All positive marks are implicit.
+
+Marks:
+   nobuild
+   nodelete
+   norecurse
+   norequire
+   noset
+   noshare
+   noupdate
+
+   Example:
+      ${MULLE_EXECUTABLE_NAME} unmark src/bar nobuild
+EOF
 
   exit 1
 }
@@ -285,7 +311,7 @@ sourcetree_add_node()
       address="${input}"
    fi
 
-   if cfg_has_duplicate "/" "${address}"
+   if cfg_has_duplicate "${SOURCETREE_START}" "${address}"
    then
       fail "There is already a node ${C_RESET_BOLD}${address}${C_ERROR_TEXT} \
 in the sourcetree"
@@ -316,21 +342,20 @@ in the sourcetree"
    node_augment "${mode}"
 
 
-   if cfg_get_nodeline "/" "${address}" > /dev/null
+   if cfg_get_nodeline "${SOURCETREE_START}" "${address}" > /dev/null
    then
       fail "${C_RESET_BOLD}${address}${C_ERROR_TEXT} already exists"
    fi
 
    local contents
    local nodeline
-   local removed
    local appended
 
    contents="`egrep -s -v '^#' "${SOURCETREE_CONFIG_FILE}"`"
    nodeline="`node_print_nodeline`"
    appended="`add_line "${contents}" "${nodeline}"`"
 
-   cfg_write "/" "${appended}"
+   cfg_write "${SOURCETREE_START}" "${appended}"
 }
 
 
@@ -338,16 +363,16 @@ sourcetree_remove_node()
 {
    log_entry "sourcetree_remove_node" "$@"
 
-   local address="$1"
-
    local oldnodeline
 
-   oldnodeline="`cfg_get_nodeline "/" "${address}"`" || return 1
-   if [ ! -z "${oldnodeline}" ]
+   if ! cfg_get_nodeline "${SOURCETREE_START}" "${address}"
    then
-      cfg_remove_nodeline "/" "${address}"
-      cfg_file_remove_if_empty "/"
+      log_warning "A node \"${address}\" does not exist"
+      return 2  # also return non 0 , but lets's not be dramatic about it
    fi
+
+   cfg_remove_nodeline "${SOURCETREE_START}" "${address}"
+   cfg_file_remove_if_empty "${SOURCETREE_START}"
 }
 
 
@@ -365,12 +390,12 @@ sourcetree_change_nodeline()
       return
    fi
 
-   cfg_change_nodeline "/" "${oldnodeline}" "${newnodeline}"
+   cfg_change_nodeline "${SOURCETREE_START}" "${oldnodeline}" "${newnodeline}"
 
    local verifynodelines
    local verifynodeline
 
-   verifynodelines="`cfg_read "/"`"
+   verifynodelines="`cfg_read "${SOURCETREE_START}"`"
    verifynodeline="`nodeline_find "${verifynodelines}" "${address}"`"
 
    if [ "${verifynodeline}" != "${newnodeline}" ]
@@ -384,11 +409,10 @@ _unfailing_get_nodeline()
 {
    local address="$1"
 
-   if ! cfg_get_nodeline "/" "${address}"
+   if ! cfg_get_nodeline "${SOURCETREE_START}" "${address}"
    then
-      fail "A node \"${address}\" does not exist"
+      fail "A node \"${address}\" does not exist (${MULLE_VIRTUAL_ROOT}${SOURCETREE_START})"
    fi
-
 }
 
 #
@@ -421,6 +445,10 @@ sourcetree_set_node()
    then
       fail "Node is marked as noset"
    fi
+
+   local oldaddress
+
+   oldaddress="${address}"
 
    branch="${OPTION_BRANCH:-${branch}}"
    address="${OPTION_ADDRESS:-${address}}"
@@ -459,17 +487,17 @@ sourcetree_set_node()
 
    node_augment "${OPTION_AUGMENTMODE}"
 
-   local newnodeline
-
-   newnodeline="`node_print_nodeline`"
-
-   if cfg_has_duplicate "/"  "${uuid}" "${address}"
+   if [ "${oldaddress}" != "${address}" ] &&
+       cfg_has_duplicate "${SOURCETREE_START}"  "${uuid}" "${address}"
    then
       fail "There is already a node ${C_RESET_BOLD}${address}${C_ERROR_TEXT} \
 in the sourcetree
 "
    fi
 
+   local newnodeline
+
+   newnodeline="`node_print_nodeline`"
    sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}" "${address}"
 }
 
@@ -498,7 +526,7 @@ sourcetree_get_node()
 
    if [ "$#" -eq 0 ]
    then
-      exekutor echo "${url}"
+      exekutor echo "${address}"
       return
    fi
 
@@ -543,6 +571,7 @@ sourcetree_mark_node()
    local uuid
 
    nodeline_parse "${oldnodeline}"
+
    if nodemarks_contain "${marks}" "${mark}"
    then
       case "${mark}" in
@@ -551,7 +580,7 @@ sourcetree_mark_node()
          ;;
 
          *)
-            log_info "Node implicitly marked as \"${mark}\". No need to mark it."
+            log_info "Node is already implicitly marked as \"${mark}\"."
          ;;
       esac
       return
@@ -595,6 +624,30 @@ sourcetree_mark_node()
 }
 
 
+sourcetree_unmark_node()
+{
+   log_entry "sourcetree_unmark_node" "$@"
+
+   local address="$1"
+   local mark="$2"
+
+   [ -z "${address}" ] && fail "address is empty"
+   [ -z "${mark}" ] && fail "mark is empty"
+
+   case "${mark}" in
+      no*)
+         mark="${mark:2}"
+      ;;
+
+      *)
+         fail "Mark to unmark must start with \"no\""
+      ;;
+   esac
+
+   sourcetree_mark_node "${address}" "${mark}"
+}
+
+
 sourcetree_info_node()
 {
    log_entry "sourcetree_info_node" "$@"
@@ -611,9 +664,9 @@ sourcetree_info_node()
    printf "%b\n" "${C_INFO}Sourcetree: ${C_RESET_BOLD}${PWD}${C_RESET}"
    printf "%b\n" "${C_INFO}Database: ${C_MAGENTA}${C_BOLD}${dbstate}${C_RESET}"
 
-   if [ ! -z "${MULLE_SDE_VIRTUAL_ROOT}" ]
+   if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
    then
-      printf "%b\n" "${C_INFO}Virtual Root: ${C_MAGENTA}${C_BOLD}${MULLE_SDE_VIRTUAL_ROOT}${C_RESET}"
+      printf "%b\n" "${C_INFO}Virtual Root: ${C_MAGENTA}${C_BOLD}${MULLE_VIRTUAL_ROOT}${C_RESET}"
    fi
 
    case "${SOURCETREE_MODE}" in
@@ -773,7 +826,6 @@ sourcetree_common_main()
             OPTION_OUTPUT_EVAL="NO"
          ;;
 
-
          #
          # more common flags
          #
@@ -854,6 +906,14 @@ sourcetree_common_main()
    local mark
    local mode
 
+   #
+   # make simple commands flat by default, except if the user wants it
+   #
+   if [ -z "${FLAG_SOURCETREE_MODE}" ]
+   then
+      SOURCETREE_MODE="flat"
+   fi
+
    [ -z "${SOURCETREE_CONFIG_FILE}" ] && fail "config file empty name"
 
    case "${COMMAND}" in
@@ -885,7 +945,7 @@ sourcetree_common_main()
       ;;
 
 
-      mark)
+      mark|unmark)
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          address="$1"
          [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
@@ -953,6 +1013,16 @@ sourcetree_mark_main()
 
    USAGE="sourcetree_mark_usage"
    COMMAND="mark"
+   sourcetree_common_main "$@"
+}
+
+
+sourcetree_unmark_main()
+{
+   log_entry "sourcetree_unmark_main" "$@"
+
+   USAGE="sourcetree_unmark_usage"
+   COMMAND="unmark"
    sourcetree_common_main "$@"
 }
 

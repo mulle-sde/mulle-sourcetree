@@ -71,8 +71,8 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_SDE_VIRTUAL_ROOT="${directory}"
-   export MULLE_SDE_VIRTUAL_ROOT
+   MULLE_VIRTUAL_ROOT="${directory}"
+   export MULLE_VIRTUAL_ROOT
 
    local project
 
@@ -98,13 +98,12 @@ main()
            fail "add failed unexpectedly"
          fi
 
-         run_mulle_sourcetree list
+         run_mulle_sourcetree list --output-full
 
          if ! run_mulle_sourcetree --recurse update
          then
             fail "update failed unexpectedly"
          fi
-
 
          version="`cat a/VERSION`"
          [ "${a}" != "${VERSION}" ] || fail "Checked out version $VERSION instead of $a"
@@ -112,12 +111,12 @@ main()
          case "${a}" in
             1.0.0)
                [ -d "a" ]   || fail "a should exist"
-               [ -d "a/b" ] && fail "b should not exist"
+               [ -d "a/b" ] && fail "a/b should not exist"
             ;;
 
             2.0.0)
                [ -d "a" ]   || fail "a should exist"
-               [ -d "a/b" ] || fail "b should exist"
+               [ -d "a/b" ] || fail "a/b should exist"
             ;;
          esac
 

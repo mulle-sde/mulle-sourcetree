@@ -2,15 +2,14 @@ digraph sourcetree
 {
    node [ shape="box"; style="filled" ]
 
-   "project" -> "stashes" [ style="", label="" ]
-   "stashes" -> "stashes/b" [ style="", label="" ]
-   "stashes/b" [ shape="folder", penwidth="2", color="maroon", style="" label="b"]
-   "stashes" -> "stashes/d" [ style="", label="" ]
-   "stashes/d" [ shape="folder", penwidth="2", color="maroon", style="" label="d"]
+   "${MULLE_SOURCETREE_SHARE_DIR}" -> "${MULLE_SOURCETREE_SHARE_DIR}/b" [ style="", label="" ]
+   "${MULLE_SOURCETREE_SHARE_DIR}/b" [ shape="folder", penwidth="2", color="maroon", style="" label="b"]
+   "${MULLE_SOURCETREE_SHARE_DIR}" -> "${MULLE_SOURCETREE_SHARE_DIR}/d" [ style="", label="" ]
+   "${MULLE_SOURCETREE_SHARE_DIR}/d" [ shape="folder", penwidth="2", color="maroon", style="" label="d"]
    "project" -> "root" [ style="", label="" ]
    "root" -> "root/a" [ style="", label="" ]
-   "root/a" [ shape="folder", penwidth="2", color="limegreen", style="" label="a"]
-   "project" [ shape="folder", penwidth="3", color="limegreen", style="" label="project"]
-   "stashes" [ shape="folder", penwidth="1", color="honeydew4", style="" label="stashes"]
+   "root/a" [ shape="folder", penwidth="2", color="goldenrod", style="" label="a"]
+   "project" [ shape="folder", penwidth="3", color="goldenrod", style="" label="project"]
+   "${MULLE_SOURCETREE_SHARE_DIR}" [ shape="folder", penwidth="1", color="honeydew4", style="" label="${MULLE_SOURCETREE_SHARE_DIR}"]
    "root" [ shape="folder", penwidth="1", color="honeydew4", style="" label="root"]
 }

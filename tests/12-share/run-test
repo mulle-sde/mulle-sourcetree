@@ -24,8 +24,8 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/b"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/c"
+   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/b"
+   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/c"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: initial version"
 }
@@ -37,7 +37,7 @@ _setup_demo_repo_b()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/c"
+   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/c"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "b: initial version"
 }
@@ -60,12 +60,12 @@ _change_demo_repo_a()
 {
    local reporoot="$1"
 
-   run_mulle_sourcetree mark "b" noshare
+   run_mulle_sourcetree -e mark "b" noshare
    exekutor git commit -m "a: noshare version" .mulle-sourcetree
 }
 
 
-change_demo_repo_b_to_noshare()
+change_demo_repo_a_set_b_to_noshare()
 {
    (
       exekutor cd "$1/a" && _change_demo_repo_a "$1"
@@ -140,7 +140,7 @@ run_test3()
    MULLE_SOURCETREE_SHARE_DIR="shared"
    export MULLE_SOURCETREE_SHARE_DIR
 
-   if !  run_mulle_sourcetree ${flags} --share update
+   if ! run_mulle_sourcetree ${flags} --share update
    then
       fail "update failed unexpectedly"
    fi
@@ -174,7 +174,7 @@ run_test4()
 
    run_mulle_sourcetree list
 
-   MULLE_SOURCETREE_SHARE_DIR="${MULLE_SDE_VIRTUAL_ROOT}/shared_global"
+   MULLE_SOURCETREE_SHARE_DIR="${MULLE_VIRTUAL_ROOT}/shared_global"
    export MULLE_SOURCETREE_SHARE_DIR
 
    if ! run_mulle_sourcetree ${flags} --share update
@@ -206,13 +206,16 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_SDE_VIRTUAL_ROOT="${directory}"
-   export MULLE_SDE_VIRTUAL_ROOT
 
    local project
 
    project="${directory}/project"
    repos="${directory}/repositories"
+
+   mkdir_if_missing "${project}"
+
+   MULLE_VIRTUAL_ROOT="`physicalpath "${project}"`"
+   export MULLE_VIRTUAL_ROOT
 
    setup_demo_repos "${repos}"
 
@@ -235,7 +238,7 @@ main()
    #
    #
    #
-   change_demo_repo_b_to_noshare "${repos}"
+   change_demo_repo_a_set_b_to_noshare "${repos}"
 
    (
       rmdir_safer "${project}" &&
@@ -251,7 +254,7 @@ main()
       cd "${project}" &&
       run_test4
    ) || exit 1
-   log_verbose "----- #3 PASSED -----"
+   log_verbose "----- #4 PASSED -----"
 
    log_info "----- ALL PASSED -----"
 

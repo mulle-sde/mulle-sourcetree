@@ -52,48 +52,25 @@ _db_filename()
 }
 
 
-#
-# often used stuff that uses shared local variables
-#
 __db_common_rootdir()
 {
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
+
    case "$1" in
       "/")
-         rootdir=""
+         rootdir="${MULLE_VIRTUAL_ROOT}"
       ;;
 
-      ""|.|./*)
-         internal_fail "database must not be empty or start with '.' . use '/' for root"
+      /*/)
+         rootdir="${MULLE_VIRTUAL_ROOT}/$(sed 's|/$||g' <<< "$1")"
       ;;
 
-      */)
-         rootdir="$(sed 's|/$||g' <<< "$1")"
+      /*)
+         rootdir="${MULLE_VIRTUAL_ROOT}/$1"
       ;;
 
       *)
-         rootdir="$1"
-      ;;
-   esac
-}
-
-
-__db_common_absolute_rootdir()
-{
-   case "$1" in
-      "/")
-         rootdir="${PWD}"
-      ;;
-
-      ""|.|./*)
-         internal_fail "database must not be empty or start with '.' . use '/' for root"
-      ;;
-
-      */)
-         rootdir="${PWD}/$(sed 's|/$||g' <<< "$1")"
-      ;;
-
-      *)
-         rootdir="${PWD}/$1"
+         internal_fail "database \"$1\" must start with '/'"
       ;;
    esac
 }
@@ -101,25 +78,27 @@ __db_common_absolute_rootdir()
 
 __db_common_databasedir()
 {
-   [ -z "${SOURCETREE_DB_DIR}" ] && internal_fail "SOURCETREE_DB_DIR is not set"
+   [ -z "${SOURCETREE_DB_NAME}" ] && internal_fail "SOURCETREE_DB_NAME is not set"
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
    database="$1"
    case "${database}" in
       "/")
-         databasedir="${SOURCETREE_DB_DIR}"
+         databasedir="${MULLE_VIRTUAL_ROOT}/${SOURCETREE_DB_NAME}"
       ;;
 
-      ""|.|./*)
-         internal_fail "database must not be empty or start with '.' . use '/' for root"
+      /*/)
+         databasedir="${MULLE_VIRTUAL_ROOT}$1${SOURCETREE_DB_NAME}"
       ;;
 
-      */)
-         databasedir="$1${SOURCETREE_DB_DIR}"
+      /*)
+         databasedir="${MULLE_VIRTUAL_ROOT}$1/${SOURCETREE_DB_NAME}"
       ;;
 
       *)
-         databasedir="$1/${SOURCETREE_DB_DIR}"
+         internal_fail "database \"$1\" must start with '/'"
       ;;
+
    esac
 }
 
@@ -184,6 +163,22 @@ db_memorize()
       ;;
    esac
 
+   case "${filename}" in
+      /*)
+#         if [ "${UNAME}" = "darwin" ]
+#         then
+#            internal_fail "non physical path"
+#         fi
+      ;;
+
+      "")
+      ;;
+
+      *)
+         internal_fail "filename \"${filename}\" must be absolute"
+      ;;
+   esac
+
    local content
    local dbfilepath
 
@@ -194,7 +189,7 @@ db_memorize()
 ${owner}
 ${filename}"
 
-   log_debug "Remembering uuid \"${uuid}\" ($PWD)"
+   log_debug "Remembering uuid \"${uuid}\" ($databasedir)"
 
    redirect_exekutor "${dbfilepath}" echo "${content}"
 }
@@ -233,7 +228,7 @@ db_forget()
 
    if __db_common_dbfilepath "${databasedir}" "${uuid}"
    then
-      log_debug "Forgetting about uuid \"${uuid}\" ($PWD)"
+      log_debug "Forgetting about uuid \"${uuid}\" ($databasedir)"
       remove_file_if_present "${dbfilepath}"
    fi
 }
@@ -267,34 +262,40 @@ db_bury()
    gravepath="${graveyard}/${uuid}"
 
    local rootdir
-   local actual
 
    __db_common_rootdir "${database}"
 
-   actual="`filepath_concat "${rootdir}" "${filename}"`"
+   case "${filename}" in
+      /*)
+      ;;
 
-   if [ -L "${actual}" ]
+      *)
+         internal_fail "filename \"${filename}\" must be absolute"
+      ;;
+   esac
+
+   if [ -L "${filename}" ]
    then
-      log_verbose "Removing old symlink \"${actual}\""
-      exekutor rm -f "${actual}" >&2
+      log_verbose "Removing old symlink \"${filename}\""
+      exekutor rm -f "${filename}" >&2
       return
    fi
 
-   if [ ! -e "${actual}" ]
+   if [ ! -e "${filename}" ]
    then
-      log_fluff "\"${actual}\" vanished or never existed ($PWD)"
+      log_fluff "\"${filename}\" vanished or never existed ($databasedir)"
    fi
 
    if [ -e "${gravepath}" ]
    then
-      log_fluff "Repurposing old grave \"${actual}\""
+      log_fluff "Repurposing old grave \"${gravepath}\""
       exekutor rm -rf "${gravepath}" >&2
    else
       mkdir_if_missing "${graveyard}"
    fi
 
-   log_info "Burying ${C_MAGENTA}${C_BOLD}${actual}${C_INFO} in grave \"${gravepath}\""
-   exekutor mv ${OPTION_COPYMOVEFLAGS} "${actual}" "${gravepath}" >&2
+   log_info "Burying ${C_MAGENTA}${C_BOLD}${filename}${C_INFO} in grave \"${gravepath}\""
+   exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}" >&2
 }
 
 
@@ -535,7 +536,7 @@ db_relative_filename()
    local database
    local rootdir
 
-   __db_common_absolute_rootdir "$@"
+   __db_common_rootdir "$@"
 
    local filename=$2
 
@@ -543,6 +544,9 @@ db_relative_filename()
 }
 
 
+#
+# the user will use filename to retrieve stuff later
+#
 db_set_memo()
 {
    log_entry "db_set_memo" "$@"
@@ -678,10 +682,10 @@ db_dir_exists()
 
    if [ -d "${databasedir}" ]
    then
-      log_debug "\"${PWD}/${databasedir}\" exists"
+      log_debug "\"${databasedir}\" exists"
       return 0
    else
-      log_debug "\"${PWD}/${databasedir}\" not found"
+      log_debug "\"${databasedir}\" not found"
       return 1
    fi
 }
@@ -689,7 +693,7 @@ db_dir_exists()
 
 db_environment()
 {
-   echo "${MULLE_SDE_VIRTUAL_ROOT}
+   echo "${MULLE_VIRTUAL_ROOT}
 ${databasedir}
 ${MULLE_SOURCETREE_SHARE_DIR}"
 }
@@ -709,7 +713,7 @@ db_is_ready()
    dbdonefile="${databasedir}/.db_done"
    if [ ! -f "${dbdonefile}" ]
    then
-      log_debug "\"${dbdonefile}\" not found ($PWD)"
+      log_debug "\"${dbdonefile}\" not found (${databasedir})"
       return 1
    fi
 
@@ -786,11 +790,11 @@ db_is_updating()
 
    if [ -f "${databasedir}/.db_update" ]
    then
-      log_debug "\"${PWD}/${databasedir}/.db_done\" exists"
+      log_debug "\"${databasedir}/.db_done\" exists"
       return 0
    fi
 
-   log_debug "\"${PWD}/${databasedir}/.db_update\" not found"
+   log_debug "\"${databasedir}/.db_update\" not found"
    return 1
 }
 
@@ -837,8 +841,25 @@ db_set_shareddir()
 
    local shareddir="$2"
 
+   # empty is OK
+
    mkdir_if_missing "${databasedir}"
    redirect_exekutor "${databasedir}/.db_shareddir"  echo "${shareddir}"
+}
+
+
+db_clear_shareddir()
+{
+   log_entry "db_clear_shareddir" "$@"
+
+   [ $# -eq 1 ] || internal_fail "api error"
+
+   local database
+   local databasedir
+
+   __db_common_databasedir "$@"
+
+   remove_file_if_present "${databasedir}/.db_shareddir"
 }
 
 
@@ -869,7 +890,7 @@ db_ensure_consistency()
    then
       log_error "A previous update was incomplete.
 Suggested resolution:
-    ${C_RESET_BOLD}cd '${PWD}/${database}'${C_ERROR}
+    ${C_RESET_BOLD}cd '${MULLE_VIRTUAL_ROOT}${database}'${C_ERROR}
     ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} clean${C_ERROR}
     ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} reset${C_ERROR}
     ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} update${C_ERROR}
@@ -931,16 +952,16 @@ _db_set_default_mode()
    local database="$1"
    local usertype="$2"
 
-
    local dbtype
    local actualdbtype
 
    actualdbtype="`db_get_dbtype "${database}"`"
 
-   if [ ! -z "${actualdbtype}" -a -z "${MULLE_WALK_SUPRESS}" ]
-   then
-      local rootdir
+   local rootdir
 
+   # que ??
+   if [ ! -z "${actualdbtype}"  ]
+   then
       __db_common_rootdir "${database}"
    fi
 
@@ -1178,7 +1199,7 @@ db_zombify_nodes()
 
    __db_common_databasedir "$@"
 
-   log_fluff "Marking all nodes as zombies for now ($PWD/${database})"
+   log_fluff "Marking all nodes as zombies for now (${databasedir})"
 
    local zombiedir
 
@@ -1296,8 +1317,6 @@ db_bury_zombies()
    local zombiedir
 
    __db_zombiedir "${databasedir}"
-
-   log_fluff "Burying zombie nodes ($PWD/${database})"
 
    local zombiefile
 

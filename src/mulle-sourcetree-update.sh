@@ -62,20 +62,27 @@ EOF
 }
 
 
-__concat_projectdir_address()
+__concat_config_absolute_filename()
 {
-   local projectdir="$1"
+   local config="$1"
    local address="$2"
 
-   case "${projectdir}" in
-      "/")
-         echo "${address}"
+   case "${config}" in
+      /|/*/)
       ;;
 
       *)
-         filepath_concat "${projectdir}" "${address}"
+         internal_fail "config \"${config}\" is malformed"
       ;;
    esac
+
+   case "${address}" in
+      /*)
+         internal_fail "address \"${config}\" is absolute"
+      ;;
+   esac
+
+   echo "${MULLE_VIRTUAL_ROOT}${config}${address}"
 }
 
 
@@ -84,10 +91,21 @@ emit_mulle_fetch_eval_options()
    local options
 
    # this implictily sets --symlink
-   if [ "${OPTION_FETCH_SYMLINK}" = "YES" ]
-   then
-      options="`concat "${options}" "--symlink-returns-2"`"
-   fi
+   case "${OPTION_FETCH_SYMLINK}" in
+      "NO")
+      ;;
+
+      "YES")
+         options="`concat "${options}" "--symlink-returns-2"`"
+      ;;
+
+      "DEFAULT")
+         if [ "${MULLE_SYMLINK}" = "YES" ]
+         then
+            options="`concat "${options}" "--symlink-returns-2"`"
+         fi
+      ;;
+   esac
 
    if [ "${OPTION_FETCH_ABSOLUTE_SYMLINK}" = "YES" ]
    then
@@ -232,7 +250,7 @@ _do_fetch_operation()
       return 1
    fi
 
-   if [ -e "${address}" ]
+   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" != "YES" ] && [ -e "${address}" ]
    then
       fail "Should have cleaned \"${address}\" before"
    fi
@@ -441,6 +459,7 @@ update_safe_clobber()
 
    db_bury "${database}" "`node_uuidgen`" "${filename}"
 }
+
 
 ##
 ## this produces actions, does not care about marks
@@ -947,49 +966,6 @@ _update_perform_actions()
 
 
 #
-# return 0 responsible
-# return 1 not reponsible
-#
-# is_responsible_for_share()
-# {
-#    log_entry "is_responsible_for_share" "$@"
-
-#    local database="$1"
-#    local address="$2"
-
-#    local rootuuid
-
-#    rootuuid="`db_fetch_uuid_for_filename "/" "${address}"`"
-#    if [ -z "${rootuuid}" ]
-#    then
-#       log_fluff "Root database does not know about \"${address}\""
-#       return 0
-#    fi
-
-#    local oldowner
-
-#    oldowner="`db_fetch_owner_for_uuid "/" "${rootuuid}"`"
-
-#    #
-#    # check root DB
-#    #
-#    if [ "${database}" != "${oldowner}" ]
-#    then
-#       if db_is_uuid_alive "/" "${rootuuid}"
-#       then
-#          log_fluff "\"${projectdir}\" does not feel responsible for \"${address}\""
-#          return 2
-#       else
-#          log_fluff "\"${projectdir}\" takes over responsibility for \"${address}\" from \"${oldowner}\""
-#          return 0
-#       fi
-#    fi
-
-#    log_fluff "\"${projectdir}\" is now owner of shared \"${address}\""
-#    return 0
-# }
-
-#
 # Only allowable combinations are shown
 #
 # Style   | Projectdir | Database   || Owner
@@ -1012,7 +988,7 @@ update_with_nodeline()
 
    local nodeline="$1"
    local style="$2"
-   local projectdir="$3"
+   local config="$3"
    local database="$4"
 
    [ "$#" -ne 4 ]     && internal_fail "api error"
@@ -1038,7 +1014,7 @@ update_with_nodeline()
    local filename
 
    #
-   # the address is what is relative to the current projectdir (configfile)
+   # the address is what is relative to the current config (configfile)
    # the filename is an absolute path
    #
    if [ "${style}" = "share" ] && nodemarks_contain_share "${marks}"
@@ -1048,11 +1024,10 @@ update_with_nodeline()
       # use shared root database for shared nodes
       #
       database="/"
+      log_debug "using root database for share node \"${address}\""
    else
-      filename="`__concat_projectdir_address "${projectdir}" "${address}"`"
+      filename="`__concat_config_absolute_filename "${config}" "${address}"`"
    fi
-
-   filename="`absolutepath "${filename}" `"
 
    if nodemarks_contain_noupdate "${marks}"
    then
@@ -1079,7 +1054,7 @@ but it is not required"
    # If we are in share mode, then the database is "/" here, so no worries
    # We don't have to check the owner, because the uuid will be different
    # to ours. (since it's coming from a different config)
-   # Search for absolute path, as that is what gets store into the DB
+   # Search for absolute path, as that is what gets stored into the DB
    #
    local otheruuid
 
@@ -1100,7 +1075,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
          log_debug "Zombie filename \"${filename}\" gets usurped"
       fi
    else
-      log_debug "Filename \"${filename}\" is unique in database \"${database}\""
+      log_debug "Filename \"${filename}\" is not yet in \"${database}\""
    fi
 
    #
@@ -1162,12 +1137,14 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    if [ "${remember}" = "YES" ]
    then
       # branch could be overwritten
-      log_debug "${C_INFO}Remembering ${nodeline} ..."
 
-      local filename
+      filename="`physicalpath "${filename}" `"
+      [ -z "${filename}" ] && internal_fail "Memorizing non existing file"
+
+      log_debug "${C_INFO}Remembering ${nodeline} located at \"${filename}\"..."
 
       nodeline="`node_print_nodeline`"
-      db_memorize "${database}" "${uuid}" "${nodeline}" "${projectdir}" "${filename}"
+      db_memorize "${database}" "${uuid}" "${nodeline}" "${config}" "${filename}"
 
       if [ "${OPTION_FIX}" != "NO" ] && [ -d "${filename}" ]
       then
@@ -1194,7 +1171,7 @@ update_with_nodelines()
 
    local nodelines="$1"
    local style="$2"
-   local projectdir="$3"
+   local config="$3"
    local database="$4"
 
    [ -z "${style}" ] && internal_fail "style is empty"
@@ -1205,7 +1182,7 @@ update_with_nodelines()
       return 0
    fi
 
-   log_debug "\"${style}\" update \"${nodelines}\" for db \"${projectdir:-ROOT}\" ($PWD)"
+   log_debug "\"${style}\" update \"${nodelines}\" for db \"${config:-ROOT}\" ($PWD)"
 
    local nodeline
 
@@ -1220,7 +1197,7 @@ update_with_nodelines()
          continue
       fi
 
-      update_with_nodeline "${nodeline}" "${style}" "${projectdir}" "${database}"
+      update_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
    done
 
    IFS="${DEFAULT_IFS}"
@@ -1233,7 +1210,7 @@ recursive_update_with_nodeline()
 
    local nodeline="$1"
    local style="$2"
-   local projectdir="$3"
+   local config="$3"
    local database="$4"
 
    [ "$#" -ne 4 ]     && internal_fail "api error"
@@ -1264,47 +1241,52 @@ recursive_update_with_nodeline()
 #   fi
 
    local filename
+   local newconfig
+   local newdatabase
 
    filename="`db_fetch_filename_for_uuid "${database}" "${uuid}" `"
-   relative="`db_relative_filename "${database}" "${filename}" `"
 
-   case "${relative}" in
-      ../*)
-         log_debug "Went into global share \"${relative}\""
-      ;;
-   esac
+   [ -z "${filename}" ] && internal_fail "corrupted db"
 
-   projectdir="`__concat_projectdir_address "${database}" "${relative}" `"
+   newconfig="`string_remove_prefix "${filename}" "${MULLE_VIRTUAL_ROOT}"`"
+   newconfig="${newconfig}/"
+   newdatabase="${newconfig}"
+
+   log_debug "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
+   log_debug "config         : ${config}"
+   log_debug "database           : ${database}"
+   log_debug "filename           : ${filename}"
+   log_debug "newconfig      : ${newconfig}"
+   log_debug "newdatabase        : ${newdatabase}"
 
    #
-   # usually database is in projectdir, except when we update with share
+   # usually database is in config, except when we update with share
    # and the node is shared. But this switch is not done here
    # but in update_with_nodeline
    #
-   if [ ! -d "${projectdir}" ]
+   if [ ! -d "${filename}" ]
    then
-      log_fluff "Will not recursively update \"${projectdir}\" as it's not \
+      log_fluff "Will not recursively update \"${filename}\" as it's not \
 a directory"
       return
    fi
 
-   database="${projectdir}"
    if nodemarks_contain_noshare "${marks}"
    then
       style="noshare"
    fi
 
-   sourcetree_update "${style}" "${projectdir}" "${database}"
+   sourcetree_update "${style}" "${newconfig}" "${newdatabase}"
 }
 
 
 recursive_update_with_nodelines()
 {
-   log_entry "recursive_update_with_nodelines" "$@"
+   log_entry "${C_FLUFF}recursive_update_with_nodelines${C_DEBUG}" "$@"
 
    local nodelines="$1"
    local style="$2"
-   local projectdir="$3"
+   local config="$3"
    local database="$4"
 
    [ -z "${style}" ] && internal_fail "style is empty"
@@ -1315,7 +1297,7 @@ recursive_update_with_nodelines()
       return 0
    fi
 
-   log_debug "\"${style}\" update \"${nodelines}\" for db \"${projectdir:-ROOT}\" ($PWD)"
+   log_fluff "\"${style}\" update \"${nodelines}\" for db \"${config:-ROOT}\" ($PWD)"
 
    local nodeline
 
@@ -1342,7 +1324,7 @@ recursive_update_with_nodelines()
 
       recursive_update_with_nodeline "${nodeline}" \
                                      "${style}" \
-                                     "${projectdir}" \
+                                     "${config}" \
                                      "${database}"
    done
 
@@ -1350,82 +1332,142 @@ recursive_update_with_nodelines()
 }
 
 
+#
+# style      : flat, recurse, share
+# config     : config relative to MULLE_VIRTUAL_ROOT
+# database   : prefix relative to MULLE_VIRTUAL_ROOT
+#
 sourcetree_update()
 {
+   log_entry "sourcetree_update" "$@"
+
    local style="$1"
-   local projectdir="$2"
+   local config="$2"
    local database="$3"
 
-   db_zombify_nodes "${database}"
-
-   log_verbose "Doing a \"${style}\" update for \"${projectdir}\"."
-   log_fluff "Set dbtype to \"${style}\""
-
-   #
-   # if the share directory is absolute, then the inferior
-   # database is also complete
-   #
-   if [ "${style}" = "share" -a "${database}" != "/" ] &&
-      ! is_absolutepath "${MULLE_SOURCETREE_SHARE_DIR}"
+   if ! fgrep -q -s -x "${database}" <<< "${UPDATED}"
    then
-      # remember that not everything is saved here
-      db_set_dbtype "${database}" "partial"
-   else
-      db_set_dbtype "${database}" "${style}"
+      log_debug "add \"${database}\" to UPDATED"
+      UPDATED="`add_line "${UPDATED}" "${database}"`"
    fi
 
+   #
+   #
+   # if there are no nodelines that's OK, we still want to do zombification
+   # but if there's also no database
+   # then just bail
+   #
    local nodelines
 
-   nodelines="`cfg_read "${projectdir}"`"
-   update_with_nodelines "${nodelines}" "${style}" "${projectdir}" "${database}" || return 1
+   if ! nodelines="`cfg_read "${config}"`"
+   then
+      log_debug "There is no sourcetree configuration in \"${config}\""
+      if ! db_dir_exists "${database}"
+      then
+         log_debug "There is also no database \"${database}\" so nothing to do"
+         return 2
+      fi
+   fi
+
+   log_verbose "Doing a \"${style}\" update for \"${config}\"."
+   log_fluff "Set dbtype to \"${style}\""
+
+   # partial is no more
+   db_set_dbtype "${database}" "${style}"
+
+   #
+   # Enclose updates in zombification
+   #
+   db_zombify_nodes "${database}"
+
+   #
+   # this is the "flat" update, that does the local "${config}" into
+   # "${database}" only
+   #
+   update_with_nodelines "${nodelines}" "${style}" "${config}" "${database}" || return 1
+
+   #
+   # In the case of share and the root  database, we remember what the
+   # flat nodelines where (could also just reread config ?)
+   #
+   local memofile
+
+   if [ "${style}" = "share" -a "${database}" = "/" -a ! -z "${nodelines}" ]
+   then
+      memofile="`db_set_memo "${database}" "${nodelines}"`"
+   fi
 
    db_bury_zombies "${database}"
 
-   case "${style}" in
-      flat)
-      ;;
 
-      *)
+   case "${style}" in
+      recurse|share)
          #
-         # Run this in a loop for the benefit of the root database, where
-         # shared nodes might be pushed into from a recursive update
+         # This is the "recursive" part over the stuff generated during "flat".
+         # Its the same for recurse and share.
+         #
+         # Unsorted, the order of the recursive updates would depend on
+         # the (random) uuid.
+         # I don't see how this would be any problem. Yet let's sort
+         # stuff anyway by name, for reproducability.
          #
          nodelines="`db_fetch_all_nodelines "${database}" | sort`"
          recursive_update_with_nodelines "${nodelines}" \
                                          "${style}" \
-                                         "${projectdir}" \
-                                         "${database}"  || return 1
-
-         if [ "${database}" = "/" -a ! -z "${nodelines}" ]
+                                         "${config}" \
+                                         "${database}"
+         if [ $? -eq 1 ] # 2 is OK
          then
-            memofile="`db_set_memo "${database}" "${nodelines}"`"
-
-            while :
-            do
-               #
-               # Unsorted, the order of the recursive updates would depend on
-               # the (random) uuid.
-               # I don't see how this would be any problem. Yet let's sort
-               # stuff anyway, for reproducability.
-               #
-               nodelines="`db_fetch_all_nodelines "${database}" | sort`"
-               nodelines="`fgrep -v -x -f "${memofile}" <<< "${nodelines}"`"
-               if [ -z "${nodelines}" ]
-               then
-                  break
-               fi
-
-               recursive_update_with_nodelines "${nodelines}" \
-                                               "${style}" \
-                                               "${projectdir}" \
-                                               "${database}"  || return 1
-               db_add_memo "${database}" "${nodelines}"
-            done
+            return 1
          fi
       ;;
    esac
 
-   db_set_shareddir "${database}" "${MULLE_SOURCETREE_SHARE_DIR}"
+   #
+   # In the share case, we have done the flat and the recurse part already
+   # Now recurse may have added stuff to our database. These haven't been
+   # recursed yet. So we do this now. There can only be additions now to
+   # root, so we don't zombify.
+   #
+   if [ ! -z "${memofile}" ]
+   then
+      #
+      # Run this in a loop for the benefit of the root database, where
+      # shared nodes might be have been pushed into from a recursive update
+      #
+      while :
+      do
+         nodelines="`db_fetch_all_nodelines "${database}" | sort`"
+         nodelines="`fgrep -v -x -f "${memofile}" <<< "${nodelines}"`"
+         if [ -z "${nodelines}" ]
+         then
+            break
+         fi
+
+         log_debug "Redo root because lines have changed"
+
+         recursive_update_with_nodelines "${nodelines}" \
+                                         "${style}" \
+                                         "${config}" \
+                                         "${database}"
+         if [ $? -eq 1 ] # 2 is OK
+         then
+            return 1
+         fi
+
+         db_add_memo "${database}" "${nodelines}"
+      done
+
+      remove_file_if_present "${memofile}"
+   fi
+
+   if [ "${style}" = "share" ]
+   then
+      db_set_shareddir "${database}" "${MULLE_SOURCETREE_SHARE_DIR}"
+   else
+      db_clear_shareddir "${database}"
+   fi
+
    db_clear_update "${database}"
    if db_contains_entries "${database}"
    then
@@ -1435,6 +1477,15 @@ sourcetree_update()
 
 
 #
+# Updating flat or recursive is simple. It can be done on any sourcetree,
+# that is not share.
+#
+# Share is trickier though, when you are doing share, you always have to
+# update from "/". So you have to set SOURCETREE_START to that. Then it could
+# be that there is no configuration in "/", have to bail if that's the case.
+# What should be checked is, that during the update the original
+# SOURCETREE_START is reached, otherwise it's headscratching time.
+#
 # STYLES:
 #
 # flat:      run through nodelines, fetch what is missing
@@ -1442,28 +1493,80 @@ sourcetree_update()
 #            that has a config file (repeat)
 # share:     the trick for "share" is, that we use a joined database
 #            for nodes marked share and again (local) databases for those
-#            marked noshare like in recurse.
+#            marked noshare like in recurse. This is stored in root.
 #
-sourcetree_update_root()
+sourcetree_update_start()
 {
-   log_entry "sourcetree_update_root" "$@" "($PWD)"
+   log_entry "sourcetree_update_start" "$@" "($PWD)"
 
    local style
+   local startpoint
+   local UPDATED
+
+   startpoint="${SOURCETREE_START}"
 
    style="${SOURCETREE_MODE}"
+   case "${style}" in
+      share)
+         if [ "${SOURCETREE_START}" != "/" ]
+         then
+            log_info "Forced deferral to ${MULLE_VIRTUAL_ROOT} for share"
+            SOURCETREE_START="/"
+         fi
+      ;;
+   esac
 
-   db_ensure_consistency "/"
-   db_ensure_compatible_dbtype "/" "${style}"
+   db_ensure_consistency "${SOURCETREE_START}"
+   db_ensure_compatible_dbtype "${SOURCETREE_START}" "${style}"
 
+   #
    # TODO: make this a MULLE_FETCH_ENVIRONMENT variable
+   # SOURCETREE_UPDATE_CACHEis used to suppress asking git mirrors to refetch
+   # superflously. For configurations where dependencies appear twice in
+   # the sourcetree (recurse)
+   #
    local SOURCETREE_UPDATE_CACHE
 
-   SOURCETREE_UPDATE_CACHE="`absolutepath "${SOURCETREE_DB_DIR}/.update-cache"`"
+   SOURCETREE_UPDATE_CACHE="`absolutepath "${SOURCETREE_DB_NAME}/.update-cache"`"
 
    rmdir_safer "${SOURCETREE_UPDATE_CACHE}"
    mkdir_if_missing "${SOURCETREE_UPDATE_CACHE}"
 
-   sourcetree_update "${style}" "/" "/"
+   sourcetree_update "${style}" "${SOURCETREE_START}" "${SOURCETREE_START}"
+   case $? in
+      0)
+      ;;
+
+      1)
+         return 1
+      ;;
+
+      2)
+        fail "There is no sourcetree in \"${MULLE_VIRTUAL_ROOT}${SOURCETREE_START}\""
+      ;;
+   esac
+
+   log_debug "UPDATED: ${UPDATED}"
+
+   if ! fgrep -q -s -x "${startpoint}" <<< "${UPDATED}"
+   then
+      fail "\"${MULLE_VIRTUAL_ROOT}${startpoint}\" is not reachable from the sourcetree root (${MULLE_VIRTUAL_ROOT})"
+   fi
+}
+
+
+warn_dry_run()
+{
+   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" = "YES" ]
+   then
+      log_warning "***IMPORTANT REMINDER***
+
+As fetches and zombification are not performed during a dry run (-n), the
+actual commands of an update can not be shown. This is especially true for
+recurse and share updates. And when updating an existing database, when
+edits have been made to the configuration.
+"
+   fi
 }
 
 
@@ -1580,7 +1683,9 @@ sourcetree_update_main()
 
    [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
 
-   sourcetree_update_root
+   warn_dry_run
+
+   sourcetree_update_start
 }
 
 

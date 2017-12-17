@@ -85,9 +85,9 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/b" || exit 1
-   run_mulle_sourcetree add --nodetype git --url "file:///${reporoot}/d" "c/d" || exit 1
-   run_mulle_sourcetree list
+   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/b" || exit 1
+   run_mulle_sourcetree -e add --nodetype git --url "file:///${reporoot}/d" "c/d" || exit 1
+   run_mulle_sourcetree -e list
 
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: initial version"
@@ -103,7 +103,7 @@ _setup_demo_repo_b()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/d" || exit 1
+   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/d" || exit 1
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "b: initial version"
 }
@@ -176,10 +176,6 @@ run_test1()
    run_dump "flat" "${testdir}"
    run_dump "recurse" "${testdir}"
    run_dump "share" "${testdir}" "share_local.dot"
-
-   MULLE_SOURCETREE_SHARE_DIR="${MULLE_SDE_VIRTUAL_ROOT}/share_global"
-   export MULLE_SOURCETREE_SHARE_DIR
-   run_dump "share" "${testdir}" "share_global.dot"
 }
 
 
@@ -193,8 +189,6 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_SDE_VIRTUAL_ROOT="${directory}"
-   export MULLE_SDE_VIRTUAL_ROOT
 
    local project
 
@@ -211,6 +205,10 @@ main()
    (
       rmdir_safer "${project}" &&
       mkdir_if_missing "${project}" &&
+
+      MULLE_VIRTUAL_ROOT="`physicalpath "${project}" `"
+      export MULLE_VIRTUAL_ROOT
+
       cd "${project}" &&
       run_test1
    ) || exit 1

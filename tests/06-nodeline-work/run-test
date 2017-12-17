@@ -26,8 +26,6 @@ _setup_demo_repo_a()
    redirect_exekutor VERSION echo "2.0.0"
    exekutor git commit -m "a: 2.0.0" VERSION
    exekutor git tag "2.0.0"
-
-   exekutor git branch -d master
 }
 
 
@@ -53,15 +51,15 @@ run_test()
       update_with_nodeline "ringo/starr;git;;${uuid};${repos}/a;release" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
-   [ -f "ringo/starr/VERSION" ] || fail "ringo/starr/VERSION not there"
+   [ -f "ringo/starr/VERSION" ] || fail "ringo/starr/VERSION not there ($PWD)"
    log_verbose "----- #1 PASSED -----"
 
    (
       update_with_nodeline "ringo/star;git;;${uuid};${repos}/a;release" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
-   [ -f "ringo/starr/VERSION" ] && fail "ringo/starr/VERSION not gone"
-   [ -f "ringo/star/VERSION" ]  || fail "ringo/star/VERSION not there"
+   [ -f "ringo/starr/VERSION" ] && fail "ringo/starr/VERSION not gone ($PWD)"
+   [ -f "ringo/star/VERSION" ]  || fail "ringo/star/VERSION not there ($PWD)"
    log_verbose "----- #2 PASSED -----"
 
    (
@@ -99,8 +97,8 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_SDE_VIRTUAL_ROOT="${directory}"
-   export MULLE_SDE_VIRTUAL_ROOT
+   MULLE_VIRTUAL_ROOT="${directory}/project"
+   export MULLE_VIRTUAL_ROOT
 
    local SOURCETREE_FIX_FILE=".mulle-sourcetree.fix"
 
@@ -115,7 +113,7 @@ main()
    mkdir_if_missing "${project}"
 
    (
-      SOURCETREE_DB_DIR="${project}/db"
+      SOURCETREE_DB_NAME="db"
 
       cd "${project}" &&
       run_test

@@ -28,9 +28,9 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/b"
-   run_mulle_sourcetree mark b "nobuild"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/c"
+   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/b"
+   run_mulle_sourcetree -e mark b "nobuild"
+   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/c"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: initial version"
 }
@@ -44,7 +44,7 @@ _setup_demo_repo_b()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/c"
+   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/c"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "b: initial version"
 }
@@ -126,7 +126,7 @@ a/c"
                                        "echo" "\\\${MULLE_DESTINATION}"`"
    if [ $? -ne 0 ]
    then
-      fail "config walk #1 failed unexpectedly"
+      fail "config walk #2 failed unexpectedly"
    fi
 
    #
@@ -139,7 +139,7 @@ a"
 
    if [ "${results}" != "${expected}" ]
    then
-      fail "config walk #1 returned \"${results}\". Expected was \"${expected}\""
+      fail "config walk #2 returned \"${results}\". Expected was \"${expected}\""
    fi
    log_verbose "----- #2 PASSED -----"
 
@@ -153,15 +153,16 @@ a"
                                        "\\\${MULLE_DESTINATION}"`"
    if [ $? -ne 0 ]
    then
-      fail "config walk #2 failed unexpectedly"
+      fail "config walk #3 failed unexpectedly"
    fi
 
+   # b is marked nobuild!
    expected="a
 a/c"
 
    if [ "${results}" != "${expected}" ]
    then
-      fail "config walk #2 returned \"${results}\". Expected was \"${expected}\""
+      fail "config walk #3 returned \"${results}\". Expected was \"${expected}\""
    fi
    log_verbose "----- #3 PASSED -----"
 
@@ -200,7 +201,12 @@ main()
    project="${directory}/project"
    repos="${directory}/repositories"
 
-   setup_demo_repos "${repos}" > /dev/null 2>&1 || exit 1
+   mkdir_if_missing "${project}"
+
+   MULLE_VIRTUAL_ROOT="`physicalpath "${project}"`"
+   export MULLE_VIRTUAL_ROOT
+
+   setup_demo_repos "${repos}" || exit 1
 
    (
       rmdir_safer "${project}" &&
@@ -217,10 +223,6 @@ main()
 
 init()
 {
-   MULLE_SDE_VIRTUAL_ROOT="fake"
-   export MULLE_SDE_VIRTUAL_ROOT
-
-
    MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env library-path`" || exit 1
 
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1

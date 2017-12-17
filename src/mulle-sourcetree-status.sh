@@ -121,7 +121,7 @@ sourcetree_is_db_compatible()
       *share*)
          case "${dbtype}" in
             partial)
-               if [ "${database}" != "/" ]
+               if [ "${database}" != "${SOURCETREE_START}" ]
                then
                   return 0
                fi
@@ -153,9 +153,9 @@ emit_status()
 
    if [ -z "${directory}" ]
    then
-      datasource="/"
+      datasource="${SOURCETREE_START}"
       directory="."
-      projectdir="/"
+      projectdir="${SOURCETREE_START}"
    fi
 
    log_debug "address:    ${address}"
@@ -491,13 +491,13 @@ sourcetree_status_main()
 
    [ "$#" -eq 0 ] || sourcetree_status_usage
 
-   if ! cfg_exists "/"
+   if ! cfg_exists "${SOURCETREE_START}"
    then
       log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
       return 0
    fi
 
-   if ! db_is_ready "/"
+   if ! db_is_ready "${SOURCETREE_START}"
    then
       if [ "${OPTION_IS_UPTODATE}" = "YES" ]
       then

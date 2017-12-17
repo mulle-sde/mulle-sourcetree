@@ -97,8 +97,7 @@ _sourcetree_augment_mode_with_output_options()
 
    local mode="$1"
 
-   if [ "${OPTION_OUTPUT_HEADER}" = "YES" ] ||
-      [ "${OPTION_OUTPUT_HEADER}" = "DEFAULT" -a "${IS_PRINTING}" != "YES" ]
+   if [ "${OPTION_OUTPUT_HEADER}" = "YES" ]
    then
       mode="`concat "${mode}" "output_header"`"
       if [ "${OPTION_OUTPUT_SEPARATOR}" != "NO" ]
@@ -125,10 +124,10 @@ _sourcetree_augment_mode_with_output_options()
       ;;
 
       "CMD")
-         mode="`concat "${mode}" "output_cmdline"`"
+         mode="`concat "${mode}" "output_cmd"`"
       ;;
 
-      ""|*)
+      *)
          [ -z "`command -v column`" ] && fail "Tool \"column\" is not available, use --output-raw"
 
          mode="`concat "${mode}" "output_column"`"
@@ -138,32 +137,16 @@ _sourcetree_augment_mode_with_output_options()
    echo "${mode}"
 }
 
-
-_list_nodes()
+_sourcetree_contents()
 {
-   log_entry "_list_nodes" "$@"
+   log_entry "_sourcetree_contents" "$@"
 
    local mode="$1"
-
-   if ! cfg_exists "/"
-   then
-      if [ -z "${IS_PRINTING}" ]
-      then
-         log_info "There is no sourcetree here (${PWD})"
-      fi
-      return
-   fi
-
-   if [ "${OPTION_OUTPUT_BANNER}" = "YES" ] ||
-      [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" -a "${OPTION_OUTPUT_FORMAT}" = "FMT" ]
-   then
-      _sourcetree_banner
-   fi
 
    local nodeline
    local nodelines
 
-   nodelines="`cfg_read "/"`" || exit 1
+   nodelines="`cfg_read "${SOURCETREE_START}"`" || exit 1
 
    nodeline_print_header "${mode}"
 
@@ -179,6 +162,38 @@ _list_nodes()
       fi
    done
    IFS="${DEFAULT_IFS}"
+}
+
+
+_list_nodes()
+{
+   log_entry "_list_nodes" "$@"
+
+   local mode="$1"
+
+   if ! cfg_exists "${SOURCETREE_START}"
+   then
+      if [ -z "${IS_PRINTING}" ]
+      then
+         log_info "There is no sourcetree here (${PWD})"
+      fi
+      return
+   fi
+
+   if [ "${OPTION_OUTPUT_BANNER}" = "YES" ] ||
+      [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" -a "${OPTION_OUTPUT_FORMAT}" = "FMT" ]
+   then
+      _sourcetree_banner
+   fi
+
+   case "${mode}" in
+      *output_column*)
+         _sourcetree_contents "${mode}" | column -t -s '|'
+         return $?
+      ;;
+   esac
+
+   _sourcetree_contents
 }
 
 
@@ -248,6 +263,7 @@ list_nodes()
    #
    flag="`emit_commandline_flag "${OPTION_OUTPUT_HEADER}" "output-header" `"
    arguments="`concat "${arguments}" "${flag}" `"
+
 #   if [ "${OPTION_OUTPUT_HEADER}" = "NO" ]
 #   then
 #      arguments="`concat "${arguments}" "--no-output-header" `"
@@ -256,21 +272,36 @@ list_nodes()
    case "${OPTION_OUTPUT_FORMAT}" in
       "RAW")
          arguments="`concat "${arguments}" "--output-raw" `"
+         if [ -z "${OPTION_OUTPUT_HEADER}" ]
+         then
+            OPTION_OUTPUT_HEADER="NO"
+         fi
       ;;
 
       "CMD")
          arguments="`concat "${arguments}" "--output-cmd" `"
+         OPTION_OUTPUT_HEADER="NO"
       ;;
 
       "FMT")
          arguments="`concat "${arguments}" "--output-fmt" `"
+         if [ -z "${OPTION_OUTPUT_HEADER}" ]
+         then
+            if [ "${IS_PRINTING}" != "YES" ]
+            then
+               OPTION_OUTPUT_HEADER="NO"
+            else
+               OPTION_OUTPUT_HEADER="YES"
+            fi
+         fi
       ;;
    esac
 
 
    IS_PRINTING="YES"; export IS_PRINTING
+
    sourcetree_walk_main --no-depth-first --cd \
-         "${MULLE_EXECUTABLE}" --flat -e -N list ${arguments}
+         "${MULLE_EXECUTABLE}" "${MULLE_TECHNICAL_FLAGS}" --flat -e -N list ${arguments}
 }
 
 
@@ -288,7 +319,7 @@ sourcetree_list_main()
    local OPTION_OUTPUT_FORMAT="DEFAULT"
    local OPTION_OUTPUT_EVAL="DEFAULT"
    local OPTION_OUTPUT_FULL="DEFAULT"
-   local OPTION_OUTPUT_HEADER="DEFAULT"
+   local OPTION_OUTPUT_HEADER="" # empty more convenient default
    local OPTION_OUTPUT_SEPARATOR="DEFAULT"
    local OPTION_OUTPUT_UUID="DEFAULT"
    local OPTION_UNSAFE="NO"
@@ -396,25 +427,24 @@ sourcetree_list_main()
 
    [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && sourcetree_list_usage
 
-   # promote flat to recurse, except when user says so
-   if [ "${SOURCETREE_MODE}" = "flat" -a -z "${FLAG_SOURCETREE_MODE}" ]
+   #
+   # generally we use flat, if the user didn't indicate otherwise
+   # via flags
+   #
+   if [ -z "${FLAG_SOURCETREE_MODE}" ]
    then
-      SOURCETREE_MODE="recurse"
+      SOURCETREE_MODE="flat"
+   fi
+
+   # if mode is not flat, we use output-banner by default
+   if [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" -a "${SOURCETREE_MODE}" != "flat" ]
+   then
+      OPTION_OUTPUT_BANNER="YES"
    fi
 
    local mode
 
    mode="`_sourcetree_augment_mode_with_output_options`"
-
-   if [ "${IS_PRINTING}" != "YES" ]
-   then
-      case "${mode}" in
-         *output_column*)
-            list_nodes "${mode}" | column -t -s '|'
-            return $?
-         ;;
-      esac
-   fi
 
    list_nodes "${mode}"
 }

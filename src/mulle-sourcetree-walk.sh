@@ -256,6 +256,7 @@ __call_callback()
    local originator="$1"; shift
    local callback="$1"; shift
 
+   [ -z "${address}" ]  && internal_fail "address is empty"
    [ -z "${callback}" ] && internal_fail "callback is empty"
 
    local evaluator
@@ -265,6 +266,13 @@ __call_callback()
       evaluator="_eval_exekutor"
    else
       evaluator="eval"
+   fi
+
+   local technical_flags
+
+   if [ "${OPTION_PASS_TECHNICAL_FLAGS}" = "YES" ]
+   then
+      technical_flags="${MULLE_TECHNICAL_OPTIONS}" # from bashfunctions
    fi
 
    MULLE_ADDRESS="${address}" \
@@ -277,13 +285,13 @@ __call_callback()
    MULLE_NODE="${nodeline}" \
    MULLE_NODETYPE="${nodetype}" \
    MULLE_ORIGINATOR="${originator}" \
-   MULLE_PROJECTDIR="`__concat_datasource_address "${datasource}" "${address}"`" \
+   MULLE_PROJECTDIR="`__concat_datasource_absolute_filename "${datasource}" "${address}"`" \
    MULLE_TAG="${tag}" \
    MULLE_URL="${url}" \
    MULLE_USERINFO="${userinfo}" \
    MULLE_UUID="${uuid}" \
    MULLE_VIRTUAL="${virtual}" \
-      "${evaluator}" "'${callback}'" "$@"
+      "${evaluator}" "'${callback}'" "${technical_flags}" "$@"
 
    rval="$?"
    if [ "${rval}" -eq 0 ]
@@ -293,12 +301,12 @@ __call_callback()
 
    case "${mode}" in
       *lenient*)
-         log_warning "Command '${callback}' failed for \"${MULLE_ADDRESS}\""
+         log_warning "Command '${callback}' failed for node \"${address}\""
          return 0
       ;;
    esac
 
-   fail "Command '${callback}' failed for \"${MULLE_ADDRESS}\""
+   fail "Command '${callback}' failed for node \"${address}\""
 
    return "$rval"
 }
@@ -314,17 +322,17 @@ __docd_preamble()
 {
    local directory="$1"
 
-   oldshared=
-   if ! is_absolutepath "${MULLE_SOURCETREE_SHARE_DIR}"
-   then
-      oldshared="${MULLE_SOURCETREE_SHARE_DIR}"
-
-      local relative
-
-      relative="`compute_relative "${directory}"`"
-      MULLE_SOURCETREE_SHARE_DIR="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${relative}"`"
-      MULLE_SOURCETREE_SHARE_DIR="`simplified_path "${MULLE_SOURCETREE_SHARE_DIR}"`"
-   fi
+#   oldshared=
+#   if ! is_absolutepath "${MULLE_SOURCETREE_SHARE_DIR}"
+#   then
+#      oldshared="${MULLE_SOURCETREE_SHARE_DIR}"
+#
+#      local relative
+#
+#      relative="`compute_relative "${directory}"`"
+#      MULLE_SOURCETREE_SHARE_DIR="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${relative}"`"
+#      MULLE_SOURCETREE_SHARE_DIR="`simplified_path "${MULLE_SOURCETREE_SHARE_DIR}"`"
+#   fi
 
    old="${PWD}"
    exekutor cd "${directory}"
@@ -333,28 +341,40 @@ __docd_preamble()
 __docd_postamble()
 {
    exekutor cd "${old}"
-   if [ ! -z "${oldshared}" ]
-   then
-      MULLE_SOURCETREE_SHARE_DIR="${oldshared}"
-   fi
+#   if [ ! -z "${oldshared}" ]
+#   then
+#      MULLE_SOURCETREE_SHARE_DIR="${oldshared}"
+#   fi
 }
 
 
-__concat_datasource_address()
+
+__concat_datasource_absolute_filename()
 {
    local datasource="$1"
    local address="$2"
 
-   case "${datasource}" in
-      "/")
+   #
+   # if share directory is absolute
+   #
+   case "${address}" in
+      /*)
          echo "${address}"
+      ;;
+   esac
+
+   case "${datasource}" in
+      /|/*/)
       ;;
 
       *)
-         filepath_concat "${datasource}" "${address}"
+         internal_fail "datasource \"${datasource}\" is malformed"
       ;;
    esac
+
+   echo "${MULLE_VIRTUAL_ROOT}${datasource}${address}"
 }
+
 
 #
 # this never returns non-zero
@@ -395,7 +415,7 @@ _visit_callback()
          local oldshared
          local directory
 
-         directory="`__concat_datasource_address "${datasource}" "${address}"`"
+         directory="`__concat_datasource_absolute_filename "${datasource}" "${address}"`"
 
          if [ -d "${directory}" ]
          then
@@ -464,19 +484,25 @@ _visit_recurse()
       return 0
    fi
 
+   local filename
    local next_datasource
    local next_virtual
 
    next_virtual="`filepath_concat "${virtual}" "${address}"`"
-   next_datasource="`__concat_datasource_address "${datasource}" "${address}"`"
+   next_datasource="${datasource}${address}/"
+   filename="${MULLE_VIRTUAL_ROOT}${datasource}${address}"
 
-   if ! [ -d "${next_datasource}" ]
+   log_debug "filename        : ${filename}"
+   log_debug "next_datasource : ${next_datasource}"
+   log_debug "next_virtual    : ${next_virtual}"
+
+   if ! [ -d "${filename}" ]
    then
-      if [ -f "${next_datasource}" ]
+      if [ -f "${filename}" ]
       then
-         log_fluff "Do not recurse on \"${next_datasource}\" as it's not a directory. ($PWD)"
+         log_fluff "Do not recurse on \"${filename}\" as it's not a directory. ($PWD)"
       else
-         log_debug "Can not recurse into \"${next_datasource}\" as it's not there yet. ($PWD)"
+         log_debug "Can not recurse into \"${filename}\" as it's not there yet. ($PWD)"
       fi
       return 0
    fi
@@ -563,14 +589,21 @@ _visit_share_node()
    name="`basename -- "${address}"`"
    address="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${name}"`"
 
+   #
+   # if address is absolute it means its shared and
+   # MULLE_SOURCETREE_SHARE_DIR is absolute
+   #
    log_debug "address:  ${address}"
    log_debug "original: ${original}"
 
-   if fgrep -q -s -x "${address}" <<< "${VISITED}"
+   if [ "${VISIT_TWICE}" != "YES" ]
    then
-      return
+      if fgrep -q -s -x "${address}" <<< "${VISITED}"
+      then
+         return
+      fi
+      VISITED="`add_line "${VISITED}" "${address}"`"
    fi
-   VISITED="`add_line "${VISITED}" "${address}"`"
 
    #
    # hacky hack. If shareddir exists visit that
@@ -581,13 +614,13 @@ _visit_share_node()
    then
       log_debug "Visiting \"${original}\" as \"${address}\" doesn't exist yet"
       address="${original}"
-      datasource="/"
+      datasource="${SOURCETREE_START}"
    fi
 
    local originator
 
    # ugly hack for dotdump
-   originator="`__concat_datasource_address "${datasource}" "${original}"`"
+   originator="`__concat_datasource_absolute_filename "${datasource}" "${original}"`"
 
    _visit_node "${datasource}" "" "${originator}" "$@"
 }
@@ -770,7 +803,7 @@ _print_walk_info()
 
 
 #
-# walk_auto_uuid settingname,callback,permissions,SOURCETREE_DB_DIR ...
+# walk_auto_uuid settingname,callback,permissions,SOURCETREE_DB_NAME ...
 #
 # datasource:  this is the current offset from ${PWD} where the config or
 #              database resides  PWD=/
@@ -808,7 +841,7 @@ walk_config_uuids()
    local VISITED
 
    VISITED=
-   _walk_config_uuids "/" "" "$@"
+   _walk_config_uuids "${SOURCETREE_START}" "" "$@"
 }
 
 
@@ -846,7 +879,7 @@ walk_db_uuids()
    local VISITED
 
    VISITED=
-   _walk_db_uuids "/" "" "$@"
+   _walk_db_uuids "${SOURCETREE_START}" "" "$@"
 }
 
 
@@ -855,7 +888,7 @@ _visit_root_callback()
    log_entry "_visit_root_callback" "$@"
 
    local virtual=""
-   local datasource="/"
+   local datasource="${SOURCETREE_START}"
    local originator=""
    local branch
    local address="."
@@ -955,12 +988,13 @@ sourcetree_walk_main()
    local OPTION_CD="DEFAULT"
    local OPTION_DEPTH_FIRST="YES"
    local OPTION_EXTERNAL_CALL="YES"
-   local OPTION_LENIENT="YES"
+   local OPTION_LENIENT="NO"
    local OPTION_MARKS="ANY"
    local OPTION_NODETYPES="ALL"
    local OPTION_PERMISSIONS="" # empty!
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_EVAL_EXEKUTOR="YES"
+   local OPTION_PASS_TECHNICAL_FLAGS="NO"
 
    while [ $# -ne 0 ]
    do
@@ -1011,6 +1045,14 @@ sourcetree_walk_main()
 
          --no-lenient)
             OPTION_LENIENT="NO"
+         ;;
+
+         --pass-flags)
+            OPTION_PASS_TECHNICAL_FLAGS="YES"
+         ;;
+
+         --no-pass-flags)
+            OPTION_PASS_TECHNICAL_FLAGS="NO"
          ;;
 
          #

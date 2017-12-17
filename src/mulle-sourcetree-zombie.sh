@@ -149,13 +149,13 @@ zombie_clean_main()
    [ "$#" -eq 0 ] || zombie_clean_usage
 
    (
-      db_zombify_nodes "/" &&
-      db_bury_zombies "/"
+      db_zombify_nodes "${SOURCETREE_START}" &&
+      db_bury_zombies "${SOURCETREE_START}"
    ) || return 1
 
    if [ "${OPTION_REMOVE_GRAVEYARD}" = "YES" ]
    then
-      zombie_clean_all_nodes "/"
+      zombie_clean_all_nodes "${SOURCETREE_START}"
    fi
 }
 

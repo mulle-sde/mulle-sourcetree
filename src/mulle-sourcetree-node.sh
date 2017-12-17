@@ -125,6 +125,21 @@ node_fetch_operation()
    evaledbranch="`eval echo "$branch"`"
    evaledfetchoptions="`eval echo "$fetchoptions"`"
 
+   log_info "Looking for local source of ${C_RESET_BOLD}${evaledurl}${C_INFO}"
+
+   local localurl
+
+   localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} "search-local" --scm "'${nodetype}'" \
+                                                            --tag "'${evaledtag}'" \
+                                                            --branch "'${evaledbranch}'" \
+                                                            --options "'${evaledfetchoptions}'" \
+                                                            --url "'${evaledurl}'" \
+                                                            "'${address}'" )"
+   if [ ! -z "${localurl}" ]
+   then
+      evaledurl="${localurl}"
+   fi
+
    log_info "Fetching ${C_MAGENTA}${C_BOLD}${address}${C_INFO} from \
 ${C_RESET_BOLD}${evaledurl}${C_INFO}"
    eval_exekutor ${MULLE_FETCH:-mulle-fetch} "${opname}" --scm "'${nodetype}'" \

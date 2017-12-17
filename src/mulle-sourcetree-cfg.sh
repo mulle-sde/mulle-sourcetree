@@ -37,44 +37,49 @@ MULLE_SOURCETREE_CFG_SH="included"
 __cfg_common_configfile()
 {
    [ -z "${SOURCETREE_CONFIG_FILE}" ] && internal_fail "SOURCETREE_CONFIG_FILE is not set"
+   [ -z "${MULLE_VIRTUAL_ROOT}" ]     && internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
    case "$1" in
       "/")
-         configfile="${SOURCETREE_CONFIG_FILE}"
+         configfile="${MULLE_VIRTUAL_ROOT}/${SOURCETREE_CONFIG_FILE}"
       ;;
 
-      ""|.|./*)
-         internal_fail "configfile must not be empty or start with '.' . use '/' for root"
+
+      /*/)
+         configfile="${MULLE_VIRTUAL_ROOT}$1${SOURCETREE_CONFIG_FILE}"
       ;;
 
-      */)
-         configfile="$1${SOURCETREE_CONFIG_FILE}"
+      /*)
+         configfile="${MULLE_VIRTUAL_ROOT}$1/${SOURCETREE_CONFIG_FILE}"
       ;;
 
       *)
-         configfile="$1/${SOURCETREE_CONFIG_FILE}"
+         internal_fail "database \"$1\" must start with '/'"
       ;;
+
    esac
 }
 
 
 __cfg_common_rootdir()
 {
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
+
    case "$1" in
       "/")
-         rootdir=""
+         rootdir="${MULLE_VIRTUAL_ROOT}"
       ;;
 
-      ""|.|./*)
-         internal_fail "configfile must not be empty or start with '.' . use '/' for root"
+      /*/)
+         rootdir="${MULLE_VIRTUAL_ROOT}/$(sed 's|/$||g' <<< "$1")"
       ;;
 
-      */)
-         rootdir="$(sed 's|/$||g' <<< "$1")"
+      /*)
+         rootdir="${MULLE_VIRTUAL_ROOT}/$1"
       ;;
 
       *)
-         rootdir="$1"
+         internal_fail "configfile \"$1\" must start with '/'"
       ;;
    esac
 }
@@ -137,6 +142,7 @@ __cfg_read()
       egrep -s -v '^#' "${configfile}"
    else
       log_debug "No config file \"${configfile}\" found ($PWD)"
+      return 1
    fi
 }
 
@@ -255,6 +261,10 @@ cfg_change_nodeline()
 }
 
 
+#
+# returned path is always physical
+# SOURCETREE_START should probably be passed in
+#
 cfg_search_for_configfile()
 {
    log_entry "cfg_search_for_configfile" "$@"
@@ -268,14 +278,16 @@ cfg_search_for_configfile()
    #
    # make sure that the ceiling is thre
    # and we walk with symlinks removed, so that we hit the ceiling
+   # Also make sure we only walk physical paths
    #
-   if [ ! -z "${MULLE_SDE_VIRTUAL_ROOT}" ] && [ -d "${MULLE_SDE_VIRTUAL_ROOT}" ]
+   if [ ! -z "${MULLE_VIRTUAL_ROOT}" ] && [ -d "${MULLE_VIRTUAL_ROOT}" ]
    then
-      ceiling="`physicalpath "${MULLE_SDE_VIRTUAL_ROOT}"`"
+      ceiling="${MULLE_VIRTUAL_ROOT}"
    else
-      ceiling="/"
+      ceiling="${SOURCETREE_START}"
    fi
 
+   ceiling="`physicalpath "${ceiling}"`"
    directory="`physicalpath "${directory}"`"
 
    local relative
@@ -292,8 +304,9 @@ cfg_search_for_configfile()
 
    (
       cd "${directory}" &&
-      while ! cfg_exists "/"
+      while ! cfg_exists "${SOURCETREE_START}"
       do
+         # since we do physical paths, PWD is ok here
          if [ "${PWD}" = "${ceiling}" ]
          then
             log_debug "Touched the ceiling"
@@ -310,8 +323,8 @@ cfg_search_for_configfile()
 
 
 #
-# return the directory, that we should be using for the following defer
-# possibilities
+# Return the directory, that we should be using for the following defer
+# possibilities. The returned directory is always a physical patha
 #
 # NONE:    do not search
 # NEAREST: search up until we find a sourcetree
@@ -323,6 +336,7 @@ cfg_determine_working_directory()
    log_entry "cfg_determine_working_directory" "$@"
 
    local preference="$1"
+   local deferflag="$2"
 
    local directory
    local parent
@@ -339,7 +353,7 @@ cfg_determine_working_directory()
       fail "need mulle-sourcetree-db.sh for this to work"
    fi
 
-   defer="${MULLE_FLAG_DEFER}"
+   defer="${deferflag}"
    if [ "${defer}" = "DEFAULT" ]
    then
       defer="${preference}"
@@ -347,9 +361,9 @@ cfg_determine_working_directory()
 
    case "${defer}" in
       NONE)
-         if cfg_exists "/"
+         if cfg_exists "${SOURCETREE_START}"
          then
-            echo "${PWD}"
+            pwd -P
             return 0
          fi
 
@@ -368,6 +382,7 @@ cfg_determine_working_directory()
          return 0
       ;;
 
+      # not sure when this is useful
       PARENT)
          directory="`cfg_search_for_configfile "${PWD}"`"
          if [ $? -ne 0 ]
@@ -376,7 +391,7 @@ cfg_determine_working_directory()
             return 1
          fi
 
-         if [ "${directory}" != "${PWD}" ]
+         if [ "${directory}" != "`pwd -P`" ]
          then
             echo "${directory}"
             return 0
@@ -406,7 +421,7 @@ cfg_determine_working_directory()
          do
             found="${directory}"
             parent="`dirname -- "${directory}"`"
-            if [ "${parent}" = "/" ]
+            if [ "${parent}" = "${SOURCETREE_START}" ]
             then
                break
             fi
@@ -422,7 +437,7 @@ cfg_determine_working_directory()
          return 0
       ;;
 
-      ""|*)
+      *)
          internal_fail "unknown defer type \"${defer}\""
       ;;
    esac
@@ -434,10 +449,11 @@ cfg_determine_working_directory()
 cfg_defer_if_needed()
 {
    local preference="$1"
+   local defer="$2"
 
    local directory
 
-   if directory="`cfg_determine_working_directory "${preference}"`"
+   if directory="`cfg_determine_working_directory "${preference}" "${defer}"`"
    then
       if [ "${directory}" != "`pwd -P`" ]
       then

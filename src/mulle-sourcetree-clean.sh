@@ -45,7 +45,7 @@ EOF
 
 walk_clean()
 {
-   log_entry "walk_clean" "$@"
+   log_entry "${C_RESET}walk_clean${C_DEBUG}" "${MULLE_DESTINATION}" "${MULLE_MARKS}"
 
    local destination
    local marks
@@ -55,7 +55,7 @@ walk_clean()
 
    if nodemarks_contain_nodelete "${marks}"
    then
-      log_fluff "\"${destination}\" is marked nodelete"
+      log_fluff "\"${destination}\" is protected from delete"
       NO_DELETES="`add_line "${NO_DELETES}" "${destination}" `"
       return
    fi
@@ -65,12 +65,11 @@ walk_clean()
    then
       if [ -d "${destination}" ]
       then
-         log_fluff "Dictionary \"${destination}\" exists."
+         log_fluff "Dictionary \"${destination}\" marked for delete."
          DELETE_DIRECTORIES="`add_line "${DELETE_DIRECTORIES}" "${destination}" `"
       else
-         log_fluff "File \"${destination}\" exists."
+         log_fluff "File \"${destination}\" markef for delete."
          DELETE_FILES="`add_line "${DELETE_FILES}" "${destination}" `"
-         remove_file_if_present "${destination}"
       fi
    else
       log_verbose "Destination \"${destination}\" doesn't exist."
@@ -103,6 +102,8 @@ sourcetree_clean()
    DELETE_FILES=
    DELETE_DIRECTORIES=
 
+   VISIT_TWICE="YES"  # need to pick up nodeletes
+
    walk_config_uuids "${filternodetypes}" \
                      "${filterpermissions}" \
                      "${filtermarks}" \
@@ -110,6 +111,10 @@ sourcetree_clean()
                      "walk_clean"
 
    local filename
+
+   log_debug "DELETE_FILES:       ${DELETE_FILES}"
+   log_debug "DELETE_DIRECTORIES: ${DELETE_DIRECTORIES}"
+   log_debug "NO_DELETES:         ${NO_DELETES}"
 
    IFS="
 "
@@ -196,14 +201,9 @@ sourcetree_clean_main()
 
    [ "$#" -eq 0 ] || sourcetree_clean_usage
 
-   if ! cfg_exists "/"
+   if ! cfg_exists "${SOURCETREE_START}"
    then
       log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
-   fi
-
-   if ! db_is_ready "/"
-   then
-      fail "The sourctree isn't updated. Can't clean config entries"
    fi
 
    local mode

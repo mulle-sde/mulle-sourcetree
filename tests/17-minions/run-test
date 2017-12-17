@@ -24,7 +24,7 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/b"
+   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/b"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: initial version"
 }
@@ -57,6 +57,9 @@ setup_demo_repos()
 
 run_test()
 {
+   MULLE_VIRTUAL_ROOT="${directory}/project"
+   export MULLE_VIRTUAL_ROOT
+
    exekutor mkdir b
    exekutor touch b/DONTDELETEME
 
@@ -66,20 +69,71 @@ run_test()
       fail "add failed unexpectedly"
    fi
 
+   # node is expected to be local and nodelete
    if ! run_mulle_sourcetree add b
    then
       fail "add failed unexpectedly"
    fi
 
+   if [ "`mulle-sourcetree get b nodetype`" != "local" ]
+   then
+      fail "minion b is not local"
+   fi
+
+   if [ "`mulle-sourcetree get b marks`" != "nodelete" ]
+   then
+      fail "minion b is not nodelete"
+   fi
+
    run_mulle_sourcetree list
 
-   if ! run_mulle_sourcetree --recurse --share update
+   #
+   # this should not work, because project is not reachable from the
+   # false MULLE_VIRTUAL_ROOT (directory)
+   #
+   MULLE_VIRTUAL_ROOT="${directory}"
+
+   if run_mulle_sourcetree ${UPDATE_FLAGS} --share update
+   then
+      fail "update succeeded unexpectedly"
+   fi
+
+   #
+   # now with the proper root though
+   #
+   MULLE_VIRTUAL_ROOT="${directory}/project"
+
+   if ! run_mulle_sourcetree ${UPDATE_FLAGS} --share update
    then
       fail "update failed unexpectedly"
    fi
 
    [ -d "a" ]              || fail "a should exist"
    [ -f "b/DONTDELETEME" ] || fail "b/DONTDELETEME should exist"
+
+   #
+   # minion should not be removed, but a
+   #
+   if ! run_mulle_sourcetree clean
+   then
+      fail "update failed unexpectedly"
+   fi
+
+   [ -d "a" ]              && fail "a should not exist"
+   [ -f "b/DONTDELETEME" ] || fail "b/DONTDELETEME should exist"
+
+   MULLE_VIRTUAL_ROOT="${directory}/project"
+
+   #
+   # should also work, will defer to root
+   #
+   cd ${directory}/project/a
+
+   if ! run_mulle_sourcetree ${UPDATE_FLAGS} --share update
+   then
+      fail "update failed unexpectedly"
+   fi
+
 }
 
 
@@ -92,8 +146,6 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_SDE_VIRTUAL_ROOT="${directory}"
-   export MULLE_SDE_VIRTUAL_ROOT
 
    local project
 
@@ -106,6 +158,7 @@ main()
       rmdir_safer "${project}" &&
       mkdir_if_missing "${project}" &&
       cd "${project}" &&
+
       run_test
    ) || exit 1
    log_verbose "----- #1 PASSED -----"

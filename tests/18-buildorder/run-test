@@ -29,7 +29,7 @@ _setup_demo_repo_a()
    exekutor git tag "1.0.0"
 
    redirect_exekutor VERSION echo "2.0.0"
-   run_mulle_sourcetree add --nodetype git "file:///${reporoot}/b"
+   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/b"
    [ -f .mulle-sourcetree ] || fail "failed add"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: version 2.0.0 (tagged)"
@@ -71,13 +71,14 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_SDE_VIRTUAL_ROOT="${directory}"
-   export MULLE_SDE_VIRTUAL_ROOT
 
    local project
 
    project="${directory}/project"
    repos="${directory}/repositories"
+
+   MULLE_VIRTUAL_ROOT="${project}"
+   export MULLE_VIRTUAL_ROOT
 
    setup_demo_repos "${repos}"
 

@@ -256,14 +256,14 @@ sourcetree_fix_main()
 
    [ "$#" -eq 0 ] || sourcetree_fix_usage
 
-   if ! cfg_exists "/"
+   if ! cfg_exists "${SOURCETREE_START}"
    then
       log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
    fi
 
-   if ! db_is_ready "/"
+   if ! db_is_ready "${SOURCETREE_START}"
    then
-      fail "The sourctree isn't updated. Can't fix config entries"
+      fail "The sourcetree isn't updated. Can't fix config entries"
    fi
 
    local mode

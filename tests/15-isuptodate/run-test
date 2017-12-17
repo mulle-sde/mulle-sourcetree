@@ -18,8 +18,8 @@ _setup_demo_archive_a()
    local archives="$1"
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree add "file:///${archives}/b.tar.gz"
-   run_mulle_sourcetree add --url "file:///${archives}/d.tar.gz" "c/d"
+   run_mulle_sourcetree -e add "file:///${archives}/b.tar.gz"
+   run_mulle_sourcetree -e add --url "file:///${archives}/d.tar.gz" "c/d"
 
    ( cd .. ; tar cfz "${archives}/a.tar.gz" a)
 }
@@ -30,7 +30,7 @@ _setup_demo_archive_b()
    local archives="$1"
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree add "file:///${archives}/d.tar.gz"
+   run_mulle_sourcetree -e add "file:///${archives}/d.tar.gz"
 
    ( cd .. ; tar cfz "${archives}/b.tar.gz" b)
 }
@@ -91,7 +91,6 @@ run_test1()
    fi
 
    expected=".;update;directory;YES;NO
-root/a;update;missing;NO;NO"
 root/a;update;missing;NO;NO"
 
    if [ "${result}" != "${expected}" ]
@@ -160,6 +159,11 @@ main()
    (
       rmdir_safer "${project}" &&
       mkdir_if_missing "${project}" &&
+
+      MULLE_VIRTUAL_ROOT="${project}"
+      export MULLE_VIRTUAL_ROOT
+
+
       cd "${project}" &&
       run_test1 "${archives}"
    ) || exit 1
@@ -173,9 +177,6 @@ main()
 
 init()
 {
-   MULLE_SDE_VIRTUAL_ROOT="fake"
-   export MULLE_SDE_VIRTUAL_ROOT
-
    MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env library-path`" || exit 1
 
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1

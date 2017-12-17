@@ -371,7 +371,7 @@ main()
    local MULLE_TRACE_POSTPONE="NO"
 
    local SOURCETREE_CONFIG_FILE=".mulle-sourcetree"
-   local SOURCETREE_DB_DIR=".mulle-sourcetree.db"
+   local SOURCETREE_DB_NAME=".mulle-sourcetree.db"
    local MULLE_SOURCETREE_SHARE_DIR=""
 
    #
@@ -398,7 +398,7 @@ main()
             [ $# -eq 1 ] && fail "missing argument to \"$1\""
             shift
 
-            SOURCETREE_DB_DIR="$1"
+            SOURCETREE_DB_NAME="$1"
          ;;
 
          --config|--config-file)
