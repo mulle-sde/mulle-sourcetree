@@ -299,16 +299,16 @@ nodeline_print_header()
       ;;
    esac
 
-   printf "%s" "_address${sep}_nodetype${sep}_marks${sep}_userinfo${sep}_url"
+   printf "%s" "address${sep}nodetype${sep}marks${sep}userinfo${sep}url"
 
    case "${mode}" in
       *output_full*)
-         printf "%s" "${sep}_branch${sep}_tag${sep}_fetchoptions"
+         printf "%s" "${sep}branch${sep}_tag${sep}fetchoptions"
       ;;
    esac
    case "${mode}" in
       *output_uuid*)
-         printf "%s" "${sep}_uuid"
+         printf "%s" "${sep}uuid"
       ;;
    esac
    printf "\n"

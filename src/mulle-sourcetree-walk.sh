@@ -1222,10 +1222,10 @@ sourcetree_buildorder_main()
    if [ "${OPTION_MARKS}" = "YES" ]
    then
       sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE}" \
-         "echo" '"${MULLE_VIRTUAL_ADDRESS};${MULLE_MARKS}"'
+         "echo" '"${MULLE_FILENAME};${MULLE_MARKS}"'
    else
       sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE}" \
-         "echo" '"${MULLE_VIRTUAL_ADDRESS}"'
+         "echo" '"${MULLE_FILENAME}"'
    fi
 }
 

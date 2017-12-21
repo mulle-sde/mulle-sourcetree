@@ -44,14 +44,14 @@ other | ./install.sh  (Requires: [mulle-fetch](https://github.com/mulle-nat/mull
 #### Add dependencies with *add*
 
 ```
-$ mulle-sourcetree add https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz external/expat
-$ mulle-sourcetree add https://github.com/madler/zlib.git external/zlib
+$ mulle-sourcetree -e add --url https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz external/expat
+$ mulle-sourcetree -e add --url https://github.com/madler/zlib.git external/zlib
 ```
 
 #### Fetch dependencies with *update*
 
 ```
-$ mulle-sourcetree update
+$ mulle-sourcetree -e update
 ```
 
 
@@ -60,21 +60,30 @@ $ mulle-sourcetree update
 See your sourcetree with **list**:
 
 ```
-$ mulle-sourcetree list
-url                                                    address     branch  tag  marks
----                                                    -------         ------  ---  -----
-https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz  external/expat
-https://github.com/madler/zlib.git                     external/zlib   master
+$ mulle-sourcetree -e list --output-header
+address         nodetype  marks  userinfo  url
+-------         --------  -----  --------  ---
+external/expat  tar                        https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz
+external/zlib   git                        https://github.com/madler/zlib.git
 ```
 
 Get a graphical overview with **dotdump**:
 
 ```
-mulle-sourcetree dotdump > pic.dot
+$ mulle-sourcetree -e dotdump > pic.dot
 open pic.dot # view it with Graphviz (http://graphviz.org/)
 ```
 
 ![Picture](pic.png)
+
+
+#### Retrieve projects to build with *buildorder* 
+
+```
+$ mulle-sourcetree -e buildorder
+/private/tmp/a/external/expat
+/private/tmp/a/external/zlib
+```
 
 
 ## GitHub and Mulle kybernetiK
