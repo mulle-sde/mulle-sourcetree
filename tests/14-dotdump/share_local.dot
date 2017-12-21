@@ -6,10 +6,8 @@ digraph sourcetree
    "${MULLE_SOURCETREE_SHARE_DIR}/b" [ shape="folder", penwidth="2", color="maroon", style="" label="b"]
    "${MULLE_SOURCETREE_SHARE_DIR}" -> "${MULLE_SOURCETREE_SHARE_DIR}/d" [ style="", label="" ]
    "${MULLE_SOURCETREE_SHARE_DIR}/d" [ shape="folder", penwidth="2", color="maroon", style="" label="d"]
-   "project" -> "root" [ style="", label="" ]
-   "root" -> "root/a" [ style="", label="" ]
-   "root/a" [ shape="folder", penwidth="2", color="goldenrod", style="" label="a"]
+   "${MULLE_SOURCETREE_SHARE_DIR}" -> "${MULLE_SOURCETREE_SHARE_DIR}/a" [ style="", label="" ]
+   "${MULLE_SOURCETREE_SHARE_DIR}/a" [ shape="folder", penwidth="2", color="maroon", style="" label="a"]
    "project" [ shape="folder", penwidth="3", color="goldenrod", style="" label="project"]
    "${MULLE_SOURCETREE_SHARE_DIR}" [ shape="folder", penwidth="1", color="honeydew4", style="" label="${MULLE_SOURCETREE_SHARE_DIR}"]
-   "root" [ shape="folder", penwidth="1", color="honeydew4", style="" label="root"]
 }

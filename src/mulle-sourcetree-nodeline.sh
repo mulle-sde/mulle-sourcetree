@@ -98,7 +98,7 @@ nodeline_get_fetchoptions()
 }
 
 
-# if userinfo was last it could contain unquoted ;
+# if _userinfo was last it could contain unquoted ;
 # but who cares ?
 nodeline_get_userinfo()
 {
@@ -109,19 +109,19 @@ nodeline_get_userinfo()
 
 #
 # This function sets values of variables that should be declared
-# in the caller!
+# in the caller! That's why they have a _ prefix
 #
 #   # nodeline_parse
 #
-#   local branch
-#   local address
-#   local fetchoptions
-#   local nodetype
-#   local marks
-#   local tag
-#   local url
-#   local uuid
-#   local userinfo
+#   local _branch
+#   local _address
+#   local _fetchoptions
+#   local _nodetype
+#   local _marks
+#   local _tag
+#   local _url
+#   local _uuid
+#   local _userinfo
 #
 nodeline_parse()
 {
@@ -132,22 +132,22 @@ nodeline_parse()
    [ -z "${nodeline}" ] && internal_fail "nodeline_parse: nodeline is empty"
 
    IFS=";" \
-      read -r address nodetype marks uuid \
-              url branch tag fetchoptions \
-              userinfo  <<< "${nodeline}"
+      read -r _address _nodetype _marks _uuid \
+              _url _branch _tag _fetchoptions \
+              _userinfo  <<< "${nodeline}"
 
-   [ -z "${address}" ]   && internal_fail "address is empty"
-   [ -z "${nodetype}" ]  && internal_fail "nodetype is empty"
-   [ -z "${uuid}" ]      && internal_fail "uuid is empty"
+   [ -z "${_address}" ]   && internal_fail "_address is empty"
+   [ -z "${_nodetype}" ]  && internal_fail "_nodetype is empty"
+   [ -z "${_uuid}" ]      && internal_fail "_uuid is empty"
 
-   case "${userinfo}" in
+   case "${_userinfo}" in
       base64:*)
          local decoded
 
-         userinfo="`base64 --decode <<< "${userinfo:7}"`"
+         _userinfo="`base64 --decode <<< "${_userinfo:7}"`"
          if [ "$?" -ne 0 ]
          then
-            internal_fail "userinfo could not be base64 decoded."
+            internal_fail "_userinfo could not be base64 decoded."
          fi
       ;;
    esac
@@ -155,15 +155,15 @@ nodeline_parse()
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
    then
-      log_trace2 "ADDRESS:      \"${address}\""
-      log_trace2 "NODETYPE:     \"${nodetype}\""
-      log_trace2 "MARKS:        \"${marks}\""
-      log_trace2 "UUID:         \"${uuid}\""
-      log_trace2 "URL:          \"${url}\""
-      log_trace2 "BRANCH:       \"${branch}\""
-      log_trace2 "TAG:          \"${tag}\""
-      log_trace2 "FETCHOPTIONS: \"${fetchoptions}\""
-      log_trace2 "USERINFO:     \"${userinfo}\""
+      log_trace2 "ADDRESS:      \"${_address}\""
+      log_trace2 "NODETYPE:     \"${_nodetype}\""
+      log_trace2 "MARKS:        \"${_marks}\""
+      log_trace2 "UUID:         \"${_uuid}\""
+      log_trace2 "URL:          \"${_url}\""
+      log_trace2 "BRANCH:       \"${_branch}\""
+      log_trace2 "TAG:          \"${_tag}\""
+      log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
+      log_trace2 "USERINFO:     \"${_userinfo}\""
    fi
 
    :
@@ -183,7 +183,7 @@ nodeline_remove()
    IFS="
 "
    local nodeline
-   local url
+   local address
 
    for nodeline in ${nodelines}
    do
@@ -195,7 +195,7 @@ nodeline_remove()
          ;;
       esac
 
-      url="`nodeline_get_address "${nodeline}"`" || internal_fail "nodeline_get_address \"${nodeline}\""
+      address="`nodeline_get_address "${nodeline}"`" || internal_fail "nodeline_get_address \"${nodeline}\""
       if [ "${address}" != "${addresstoremove}" ]
       then
          echo "${nodeline}"
@@ -299,16 +299,16 @@ nodeline_print_header()
       ;;
    esac
 
-   printf "%s" "address${sep}nodetype${sep}marks${sep}userinfo${sep}url"
+   printf "%s" "_address${sep}_nodetype${sep}_marks${sep}_userinfo${sep}_url"
 
    case "${mode}" in
       *output_full*)
-         printf "%s" "${sep}branch${sep}tag${sep}fetchoptions"
+         printf "%s" "${sep}_branch${sep}_tag${sep}_fetchoptions"
       ;;
    esac
    case "${mode}" in
       *output_uuid*)
-         printf "%s" "${sep}uuid"
+         printf "%s" "${sep}_uuid"
       ;;
    esac
    printf "\n"
@@ -339,25 +339,25 @@ nodeline_print()
    local nodeline=$1
    local mode="$2"
 
-   local branch
-   local address
-   local fetchoptions
-   local marks
-   local nodetype
-   local tag
-   local url
-   local userinfo
-   local uuid
+   local _branch
+   local _address
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _tag
+   local _url
+   local _userinfo
+   local _uuid
 
 
    nodeline_parse "${nodeline}"
 
    case "${mode}" in
       *output_eval*)
-         url="`eval echo "${url}"`"
-         branch="`eval echo "${branch}"`"
-         tag="`eval echo "${tag}"`"
-         fetchoptions="`eval echo "${fetchoptions}"`"
+         _url="`eval echo "${_url}"`"
+         _branch="`eval echo "${_branch}"`"
+         _tag="`eval echo "${_tag}"`"
+         _fetchoptions="`eval echo "${_fetchoptions}"`"
       ;;
    esac
 
@@ -378,56 +378,59 @@ nodeline_print()
 
          local guess
 
-         guess="`node_guess_nodetype "${url}"`"
-
-         if [ "${nodetype}" != "git" -o "${guess}" != "git" ]
+         if [ ! -z "${_url}" ]
          then
-            line="`concat "${line}" "--nodetype '${nodetype}'"`"
-         fi
-         if [ ! -z "${url}" ]
-         then
-            line="`concat "${line}" "--url '${url}'"`"
-         fi
-         if [ ! -z "${marks}" ]
-         then
-            line="`concat "${line}" "--marks '${marks}'"`"
+            guess="`node_guess_nodetype "${_url}"`"
          fi
 
-         if [ ! -z "${branch}" -a "${branch}" != "master" ]
+         if [ "${_nodetype}" != "git" -o "${guess}" != "git" ]
          then
-            line="`concat "${line}" "--branch '${branch}'"`"
+            line="`concat "${line}" "--nodetype '${_nodetype}'"`"
          fi
-         if [ ! -z "${fetchoptions}" ]
+         if [ ! -z "${_url}" ]
          then
-            line="`concat "${line}" "--fetchoptions '${fetchoptions}'"`"
+            line="`concat "${line}" "--url '${_url}'"`"
          fi
-         if [ ! -z "${tag}" ]
+         if [ ! -z "${_marks}" ]
          then
-            line="`concat "${line}" "--tag '${tag}'"`"
-         fi
-         if [ ! -z "${userinfo}" ]
-         then
-            line="`concat "${line}" "--userinfo '${userinfo}'"`"
+            line="`concat "${line}" "--marks '${_marks}'"`"
          fi
 
-         line="`concat "${line}" "'${address}'"`"
+         if [ ! -z "${_branch}" -a "${_branch}" != "master" ]
+         then
+            line="`concat "${line}" "--branch '${_branch}'"`"
+         fi
+         if [ ! -z "${_fetchoptions}" ]
+         then
+            line="`concat "${line}" "--fetchoptions '${_fetchoptions}'"`"
+         fi
+         if [ ! -z "${_tag}" ]
+         then
+            line="`concat "${line}" "--tag '${_tag}'"`"
+         fi
+         if [ ! -z "${_userinfo}" ]
+         then
+            line="`concat "${line}" "--userinfo '${_userinfo}'"`"
+         fi
+
+         line="`concat "${line}" "'${_address}'"`"
 
          echo "${line}"
       ;;
 
       *output_column*)
          # need space for column if empty
-         printf "%s" "${address:-" "}${sep}${nodetype:- }\
-${sep}${marks:- }${sep}${userinfo:- }${sep}${url:-  }"
+         printf "%s" "${_address:-" "}${sep}${_nodetype:- }\
+${sep}${_marks:- }${sep}${_userinfo:- }${sep}${_url:-  }"
          case "${mode}" in
             *output_full*)
-               printf "%s" "${sep}${branch:- }\
-${sep}${tag:- }${sep}${fetchoptions:- }"
+               printf "%s" "${sep}${_branch:- }\
+${sep}${_tag:- }${sep}${_fetchoptions:- }"
             ;;
          esac
          case "${mode}" in
             *output_uuid*)
-               printf "%s" "${sep}${uuid:-" "}"
+               printf "%s" "${sep}${_uuid:-" "}"
             ;;
          esac
          printf "\n"
@@ -435,16 +438,16 @@ ${sep}${tag:- }${sep}${fetchoptions:- }"
 
 
       *)
-         printf "%s" "${address}${sep}${nodetype}${sep}${marks}${sep}${userinfo}${sep}${url}"
+         printf "%s" "${_address}${sep}${_nodetype}${sep}${_marks}${sep}${_userinfo}${sep}${_url}"
          case "${mode}" in
             *output_full*)
-               printf "%s" "${sep}${branch}${sep}${tag}${sep}${fetchoptions}"
+               printf "%s" "${sep}${_branch}${sep}${_tag}${sep}${_fetchoptions}"
 
             ;;
          esac
          case "${mode}" in
             *output_uuid*)
-               printf "%s" "${sep}${uuid}"
+               printf "%s" "${sep}${_uuid}"
             ;;
          esac
          printf "\n"

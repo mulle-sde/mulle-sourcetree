@@ -1,6 +1,6 @@
 # mulle-brew, C/C++/Objective-C developer sandboxing with homebrew
 
-![Last version](https://img.shields.io/github/tag/{{PUBLISHER}}/mulle-sourcetree.svg)
+![Last version](https://img.shields.io/github/_tag/{{PUBLISHER}}/mulle-sourcetree.svg)
 
 [Homebrew](//brew.sh) is the de facto standard package manager of OS X. It is also
 available on Linux as [Linuxbrew](linuxbrew.sh).

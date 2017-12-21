@@ -106,7 +106,7 @@ html_print_node()
    local nodetype="$5"
    local marks="$6"
    local fetchoptions="$7"
-   local useroptions="$8"
+   local userinfo="$8"
    local uuid="$9"
 
    case "${identifier}" in
@@ -121,7 +121,6 @@ html_print_node()
          internal_fail "identifier \"${identifier}\" must be quoted"
       ;;
    esac
-
 
    bgcolor="lightgray"
    fontcolor="black"
@@ -240,9 +239,9 @@ _get_fs_status()
      return
    fi
 
-   if ! db_dir_exists "${datasource}" ]
+   if ! db_dir_exists "${datasource}"
    then
-     log_debug "${destination} has no db (but is a sourcetree)"
+     log_debug "${datasource} has no db (but is a sourcetree)"
      echo "config"
      return
    fi
@@ -250,19 +249,19 @@ _get_fs_status()
    db_is_ready "${datasource}"
    case $? in
       1)
-         log_debug "${destination} db not ready"
+         log_debug "\"${datasource}\" db not ready"
          echo "database"
-         return
+         return 0
       ;;
 
       2)
-         log_debug "${destination} db needs reset"
+         log_debug "\${datasource}\" db needs reset"
          echo "reset"
-         return
+         return 0
       ;;
    esac
 
-   log_debug "${destination} db ready"
+   log_debug "${datasource} db ready"
    echo "ready"
 }
 
@@ -395,6 +394,8 @@ penwidth=\"${penwidth}\", \
 color=\"${color}\", \
 style=\"${style}\" \
 label=\"`basename -- "${address}"`\"]"
+
+   log_debug "print_node done"
 }
 
 
@@ -410,8 +411,10 @@ walk_dotdump()
    local uuid="${MULLE_UUID}"
    local marks="${MULLE_MARKS}"
    local fetchoptions="${MULLE_FETCHOPTIONS}"
-   local useroptions="${MULLE_USEROPTIONS}"
-   local destination="${MULLE_DESTINATION}"
+   local userinfo="${MULLE_USERINFO}"
+   local destination="${MULLE_VIRTUAL_ADDRESS}"
+   local filename="${MULLE_FILENAME}"
+   local virtual="${MULLE_VIRTUAL}"
 
    local identifier
    local previdentifier
@@ -419,9 +422,9 @@ walk_dotdump()
    local component
    local isshared
 
-   log_debug "address:     ${MULLE_ADDRESS}"
-   log_debug "destination: ${MULLE_DESTINATION}"
-   log_debug "virtual:     ${MULLE_VIRTUAL}"
+   log_debug "address:     ${address}"
+   log_debug "destination: ${destination}"
+   log_debug "virtual:     ${virtual}"
 
    if [ "${OPTION_OUTPUT_EVAL}" = "YES" ]
    then
@@ -535,16 +538,15 @@ walk_dotdump()
    then
       html_print_node "${identifier}" \
                       "${isshared}"   \
-                                      "${url}" \
-                                      "${address}" \
-                                      "${branch}" \
-                                      "${tag}" \
-                                      "${nodetype}" \
-                                      "${marks}" \
-                                      "${fetchoptions}" \
-                                      "${userinfo}" \
-                                      "${uuid}" \
-
+                         "${url}" \
+                         "${address}" \
+                         "${branch}" \
+                         "${tag}" \
+                         "${nodetype}" \
+                         "${marks}" \
+                         "${fetchoptions}" \
+                         "${userinfo}" \
+                         "${uuid}"
    else
       print_node "default" \
                  "${destination}" \
@@ -554,6 +556,8 @@ walk_dotdump()
    fi
 
    IFS="${DEFAULT_IFS}"
+
+   log_entry "walk_dotdump done"
 
    :
 }

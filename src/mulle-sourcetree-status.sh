@@ -59,22 +59,20 @@ sourcetree_is_uptodate()
 {
    log_entry "sourcetree_is_uptodate" "$@"
 
-   local database="$1"
-   local projectdir="$2"
+   local datasource="$1"
 
-   [ -z "${database}" ] && internal_fail "database is empty"
-   [ -z "${projectdir}" ] && internal_fail "projectdir is empty"
+   [ -z "${datasource}" ] && internal_fail "datasource is empty"
 
    local configtimestamp
    local dbtimestamp
 
-   configtimestamp="`cfg_timestamp "${projectdir}"`"
+   configtimestamp="`cfg_timestamp "${datasource}"`"
    if [ -z "${configtimestamp}" ]
    then
       return 2
    fi
 
-   dbtimestamp="`db_get_timestamp "${database}"`"
+   dbtimestamp="`db_get_timestamp "${datasource}"`"
 
    log_debug "Timestamps: config=${configtimestamp} db=${dbtimestamp:-0}"
 
@@ -147,21 +145,20 @@ emit_status()
    local address="$1"
    local directory="$2"
    local datasource="$3"
-   local projectdir="$4"
-   local marks="$5"
-   local mode="$6"
+   local marks="$4"
+   local mode="$5"
 
    if [ -z "${directory}" ]
    then
       datasource="${SOURCETREE_START}"
       directory="."
-      projectdir="${SOURCETREE_START}"
+   else
+      datasource="/${MULLE_VIRTUAL_ADDRESS}"
    fi
 
    log_debug "address:    ${address}"
    log_debug "directory:  ${directory}"
    log_debug "datasource: ${datasource}"
-   log_debug "projectdir: ${projectdir}"
    log_debug "marks:      ${marks}"
    log_debug "mode:       ${mode}"
 
@@ -172,12 +169,12 @@ emit_status()
    configexists="NO"
    dbexists="NO"
 
-   if cfg_exists "${projectdir}"
+   if cfg_exists "${datasource}"
    then
       configexists="YES"
    fi
 
-   if db_dir_exists "${projectdir}"
+   if db_dir_exists "${datasource}"
    then
       dbexists="YES"
    fi
@@ -213,9 +210,9 @@ emit_status()
          fi
          exekutor echo "${directory};norequire;${fs};${configexists};${dbexists}"
       else
-         if [ -z "${url}" ]
+         if [ -z "${_url}" ]
          then
-            log_fluff "\"${directory}\" does not exist and and is required ($PWD), but url is empty"
+            log_fluff "\"${directory}\" does not exist and and is required ($PWD), but _url is empty"
             if [ "${OPTION_IS_UPTODATE}" = "YES" ]
             then
                exit 2   # indicate brokenness
@@ -310,7 +307,7 @@ emit_status()
                return 0
             fi
 
-            if ! sourcetree_is_uptodate "${datasource}" "${projectdir}"
+            if ! sourcetree_is_uptodate "${datasource}"
             then
                log_fluff "\"${directory}\" database is stale ($PWD)"
 
@@ -333,9 +330,8 @@ walk_status()
    log_entry "walk_status" "$@"
 
    emit_status "${MULLE_ADDRESS}" \
-               "${MULLE_DESTINATION}" \
+               "${MULLE_VIRTUAL_ADDRESS}" \
                "${MULLE_DATASOURCE}" \
-               "${MULLE_PROJECTDIR}" \
                "${MULLE_MARKS}" \
                "${MULLE_MODE}"
 }

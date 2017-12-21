@@ -47,32 +47,32 @@ walk_clean()
 {
    log_entry "${C_RESET}walk_clean${C_DEBUG}" "${MULLE_DESTINATION}" "${MULLE_MARKS}"
 
-   local destination
+   local filename
    local marks
 
-   destination="${MULLE_DESTINATION}"
+   filename="${MULLE_FILENAME}"
    marks="${MULLE_MARKS}"
 
    if nodemarks_contain_nodelete "${marks}"
    then
-      log_fluff "\"${destination}\" is protected from delete"
-      NO_DELETES="`add_line "${NO_DELETES}" "${destination}" `"
+      log_fluff "\"${filename}\" is protected from delete"
+      NO_DELETES="`add_line "${NO_DELETES}" "${filename}" `"
       return
    fi
 
    # could move stuff to graveyard, but we don't
-   if [ -e "${destination}" ]
+   if [ -e "${filename}" ]
    then
-      if [ -d "${destination}" ]
+      if [ -d "${filename}" ]
       then
-         log_fluff "Dictionary \"${destination}\" marked for delete."
-         DELETE_DIRECTORIES="`add_line "${DELETE_DIRECTORIES}" "${destination}" `"
+         log_fluff "Dictionary \"${filename}\" marked for delete."
+         DELETE_DIRECTORIES="`add_line "${DELETE_DIRECTORIES}" "${filename}" `"
       else
-         log_fluff "File \"${destination}\" markef for delete."
-         DELETE_FILES="`add_line "${DELETE_FILES}" "${destination}" `"
+         log_fluff "File \"${filename}\" marked for delete."
+         DELETE_FILES="`add_line "${DELETE_FILES}" "${filename}" `"
       fi
    else
-      log_verbose "Destination \"${destination}\" doesn't exist."
+      log_verbose "Destination \"${filename}\" doesn't exist."
    fi
 }
 
@@ -86,7 +86,7 @@ sourcetree_clean()
    local filtermarks="$3"
    local mode="$4"
 
-   local  OPTION_EVAL_EXEKUTOR
+   local OPTION_EVAL_EXEKUTOR
 
    OPTION_EVAL_EXEKUTOR="NO"
 
@@ -116,29 +116,24 @@ sourcetree_clean()
    log_debug "DELETE_DIRECTORIES: ${DELETE_DIRECTORIES}"
    log_debug "NO_DELETES:         ${NO_DELETES}"
 
+   # create a graveyard for the files
+
+   local uuid
+
    IFS="
 "
-   for filename in ${DELETE_FILES}
+   for filename in ${DELETE_FILES} ${DELETE_DIRECTORIES}
    do
       IFS="${DEFAULT_IFS}"
 
       if ! fgrep -q -x "${filename}" <<< "${NO_DELETES}"
       then
-         remove_file_if_present "${filename}"
+         uuid="`node_uuidgen`"
+
+         db_bury "${SOURCETREE_START}" "${uuid}" "${filename}"
       fi
    done
 
-   IFS="
-"
-   for filename in ${DELETE_DIRECTORIES}
-   do
-      IFS="${DEFAULT_IFS}"
-
-      if ! fgrep -q -x "${filename}" <<< "${NO_DELETES}"
-      then
-         rmdir_safer "${filename}"
-      fi
-   done
    IFS="${DEFAULT_IFS}"
 }
 

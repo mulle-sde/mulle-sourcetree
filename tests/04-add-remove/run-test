@@ -42,7 +42,7 @@ main()
 
    cd "${directory}"
 
-   if [ -f ".mulle-sourcetree" ]
+   if [ -f ".mulle-sourcetree/config" ]
    then
       fail "config should not exist"
    fi
@@ -67,7 +67,7 @@ main()
       fail "/ add succeeded unexpectedly"
    fi
 
-   if ! [ -f ".mulle-sourcetree" ]
+   if ! [ -f ".mulle-sourcetree/config" ]
    then
       fail "config should exist now"
    fi
@@ -92,7 +92,7 @@ main()
       fail "remove \".\" succeeded unexpectedly"
    fi
 
-   if [ ! -f ".mulle-sourcetree" ]
+   if [ ! -f ".mulle-sourcetree/config" ]
    then
       fail "config should still exist now"
    fi
@@ -102,7 +102,7 @@ main()
       fail "remove \"a\" failed unexpectedly"
    fi
 
-   if [ -f ".mulle-sourcetree" ]
+   if [ -f ".mulle-sourcetree/config" ]
    then
       fail "config should not exist now"
    fi

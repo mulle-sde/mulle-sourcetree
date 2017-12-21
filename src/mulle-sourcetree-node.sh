@@ -87,7 +87,7 @@ node_guess_nodetype()
 
       *)
          result="`${MULLE_FETCH:-mulle-fetch} typeguess "${evaledurl}"`"
-         log_fluff "${MULLE_FETCH:-mulle-fetch} determined \"${result}\" as nodetype from \
+         log_fluff "${MULLE_FETCH:-mulle-fetch} determined \"${result}\" as _nodetype from \
 url ($evaledurl)"
          echo "${result}"
       ;;
@@ -104,14 +104,14 @@ node_fetch_operation()
 
    [ -z "${opname}" ] && internal_fail "opname is empty"
 
-   local url="$1"; shift
-   local address="$1"; shift
-   local branch="$1"; shift
-   local tag="$1"; shift
-   local nodetype="$1"; shift
-   local fetchoptions="$1"; shift
+   local _url="$1"; shift
+   local _address="$1"; shift
+   local _branch="$1"; shift
+   local _tag="$1"; shift
+   local _nodetype="$1"; shift
+   local _fetchoptions="$1"; shift
 
-   [ -z "${url}" ] && fail "URL is empty"
+   [ -z "${_url}" ] && fail "URL is empty"
 
    local rval
    local evaledurl
@@ -119,36 +119,36 @@ node_fetch_operation()
    local evaledtag
    local evaledfetchoptions
 
-   evaledurl="`eval echo "$url"`"
-   [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
-   evaledtag="`eval echo "$tag"`"
-   evaledbranch="`eval echo "$branch"`"
-   evaledfetchoptions="`eval echo "$fetchoptions"`"
+   evaledurl="`eval echo "$_url"`"
+   [ -z "${evaledurl}" ] && fail "URL \"${_url}\" evaluates to empty"
+   evaledtag="`eval echo "$_tag"`"
+   evaledbranch="`eval echo "$_branch"`"
+   evaledfetchoptions="`eval echo "$_fetchoptions"`"
 
    log_info "Looking for local source of ${C_RESET_BOLD}${evaledurl}${C_INFO}"
 
    local localurl
 
-   localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} "search-local" --scm "'${nodetype}'" \
+   localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} "search-local" --scm "'${_nodetype}'" \
                                                             --tag "'${evaledtag}'" \
                                                             --branch "'${evaledbranch}'" \
                                                             --options "'${evaledfetchoptions}'" \
                                                             --url "'${evaledurl}'" \
-                                                            "'${address}'" )"
+                                                            "'${_address}'" )"
    if [ ! -z "${localurl}" ]
    then
       evaledurl="${localurl}"
    fi
 
-   log_info "Fetching ${C_MAGENTA}${C_BOLD}${address}${C_INFO} from \
+   log_info "Fetching ${C_MAGENTA}${C_BOLD}${_address}${C_INFO} from \
 ${C_RESET_BOLD}${evaledurl}${C_INFO}"
-   eval_exekutor ${MULLE_FETCH:-mulle-fetch} "${opname}" --scm "'${nodetype}'" \
+   eval_exekutor ${MULLE_FETCH:-mulle-fetch} "${opname}" --scm "'${_nodetype}'" \
                                                          --tag "'${evaledtag}'" \
                                                          --branch "'${evaledbranch}'" \
                                                          --options "'${evaledfetchoptions}'" \
                                                          --url "'${evaledurl}'" \
                                                          ${options} \
-                                                         "'${address}'"
+                                                         "'${_address}'"
 }
 
 
@@ -167,55 +167,55 @@ node_list_operations()
 #
 #   # node_augmentline
 #
-#   local branch
-#   local address
-#   local fetchoptions
-#   local marks
-#   local nodetype
-#   local tag
-#   local url
-#   local userinfo
-#   local uuid
+#   local _branch
+#   local _address
+#   local _fetchoptions
+#   local _marks
+#   local _nodetype
+#   local _tag
+#   local _url
+#   local _userinfo
+#   local _uuid
 #
 node_augment()
 {
    local mode="$1"
 
-   if [ -z "${uuid}" ]
+   if [ -z "${_uuid}" ]
    then
-      uuid="$(node_uuidgen)"
+      _uuid="$(node_uuidgen)"
    fi
 
-   nodetype="${nodetype:-local}"
+   _nodetype="${_nodetype:-local}"
 
-   case "${nodetype}" in
+   case "${_nodetype}" in
       "local")
-         # locals have no url and that is important
-         if [ ! -z "${url}" ]
+         # locals have no _url and that is important
+         if [ ! -z "${_url}" ]
          then
-            log_warning "Url is always empty for nodetype \"${nodetype}\""
+            log_warning "Url is always empty for _nodetype \"${_nodetype}\""
          fi
-         url=
+         _url=
 
          #
          # since they are local, they can not be deleted and are always required
          #
          local before
 
-         before="${marks}"
+         before="${_marks}"
 
-         if nodemarks_contain_delete "${marks}"
+         if nodemarks_contain_delete "${_marks}"
          then
-            marks="`nodemarks_remove_delete "${marks}"`"
+            _marks="`nodemarks_remove_delete "${_marks}"`"
          fi
-         if ! nodemarks_contain_require "${marks}"
+         if ! nodemarks_contain_require "${_marks}"
          then
-            marks="`nodemarks_add_require "${marks}"`"
+            _marks="`nodemarks_add_require "${_marks}"`"
          fi
 
-         if [ "${before}" != "${marks}" ]
+         if [ "${before}" != "${_marks}" ]
          then
-            log_verbose "Node of nodetype \"${nodetype}\" gained marks \"nodelete,require\""
+            log_verbose "Node of _nodetype \"${_nodetype}\" gained _marks \"nodelete,require\""
          fi
       ;;
    esac
@@ -225,37 +225,36 @@ node_augment()
       ;;
 
       *)
-         address="`node_sanitized_address "${address}"`" || exit 1
+         _address="`node_sanitized_address "${_address}"`" || exit 1
       ;;
    esac
 
-
    if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
    then
-      log_trace2 "ADDRESS:      \"${address}\""
-      log_trace2 "NODETYPE:     \"${nodetype}\""
-      log_trace2 "MARKS:        \"${marks}\""
-      log_trace2 "UUID:         \"${uuid}\""
-      log_trace2 "URL:          \"${url}\""
-      log_trace2 "BRANCH:       \"${branch}\""
-      log_trace2 "TAG:          \"${tag}\""
-      log_trace2 "FETCHOPTIONS: \"${fetchoptions}\""
-      log_trace2 "USERINFO:     \"${userinfo}\""
+      log_trace2 "ADDRESS:      \"${_address}\""
+      log_trace2 "NODETYPE:     \"${_nodetype}\""
+      log_trace2 "MARKS:        \"${_marks}\""
+      log_trace2 "UUID:         \"${_uuid}\""
+      log_trace2 "URL:          \"${_url}\""
+      log_trace2 "BRANCH:       \"${_branch}\""
+      log_trace2 "TAG:          \"${_tag}\""
+      log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
+      log_trace2 "USERINFO:     \"${_userinfo}\""
    fi
 
    # this is done  during auto already
-   # case "${address}" in
+   # case "${_address}" in
    #    ..*|~*|/*)
-   #     fail "address \"${address}\" is invalid ($nodeline)"
+   #     fail "_address \"${_address}\" is invalid ($nodeline)"
    #    ;;
    # esac
 
-   [ -z "${uuid}" ]     && internal_fail "uuid is empty"
-   [ -z "${nodetype}" ] && internal_fail "nodetype is empty"
-   [ -z "${address}" ]  && internal_fail "address is empty"
+   [ -z "${_uuid}" ]     && internal_fail "_uuid is empty"
+   [ -z "${_nodetype}" ] && internal_fail "_nodetype is empty"
+   [ -z "${_address}" ]  && internal_fail "_address is empty"
 
    # does not work
-   [ "${address}" = "." ]  && fail "Node address is '.'"
+   [ "${_address}" = "." ]  && fail "Node address is '.'"
 
    :
 }
@@ -286,31 +285,31 @@ nodemarks_key_check()
 #
 nodemarks_add()
 {
-   local marks="$1"
+   local _marks="$1"
    local key="$2"
 
    nodemarks_key_check "${key}"
 
    # is this faster than case ?
    IFS=","
-   for i in ${marks}
+   for i in ${_marks}
    do
       IFS="${DEFAULT_IFS}"
       if [ "$i" = "${key}" ]
       then
-         echo "${marks}"
+         echo "${_marks}"
          return
       fi
    done
    IFS="${DEFAULT_IFS}"
 
-   comma_concat "${marks}" "${key}"
+   comma_concat "${_marks}" "${key}"
 }
 
 
 nodemarks_remove()
 {
-   local marks="$1"
+   local _marks="$1"
    local key="$2"
 
    nodemarks_key_check "${key}"
@@ -318,7 +317,7 @@ nodemarks_remove()
    local result
 
    IFS=","
-   for i in ${marks}
+   for i in ${_marks}
    do
       IFS="${DEFAULT_IFS}"
 
@@ -335,14 +334,14 @@ nodemarks_remove()
 
 _nodemarks_contain()
 {
-   local marks="$1"
+   local _marks="$1"
    local key="$2"
 
    nodemarks_key_check "${key}"
 
    # is this faster than case ?
    IFS=","
-   for i in ${marks}
+   for i in ${_marks}
    do
       IFS="${DEFAULT_IFS}"
       if [ "${i}" = "${key}" ]
@@ -358,16 +357,16 @@ _nodemarks_contain()
 
 nodemarks_contain()
 {
-   local marks="$1"
+   local _marks="$1"
    local key="$2"
 
    case "${key}" in
       no*)
-         _nodemarks_contain "${marks}" "${key}"
+         _nodemarks_contain "${_marks}" "${key}"
       ;;
 
       *)
-         ! _nodemarks_contain "${marks}" "no${key}"
+         ! _nodemarks_contain "${_marks}" "no${key}"
       ;;
    esac
 
@@ -376,7 +375,7 @@ nodemarks_contain()
 
 nodemarks_intersect()
 {
-   local marks="$1"
+   local _marks="$1"
    local anymarks="$2"
 
    local key
@@ -385,7 +384,7 @@ nodemarks_intersect()
    for key in ${anymarks}
    do
       IFS="${DEFAULT_IFS}"
-      if nodemarks_contain "${marks}" "${key}"
+      if nodemarks_contain "${_marks}" "${key}"
       then
          return 0
       fi
@@ -781,96 +780,96 @@ node_print_nodeline()
 {
    log_entry "node_print_nodeline" "$@"
 
-   case "${url}" in
+   case "${_url}" in
       *\;*)
-         fail "url \"${url}\" contains semicolon"
+         fail "_url \"${_url}\" contains semicolon"
       ;;
    esac
 
-   case "${address}" in
+   case "${_address}" in
       *\;*)
-         fail "Address \"${address}\" contains semicolon"
+         fail "Address \"${_address}\" contains semicolon"
       ;;
 
       "")
-         internal_fail "Address \"${address}\" is empty"
+         internal_fail "Address \"${_address}\" is empty"
       ;;
    esac
 
-   case "${branch}" in
+   case "${_branch}" in
       *\;*)
-         fail "Branch \"${branch}\" contains semicolon"
+         fail "Branch \"${_branch}\" contains semicolon"
       ;;
    esac
 
-   case "${tag}" in
+   case "${_tag}" in
       *\;*)
-         fail "Tag \"${tag}\" contains semicolon"
+         fail "Tag \"${_tag}\" contains semicolon"
       ;;
    esac
 
-   case "${nodetype}" in
+   case "${_nodetype}" in
       *\;*)
-         fail "Nodetype \"${nodetype}\" contains semicolon"
+         fail "Nodetype \"${_nodetype}\" contains semicolon"
       ;;
       *\,*)
-         fail "Nodetype \"${nodetype}\" contains comma"
+         fail "Nodetype \"${_nodetype}\" contains comma"
       ;;
       "")
-         internal_fail "nodetype is empty"
+         internal_fail "_nodetype is empty"
       ;;
    esac
 
-   case "${uuid}" in
+   case "${_uuid}" in
       *\;*)
-         fail "UUID \"${uuid}\" contains semicolon"
+         fail "UUID \"${_uuid}\" contains semicolon"
       ;;
       "")
-         internal_fail "uuid is empty"
+         internal_fail "_uuid is empty"
       ;;
    esac
 
-   case "${marks}" in
+   case "${_marks}" in
       *\;*)
-         fail "Marks \"${marks}\" contain semicolon"
+         fail "Marks \"${_marks}\" contain semicolon"
       ;;
 
       ,*|*,,*|*,)
-         fail "Marks \"${marks}\" are ugly, remove excess commata"
+         fail "Marks \"${_marks}\" are ugly, remove excess commata"
       ;;
    esac
 
-   case "${fetchoptions}" in
+   case "${_fetchoptions}" in
       *\;*)
-         fail "Fetchoptions \"${fetchoptions}\" contains semicolon"
+         fail "Fetchoptions \"${_fetchoptions}\" contains semicolon"
       ;;
 
       ,*|*,,*|*,)
-         fail "Fetchoptions \"${fetchoptions}\" are ugly, remove excess commata"
+         fail "Fetchoptions \"${_fetchoptions}\" are ugly, remove excess commata"
       ;;
    esac
 
-   if egrep -q '[^A-Za-z0-9%&/()=+\-_.,$# ]' <<< "${userinfo}"
+   if egrep -q '[^A-Za-z0-9%&/()=+\-_.,$# ]' <<< "${_userinfo}"
    then
-      userinfo="base64:`base64 <<< "${userinfo}"`"
+      _userinfo="base64:`base64 <<< "${_userinfo}"`"
    fi
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
    then
-      log_trace2 "ADDRESS:      \"${address}\""
-      log_trace2 "NODETYPE:     \"${nodetype}\""
-      log_trace2 "MARKS:        \"${marks}\""
-      log_trace2 "UUID:         \"${uuid}\""
-      log_trace2 "URL:          \"${url}\""
-      log_trace2 "BRANCH:       \"${branch}\""
-      log_trace2 "TAG:          \"${tag}\""
-      log_trace2 "FETCHOPTIONS: \"${fetchoptions}\""
-      log_trace2 "USERINFO:     \"${userinfo}\""
+      log_trace2 "ADDRESS:      \"${_address}\""
+      log_trace2 "NODETYPE:     \"${_nodetype}\""
+      log_trace2 "MARKS:        \"${_marks}\""
+      log_trace2 "UUID:         \"${_uuid}\""
+      log_trace2 "URL:          \"${_url}\""
+      log_trace2 "BRANCH:       \"${_branch}\""
+      log_trace2 "TAG:          \"${_tag}\""
+      log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
+      log_trace2 "USERINFO:     \"${_userinfo}\""
    fi
 
-   echo "${address};${nodetype};${marks};${uuid};\
-${url};${branch};${tag};${fetchoptions};\
-${userinfo}"
+   echo "${_address};${_nodetype};${_marks};${_uuid};\
+${_url};${_branch};${_tag};${_fetchoptions};\
+${_userinfo}"
 }
 
 
@@ -879,7 +878,7 @@ nodetypes_contain()
    log_entry "nodetypes_contain" "$@"
 
    local nodetypes="$1"
-   local nodetype="$2"
+   local _nodetype="$2"
 
    local key
 
@@ -887,7 +886,7 @@ nodetypes_contain()
    for key in ${nodetypes}
    do
       IFS="${DEFAULT_IFS}"
-      if [ "${nodetype}" = "${key}" ]
+      if [ "${_nodetype}" = "${key}" ]
       then
          return 0
       fi

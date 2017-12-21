@@ -5,30 +5,30 @@ run_test_1()
 {
    local nodeline
 
-   nodeline="address;nodetype;marks;uuid;url;branch;tag;fetchoptions;userinfo"
+   nodeline="_address;_nodetype;_marks;_uuid;_url;_branch;_tag;_fetchoptions;_userinfo"
 
-   local branch
-   local address
-   local fetchoptions
+   local _branch
+   local _address
+   local _fetchoptions
    local name
-   local nodetype
-   local marks
-   local tag
-   local url
-   local userinfo
-   local uuid
+   local _nodetype
+   local _marks
+   local _tag
+   local _url
+   local _userinfo
+   local _uuid
 
    nodeline_parse "${nodeline}"
 
-   [ "${address}"      = "address" ]      || fail "wrong address \"${address}\""
-   [ "${url}"          = "url" ]          || fail "wrong name \"${url}\""
-   [ "${branch}"       = "branch" ]       || fail "wrong branch \"${branch}\""
-   [ "${tag}"          = "tag" ]          || fail "wrong tag \"${tag}\""
-   [ "${nodetype}"     = "nodetype" ]     || fail "wrong nodetype \"${nodetype}\""
-   [ "${marks}"        = "marks" ]        || fail "wrong marks \"${marks}\""
-   [ "${fetchoptions}" = "fetchoptions" ] || fail "wrong nodetype \"${fetchoptions}\""
-   [ "${userinfo}"     = "userinfo" ]     || fail "wrong userinfo \"${userinfo}\""
-   [ "${uuid}"         = "uuid" ]         || fail "wrong uuid \"${uuid}\""
+   [ "${_address}"      = "_address" ]      || fail "wrong _address \"${_address}\""
+   [ "${_url}"          = "_url" ]          || fail "wrong name \"${_url}\""
+   [ "${_branch}"       = "_branch" ]       || fail "wrong _branch \"${_branch}\""
+   [ "${_tag}"          = "_tag" ]          || fail "wrong _tag \"${_tag}\""
+   [ "${_nodetype}"     = "_nodetype" ]     || fail "wrong _nodetype \"${_nodetype}\""
+   [ "${_marks}"        = "_marks" ]        || fail "wrong _marks \"${_marks}\""
+   [ "${_fetchoptions}" = "_fetchoptions" ] || fail "wrong _nodetype \"${_fetchoptions}\""
+   [ "${_userinfo}"     = "_userinfo" ]     || fail "wrong _userinfo \"${_userinfo}\""
+   [ "${_uuid}"         = "_uuid" ]         || fail "wrong _uuid \"${_uuid}\""
 
    local printed
 
@@ -40,27 +40,27 @@ run_test_1()
 
 run_test_2()
 {
-   local branch
-   local address
-   local fetchoptions
+   local _branch
+   local _address
+   local _fetchoptions
    local name
-   local nodetype
-   local marks
-   local tag
-   local url
-   local userinfo
+   local _nodetype
+   local _marks
+   local _tag
+   local _url
+   local _userinfo
 
-   nodeline_parse "whatever;xyz;;uuid-required;abc"
+   nodeline_parse "whatever;xyz;;_uuid-required;abc"
 
-   [ "${url}"     = "abc" ]          || fail "wrong name \"${url}\""
-   [ "${address}" = "whatever" ]     || fail "wrong address \"${address}\""
-   [ -z "${branch}"       ]          || fail "wrong branch \"${branch}\""
-   [ -z "${tag}"          ]          || fail "wrong tag \"${tag}\""
-   [ "${nodetype}" = "xyz"  ]        || fail "wrong nodetype \"${nodetype}\""
-   [ -z "${marks}"        ]          || fail "wrong marks \"${marks}\""
-   [ -z "${fetchoptions}" ]          || fail "wrong nodetype \"${fetchoptions}\""
-   [ -z "${userinfo}"     ]          || fail "wrong userinfo \"${userinfo}\""
-   [ "${uuid}" = "uuid-required" ]   || fail "wrong uuid \"${uuid}\""
+   [ "${_url}"     = "abc" ]          || fail "wrong name \"${_url}\""
+   [ "${_address}" = "whatever" ]     || fail "wrong _address \"${_address}\""
+   [ -z "${_branch}"       ]          || fail "wrong _branch \"${_branch}\""
+   [ -z "${_tag}"          ]          || fail "wrong _tag \"${_tag}\""
+   [ "${_nodetype}" = "xyz"  ]        || fail "wrong _nodetype \"${_nodetype}\""
+   [ -z "${_marks}"        ]          || fail "wrong _marks \"${_marks}\""
+   [ -z "${_fetchoptions}" ]          || fail "wrong _nodetype \"${_fetchoptions}\""
+   [ -z "${_userinfo}"     ]          || fail "wrong _userinfo \"${_userinfo}\""
+   [ "${_uuid}" = "_uuid-required" ]   || fail "wrong _uuid \"${_uuid}\""
 }
 
 

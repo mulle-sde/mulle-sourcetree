@@ -131,7 +131,7 @@ __db_common_dbfilepath()
    dbfilepath="${databasedir}/${uuid}"
    if [ ! -f "${dbfilepath}" ]
    then
-      log_debug "No address found for ${uuid} in ${databasedir}"
+      log_debug "No _address found for ${uuid} in ${databasedir}"
       return 1
    fi
    log_debug "Found \"${dbfilepath}\""
@@ -258,7 +258,7 @@ db_bury()
    local gravepath
    local graveyard
 
-   graveyard="${databasedir}/.graveyard"
+   graveyard="${databasedir}/../graveyard"
    gravepath="${graveyard}/${uuid}"
 
    local rootdir
@@ -288,8 +288,14 @@ db_bury()
 
    if [ -e "${gravepath}" ]
    then
-      log_fluff "Repurposing old grave \"${gravepath}\""
-      exekutor rm -rf "${gravepath}" >&2
+      local otheruuid
+      local othergravepath
+
+      otheruuid="`node_genuuid`"
+      othergravepath="${graveyard}/${otheruuid}"
+
+      log_fluff "Moving old grave with same uuid \"${gravepath}\" to \"${othergravepath}\""
+      exekutor mv "${gravepath}" "${othergravepath}"
    else
       mkdir_if_missing "${graveyard}"
    fi
@@ -424,7 +430,6 @@ db_fetch_all_nodelines()
 
    __db_common_databasedir "$@"
 
-
    (
       shopt -s nullglob
 
@@ -447,15 +452,15 @@ db_fetch_uuid_for_address()
 
    __db_common_databasedir "$@"
 
-   local address="$2"
+   local _address="$2"
 
-   [ -z "${address}" ] && internal_fail "address is empty"
+   [ -z "${_address}" ] && internal_fail "_address is empty"
 
    if dir_has_files "${databasedir}" f
    then
       local pattern
 
-      pattern="`escaped_grep_pattern "${address}"`"
+      pattern="`escaped_grep_pattern "${_address}"`"
       egrep -s "^${pattern};" "${databasedir}"/* | cut -s '-d;' -f 4
    fi
 }
@@ -691,8 +696,21 @@ db_dir_exists()
 }
 
 
+__db_environment()
+{
+   echo "${MULLE_VIRTUAL_ROOT}
+${databasedir}
+${MULLE_SOURCETREE_SHARE_DIR}"
+}
+
+
 db_environment()
 {
+   local database
+   local databasedir
+
+   __db_common_databasedir "$@"
+
    echo "${MULLE_VIRTUAL_ROOT}
 ${databasedir}
 ${MULLE_SOURCETREE_SHARE_DIR}"
@@ -721,11 +739,13 @@ db_is_ready()
    local environment
 
    oldenvironment="`cat "${dbdonefile}" `"
-   environment="`db_environment`"
+   environment="`__db_environment`"
 
    if [ "${oldenvironment}" != "${environment}" ]
    then
       log_debug "\"${database}\" was made in a different environment. Needs reset"
+      log_debug "Current environment : ${environment}"
+      log_debug "Old environment     : ${oldenvironment}"
       return 2
    fi
 
@@ -743,7 +763,7 @@ db_set_ready()
    __db_common_databasedir "$@"
 
    mkdir_if_missing "${databasedir}"
-   redirect_exekutor "${databasedir}/.db_done" db_environment
+   redirect_exekutor "${databasedir}/.db_done" __db_environment
 }
 
 
@@ -1018,7 +1038,7 @@ db_has_graveyard()
 
    __db_common_databasedir "$@"
 
-   [ -d "${databasedir}/.graveyard" ]
+   [ -d "${databasedir}/../graveyard" ]
 }
 
 
@@ -1031,7 +1051,7 @@ db_graveyard_dir()
 
    __db_common_databasedir "$@"
 
-   echo "${databasedir}/.graveyard"
+   echo "${databasedir}/../graveyard"
 }
 
 
@@ -1080,8 +1100,6 @@ db_reset()
 
    __db_common_databasedir "$@"
 
-   local keepgraveyard="${2:-YES}"
-
    if ! db_dir_exists "${database}"
    then
       return 0
@@ -1098,19 +1116,7 @@ db_reset()
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh" || exit 1
    fi
 
-   if [ "${keepgraveyard}" = "YES" ] && db_has_graveyard "${database}"
-   then
-      local oldplace
-      local newplace
-
-      oldplace="${databasedir}/.graveyard"
-      newplace="`dirname -- "${databasedir}"`/`uuidgen`.graveyard"
-
-      mv "${oldplace}" "${newplace}"
-   fi
-
    rmdir_safer "${databasedir}"
-   return
 }
 
 
@@ -1240,6 +1246,10 @@ _db_bury_zombiefile()
 }
 
 
+#
+# a zombie remembers its associate file
+# this will be buried
+#
 db_bury_zombie()
 {
    log_entry "db_bury_zombie" "$@"
@@ -1275,23 +1285,23 @@ db_safe_bury_dbentry()
    local owner="$3"
    local filename="$4"
 
-   local branch
-   local address
-   local fetchoptions
-   local nodetype
-   local marks
-   local tag
-   local url
-   local userinfo
-   local uuid
+   local _branch
+   local _address
+   local _fetchoptions
+   local _nodetype
+   local _marks
+   local _tag
+   local _url
+   local _userinfo
+   local _uuid
 
    nodeline_parse "${nodeline}"
 
-   db_forget "${database}" "${uuid}"
+   db_forget "${database}" "${_uuid}"
 
-   if nodemarks_contain_nodelete "${marks}"
+   if nodemarks_contain_nodelete "${_marks}"
    then
-      log_fluff "${url} is marked as nodelete so not burying"
+      log_fluff "${_url} is marked as nodelete so not burying"
       return
    fi
 
@@ -1301,7 +1311,7 @@ db_safe_bury_dbentry()
       return
    fi
 
-   db_bury "${database}" "${uuid}" "${filename}"
+   db_bury "${database}" "${_uuid}" "${filename}"
 }
 
 

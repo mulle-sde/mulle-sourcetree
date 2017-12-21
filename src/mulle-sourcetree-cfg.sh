@@ -168,6 +168,7 @@ cfg_write()
    __cfg_common_configfile "$@"
    shift
 
+   mkdir_if_missing "${SOURCETREE_DIR}"
    redirect_exekutor "${SOURCETREE_CONFIG_FILE}" echo "$*"
 }
 

@@ -83,21 +83,21 @@ zombie_clean_all_nodes()
          continue
       fi
 
-      local branch
-      local address
-      local fetchoptions
-      local nodetype
-      local marks
-      local tag
-      local url
-      local uuid
-      local userinfo
+      local _branch
+      local _address
+      local _fetchoptions
+      local _nodetype
+      local _marks
+      local _tag
+      local _url
+      local _uuid
+      local _userinfo
 
       nodeline_parse "${nodeline}"
 
-      db_bury_zombie "${database}" "${uuid}"
+      db_bury_zombie "${database}" "${_uuid}"
 
-      parent="`dirname -- "${address}"`"
+      parent="`dirname -- "${_address}"`"
       case "${parent}" in
          .|""|..)
          ;;

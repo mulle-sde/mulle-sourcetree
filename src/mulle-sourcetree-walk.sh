@@ -55,7 +55,7 @@ Usage:
 Options:
    -n <value>       : node types to walk (default: ALL)
    -p <value>       : specify permissions (missing)
-   -m <value>       : specify marks to match (e.g. build)
+   -m <value>       : specify _marks to match (e.g. build)
    --cd             : change directory to node's working directory
    --lenient        : allow shell command to error
    --no-depth-first : walk tree in pre-order
@@ -74,14 +74,14 @@ Usage:
    Print all sourcetree addresses according to the following rules:
 
    * ignore nodes marked as "nobuild"
-   * ignore nodes marked as "norequire", whose address is missing
+   * ignore nodes marked as "norequire", whose _address is missing
    * ignore nodes marked as "no${UNAME}" (platform dependent of course)
 
    In a make based project, this can be used to build everything like this:
 
-      ${MULLE_EXECUTABLE_NAME} buildorder | while read address
+      ${MULLE_EXECUTABLE_NAME} buildorder | while read _address
       do
-         ( cd "${address}" ; make ) || break
+         ( cd "${_address}" ; make ) || break
       done
 EOF
   exit 1
@@ -97,11 +97,11 @@ walk_filter_permissions()
 {
    log_entry "walk_filter_permissions" "$@"
 
-   local address="$1"
+   local _address="$1"
    local permissions="$2"
-   local marks="$3"
+   local _marks="$3"
 
-   [ -z "${address}" ] && internal_fail "empty address"
+   [ -z "${_address}" ] && internal_fail "empty _address"
 
    local match
 
@@ -110,21 +110,21 @@ walk_filter_permissions()
       return
    fi
 
-   if [ ! -e "${address}" ]
+   if [ ! -e "${_address}" ]
    then
-      log_fluff "${address} does not exist (yet)"
+      log_fluff "${_address} does not exist (yet)"
       case "${permissions}" in
          *fail-noexist*)
-            fail "Missing \"${address}\" is not yet fetched."
+            fail "Missing \"${_address}\" is not yet fetched."
          ;;
 
          *warn-noexist*)
-            log_verbose "Repository expected in \"${address}\" is not yet fetched"
+            log_verbose "Repository expected in \"${_address}\" is not yet fetched"
             return 0
          ;;
 
          *skip-noexist*)
-            log_fluff "Repository expected in \"${address}\" is not yet fetched, skipped"
+            log_fluff "Repository expected in \"${_address}\" is not yet fetched, skipped"
             return 1
          ;;
 
@@ -134,24 +134,24 @@ walk_filter_permissions()
       esac
    fi
 
-   if [ ! -L "${address}" ]
+   if [ ! -L "${_address}" ]
    then
       return 0
    fi
 
-   log_fluff "${address} is a symlink"
+   log_fluff "${_address} is a symlink"
    case "${permissions}" in
       *fail-symlink*)
-         fail "Missing \"${address}\" is a symlink."
+         fail "Missing \"${_address}\" is a symlink."
       ;;
 
       *warn-symlink*)
-         log_verbose "\"${address}\" is a symlink."
+         log_verbose "\"${_address}\" is a symlink."
          return 0
       ;;
 
       *skip-symlink*)
-         log_fluff "\"${address}\" is a symlink, skipped"
+         log_fluff "\"${_address}\" is a symlink, skipped"
          return 1
       ;;
    esac
@@ -164,29 +164,29 @@ walk_filter_nodetypes()
 {
    log_entry "walk_filter_nodetypes" "$@"
 
-   local nodetype="$1"
+   local _nodetype="$1"
    local allowednodetypes="$2"
 
-   [ -z "${nodetype}" ] && internal_fail "empty nodetype"
+   [ -z "${_nodetype}" ] && internal_fail "empty _nodetype"
 
    if [ "${allowednodetypes}" = "ALL" ]
    then
       return 0
    fi
 
-   nodetypes_contain "${allowednodetypes}" "${nodetype}"
+   nodetypes_contain "${allowednodetypes}" "${_nodetype}"
 }
 
 
 #
 # you can pass a qualifier of the form <all>;<one>;<none>
-# inside all,one,none are comma separated marks
+# inside all,one,none are comma separated _marks
 #
 walk_filter_marks()
 {
    log_entry "walk_filter_marks" "$@"
 
-   local marks="$1"
+   local _marks="$1"
    local qualifier="$2"
 
    if [ "${qualifier}" = "ANY" ]
@@ -208,7 +208,7 @@ walk_filter_marks()
       for i in ${all}
       do
          IFS="${DEFAULT_IFS}"
-         if ! nodemarks_contain "${marks}" "${i}"
+         if ! nodemarks_contain "${_marks}" "${i}"
          then
             return 1
          fi
@@ -218,7 +218,7 @@ walk_filter_marks()
 
    if [ ! -z "${one}" ]
    then
-      if ! nodemarks_intersect "${marks}" "${one}"
+      if ! nodemarks_intersect "${_marks}" "${one}"
       then
          return 1
       fi
@@ -230,7 +230,7 @@ walk_filter_marks()
       for i in ${none}
       do
          IFS="${DEFAULT_IFS}"
-         if nodemarks_contain "${marks}" "${i}"
+         if nodemarks_contain "${_marks}" "${i}"
          then
             return 1
          fi
@@ -239,77 +239,6 @@ walk_filter_marks()
    fi
 }
 
-
-#
-# "cheat" and read values defined in _visit_node
-# w/o passing them explicitly
-#
-# useful for running git on the repos or so
-# this way the user can pass "echo '${MULLE_URL}'" and
-# the value gets printed
-#
-__call_callback()
-{
-   log_entry "__call_callback" "$@"
-
-   local mode="$1"; shift
-   local originator="$1"; shift
-   local callback="$1"; shift
-
-   [ -z "${address}" ]  && internal_fail "address is empty"
-   [ -z "${callback}" ] && internal_fail "callback is empty"
-
-   local evaluator
-
-   if [ "${OPTION_EVAL_EXEKUTOR}" = "YES" ]
-   then
-      evaluator="_eval_exekutor"
-   else
-      evaluator="eval"
-   fi
-
-   local technical_flags
-
-   if [ "${OPTION_PASS_TECHNICAL_FLAGS}" = "YES" ]
-   then
-      technical_flags="${MULLE_TECHNICAL_OPTIONS}" # from bashfunctions
-   fi
-
-   MULLE_ADDRESS="${address}" \
-   MULLE_BRANCH="${branch}" \
-   MULLE_DATASOURCE="${datasource}" \
-   MULLE_DESTINATION="`filepath_concat "${virtual}" "${address}"`" \
-   MULLE_FETCHOPTIONS="${fetchoptions}" \
-   MULLE_MARKS="${marks}" \
-   MULLE_MODE="${mode}" \
-   MULLE_NODE="${nodeline}" \
-   MULLE_NODETYPE="${nodetype}" \
-   MULLE_ORIGINATOR="${originator}" \
-   MULLE_PROJECTDIR="`__concat_datasource_absolute_filename "${datasource}" "${address}"`" \
-   MULLE_TAG="${tag}" \
-   MULLE_URL="${url}" \
-   MULLE_USERINFO="${userinfo}" \
-   MULLE_UUID="${uuid}" \
-   MULLE_VIRTUAL="${virtual}" \
-      "${evaluator}" "'${callback}'" "${technical_flags}" "$@"
-
-   rval="$?"
-   if [ "${rval}" -eq 0 ]
-   then
-      return 0
-   fi
-
-   case "${mode}" in
-      *lenient*)
-         log_warning "Command '${callback}' failed for node \"${address}\""
-         return 0
-      ;;
-   esac
-
-   fail "Command '${callback}' failed for node \"${address}\""
-
-   return "$rval"
-}
 
 
 #
@@ -348,31 +277,101 @@ __docd_postamble()
 }
 
 
-
-__concat_datasource_absolute_filename()
+#
+# "cheat" and read global _ values defined in _visit_node and friends
+# w/o passing them explicitly
+#
+__call_callback()
 {
-   local datasource="$1"
-   local address="$2"
+   log_entry "__call_callback" "$@"
+
+   local datasource="$1"; shift
+   local virtual="$1"; shift
+   local mode="$1"; shift
+   local callback="$1"; shift
+
+   [ -z "${callback}" ]  && internal_fail "callback is empty"
+
+   local evaluator
+
+   if [ "${OPTION_EVAL_EXEKUTOR}" = "YES" ]
+   then
+      evaluator="_eval_exekutor"
+   else
+      evaluator="eval"
+   fi
+
+   local technical_flags
+
+   if [ "${OPTION_PASS_TECHNICAL_FLAGS}" = "YES" ]
+   then
+      technical_flags="${MULLE_TECHNICAL_OPTIONS}" # from bashfunctions
+   fi
+
+   if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
+   then
+      log_trace2 "MULLE_ADDRESS:         \"${_address}\""
+      log_trace2 "MULLE_BRANCH:          \"${_branch}\""
+      log_trace2 "MULLE_DATASOURCE:      \"${datasource}\""
+      log_trace2 "MULLE_DESTINATION:     \"${_destination}\""
+      log_trace2 "MULLE_FETCHOPTIONS:    \"${_fetchoptions}\""
+      log_trace2 "MULLE_FILENAME:        \"${_filename}\""
+      log_trace2 "MULLE_MARKS:           \"${_marks}\""
+      log_trace2 "MULLE_MODE:            \"${mode}\""
+      log_trace2 "MULLE_NODE:            \"${_nodeline}\""
+      log_trace2 "MULLE_NODETYPE:        \"${_nodetype}\""
+      log_trace2 "MULLE_TAG:             \"${_tag}\""
+      log_trace2 "MULLE_URL:             \"${_url}\""
+      log_trace2 "MULLE_USERINFO:        \"${_userinfo}\""
+      log_trace2 "MULLE_UUID:            \"${_uuid}\""
+      log_trace2 "MULLE_VIRTUAL:         \"${virtual}\""
+      log_trace2 "MULLE_VIRTUAL_ADDRESS: \"${_virtual_address}\""
+   fi
 
    #
-   # if share directory is absolute
+   # MULLE_NODE the current nodelines from config or database, unchanged
    #
-   case "${address}" in
-      /*)
-         echo "${address}"
+   # MULLE_ADDRESS-MULLE_UUID as defined in nodeline, unchanged
+   #
+   # MULLE_DATASOURCE  : config or database "handle" where nodelines was read
+   # MULLE_DESTINATION : either "_address" or in shared case basename of "_address"
+   # MULLE_VIRTUAL     : either ${MULLE_SOURECTREE_SHARE_DIR} or ${MULLE_PROJECTDIR}
+   #
+   #
+   MULLE_NODE="${_nodeline}" \
+   MULLE_ADDRESS="${_address}" \
+   MULLE_BRANCH="${_branch}" \
+   MULLE_FETCHOPTIONS="${_fetchoptions}" \
+   MULLE_MARKS="${_marks}" \
+   MULLE_NODETYPE="${_nodetype}" \
+   MULLE_URL="${_url}" \
+   MULLE_USERINFO="${_userinfo}" \
+   MULLE_TAG="${_tag}" \
+   MULLE_UUID="${_uuid}" \
+   MULLE_DATASOURCE="${datasource}" \
+   MULLE_DESTINATION="${_destination}" \
+   MULLE_FILENAME="${_filename}" \
+   MULLE_MODE="${mode}" \
+   MULLE_VIRTUAL="${virtual}" \
+   MULLE_VIRTUAL_ADDRESS="${_virtual_address}" \
+      "${evaluator}" "'${callback}'" "${technical_flags}" "$@"
+
+   rval="$?"
+   if [ "${rval}" -eq 0 ]
+   then
+      return 0
+   fi
+
+   case "${mode}" in
+      *lenient*)
+         log_warning "Command '${callback}' failed for node \"${_address}\""
+         return 0
       ;;
    esac
 
-   case "${datasource}" in
-      /|/*/)
-      ;;
+   fail "Command '${callback}' failed for node \"${_address}\""
 
-      *)
-         internal_fail "datasource \"${datasource}\" is malformed"
-      ;;
-   esac
-
-   echo "${MULLE_VIRTUAL_ROOT}${datasource}${address}"
+   return "$rval"
 }
 
 
@@ -396,7 +395,8 @@ _visit_callback()
 
    local datasource="$1"; shift
    local virtual="$1"; shift
-   local originator="$1"; shift
+   local next_datasource="$1"; shift
+   local next_virtual="$1"; shift
 
    shift 3
 
@@ -412,24 +412,21 @@ _visit_callback()
    case "${mode}" in
       *docd*)
          local old
-         local oldshared
          local directory
 
-         directory="`__concat_datasource_absolute_filename "${datasource}" "${address}"`"
-
-         if [ -d "${directory}" ]
+         if [ -d "${filename}" ]
          then
-            __docd_preamble "${directory}"
-               __call_callback "${mode}" "${originator}" "${callback}" "$@"
+            __docd_preamble "${filename}"
+               __call_callback "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
             __docd_postamble
          else
-            log_fluff "\"${directory}\" not there, so no callback"
+            log_fluff "\"${filename}\" not there, so no callback"
          fi
          return
       ;;
 
       *)
-         __call_callback "${mode}" "${originator}" "${callback}" "$@"
+         __call_callback "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
       ;;
    esac
 }
@@ -455,63 +452,30 @@ _visit_recurse()
 
    local datasource="$1"; shift
    local virtual="$1"; shift
-   local originator="$1" ; shift
+   local next_datasource="$1" ; shift
+   local next_virtual="$1" ; shift
 
    local filternodetypes="$1"; shift
    local filterpermissions="$1"; shift
    local filtermarks="$1"; shift
    local mode="$1" ; shift
 
-   local actual
-
-   [ ! -z "${address}" ] || internal_fail "Empty address"
-
-   log_debug "address:    ${address}"
-   log_debug "virtual:    ${virtual}"
-   log_debug "datasource: ${datasource}"
-   log_debug "originator: ${originator}"
 
    case "${mode}" in
       *flat*)
-         log_debug "Non-recursive walk doesn't recurse on \"${address}\""
+         log_debug "Non-recursive walk doesn't recurse on \"${_address}\""
          return 0
       ;;
    esac
 
-   if nodemarks_contain_norecurse "${marks}"
+   if nodemarks_contain_norecurse "${_marks}"
    then
-      log_debug "Do not recurse on \"${address}\" due to norecurse mark"
-      return 0
-   fi
-
-   local filename
-   local next_datasource
-   local next_virtual
-
-   next_virtual="`filepath_concat "${virtual}" "${address}"`"
-   next_datasource="${datasource}${address}/"
-   filename="${MULLE_VIRTUAL_ROOT}${datasource}${address}"
-
-   log_debug "filename        : ${filename}"
-   log_debug "next_datasource : ${next_datasource}"
-   log_debug "next_virtual    : ${next_virtual}"
-
-   if ! [ -d "${filename}" ]
-   then
-      if [ -f "${filename}" ]
-      then
-         log_fluff "Do not recurse on \"${filename}\" as it's not a directory. ($PWD)"
-      else
-         log_debug "Can not recurse into \"${filename}\" as it's not there yet. ($PWD)"
-      fi
+      log_debug "Do not recurse on \"${virtual}/${_destination}\" due to norecurse mark"
       return 0
    fi
 
    #
-   #
-   # internally we want to preserve state and globals vars
-   # so dont subshell
-   #
+   # Preserve state and globals vars, so dont subshell
    #
    case "${mode}" in
       *walkdb*)
@@ -536,9 +500,12 @@ _visit_recurse()
    esac
 }
 
+
 #
 # datasource
 # virtual
+# next_datasource
+# next_virtual
 # filternodetypes
 # filterpermissions
 # filtermarks
@@ -550,7 +517,17 @@ _visit_node()
 {
    log_entry "_visit_node" "$@"
 
-   local mode="$7"
+   local mode="$8"
+
+   # filename comes from "environment"
+   if [ "${VISIT_TWICE}" != "YES" ]
+   then
+      if fgrep -q -s -x "${_filename}" <<< "${VISITED}"
+      then
+         return 1
+      fi
+      VISITED="`add_line "${VISITED}" "${_filename}"`"
+   fi
 
    #
    # pre-order callback first before recursion
@@ -569,62 +546,30 @@ _visit_node()
 }
 
 
-_visit_share_node()
+pretty_datasource()
 {
-   log_entry "_visit_share_node" "$@"
+   local datasource="$1"
 
-   local datasource="$1"; shift
-   local virtual="$1"; shift
+   case "${datasource}" in
+      /*)
+      ;;
 
-   local mode="$4"
+      *)
+         datasource="/${datasource}"
+      ;;
+   esac
 
-#   [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ] && internal_fail "MULLE_SOURCETREE_SHARE_DIR is empty"
+   case "${datasource}" in
+      */)
+      ;;
 
-   local shareddir
-   local actual
-   local name
-   local original
+      *)
+         datasource="${datasource}/"
+      ;;
+   esac
 
-   original="${address}"
-   name="`basename -- "${address}"`"
-   address="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${name}"`"
-
-   #
-   # if address is absolute it means its shared and
-   # MULLE_SOURCETREE_SHARE_DIR is absolute
-   #
-   log_debug "address:  ${address}"
-   log_debug "original: ${original}"
-
-   if [ "${VISIT_TWICE}" != "YES" ]
-   then
-      if fgrep -q -s -x "${address}" <<< "${VISITED}"
-      then
-         return
-      fi
-      VISITED="`add_line "${VISITED}" "${address}"`"
-   fi
-
-   #
-   # hacky hack. If shareddir exists visit that
-   # otherwise optimistically look for it where it is in
-   # recursive mode
-   #
-   if [ ! -e "${address}" -a -e "${original}" ]
-   then
-      log_debug "Visiting \"${original}\" as \"${address}\" doesn't exist yet"
-      address="${original}"
-      datasource="${SOURCETREE_START}"
-   fi
-
-   local originator
-
-   # ugly hack for dotdump
-   originator="`__concat_datasource_absolute_filename "${datasource}" "${original}"`"
-
-   _visit_node "${datasource}" "" "${originator}" "$@"
+   echo "${datasource}"
 }
-
 
 #
 # datasource          // place of the config/db where we read the nodeline from
@@ -659,40 +604,44 @@ _visit_filter_nodeline()
    # These values are now defined for all the "_" prefix functions
    # that we call from now on!
    #
-   local branch
-   local address
-   local fetchoptions
-   local marks
-   local nodetype
-   local tag
-   local url
-   local useroptions
-   local uuid
+   local _branch
+   local _address
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _tag
+   local _url
+   local _userinfo
+   local _uuid
 
    nodeline_parse "${nodeline}"
 
-   if ! walk_filter_marks "${marks}" "${filtermarks}"
+   local _nodeline
+
+   _nodeline="${nodeline}"
+
+   if ! walk_filter_marks "${_marks}" "${filtermarks}"
    then
-      log_fluff "Node \"${address}\": \"${marks}\" doesn't jive with marks \"${filtermarks}\""
+      log_fluff "Node \"${_address}\": \"${_marks}\" doesn't jive with _marks \"${filtermarks}\""
       return 0
    fi
 
-   if ! walk_filter_nodetypes "${nodetype}" "${filternodetypes}"
+   if ! walk_filter_nodetypes "${_nodetype}" "${filternodetypes}"
    then
-      log_fluff "Node \"${address}\": \"${nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
+      log_fluff "Node \"${_address}\": \"${_nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
       return 0
    fi
 
-   if ! walk_filter_permissions "${address}" "${filterpermissions}"
+   if ! walk_filter_permissions "${_address}" "${filterpermissions}"
    then
-      log_fluff "Node \"${address}\": \"${address}\" doesn't jive with permissions \"${filterpermissions}\""
+      log_fluff "Node \"${_address}\": \"${_address}\" doesn't jive with permissions \"${filterpermissions}\""
       return 0
    fi
 
-   log_debug "Node \"${address}\" passed the filters"
+   log_debug "Node \"${_address}\" passed the filters"
 
    #
-   # if we are walking in shared mode, then we fold the address
+   # if we are walking in shared mode, then we fold the _address
    # into the shared directory.
    #
    case "${mode}" in
@@ -701,7 +650,7 @@ _visit_filter_nodeline()
       ;;
 
       *share*)
-         if nodemarks_contain_share "${marks}"
+         if nodemarks_contain_share "${_marks}"
          then
             _visit_share_node "${datasource}" "${virtual}" "$@"
             return $?
@@ -712,7 +661,103 @@ _visit_filter_nodeline()
       ;;
    esac
 
-   _visit_node "${datasource}" "${virtual}" "" "$@"
+   # "value addition" of a quasi global
+
+   local _destination
+
+   _destination="${_address}"
+
+   local next_datasource
+   local next_virtual
+
+   next_datasource="`filepath_concat "${datasource}" "${_destination}" `"
+   next_datasource="`pretty_datasource "${next_datasource}" `"
+
+   next_virtual="`filepath_concat "${virtual}" "${_destination}" `"
+
+   # another quasi global
+
+   local _filename  # always absolute!
+   local _virtual_address
+
+   _virtual_address="${next_virtual}"
+
+   _filename="${next_virtual}"
+   if ! is_absolutepath "${_filename}"
+   then
+      _filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${_filename}" `"
+   fi
+
+   _visit_node "${datasource}" \
+               "${virtual}" \
+               "${next_datasource}" \
+               "${next_virtual}" \
+               "$@"
+}
+
+
+_visit_share_node()
+{
+   log_entry "_visit_share_node" "$@"
+
+   local datasource="$1"; shift
+   local virtual="$1"; shift
+
+   local mode="$4"
+
+#   [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ] && internal_fail "MULLE_SOURCETREE_SHARE_DIR is empty"
+
+   #
+   # So the node is shared so, virtual changes
+   # The datasource may diverge though..
+
+   local _destination
+   local _filename
+
+   _destination="`basename -- "${_address}"`"
+
+   local next_virtual
+
+   next_virtual="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${_destination}" `"
+
+   local _virtual_address
+
+   _virtual_address="${next_virtual}"
+
+   _filename="${next_virtual}"
+   if ! is_absolutepath "${_filename}"
+   then
+      _filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${next_virtual}" `"
+   fi
+
+   #
+   # hacky hack. If shareddir exists visit that.
+   # Otherwise optimistically look for it where it would be in
+   # recursive mode.
+   #
+   local next_datasource
+
+   next_datasource="${next_virtual}"
+
+   if [ ! -e "${_filename}" ]
+   then
+      local optimistic
+
+      optimistic="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${virtual}" "${_address}" `"
+      if [ -e "${optimistic}" ]
+      then
+         next_datasource="`filepath_concat "${virtual}" "${_address}" `"
+
+         log_debug "Visit \"${next_datasource}\" as \"${_filename}\" doesn't exist yet"
+      fi
+   fi
+
+   next_datasource="`pretty_datasource "${next_datasource}" `"
+   _visit_node "${datasource}" \
+               "${MULLE_SOURCETREE_SHARE_DIR}" \
+               "${next_datasource}" \
+               "${next_virtual}" \
+               "$@"
 }
 
 
@@ -820,6 +865,9 @@ _print_walk_info()
 # callback
 # ...
 #
+
+
+
 _walk_config_uuids()
 {
    log_entry "_walk_config_uuids" "$@"
@@ -887,22 +935,20 @@ _visit_root_callback()
 {
    log_entry "_visit_root_callback" "$@"
 
-   local virtual=""
-   local datasource="${SOURCETREE_START}"
-   local originator=""
-   local branch
-   local address="."
-   local fetchoptions
-   local marks
-   local nodetype
-   local tag
-   local url
-   local useroptions
-   local uuid
+   local _address="."
+   local _branch
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _tag
+   local _url
+   local _userinfo
+   local _uuid
 
-   _visit_callback "${datasource}" \
-                   "${virtual}" \
-                   "${originator}" \
+   _visit_callback "" \
+                   "${SOURCETREE_START}" \
+                   "" \
+                   "" \
                    "" \
                    "" \
                    "" \
@@ -1176,10 +1222,10 @@ sourcetree_buildorder_main()
    if [ "${OPTION_MARKS}" = "YES" ]
    then
       sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE}" \
-         "echo" '"${MULLE_DESTINATION};${MULLE_MARKS}"'
+         "echo" '"${MULLE_VIRTUAL_ADDRESS};${MULLE_MARKS}"'
    else
       sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE}" \
-         "echo" '"${MULLE_DESTINATION}"'
+         "echo" '"${MULLE_VIRTUAL_ADDRESS}"'
    fi
 }
 

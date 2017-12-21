@@ -72,15 +72,15 @@ main()
 
    #
    # for zombiefication we need a proper nodeline
-   # with a nodetype
+   # with a _nodetype
    if ! db_forget "/" 1
    then
       fail "did not forget"
    fi
 
-   db_memorize "/" 1 "address;git;;1" "the_owner" "${PWD}/the_owner/address"
+   db_memorize "/" 1 "_address;git;;1" "the_owner" "${PWD}/the_owner/_address"
 
-   mkdir -p the_owner/address
+   mkdir -p the_owner/_address
 
    #
    # zombify but keeping it alive
@@ -107,7 +107,7 @@ main()
       fail "alive node unfairly reaped before its time"
    fi
 
-   [ -d "the_owner/address" ] || fail  "directory vanished"
+   [ -d "the_owner/_address" ] || fail  "directory vanished"
 
    log_verbose "----- #5 PASSED -----"
 
@@ -134,7 +134,7 @@ main()
       fail "survived the zombie apocalypse"
    fi
 
-   [ ! -d "the_owner/address" ] || fail  "directory still there"
+   [ ! -d "the_owner/_address" ] || fail  "directory still there"
 
    log_verbose "----- #6 PASSED -----"
 

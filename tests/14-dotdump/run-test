@@ -171,8 +171,6 @@ run_test1()
       fail "dotdump failed unexpectedly"
    fi
 
-   local expect
-
    run_dump "flat" "${testdir}"
    run_dump "recurse" "${testdir}"
    run_dump "share" "${testdir}" "share_local.dot"

@@ -49,7 +49,7 @@ Options:
    --output-banner        : print a banner with config information
    --output-cmd           : output as ${MULLE_EXECUTABLE_NAME} command line
    --output-eval          : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
-   --output-full          : show url and various fetch options
+   --output-full          : show _url and various fetch options
    --output-raw           : output as CSV (semicolon separated values)
 EOF
   exit 1
@@ -65,6 +65,7 @@ _sourcetree_banner()
 
    local dbstate
    local dbsharedir
+
    dbstate="`db_state_description "${database}" `"
    dbsharedir="`db_get_shareddir "${database}" `"
 
@@ -193,7 +194,7 @@ _list_nodes()
       ;;
    esac
 
-   _sourcetree_contents
+   _sourcetree_contents "${mode}"
 }
 
 
@@ -417,8 +418,8 @@ sourcetree_list_main()
 
    [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
 
-   local address
-   local url
+   local _address
+   local _url
    local key
    local mark
    local mode

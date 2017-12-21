@@ -126,10 +126,10 @@ sourcetree_mark_usage()
 Usage:
    ${MULLE_EXECUTABLE_NAME} mark <node> <mark>
 
-   You can mark or unmark a node with this command. Only negative marks
-   are actually stored in the node. All positive marks are implicit.
+   You can mark or unmark a node with this command. Only negative _marks
+   are actually stored in the node. All positive _marks are implicit.
 
-   Examine the nodes marks with
+   Examine the nodes _marks with
        \`${MULLE_EXECUTABLE_NAME} -N list\`.
 
    This command only affects the config file.
@@ -168,8 +168,8 @@ sourcetree_unmark_usage()
 Usage:
    ${MULLE_EXECUTABLE_NAME} unmark <node> <mark>
 
-   Remove a negative mark from a node. A node stores only negative marks,
-   prefixed by "no". All positive marks are implicit.
+   Remove a negative mark from a node. A node stores only negative _marks,
+   prefixed by "no". All positive _marks are implicit.
 
 Marks:
    nobuild
@@ -239,28 +239,30 @@ sourcetree_add_node()
 
    local input="$1"
 
-   local branch="${OPTION_BRANCH}"
-   local fetchoptions="${OPTION_FETCHOPTIONS}"
-   local marks="${OPTION_MARKS}"
-   local nodetype="${OPTION_NODETYPE}"
-   local tag="${OPTION_TAG}"
-   local url="${OPTION_URL}"
-   local userinfo="${OPTION_USERINFO}"
+   local _address
+   local _branch="${OPTION_BRANCH}"
+   local _fetchoptions="${OPTION_FETCHOPTIONS}"
+   local _marks="${OPTION_MARKS}"
+   local _nodetype="${OPTION_NODETYPE}"
+   local _tag="${OPTION_TAG}"
+   local _url="${OPTION_URL}"
+   local _userinfo="${OPTION_USERINFO}"
+   local _uuid
 
    #
-   # try to figure out nodetype. At this point adre
+   # try to figure out _nodetype. At this point adre
    #
-   if [ -z "${nodetype}" -a ! -z "${url}" ]
+   if [ -z "${_nodetype}" -a ! -z "${_url}" ]
    then
-      nodetype="`node_guess_nodetype "${url}"`"
+      _nodetype="`node_guess_nodetype "${_url}"`"
    fi
 
-   if [ -z "${nodetype}" -a ! -z "${input}" ]
+   if [ -z "${_nodetype}" -a ! -z "${input}" ]
    then
-      nodetype="`node_guess_nodetype "${input}"`"
+      _nodetype="`node_guess_nodetype "${input}"`"
    fi
 
-   if [ -z "${nodetype}" ]
+   if [ -z "${_nodetype}" ]
    then
       case "${input}" in
          *:*|~*|/*)
@@ -268,65 +270,63 @@ sourcetree_add_node()
          ;;
 
          *)
-            if [ ! -z "${url}" ]
+            if [ ! -z "${_url}" ]
             then
                fail "Please specify --nodetype"
             fi
-            nodetype="local"
+            _nodetype="local"
          ;;
       esac
    fi
 
-   local address
-
    #
-   # try to figure out if input is an url
-   # trivially, it is the address if url is empty
+   # try to figure out if input is an _url
+   # trivially, it is the _address if _url is empty
    #
-   if [ -z "${url}" ]
+   if [ -z "${_url}" ]
    then
       case "${input}" in
          *:*)
-            url="${input}"
-            address="`node_guess_address "${url}" "${nodetype}"`"
+            _url="${input}"
+            _address="`node_guess_address "${_url}" "${_nodetype}"`"
          ;;
 
          /*|~*)
-            case "${nodetype}" in
+            case "${_nodetype}" in
                local)
-                  address="`symlink_relpath "${input}" "${PWD}"`"
+                  _address="`symlink_relpath "${input}" "${PWD}"`"
                ;;
 
                *)
-                  url="${input}"
-                  address="`node_guess_address "${url}" "${nodetype}"`"
+                  _url="${input}"
+                  _address="`node_guess_address "${_url}" "${_nodetype}"`"
                ;;
             esac
          ;;
       esac
    fi
 
-   if [ -z "${address}" ]
+   if [ -z "${_address}" ]
    then
-      address="${input}"
+      _address="${input}"
    fi
 
-   if cfg_has_duplicate "${SOURCETREE_START}" "${address}"
+   if cfg_has_duplicate "${SOURCETREE_START}" "${_address}"
    then
-      fail "There is already a node ${C_RESET_BOLD}${address}${C_ERROR_TEXT} \
+      fail "There is already a node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} \
 in the sourcetree"
    fi
 
-   if [ -z "${url}" ]
+   if [ -z "${_url}" ]
    then
-      if ! [ -e "${address}" ]
+      if ! [ -e "${_address}" ]
       then
-         log_warning "There is no directory or file named \"${address}\""
+         log_warning "There is no directory or file named \"${_address}\""
       fi
    else
-      if [ -e "${address}" ]
+      if [ -e "${_address}" ]
       then
-         log_warning "A directory or file named \"${address}\" already exists"
+         log_warning "A directory or file named \"${_address}\" already exists"
       fi
    fi
 
@@ -342,9 +342,9 @@ in the sourcetree"
    node_augment "${mode}"
 
 
-   if cfg_get_nodeline "${SOURCETREE_START}" "${address}" > /dev/null
+   if cfg_get_nodeline "${SOURCETREE_START}" "${_address}" > /dev/null
    then
-      fail "${C_RESET_BOLD}${address}${C_ERROR_TEXT} already exists"
+      fail "${C_RESET_BOLD}${_address}${C_ERROR_TEXT} already exists"
    fi
 
    local contents
@@ -362,6 +362,8 @@ in the sourcetree"
 sourcetree_remove_node()
 {
    log_entry "sourcetree_remove_node" "$@"
+
+   local address="$1"
 
    local oldnodeline
 
@@ -429,19 +431,19 @@ sourcetree_set_node()
 
    oldnodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
 
-   local branch
-   local address
-   local fetchoptions
-   local marks
-   local nodetype
-   local tag
-   local url
-   local uuid
-   local userinfo
+   local _branch
+   local _address
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _tag
+   local _url
+   local _uuid
+   local _userinfo
 
    nodeline_parse "${oldnodeline}"
 
-   if nodemarks_contain_noset "${marks}"
+   if nodemarks_contain_noset "${_marks}"
    then
       fail "Node is marked as noset"
    fi
@@ -450,14 +452,14 @@ sourcetree_set_node()
 
    oldaddress="${address}"
 
-   branch="${OPTION_BRANCH:-${branch}}"
-   address="${OPTION_ADDRESS:-${address}}"
-   fetchoptions="${OPTION_FETCHOPTIONS:-${fetchoptions}}"
-   marks="${OPTION_MARKS:-${marks}}"
-   nodetype="${OPTION_NODETYPE:-${nodetype}}"
-   url="${OPTION_URL:-${url}}"
-   tag="${OPTION_TAG:-${tag}}"
-   userinfo="${OPTION_USERINFO:-${userinfo}}"
+   _branch="${OPTION_BRANCH:-${_branch}}"
+   _address="${OPTION_ADDRESS:-${_address}}"
+   _fetchoptions="${OPTION_FETCHOPTIONS:-${_fetchoptions}}"
+   _marks="${OPTION_MARKS:-${_marks}}"
+   _nodetype="${OPTION_NODETYPE:-${_nodetype}}"
+   _url="${OPTION_URL:-${_url}}"
+   _tag="${OPTION_TAG:-${_tag}}"
+   _userinfo="${OPTION_USERINFO:-${_userinfo}}"
 
    local key
 
@@ -467,10 +469,11 @@ sourcetree_set_node()
       shift
 
       case "${key}" in
-         branch|address|fetchoptions|info|marks|nodetype|tag|url|userinfo)
-            eval ${key}="'$1'"
-            log_debug "Set $key to \"`eval echo \\\$${key}`\""
+         branch|address|fetchoptions|marks|nodetype|tag|url|userinfo)
+            eval ${key}="'_$1'"
+            log_debug "Set ${key} to \"`eval echo \\\$_${key}`\""
          ;;
+
          *)
             log_error "unknown keyword \"$1\""
             sourcetree_set_usage
@@ -481,16 +484,16 @@ sourcetree_set_node()
 
    if [ "$#" -ne 0 ]
    then
-      log_error "key \"$1\" without value"
+      log_error "Key \"$1\" without value"
       sourcetree_set_usage
    fi
 
    node_augment "${OPTION_AUGMENTMODE}"
 
-   if [ "${oldaddress}" != "${address}" ] &&
-       cfg_has_duplicate "${SOURCETREE_START}"  "${uuid}" "${address}"
+   if [ "${oldaddress}" != "${_address}" ] &&
+       cfg_has_duplicate "${SOURCETREE_START}"  "${_uuid}" "${_address}"
    then
-      fail "There is already a node ${C_RESET_BOLD}${address}${C_ERROR_TEXT} \
+      fail "There is already a node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} \
 in the sourcetree
 "
    fi
@@ -498,7 +501,7 @@ in the sourcetree
    local newnodeline
 
    newnodeline="`node_print_nodeline`"
-   sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}" "${address}"
+   sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}" "${_address}"
 }
 
 
@@ -512,21 +515,21 @@ sourcetree_get_node()
 
    nodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
 
-   local branch
-   local address
-   local fetchoptions
-   local marks
-   local nodetype
-   local tag
-   local url
-   local uuid
-   local userinfo
+   local _branch
+   local _address
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _tag
+   local _url
+   local _uuid
+   local _userinfo
 
    nodeline_parse "${nodeline}"
 
    if [ "$#" -eq 0 ]
    then
-      exekutor echo "${address}"
+      exekutor echo "${_address}"
       return
    fi
 
@@ -534,7 +537,7 @@ sourcetree_get_node()
    do
       case "$1" in
          branch|address|fetchoptions|marks|nodetype|tag|url|uuid|userinfo)
-            exekutor eval echo \$"${1}"
+            exekutor eval echo \$"_${1}"
          ;;
          *)
             log_error "unknown keyword \"$1\""
@@ -560,19 +563,19 @@ sourcetree_mark_node()
 
    oldnodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
 
-   local branch
-   local address
-   local fetchoptions
-   local marks
-   local nodetype
-   local tag
-   local url
-   local userinfo
-   local uuid
+   local _branch
+   local _address
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _tag
+   local _url
+   local _userinfo
+   local _uuid
 
    nodeline_parse "${oldnodeline}"
 
-   if nodemarks_contain "${marks}" "${mark}"
+   if nodemarks_contain "${_marks}" "${mark}"
    then
       case "${mark}" in
          no*)
@@ -591,7 +594,7 @@ sourcetree_mark_node()
    operation="nodemarks_add_${mark}"
    if [ "`type -t "${operation}"`" = "function" ]
    then
-      marks="`${operation} "${marks}"`"
+      _marks="`${operation} "${_marks}"`"
    else
       if [ "${OPTION_EXTENDED_MARKS}" != "YES" ]
       then
@@ -614,13 +617,13 @@ sourcetree_mark_node()
             fail "mark must start with no"
          ;;
       esac
-      marks="${marks} ${mark}"
+      _marks="${_marks} ${mark}"
    fi
 
    local newnodeline
 
    newnodeline="`node_print_nodeline`"
-   sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}" "${address}"
+   sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}" "${_address}"
 }
 
 
@@ -781,7 +784,7 @@ sourcetree_common_main()
          ;;
 
          #
-         # marks
+         # _marks
          #
          --extended-marks)
             OPTION_EXTENDED_MARKS="YES"

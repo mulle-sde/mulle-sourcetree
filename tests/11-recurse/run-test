@@ -30,7 +30,7 @@ _setup_demo_repo_a()
 
    redirect_exekutor VERSION echo "2.0.0"
    run_mulle_sourcetree add --nodetype git "file:///${reporoot}/b"
-   [ -f .mulle-sourcetree ] || fail "failed add"
+   [ -f .mulle-sourcetree/config ] || fail "failed add"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: version 2.0.0 (tagged)"
    exekutor git tag "2.0.0"

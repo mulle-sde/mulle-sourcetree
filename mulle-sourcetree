@@ -36,7 +36,7 @@ fi
 
 
 MULLE_EXECUTABLE_VERSION_MAJOR=0
-MULLE_EXECUTABLE_VERSION_MINOR=0
+MULLE_EXECUTABLE_VERSION_MINOR=1
 MULLE_EXECUTABLE_VERSION_PATCH=0
 
 MULLE_EXECUTABLE_VERSION="${MULLE_EXECUTABLE_VERSION_MAJOR}.${MULLE_EXECUTABLE_VERSION_MINOR}.${MULLE_EXECUTABLE_VERSION_PATCH}"
@@ -67,14 +67,14 @@ HIDDEN_COMMANDS="\
    dotdump       : create a picture of the tree or the database
    fix           : support to track user modifications in the filesystem
    get           : get a node's properties from the configuration
-   library-path  : print path to ${MULLE_EXECUTABLE_NAME} libexec
+   libexec-path  : print path to ${MULLE_EXECUTABLE_NAME} libexec
    list          : list nodes in the current configuration
    mark          : add or remove a mark from a node in the configuration
    path          : print path to project
    remove        : remove a node from the configuration
    reset         : clear the database, to force an update
    uname         : ${MULLE_EXECUTABLE_NAME}'s simplified uname(1)
-   unmark        : remove marks from a node in the configuration
+   unmark        : remove _marks from a node in the configuration
    version       : print ${MULLE_EXECUTABLE_NAME} version
    walk          : visit all the tree nodes with a callback"
 
@@ -285,10 +285,11 @@ main()
 
    local FLAG_SOURCETREE_MODE=
 
-   local SOURCETREE_CONFIG_FILE=".mulle-sourcetree"
-   local SOURCETREE_DEFAULT_FILE=".mulle-sourcetree.default"
-   local SOURCETREE_DB_NAME=".mulle-sourcetree.db"
-   local SOURCETREE_FIX_FILE=".mulle-sourcetree.fix"
+   local SOURCETREE_DIR=".mulle-sourcetree"
+   local SOURCETREE_CONFIG_FILE="${SOURCETREE_DIR}/config"
+   local SOURCETREE_DEFAULT_FILE="${SOURCETREE_DIR}/default"
+   local SOURCETREE_DB_NAME="${SOURCETREE_DIR}/db"
+   local SOURCETREE_FIX_FILE=".mulle-sourcetree-fix"
 
    #
    # simple option handling
@@ -536,7 +537,7 @@ main()
          sourcetree_info_main "$@"
       ;;
 
-      library-path)
+      libexec-path|library-path)
          echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
       ;;
 
@@ -727,13 +728,17 @@ _init()
    #
    # minimal setup exit
    #
-   if [ "$1" = "library-path" ]
-   then
-      echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
-      exit 0
-   fi
+   #
+   # minimal setup exit
+   #
+   case "$1" in
+      "libexec-path"|"library-path")
+         echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
+         exit 0
+      ;;
+   esac
 
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env library-path 2> /dev/null`"
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-path 2> /dev/null`"
    if [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ]
    then
       if [ -z "`command -v "${executablepath}"`" ]

@@ -32,9 +32,10 @@ EOF
 
 run_git_tests()
 {
-   local uuidgen
    local old
    local new
+
+   local uuid
 
    uuid="`node_uuidgen`"
 
@@ -54,28 +55,28 @@ run_git_tests()
    mkdir_if_missing "ringo"
    exekutor touch "ringo/starr"
 
-   # url change for git is supported
+   # _url change for git is supported
    new="ringo/starr;git;;${uuid};https://github.com/mulle-objc/mulle-c11.git;release"
    actions="`update_actions_for_nodelines "normal" "${old}" "${new}"`" || fail "failed unexpectedly"
    expect_actions "${actions}" "set-url,upgrade"
 
    log_verbose "----- #3 PASSED -----"
 
-   # branch change for git is supported
+   # _branch change for git is supported
    new="ringo/starr;git;;${uuid};https://github.com/mulle-nat/mulle-c11.git;master"
    actions="`update_actions_for_nodelines "normal" "${old}" "${new}"`" || fail "failed unexpectedly"
    expect_actions "${actions}" "checkout"
 
    log_verbose "----- #4 PASSED -----"
 
-   # tag change needs a checkout
+   # _tag change needs a checkout
    new="ringo/starr;git;;${uuid};https://github.com/mulle-nat/mulle-c11.git;release;frobozz"
    actions="`update_actions_for_nodelines "normal" "${old}" "${new}"`" || fail "failed unexpectedly"
    expect_actions "${actions}" "checkout"
 
    log_verbose "----- #5 PASSED -----"
 
-   # let it move the address around
+   # let it move the _address around
    new="paul/jones;git;;${uuid};https://github.com/mulle-nat/mulle-c11.git;release"
    actions="`update_actions_for_nodelines "normal" "${old}" "${new}"`" || fail "failed unexpectedly"
    expect_actions "${actions}" "move"
@@ -96,22 +97,22 @@ run_git_tests()
 
    old="paul/jones;git;;${uuid};https://github.com/mulle-nat/mulle-c11.git;release"
 
-   # lets change url and dst at the same time
+   # lets change _url and dst at the same time
    new="tom/petty;git;;${uuid};https://github.com/mulle-objc/mulle-c11.git;release"
    actions="`update_actions_for_nodelines "normal" "${old}" "${new}"`" || fail "failed unexpectedly"
    expect_actions "${actions}" "move,upgrade,set-url"
 
    log_verbose "----- #8 PASSED -----"
 
-   # change of nodetype is heavy url and dst at the same time
+   # change of _nodetype is heavy _url and dst at the same time
    new="paul/jones;svn;;${uuid};https://github.com/mulle-nat/mulle-c11.git;release"
    actions="`update_actions_for_nodelines "normal" "${old}" "${new}"`" || fail "failed unexpectedly"
    expect_actions "${actions}" "fetch,remove"
 
    log_verbose "----- #9 PASSED -----"
 
-   # change in marks,fetchoptions,userinfo = don't care
-   new="paul/jones;git;nobuild;${uuid};https://github.com/mulle-nat/mulle-c11.git;release;;fetch=whatever;userinfo"
+   # change in _marks,_fetchoptions,_userinfo = don't care
+   new="paul/jones;git;nobuild;${uuid};https://github.com/mulle-nat/mulle-c11.git;release;;fetch=whatever;_userinfo"
    actions="`update_actions_for_nodelines "normal" "${old}" "${new}"`" || fail "failed unexpectedly"
    expect_actions "${actions}" ""
 
@@ -122,7 +123,7 @@ run_git_tests()
 
 run_tar_tests()
 {
-   local uuidgen
+   local uuid
    local old
    local new
 
@@ -139,7 +140,7 @@ run_tar_tests()
    mkdir_if_missing "ringo"
    exekutor touch "ringo/starr"
 
-   # url change means refetch
+   # _url change means refetch
    new="ringo/starr;tar;;${uuid};https://github.com/mulle-nat/mulle-c11/archive/1.2.7.tar.gz"
    actions="`update_actions_for_nodelines "normal" "${old}" "${new}"`" || fail "failed unexpectedly"
    expect_actions "${actions}" "fetch,remove"

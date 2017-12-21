@@ -3,7 +3,11 @@
 # formula operations.
 #
 PROJECT="mulle-sourcetree"      # your project/repository uuid
-DESC="👢 Cross platform dependency manager for developers"
+DESC="🌲 Project composition and maintainance with build support"
 LANGUAGE="bash"                # c,cpp, objc, bash ...
 # NAME="${PROJECT}"        # formula filename without .rb extension
 
+DEPENDENCIES='${TOOLS_TAP}mulle-fetch
+'
+
+DEBIAN_DEPENDENCIES="mulle-fetch"

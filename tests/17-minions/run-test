@@ -85,6 +85,8 @@ run_test()
       fail "minion b is not nodelete"
    fi
 
+   log_verbose "----- #1 PASSED -----"
+
    run_mulle_sourcetree list
 
    #
@@ -97,6 +99,8 @@ run_test()
    then
       fail "update succeeded unexpectedly"
    fi
+
+   log_verbose "----- #2 PASSED -----"
 
    #
    # now with the proper root though
@@ -111,6 +115,8 @@ run_test()
    [ -d "a" ]              || fail "a should exist"
    [ -f "b/DONTDELETEME" ] || fail "b/DONTDELETEME should exist"
 
+   log_verbose "----- #3 PASSED -----"
+
    #
    # minion should not be removed, but a
    #
@@ -121,6 +127,8 @@ run_test()
 
    [ -d "a" ]              && fail "a should not exist"
    [ -f "b/DONTDELETEME" ] || fail "b/DONTDELETEME should exist"
+
+   log_verbose "----- #4 PASSED -----"
 
    MULLE_VIRTUAL_ROOT="${directory}/project"
 
@@ -133,6 +141,8 @@ run_test()
    then
       fail "update failed unexpectedly"
    fi
+
+   log_verbose "----- #5 PASSED -----"
 
 }
 
@@ -161,7 +171,6 @@ main()
 
       run_test
    ) || exit 1
-   log_verbose "----- #1 PASSED -----"
 
    rmdir_safer "${directory}"
 }

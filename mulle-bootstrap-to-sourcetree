@@ -36,7 +36,7 @@ fi
 
 
 MULLE_EXECUTABLE_VERSION_MAJOR=0
-MULLE_EXECUTABLE_VERSION_MINOR=0
+MULLE_EXECUTABLE_VERSION_MINOR=1
 MULLE_EXECUTABLE_VERSION_PATCH=0
 
 MULLE_EXECUTABLE_VERSION="${MULLE_EXECUTABLE_VERSION_MAJOR}.${MULLE_EXECUTABLE_VERSION_MINOR}.${MULLE_EXECUTABLE_VERSION_PATCH}"
@@ -161,11 +161,11 @@ sourcetree_libexec_path()
 # in the caller!
 #
 #   # parse_raw_clone
-#   local url        # url of clone
-#   local dstdir
-#   local branch
-#   local scm
-#   local tag
+#   local _url        # _url of clone
+#   local _dstdir
+#   local _branch
+#   local _scm
+#   local _tag
 #
 parse_raw_clone()
 {
@@ -174,7 +174,7 @@ parse_raw_clone()
 
    [ -z "${clone}" ] && internal_fail "parse_raw_clone: clone is empty"
 
-   IFS=";" read -r url dstdir branch scm tag <<< "${clone}"
+   IFS=";" read -r _url _dstdir _branch _scm _tag <<< "${clone}"
 }
 
 
@@ -186,12 +186,12 @@ parse_raw_clone()
 # in the caller!
 #
 #   # parse_clone
-#   local name
-#   local url
-#   local branch
-#   local scm
-#   local tag
-#   local stashdir
+#   local _name
+#   local _url
+#   local _branch
+#   local _scm
+#   local _tag
+#   local _stashdir
 #
 # expansion is now done during .auto creation
 # clone="`expanded_variables "${1}"`"
@@ -204,12 +204,54 @@ parse_clone()
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
    then
-      log_trace2 "URL:      \"${url}\""
-      log_trace2 "SCM:      \"${scm}\""
-      log_trace2 "BRANCH:   \"${branch}\""
-      log_trace2 "TAG:      \"${tag}\""
-      log_trace2 "DSTDIR:   \"${dstdir}\""
+      log_trace2 "URL:      \"${_url}\""
+      log_trace2 "SCM:      \"${_scm}\""
+      log_trace2 "BRANCH:   \"${_branch}\""
+      log_trace2 "TAG:      \"${_tag}\""
+      log_trace2 "DSTDIR:   \"${_dstdir}\""
    fi
+}
+
+
+#
+# most stuff passed in via global
+#
+emit_commandline()
+{
+   local marks="$1"
+
+   if ! [ -z "${marks}" ]
+   then
+      log_info "Add embedded ${C_MAGENTA}${C_BOLD}${_url}${C_INFO} for \
+${C_RESET_BOLD}${_dstdir}${C_INFO}"
+   else
+      log_info "Add repository ${C_MAGENTA}${C_BOLD}${_url}"
+   fi
+
+   local flags
+
+   flags=""
+   if [ ! -z "${marks}" ]
+   then
+      flags="`concat "${flags}" "--marks '${marks}'" `"
+   fi
+   if [ ! -z "${_scm}" ]
+   then
+      flags="`concat "${flags}" "--nodetype '${_scm}'" `"
+   fi
+   if [ ! -z "${_branch}" ]
+   then
+      flags="`concat "${flags}" "--branch '${_branch}'" `"
+   fi
+   if [ ! -z "${_tag}" ]
+   then
+      flags="`concat "${flags}" "--tag '${_tag}'" `"
+   fi
+   if [ ! -z "${_url}" ]
+   then
+      flags="`concat "${flags}" "--url '${_url}'" `"
+   fi
+   exekutor echo "mulle-sourcetree add ${flags} '${_dstdir}'"
 }
 
 
@@ -218,11 +260,11 @@ copy_repositories()
    local filename="$1"
    local marks="$2"
 
-   local url
-   local branch
-   local scm
-   local tag
-   local dstdir
+   local _url
+   local _branch
+   local _scm
+   local _tag
+   local _dstdir
 
    ROOT_DIR="${PWD}"
 
@@ -244,44 +286,26 @@ copy_repositories()
 
       local evaledurl
 
-      evaledurl="`eval echo "$url"`"
-      [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
+      evaledurl="`eval echo "${_url}"`"
+      [ -z "${evaledurl}" ] && fail "URL \"${_url}\" evaluates to empty"
 
-      if [ -z "${scm}" ]
+      if [ -z "${_scm}" ]
       then
-         scm="`exekutor ${MULLE_FETCH:-mulle-fetch} typeguess "${evaledurl}"`"
+         _scm="`exekutor ${MULLE_FETCH:-mulle-fetch} typeguess "${evaledurl}"`"
       fi
-      scm="${scm:-git}"
+      _scm="${_scm:-git}"
 
       # mark empty = normal
-      if [ -z "${dstdir}" ]
+      if [ -z "${_dstdir}" ]
       then
-         dstdir="`exekutor ${MULLE_FETCH:-mulle-fetch} guess -s "${scm}" "${evaledurl}"`"
+         _dstdir="`exekutor ${MULLE_FETCH:-mulle-fetch} guess -s "${_scm}" "${evaledurl}"`"
          if [ -z "${marks}" ]
          then
-            dstdir="subproject/${dstdir}"
+            _dstdir="subproject/${_dstdir}"
          fi
       fi
 
-
-      log_fluff "Adding ${scm} ${C_MAGENTA}${C_BOLD}${dstdir}${C_VERBOSE} ..."
-
-      if ! exekutor mulle-sourcetree add -s "${scm}" \
-                                         -b "${branch}" \
-                                         -t "${tag}" \
-                                         -m "${marks}" \
-                                         -u "${url}" "${dstdir}"
-      then
-         exit 1
-      fi
-
-      if ! [ -z "${marks}" ]
-      then
-         log_info "Added embedded ${C_MAGENTA}${C_BOLD}${url}${C_INFO} for \
-${C_RESET_BOLD}${dstdir}${C_INFO}"
-      else
-         log_info "Added repository ${C_MAGENTA}${C_BOLD}${url}"
-      fi
+      emit_commandline "${marks}"
    done
    IFS="${DEFAULT_IFS}"
 }
@@ -302,15 +326,6 @@ convert_bootstrap()
       log_warning "This is a master bootstrap project.
 The master can not be converted. Convert the minions! ($PWD)"
       exit 0
-   fi
-
-   if [ -f "${SOURCETREE_CONFIG_FILE}" ]
-   then
-      if [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
-      then
-         fail "There is already a ${SOURCETREE_CONFIG_FILE} here ($PWD)"
-      fi
-      remove_file_if_present "${SOURCETREE_CONFIG_FILE}"
    fi
 
    local found
@@ -370,9 +385,9 @@ main()
    local MULLE_FLAG_LOG_MERGE="NO"
    local MULLE_TRACE_POSTPONE="NO"
 
-   local SOURCETREE_CONFIG_FILE=".mulle-sourcetree"
-   local SOURCETREE_DB_NAME=".mulle-sourcetree.db"
-   local MULLE_SOURCETREE_SHARE_DIR=""
+   local SOURCETREE_CONFIG_FILE=".mulle-sourcetree/config"
+   local SOURCETREE_DB_NAME=".mulle-sourcetree/db"
+   local MULLE_SOURCETREE_SHARE_DIR="stashes"
 
    #
    # simple option handling
@@ -392,20 +407,6 @@ main()
 
          -h|--help)
             usage "${MULLE_TRACE}"
-         ;;
-
-         --database-dir)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
-            shift
-
-            SOURCETREE_DB_NAME="$1"
-         ;;
-
-         --config|--config-file)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
-            shift
-
-            SOURCETREE_CONFIG_FILE="$1"
          ;;
 
          --version)
@@ -482,15 +483,6 @@ _init()
          echo "Fatal Error: Could not find libexec of mulle-bashfunctions-env ($PWD)" >&2
       fi
       exit 1
-   fi
-
-   PATH="${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}:$PATH"
-   PATH="${MULLE_SOURCETREE_LIBEXEC_DIR}:$PATH"
-   export PATH
-
-   if [ ! -z "${MULLE_SOURCETREE_LIBEXEC_TRACE}" ]
-   then
-      echo "PATH=$PATH" >&2
    fi
 
    #

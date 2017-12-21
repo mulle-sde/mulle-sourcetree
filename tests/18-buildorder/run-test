@@ -30,7 +30,7 @@ _setup_demo_repo_a()
 
    redirect_exekutor VERSION echo "2.0.0"
    run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/b"
-   [ -f .mulle-sourcetree ] || fail "failed add"
+   [ -d .mulle-sourcetree ] || fail "failed add"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: version 2.0.0 (tagged)"
    exekutor git tag "2.0.0"
@@ -102,7 +102,7 @@ a;nodelete"
    result="`run_mulle_sourcetree buildorder --marks`"
    if [ "${expect}" != "${result}" ]
    then
-      fail "missed expectations"
+      fail "missed expectations: ${result}"
    fi
 
    log_info "----- ALL PASSED -----"

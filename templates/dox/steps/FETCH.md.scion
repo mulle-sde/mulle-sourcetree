@@ -132,7 +132,7 @@ the repositories to build:
 
 ![The Build](1-build.svg)
 
-Each name is used to lookup the location of the nodetype to build via
+Each name is used to lookup the location of the _nodetype to build via
 `.sourcetree.repos`. So "Noobie" will find `../stashes/Noobie`.
 
 

@@ -142,7 +142,7 @@ run_test1()
    fi
 
    case "${result}" in
-      *remove*/b\'*)
+      *remove*b\'*)
       ;;
 
       *)
@@ -175,7 +175,7 @@ main()
       rmdir_safer "${project}" &&
       mkdir_if_missing "${project}" &&
 
-      MULLE_VIRTUAL_ROOT="${project}"
+      MULLE_VIRTUAL_ROOT="`physicalpath "${project}"`"
       export MULLE_VIRTUAL_ROOT
 
       cd "${project}" &&
