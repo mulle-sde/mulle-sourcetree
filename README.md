@@ -1,4 +1,4 @@
-# mulle-sourcetree,  🌲 Project composition and maintainance with build support 
+# mulle-sourcetree,  🌲 Project composition and maintainance with build support
 
 ![Last version](https://img.shields.io/github/tag/mulle-nat/mulle-sourcetree.svg)
 
@@ -36,8 +36,9 @@ Executable                      | Description
 
 OS    | Command
 ------|------------------------------------
-macos | `brew install mulle-kybernetik/software/mulle-fetch`
+macos | `brew install mulle-kybernetik/software/mulle-sourcetree`
 other | ./install.sh  (Requires: [mulle-fetch](https://github.com/mulle-nat/mulle-fetch), [mulle-bashfunctions](https://github.com/mulle-nat/mulle-bashfunctions))
+
 
 ## Commands
 
@@ -77,7 +78,7 @@ open pic.dot # view it with Graphviz (http://graphviz.org/)
 ![Picture](pic.png)
 
 
-#### Retrieve projects to build with *buildorder* 
+#### Retrieve projects to build with *buildorder*
 
 ```
 $ mulle-sourcetree -e buildorder
