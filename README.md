@@ -1,4 +1,4 @@
-# mulle-sourcetree,  🌲 Project composition and maintainance with build support
+# mulle-sourcetree, 🌲 Project composition and maintenance with build support
 
 ![Last version](https://img.shields.io/github/tag/mulle-nat/mulle-sourcetree.svg)
 
