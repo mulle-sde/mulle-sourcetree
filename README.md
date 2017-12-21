@@ -37,7 +37,7 @@ Executable                      | Description
 OS    | Command
 ------|------------------------------------
 macos | `brew install mulle-kybernetik/software/mulle-sourcetree`
-other | ./install.sh  (Requires: [mulle-fetch](https://github.com/mulle-nat/mulle-fetch), [mulle-bashfunctions](https://github.com/mulle-nat/mulle-bashfunctions))
+other | ./install.sh  (Requires: [mulle-fetch](https://github.com/mulle-nat/mulle-sourcetree))
 
 
 ## Commands

@@ -69,12 +69,12 @@ sourcetree_buildorder_usage()
 {
    cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} buildorder
+   ${MULLE_EXECUTABLE_NAME} buildorder [options]
 
    Print all sourcetree addresses according to the following rules:
 
    * ignore nodes marked as "nobuild"
-   * ignore nodes marked as "norequire", whose _address is missing
+   * ignore nodes marked as "norequire", whose address is missing
    * ignore nodes marked as "no${UNAME}" (platform dependent of course)
 
    In a make based project, this can be used to build everything like this:
