@@ -45,17 +45,20 @@ EOF
 
 walk_clean()
 {
-   log_entry "${C_RESET}walk_clean${C_DEBUG}" "${MULLE_DESTINATION}" "${MULLE_MARKS}"
+   log_entry "${C_RESET}walk_clean${C_DEBUG}" "${MULLE_FILENAME}" "${MULLE_MARKS}"
 
    local filename
    local marks
 
-   filename="${MULLE_FILENAME}"
+   filename="`db_fetch_filename_for_uuid "${MULLE_DATASOURCE}" "${MULLE_UUID}" `"
    marks="${MULLE_MARKS}"
 
+   #
+   # the actual desired filename for a config file is pretty complicated though
+   #
    if nodemarks_contain_nodelete "${marks}"
    then
-      log_fluff "\"${filename}\" is protected from delete"
+      log_verbose "${C_RESET_BOLD}${filename}${C_VERBOSE} is protected from delete"
       NO_DELETES="`add_line "${NO_DELETES}" "${filename}" `"
       return
    fi
@@ -63,16 +66,22 @@ walk_clean()
    # could move stuff to graveyard, but we don't
    if [ -e "${filename}" ]
    then
-      if [ -d "${filename}" ]
+      if [ ! -L "${filename}" ]
       then
-         log_fluff "Dictionary \"${filename}\" marked for delete."
-         DELETE_DIRECTORIES="`add_line "${DELETE_DIRECTORIES}" "${filename}" `"
-      else
-         log_fluff "File \"${filename}\" marked for delete."
+         log_fluff "Symlink \"${filename}\" marked for delete."
          DELETE_FILES="`add_line "${DELETE_FILES}" "${filename}" `"
+      else
+         if [ -d "${filename}" ]
+         then
+            log_fluff "Dictionary \"${filename}\" marked for delete."
+            DELETE_DIRECTORIES="`add_line "${DELETE_DIRECTORIES}" "${filename}" `"
+         else
+            log_fluff "File (or syml) \"${filename}\" marked for delete."
+            DELETE_FILES="`add_line "${DELETE_FILES}" "${filename}" `"
+         fi
       fi
    else
-      log_verbose "Destination \"${filename}\" doesn't exist."
+      log_fluff "Destination \"${filename}\" doesn't exist."
    fi
 }
 
@@ -104,19 +113,21 @@ sourcetree_clean()
 
    VISIT_TWICE="YES"  # need to pick up nodeletes
 
-   walk_config_uuids "${filternodetypes}" \
-                     "${filterpermissions}" \
-                     "${filtermarks}" \
-                     "${mode}" \
-                     "walk_clean"
+   #
+   # We must walk the dbs, because only the dbs know where
+   # stuff eventually ended up being placed (think share)
+   #
+   walk_db_uuids "${filternodetypes}" \
+                 "${filterpermissions}" \
+                 "${filtermarks}" \
+                 "${mode}" \
+                 "walk_clean"
 
    local filename
 
    log_debug "DELETE_FILES:       ${DELETE_FILES}"
    log_debug "DELETE_DIRECTORIES: ${DELETE_DIRECTORIES}"
    log_debug "NO_DELETES:         ${NO_DELETES}"
-
-   # create a graveyard for the files
 
    local uuid
 

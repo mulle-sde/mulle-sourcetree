@@ -96,13 +96,20 @@ main()
    fi
 
    local result
-   local expect="a/b;
-a;nodelete"
+   local expect="`physicalpath "${project}"`/a/b;
+`physicalpath "${project}"`/a;nodelete"
 
    result="`run_mulle_sourcetree buildorder --marks`"
    if [ "${expect}" != "${result}" ]
    then
-      fail "missed expectations: ${result}"
+      fail "missed expectation:
+---
+${expect}
+---
+got
+---
+${result}
+---"
    fi
 
    log_info "----- ALL PASSED -----"

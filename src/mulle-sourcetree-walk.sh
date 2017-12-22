@@ -414,13 +414,13 @@ _visit_callback()
          local old
          local directory
 
-         if [ -d "${filename}" ]
+         if [ -d "${_filename}" ]
          then
-            __docd_preamble "${filename}"
+            __docd_preamble "${_filename}"
                __call_callback "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
             __docd_postamble
          else
-            log_fluff "\"${filename}\" not there, so no callback"
+            log_fluff "\"${_filename}\" not there, so no callback"
          fi
          return
       ;;
@@ -710,7 +710,7 @@ _visit_share_node()
    #
    # So the node is shared so, virtual changes
    # The datasource may diverge though..
-
+   #
    local _destination
    local _filename
 
@@ -833,11 +833,11 @@ _print_walk_info()
       *)
          case "${mode}" in
             *pre-order*)
-               log_verbose "Recursive pre-order walk \"${datasource:-.}\""
+               log_fluff "Recursive pre-order walk \"${datasource:-.}\""
             ;;
 
             *)
-               log_verbose "Recursive depth-first walk \"${datasource:-.}\""
+               log_fluff "Recursive depth-first walk \"${datasource:-.}\""
             ;;
          esac
       ;;

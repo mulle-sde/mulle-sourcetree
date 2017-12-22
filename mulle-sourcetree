@@ -156,7 +156,8 @@ _set_sourcetree_global()
       SOURCETREE_START="`string_remove_prefix "${physicalpwd}" "${MULLE_VIRTUAL_ROOT}"`"
       if [ "${SOURCETREE_START}" = "${physicalpwd}" ]
       then
-         fail "Called outside of MULLE_VIRTUAL_ROOT. Use -e if this is desired"
+         fail "\"${physicalpwd}\" lies outside of MULLE_VIRTUAL_ROOT (${MULLE_VIRTUAL_ROOT}). \
+Use -e if this is desired."
       fi
    fi
    SOURCETREE_START="${SOURCETREE_START}/"
@@ -244,7 +245,7 @@ __check_sane_share_dir()
          relative="`symlink_relpath "${MULLE_SOURCETREE_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT}" `"
          case "${relative}" in
             *..*)
-               fail "MULLE_SOURCETREE_SHARE_DIR (${MULLE_SOURCETREE_SHARE_DIR}) lies outside of MULLE_VIRTUAL_ROOT ($MULLE_VIRTUAL_ROOT).
+               log_warning "MULLE_SOURCETREE_SHARE_DIR (${MULLE_SOURCETREE_SHARE_DIR}) lies outside of MULLE_VIRTUAL_ROOT ($MULLE_VIRTUAL_ROOT).
 Hint: MULLE_SOURCETREE_SHARE_DIR must not contain symlinks."
             ;;
          esac

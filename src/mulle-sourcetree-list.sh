@@ -43,7 +43,6 @@ Usage:
    This command only reads config files.
 
 Options:
-   --local                : only list local config file
    --no-output-header     : suppress header in raw and default lists
    --no-output-separator  : suppress separator line if header is printed
    --output-banner        : print a banner with config information
@@ -98,7 +97,7 @@ _sourcetree_augment_mode_with_output_options()
 
    local mode="$1"
 
-   if [ "${OPTION_OUTPUT_HEADER}" = "YES" ]
+   if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
    then
       mode="`concat "${mode}" "output_header"`"
       if [ "${OPTION_OUTPUT_SEPARATOR}" != "NO" ]
@@ -259,11 +258,6 @@ list_nodes()
    flag="`emit_commandline_flag "${OPTION_OUTPUT_COLOR}" "output-color" `"
    arguments="`concat "${arguments}" "${flag}" `"
 
-   #
-   # some special treatment
-   #
-   flag="`emit_commandline_flag "${OPTION_OUTPUT_HEADER}" "output-header" `"
-   arguments="`concat "${arguments}" "${flag}" `"
 
 #   if [ "${OPTION_OUTPUT_HEADER}" = "NO" ]
 #   then
@@ -298,11 +292,16 @@ list_nodes()
       ;;
    esac
 
+   #
+   # some special treatment
+   #
+   flag="`emit_commandline_flag "${OPTION_OUTPUT_HEADER}" "output-header" `"
+   arguments="`concat "${arguments}" "${flag}" `"
 
    IS_PRINTING="YES"; export IS_PRINTING
 
    sourcetree_walk_main --no-depth-first --cd \
-         "${MULLE_EXECUTABLE}" "${MULLE_TECHNICAL_FLAGS}" --flat -e -N list ${arguments}
+         "${MULLE_EXECUTABLE}" "${MULLE_TECHNICAL_FLAGS}" --flat -e list ${arguments}
 }
 
 

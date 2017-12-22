@@ -845,6 +845,7 @@ __update_perform_item()
             2)
                # if we used a symlink, we want to memorize that
                _nodetype="symlink"
+
                # we don't really want to update that
                contentschanged="NO"
             ;;
@@ -959,6 +960,41 @@ _update_perform_actions()
 }
 
 
+# sourcetree_root_has_minion_with_name()
+# {
+#    log_entry "sourcetree_root_has_minion" "$@"
+
+#    local address="$1"
+
+#    local name
+#    local uuid
+
+#    #
+#    # minion can not have a "path" only a name
+#    #
+#    name="`basename -- "${_address}" `"
+
+#    uuid="`db_fetch_uuid_for_address "/" "${name}" `"
+#    if [ -z "${uuid}" ]
+#    then
+#       return 1
+#    fi
+
+#    local nodeline
+#    local marks
+#    local nodetype
+
+#    nodeline="`db_fetch_nodeline_for_uuid "/" "${uuid}" `"
+#    marks="`nodeline_get_marks "${nodeline}" `"
+#    nodetype="`nodeline_get_nodetype "${nodeline}" `"
+#    if [ "${nodetype}" != "local" ]
+#    then
+#       return 1
+#    fi
+
+#    nodeline_contains_nodelete "${marks}"
+# }
+
 #
 # Only allowable combinations are shown
 #
@@ -1013,12 +1049,45 @@ update_with_nodeline()
    #
    if [ "${style}" = "share" ] && nodemarks_contain_share "${_marks}"
    then
-      filename="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${_address}"`"
       #
-      # use shared root database for shared nodes
+      # address gets truncated
       #
-      database="/"
-      log_debug "using root database for share node \"${_address}\""
+      if [ "${_address}" != "`basename -- "${_address}" `" ]
+      then
+         fail "Can't share node \"${_address}\" as it specified as a subdirectory."
+      fi
+
+      #
+      # locate minion in root database, which overrides, but not if we are
+      # in root
+      #
+      if [ "${database}" != "/" ]
+      then
+         local otheruuid
+
+         otheruuid="`db_fetch_uuid_for_address "${database}" "${_address}"`"
+         if [ ! -z "${otheruuid}" ]
+         then
+            log_fluff "There is a minion for \"${_address}\" in root. So skip it."
+            return
+         else
+            log_debug "No minion for \"${_address}\" in root."
+         fi
+
+         log_debug "Using root database for share node \"${_address}\""
+         database="/"
+      fi
+
+      if [ "${_nodetype}" != "local" ]
+      then
+         #
+         # use shared root database for shared nodes
+         #
+         filename="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${_address}"`"
+         log_debug "Set filename to share \"${filename}\""
+      else
+         filename="${_address}"
+      fi
    else
       filename="`__concat_config_absolute_filename "${config}" "${_address}"`"
    fi
@@ -1027,23 +1096,25 @@ update_with_nodeline()
    then
       if [ -e "${filename}"  ]
       then
-         log_fluff "\"${filename}\" is marked as noupdate and exists"
+         log_fluff "\"${_address}\" is marked as noupdate and exists"
          return
       fi
 
       if nodemarks_contain_norequire "${_marks}"
       then
-         log_fluff "\"${filename}\" is marked as noupdate and doesnt exist, \
+         log_fluff "\"${_address}\" is marked as noupdate and doesnt exist, \
 but it is not required"
          return
       fi
-      fail "\${filename}\" is missing, marked as noupdate, but required"
+      fail "\${_address}\" is missing, marked as noupdate, but required"
    fi
 
    #
-   # If we find something in the database for the same _address,
+   # If we find something in the database for the same address,
    # check if it is ours. This could be a new entry/edit whatever.
    # But it could be old. If its not old, it has preference.
+   # A general problem, why we check for _address here is, that the filename
+   # due to symlinking is unpredictable.
    #
    # If we are in share mode, then the database is "/" here, so no worries
    # We don't have to check the owner, because the _uuid will be different
@@ -1052,7 +1123,7 @@ but it is not required"
    #
    local otheruuid
 
-   otheruuid="`db_fetch_uuid_for_filename "${database}" "${filename}"`"
+   otheruuid="`db_fetch_uuid_for_address "${database}" "${_address}"`"
    if [ ! -z "${otheruuid}" ]
    then
       if db_is_uuid_alive "${database}" "${otheruuid}"
@@ -1071,6 +1142,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    else
       log_debug "Filename \"${filename}\" is not yet in \"${database}\""
    fi
+
 
    #
    # check if this nodeline is already known (this being an update)
@@ -1091,11 +1163,6 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
       [ -z "${previousfilename}" ] && internal_fail "corrupted db"
    fi
 
-   local magic
-   local contentschanged
-   local remember
-   local skip
-   local _nodetype
    local results
 
    results="`_update_perform_actions "${style}" \
@@ -1109,18 +1176,26 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
       exit 1
    fi
 
+   local magic
+
    magic="$(sed -n '1p' <<< "${results}")"
    [ "${magic}" = "-- VfL Bochum 1848 --" ]|| internal_fail "stdout was polluted with \"magic\""
+
+   local contentschanged
+   local remember
+   local skip
+   local nodetype
 
    contentschanged="$(sed -n '2p' <<< "${results}")"
    remember="$(sed -n '3p' <<< "${results}")"
    skip="$(sed -n '4p' <<< "${results}")"
-   _nodetype="$(sed -n '5p' <<< "${results}")"
+   nodetype="$(sed -n '5p' <<< "${results}")"
 
-   log_debug "contentschanged: ${contentschanged}" \
-             "remember: ${remember}" \
-             "skip: ${skip}" \
-             "_nodetype: ${_nodetype}"
+   log_debug "\
+contentschanged : ${contentschanged}
+remember        : ${remember}
+skip            : ${skip}
+nodetype        : ${nodetype}"
 
    if [ "${skip}" = "YES" ]
    then
@@ -1132,7 +1207,13 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    then
       # _branch could be overwritten
 
-      filename="`physicalpath "${filename}" `"
+      # don't do this as it resolved symlinks that we might need
+      # filename="`physicalpath "${filename}" `"
+      if ! is_absolutepath "${filename}"
+      then
+         filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${filename}" `"
+      fi
+
       [ -z "${filename}" ] && internal_fail "Memorizing non existing file"
 
       log_debug "${C_INFO}Remembering ${nodeline} located at \"${filename}\"..."
@@ -1142,7 +1223,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
 
       if [ "${OPTION_FIX}" != "NO" ] && [ -d "${filename}" ]
       then
-         local  output
+         local output
 
          [ -z "${SOURCETREE_FIX_FILE}" ] && internal_fail "SOURCETREE_FIX_FILE is empty"
          output="`filepath_concat "${filename}" "${SOURCETREE_FIX_FILE}"`"

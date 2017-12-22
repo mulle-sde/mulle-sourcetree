@@ -142,8 +142,6 @@ nodeline_parse()
 
    case "${_userinfo}" in
       base64:*)
-         local decoded
-
          _userinfo="`base64 --decode <<< "${_userinfo:7}"`"
          if [ "$?" -ne 0 ]
          then
@@ -303,7 +301,7 @@ nodeline_print_header()
 
    case "${mode}" in
       *output_full*)
-         printf "%s" "${sep}branch${sep}_tag${sep}fetchoptions"
+         printf "%s" "${sep}branch${sep}tag${sep}fetchoptions"
       ;;
    esac
    case "${mode}" in
@@ -436,7 +434,6 @@ ${sep}${_tag:- }${sep}${_fetchoptions:- }"
          printf "\n"
       ;;
 
-
       *)
          printf "%s" "${_address}${sep}${_nodetype}${sep}${_marks}${sep}${_userinfo}${sep}${_url}"
          case "${mode}" in
@@ -455,3 +452,58 @@ ${sep}${_tag:- }${sep}${_fetchoptions:- }"
    esac
 }
 
+
+#
+# style is known to be "share"
+# compute the filename to use
+#
+nodeline_share_filename()
+{
+   log_entry "nodeline_share_filename" "$@"
+
+   local database="$1"
+   local address="$2"
+   local nodetype="$3"
+   local marks="$4"
+
+   local filename
+
+   #
+   # address gets truncated
+   #
+   if [ "${address}" != "`basename -- "${address}" `" ]
+   then
+      fail "Can't share node \"${address}\" as it specified as a subdirectory."
+   fi
+
+   #
+   # locate minion in root database, which overrides, but not if we are
+   # in root
+   #
+   if [ "${database}" != "/" ]
+   then
+      local otheruuid
+
+      otheruuid="`db_fetch_uuid_for_address "/" "${address}"`"
+      if [ ! -z "${otheruuid}" ]
+      then
+         log_fluff "There is a minion for \"${address}\" in root. So skip it."
+         return 1
+      fi
+
+      log_debug "Use root database for share node \"${address}\""
+   fi
+
+   if [ "${nodetype}" != "local" ]
+   then
+      #
+      # use shared root database for shared nodes
+      #
+      filename="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${address}"`"
+      log_debug "Set filename to share \"${filename}\""
+   else
+      filename="${address}"
+   fi
+
+   echo "${filename}"
+}

@@ -932,17 +932,17 @@ db_ensure_compatible_dbtype()
    log_entry "db_ensure_compatible_dbtype" "$@"
 
    local database="$1"
-   local mode="$2"
+   local dbtype="$2"
 
-   local dbtype
+   local actualdbtype
 
-   dbtype="`db_get_dbtype "${database}"`"
-   if [ -z "${dbtype}" -o "${dbtype}" = "${mode}" ]
+   actualdbtype="`db_get_dbtype "${database}"`"
+   if [ -z "${actualdbtype}" -o "${actualdbtype}" = "${dbtype}" ]
    then
       return
    fi
 
-   if [ "${dbtype}" = "flat" -a "${mode}" = "recurse" ]
+   if [ "${actualdbtype}" = "flat" -a "${dbtype}" = "recurse" ]
    then
       if [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
       then
@@ -955,12 +955,12 @@ or append the -r flag for recurse."
       return
    fi
 
-   fail "Database in \"$PWD\" was constructed as $mode \.
-If you want to change that do:
+   fail "Database in \"$PWD\" was constructed as \"${actualdbtype}\".
+If you want to change that to \"${dbtype}\" do:
    ${C_RESET_BOLD}cd '$PWD'${C_ERROR}
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} clean${C_ERROR}
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} reset${C_ERROR}
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} update --mode${C_ERROR}"
+   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} update --${dbtype}${C_ERROR}"
 }
 
 
@@ -972,7 +972,6 @@ _db_set_default_mode()
    local database="$1"
    local usertype="$2"
 
-   local dbtype
    local actualdbtype
 
    actualdbtype="`db_get_dbtype "${database}"`"
@@ -984,6 +983,8 @@ _db_set_default_mode()
    then
       __db_common_rootdir "${database}"
    fi
+
+   local dbtype
 
    dbtype="${usertype}"
    if [ -z "${dbtype}" ]
