@@ -147,11 +147,19 @@ emit_status()
    local datasource="$3"
    local marks="$4"
    local mode="$5"
+   local filename="$6"
 
+   local output_address
+
+   output_adress="`filepath_concat "${datasource}" "${address}" `"
+
+   # emit root
    if [ -z "${directory}" ]
    then
       datasource="${SOURCETREE_START}"
+      output_adress="`filepath_concat "${SOURCETREE_START}" "${address}" `"
       directory="."
+      filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${SOURCETREE_START}" `"
    else
       datasource="/${MULLE_VIRTUAL_ADDRESS}"
    fi
@@ -161,6 +169,7 @@ emit_status()
    log_debug "datasource: ${datasource}"
    log_debug "marks:      ${marks}"
    log_debug "mode:       ${mode}"
+   log_debug "filename:   ${filename}"
 
    local fs
    local configexists
@@ -208,7 +217,7 @@ emit_status()
          then
             return 0
          fi
-         exekutor echo "${directory};norequire;${fs};${configexists};${dbexists}"
+         exekutor echo "${output_adress};norequire;${fs};${configexists};${dbexists};${filename}"
       else
          if [ -z "${_url}" ]
          then
@@ -217,7 +226,7 @@ emit_status()
             then
                exit 2   # indicate brokenness
             fi
-            exekutor echo "${directory};update;${fs};${configexists};${dbexists}"
+            exekutor echo "${output_adress};update;${fs};${configexists};${dbexists};${filename}"
             return 0
          fi
 
@@ -226,7 +235,7 @@ emit_status()
          then
             exit 1
          fi
-         exekutor echo "${directory};update;${fs};${configexists};${dbexists}"
+         exekutor echo "${output_adress};update;${fs};${configexists};${dbexists};${filename}"
       fi
       return
    else
@@ -249,7 +258,7 @@ emit_status()
       then
          exit 1
       fi
-      exekutor echo "${directory};update;${fs};${configexists};${dbexists}"
+      exekutor echo "${output_adress};update;${fs};${configexists};${dbexists};${filename}"
       return 0
    fi
 
@@ -277,7 +286,7 @@ emit_status()
                return 0
             fi
 
-            exekutor echo "${directory};ok;${fs};${configexists};${dbexists}"
+            exekutor echo "${output_adress};ok;${fs};${configexists};${dbexists};${filename}"
             return
          fi
 
@@ -303,7 +312,7 @@ emit_status()
                   exit 2  # only time we exit with 2 on IS_UPTODATE
                fi
 
-               exekutor echo "${directory};incomplete;${fs};${configexists};${dbexists}"
+               exekutor echo "${output_adress};incomplete;${fs};${configexists};${dbexists};${filename}"
                return 0
             fi
 
@@ -321,7 +330,7 @@ emit_status()
    then
       return 0
    fi
-   exekutor echo "${directory};${status};${fs};${configexists};${dbexists}"
+   exekutor echo "${output_adress};${status};${fs};${configexists};${dbexists};${filename}"
 }
 
 
@@ -329,11 +338,30 @@ walk_status()
 {
    log_entry "walk_status" "$@"
 
+   local filename
+   local name
+
+   if db_is_ready "${MULLE_DATASOURCE}"
+   then
+      filename="`db_fetch_filename_for_uuid "${MULLE_DATASOURCE}" "${MULLE_UUID}" `"
+   else
+      if nodemarks_contain_share "${MULLE_MARKS}" && \
+         "${SOURCETREE_MODE}" = "share" && \
+         "${MULLE_NODETYPE}" != "local"
+      then
+         name="`basename -- "${MULLE_ADDRESS}"`"
+         filename="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${MULLE_ADDRESS}"`"
+      else
+         filename="${MULLE_FILENAME}"
+      fi
+   fi
+
    emit_status "${MULLE_ADDRESS}" \
                "${MULLE_VIRTUAL_ADDRESS}" \
                "${MULLE_DATASOURCE}" \
                "${MULLE_MARKS}" \
-               "${MULLE_MODE}"
+               "${MULLE_MODE}" \
+               "${filename}"
 }
 
 
@@ -375,11 +403,11 @@ sourcetree_status()
 
    case "${mode}" in
       *header*)
-         header="Address;Status;Filesystem;Config;Database"
+         header="Node;Status;Filesystem;Config;Database;Filename"
 
          case "${mode}" in
             *separator*)
-               header="`add_line "${header}" "-------;------;----------;------;--------"`"
+               header="`add_line "${header}" "-------;------;----------;------;--------;--------"`"
             ;;
          esac
          output="`add_line "${header}" "${output}"`"

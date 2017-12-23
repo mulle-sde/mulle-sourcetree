@@ -1,3 +1,8 @@
+## 0.2.0
+
+* use evaled url to unique sharable nodes
+
+
 ### 0.1.1
 
 * Various small improvements

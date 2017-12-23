@@ -53,7 +53,7 @@ node_guess_address()
    local evaledurl
    local result
 
-   evaledurl="`eval echo "$url"`"
+   evaledurl="`eval echo "${url}"`"
 
    case "${evaledurl}" in
       "")
@@ -119,11 +119,11 @@ node_fetch_operation()
    local evaledtag
    local evaledfetchoptions
 
-   evaledurl="`eval echo "$_url"`"
+   evaledurl="`eval echo "${_url}"`"
    [ -z "${evaledurl}" ] && fail "URL \"${_url}\" evaluates to empty"
-   evaledtag="`eval echo "$_tag"`"
-   evaledbranch="`eval echo "$_branch"`"
-   evaledfetchoptions="`eval echo "$_fetchoptions"`"
+   evaledtag="`eval echo "${_tag}"`"
+   evaledbranch="`eval echo "${_branch}"`"
+   evaledfetchoptions="`eval echo "${_fetchoptions}"`"
 
    log_info "Looking for local source of ${C_RESET_BOLD}${evaledurl}${C_INFO}"
 
@@ -878,7 +878,7 @@ nodetypes_contain()
    log_entry "nodetypes_contain" "$@"
 
    local nodetypes="$1"
-   local _nodetype="$2"
+   local nodetype="$2"
 
    local key
 
@@ -886,7 +886,7 @@ nodetypes_contain()
    for key in ${nodetypes}
    do
       IFS="${DEFAULT_IFS}"
-      if [ "${_nodetype}" = "${key}" ]
+      if [ "${nodetype}" = "${key}" ]
       then
          return 0
       fi
@@ -894,4 +894,3 @@ nodetypes_contain()
    IFS="${DEFAULT_IFS}"
    return 1
 }
-

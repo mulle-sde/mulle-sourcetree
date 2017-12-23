@@ -48,6 +48,12 @@ _db_owner()
 
 _db_filename()
 {
+   sed -n '3p'
+}
+
+
+_db_evaledurl()
+{
    tail -1
 }
 
@@ -131,7 +137,7 @@ __db_common_dbfilepath()
    dbfilepath="${databasedir}/${uuid}"
    if [ ! -f "${dbfilepath}" ]
    then
-      log_debug "No _address found for ${uuid} in ${databasedir}"
+      log_debug "No address found for ${uuid} in ${databasedir}"
       return 1
    fi
    log_debug "Found \"${dbfilepath}\""
@@ -152,6 +158,7 @@ db_memorize()
    local nodeline="$3"
    local owner="$4"
    local filename="$5"
+   local evaledurl="$5"
 
    [ -z "${nodeline}" ] && internal_fail "nodeline is missing"
    [ -z "${uuid}" ]     && internal_fail "uuid is missing"
@@ -187,7 +194,8 @@ db_memorize()
 
    content="${nodeline}
 ${owner}
-${filename}"
+${filename}
+${evaledurl}"
 
    log_debug "Remembering uuid \"${uuid}\" ($databasedir)"
 
@@ -207,10 +215,12 @@ db_recall()
 
    local dbfilepath
 
-   if __db_common_dbfilepath "${databasedir}" "${uuid}"
+   if ! __db_common_dbfilepath "${databasedir}" "${uuid}"
    then
-      cat "${dbfilepath}"
+      return 1
    fi
+
+   cat "${dbfilepath}"
 }
 
 
@@ -319,10 +329,16 @@ __db_parse_dbentry()
    nodeline="`_db_nodeline <<< "${dbentry}"`"
    owner="`_db_owner <<< "${dbentry}"`"
    filename="`_db_filename <<< "${dbentry}"`"
+   evaledurl="`_db_evaledurl <<< "${dbentry}"`"
 
-   log_debug "nodeline : ${nodeline}"
-   log_debug "owner    : ${owner}"
-   log_debug "filename : ${filename}"
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = "YES" ]
+   then
+      log_trace2 "\
+nodeline  : ${nodeline}
+owner     : ${owner}
+filename  : ${filename}
+evaledurl : ${evaledurl}"
+   fi
 }
 
 
@@ -353,19 +369,20 @@ db_fetch_nodeline_for_uuid()
 {
    log_entry "db_fetch_nodeline_for_uuid" "$@"
 
-   local nodeline
-   local owner
-   local filename
+   local database
+   local databasedir
+   local uuid
 
-   __db_recall_dbentry "$@"
+   __db_common_databasedir_uuid "$@"
 
-   if [ -z "${nodeline}" ]
+   local dbfilepath
+
+   if ! __db_common_dbfilepath "${databasedir}" "${uuid}"
    then
       return 1
    fi
 
-   echo "${nodeline}"
-   return 0
+   _db_nodeline <"${dbfilepath}"
 }
 
 
@@ -373,18 +390,20 @@ db_fetch_owner_for_uuid()
 {
    log_entry "db_fetch_owner_for_uuid" "$@"
 
-   local nodeline
-   local owner
+   local database
+   local databasedir
+   local uuid
 
-   __db_recall_dbentry "$@"
+   __db_common_databasedir_uuid "$@"
 
-   if [ -z "${owner}" ]
+   local dbfilepath
+
+   if ! __db_common_dbfilepath "${databasedir}" "${uuid}"
    then
       return 1
    fi
 
-   echo "${owner}"
-   return 0
+   _db_owner < "${dbfilepath}"
 }
 
 
@@ -392,19 +411,41 @@ db_fetch_filename_for_uuid()
 {
    log_entry "db_fetch_filename_for_uuid" "$@"
 
-   local nodeline
-   local owner
-   local filename
+   local database
+   local databasedir
+   local uuid
 
-   __db_recall_dbentry "$@"
+   __db_common_databasedir_uuid "$@"
 
-   if [ -z "${filename}" ]
+   local dbfilepath
+
+   if ! __db_common_dbfilepath "${databasedir}" "${uuid}"
    then
       return 1
    fi
 
-   echo "${filename}"
-   return 0
+   _db_filename < "${dbfilepath}"
+}
+
+
+db_fetch_evaledurl_for_uuid()
+{
+   log_entry "db_fetch_evaledurl_for_uuid" "$@"
+
+   local database
+   local databasedir
+   local uuid
+
+   __db_common_databasedir_uuid "$@"
+
+   local dbfilepath
+
+   if ! __db_common_dbfilepath "${databasedir}" "${uuid}"
+   then
+      return 1
+   fi
+
+   _db_evaledurl < "${dbfilepath}"
 }
 
 
@@ -452,17 +493,60 @@ db_fetch_uuid_for_address()
 
    __db_common_databasedir "$@"
 
-   local _address="$2"
+   local address="$2"
 
-   [ -z "${_address}" ] && internal_fail "_address is empty"
+   [ -z "${address}" ] && internal_fail "address is empty"
 
    if dir_has_files "${databasedir}" f
    then
       local pattern
 
-      pattern="`escaped_grep_pattern "${_address}"`"
+      pattern="`escaped_grep_pattern "${address}"`"
       egrep -s "^${pattern};" "${databasedir}"/* | cut -s '-d;' -f 4
    fi
+}
+
+
+db_fetch_uuid_for_evaledurl()
+{
+   log_entry "db_fetch_uuid_for_evaledurl" "$@"
+
+   local database
+   local databasedir
+
+   __db_common_databasedir "$@"
+
+   local searchurl="$2"
+
+   [ -z "${searchurl}" ] && internal_fail "url is empty"
+
+   if ! dir_has_files "${databasedir}" f
+   then
+      return 1
+   fi
+
+   (
+      local evaledurl
+      local candidate
+
+      cd "${databasedir}"
+      IFS="
+"
+      for candidate in `fgrep -l -x -s "${evaledurl}" *`
+      do
+         IFS="${DEFAULT_IFS}"
+
+         evaledurl="`_db_evaledurl < "${candidate}" `"
+         if [ "${searchurl}" = "${evaledurl}" ]
+         then
+            echo "${candidate}"
+            exit 0
+         fi
+      done
+      exit 1
+   )
+
+   return 1
 }
 
 
@@ -475,7 +559,7 @@ db_fetch_uuid_for_filename()
 
    __db_common_databasedir "$@"
 
-   local searchfilename="$2"
+   local searchurl="$2"
 
    [ -z "${searchfilename}" ] && internal_fail "filename is empty"
 
@@ -484,32 +568,29 @@ db_fetch_uuid_for_filename()
       return 1
    fi
 
-   local nodeline
-   local owner
-   local filename
-   local dbentry
+   (
+      local filename
+      local candidate
 
-   IFS="
+      cd "${databasedir}"
+      IFS="
 "
-   for candidate in `fgrep -l -x -s "${searchfilename}" "${databasedir}"/*`
-   do
-      IFS="${DEFAULT_IFS}"
+      for candidate in `fgrep -l -x -s "${searchfilename}" *`
+      do
+         IFS="${DEFAULT_IFS}"
 
-      dbentry="`cat "${candidate}" `"
+         filename="`_db_filename < "${candidate}" `"
+         if [ "${searchfilename}" = "${filename}" ]
+         then
+            echo "${candidate}"
+            exit 0
+         fi
+      done
+      exit 1
+   )
 
-      __db_parse_dbentry "${dbentry}"
-
-      if [ "${searchfilename}" = "${filename}" ]
-      then
-         _nodeline_get_uuid <<< "${nodeline}"
-         return 0
-      fi
-   done
-
-   IFS="${DEFAULT_IFS}"
    return 1
 }
-
 
 
 db_fetch_all_filenames()
@@ -1382,4 +1463,72 @@ db_state_description()
    fi
 
    echo "${dbstate}"
+}
+
+
+#
+# Figure out the filename for a node marked share (which is the default)
+# It is assumed, that this particular node is not in the database yet.
+# I.e. this is run during an update!
+# The returned filename is not absolute.
+#
+# return values:
+#  0: go ahead with update, use return value as filename
+#  1: error
+#  2: skip this node
+#
+db_update_determine_share_filename()
+{
+   log_entry "db_update_determine_share_filename" "$@"
+
+   local database="$1"
+   local address="$2"
+   local url="$3"
+   local nodetype="$4"
+   local marks="$5"
+
+   local filename
+   local evaledurl
+
+   evaledurl="`eval echo "${url}"`"
+   if [ -z "${evaledurl}" ]
+   then
+      log_fluff  "URL \"${url}\" evaluates to empty"
+      return 1
+   fi
+
+   #
+   # Check root database if there is not the same URL in there already.
+   # It is assumed
+   local otheruuid
+
+   otheruuid="`db_fetch_uuid_for_evaledurl "/" "${evaledurl}"`"
+   if [ ! -z "${otheruuid}" ]
+   then
+      log_fluff "The \"${url}\" is already used in root. So skip it."
+      return 2
+   fi
+
+   log_debug "Use root database for share node \"${address}\""
+
+   #
+   # Use the "${MULLE_SOURCETREE_SHARE_DIR}" for shared nodes, except when
+   # marked "local". We do not check the whole tree for another local node
+   # though.
+   #
+   if [ "${nodetype}" = "local" ]
+   then
+      log_debug "Use local minion node \"${address}\" as share"
+      echo "${address}"
+      return 0
+   fi
+
+   local name
+
+   name="`basename -- "${address}" `"
+   filename="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${name}" `"
+   log_debug "Set filename to share directory \"${filename}\""
+
+   echo "${filename}"
+   return 0
 }

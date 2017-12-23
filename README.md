@@ -40,6 +40,15 @@ macos | `brew install mulle-kybernetik/software/mulle-sourcetree`
 other | ./install.sh  (Requires: [mulle-fetch](https://github.com/mulle-nat/mulle-sourcetree))
 
 
+## Sourcetree Modes
+
+Mode       | Description
+-----------|---------------------------------------------
+--flat     | Only the local sourcetree nodes are updated
+--recurse  | Subtrees of nodes are also updated
+--share    | Like recurse, but nodes with identical URLS are only fetched once
+
+
 ## Commands
 
 #### Add dependencies with *add*
@@ -85,6 +94,7 @@ $ mulle-sourcetree -e buildorder
 /private/tmp/a/external/expat
 /private/tmp/a/external/zlib
 ```
+
 
 
 ## GitHub and Mulle kybernetiK

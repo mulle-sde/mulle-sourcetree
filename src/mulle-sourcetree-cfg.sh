@@ -449,6 +449,8 @@ cfg_determine_working_directory()
 
 cfg_defer_if_needed()
 {
+   log_entry "cfg_defer_if_needed" "$@"
+
    local preference="$1"
    local defer="$2"
 
@@ -462,4 +464,30 @@ cfg_defer_if_needed()
          exekutor cd "${directory}"
       fi
    fi
+}
+
+
+cfg_absolute_filename()
+{
+   log_entry "cfg_absolute_filename" "$@"
+
+   local config="$1"
+   local address="$2"
+
+   case "${config}" in
+      /|/*/)
+      ;;
+
+      *)
+         internal_fail "config \"${config}\" is malformed"
+      ;;
+   esac
+
+   case "${address}" in
+      /*)
+         internal_fail "address \"${config}\" is absolute"
+      ;;
+   esac
+
+   echo "${MULLE_VIRTUAL_ROOT}${config}${address}"
 }

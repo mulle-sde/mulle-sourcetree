@@ -1047,49 +1047,28 @@ update_with_nodeline()
    # the _address is what is relative to the current config (configfile)
    # the filename is an absolute path
    #
-   if [ "${style}" = "share" ] && nodemarks_contain_share "${_marks}"
+   if [ ! -z "${_url}" -a "${style}" = "share" ] && nodemarks_contain_share "${_marks}"
    then
-      #
-      # address gets truncated
-      #
-      if [ "${_address}" != "`basename -- "${_address}" `" ]
-      then
-         fail "Can't share node \"${_address}\" as it specified as a subdirectory."
-      fi
+      filename="`db_update_determine_share_filename "${database}" \
+                                                    "${_address}" \
+                                                    "${_url}" \
+                                                    "${_nodetype}" \
+                                                    "${_marks}" `"
+      case $? in
+         0)
+         ;;
 
-      #
-      # locate minion in root database, which overrides, but not if we are
-      # in root
-      #
-      if [ "${database}" != "/" ]
-      then
-         local otheruuid
+         1)
+            exit 1
+         ;;
 
-         otheruuid="`db_fetch_uuid_for_address "${database}" "${_address}"`"
-         if [ ! -z "${otheruuid}" ]
-         then
-            log_fluff "There is a minion for \"${_address}\" in root. So skip it."
+         2)
             return
-         else
-            log_debug "No minion for \"${_address}\" in root."
-         fi
-
-         log_debug "Using root database for share node \"${_address}\""
-         database="/"
-      fi
-
-      if [ "${_nodetype}" != "local" ]
-      then
-         #
-         # use shared root database for shared nodes
-         #
-         filename="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${_address}"`"
-         log_debug "Set filename to share \"${filename}\""
-      else
-         filename="${_address}"
-      fi
+         ;;
+      esac
+      database="/"
    else
-      filename="`__concat_config_absolute_filename "${config}" "${_address}"`"
+      filename="`cfg_absolute_filename "${config}" "${_address}"`"
    fi
 
    if nodemarks_contain_noupdate "${_marks}"
@@ -1218,8 +1197,16 @@ nodetype        : ${nodetype}"
 
       log_debug "${C_INFO}Remembering ${nodeline} located at \"${filename}\"..."
 
+      local evaledurl
+
+      evaledurl="`eval echo "${_url}"`"
       nodeline="`node_print_nodeline`"
-      db_memorize "${database}" "${_uuid}" "${nodeline}" "${config}" "${filename}"
+      db_memorize "${database}" \
+                  "${_uuid}" \
+                  "${nodeline}" \
+                  "${config}" \
+                  "${filename}" \
+                  "${evaledurl}"
 
       if [ "${OPTION_FIX}" != "NO" ] && [ -d "${filename}" ]
       then
