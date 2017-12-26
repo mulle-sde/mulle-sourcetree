@@ -62,6 +62,28 @@ __db_common_rootdir()
 {
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
+   case "${MULLE_SOURCETREE_SHARE_DIR}" in
+      /*)
+         if string_has_prefix "$1" "${MULLE_SOURCETREE_SHARE_DIR}"
+         then
+            case "$1" in
+               "/")
+                  rootdir="$1"
+               ;;
+
+               /*/)
+                  rootdir="$(sed 's|/$||g' <<< "$1")"
+               ;;
+
+               *)
+                  rootdir="$1"
+               ;;
+            esac
+            return
+         fi
+      ;;
+   esac
+
    case "$1" in
       "/")
          rootdir="${MULLE_VIRTUAL_ROOT}"
@@ -88,23 +110,45 @@ __db_common_databasedir()
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
    database="$1"
+
+   case "${MULLE_SOURCETREE_SHARE_DIR}" in
+      /*)
+         if string_has_prefix "${database}" "${MULLE_SOURCETREE_SHARE_DIR}"
+         then
+            case "${database}" in
+               "/")
+                  databasedir="${SOURCETREE_DB_NAME}"
+               ;;
+
+               /*/)
+                  databasedir="${database}${SOURCETREE_DB_NAME}"
+               ;;
+
+               *)
+                  databasedir="${database}/${SOURCETREE_DB_NAME}"
+               ;;
+            esac
+            return
+         fi
+      ;;
+   esac
+
    case "${database}" in
       "/")
          databasedir="${MULLE_VIRTUAL_ROOT}/${SOURCETREE_DB_NAME}"
       ;;
 
       /*/)
-         databasedir="${MULLE_VIRTUAL_ROOT}$1${SOURCETREE_DB_NAME}"
+         databasedir="${MULLE_VIRTUAL_ROOT}${database}${SOURCETREE_DB_NAME}"
       ;;
 
       /*)
-         databasedir="${MULLE_VIRTUAL_ROOT}$1/${SOURCETREE_DB_NAME}"
+         databasedir="${MULLE_VIRTUAL_ROOT}${database}/${SOURCETREE_DB_NAME}"
       ;;
 
       *)
-         internal_fail "database \"$1\" must start with '/'"
+         internal_fail "database \"${database}\" must start with '/'"
       ;;
-
    esac
 }
 
@@ -158,7 +202,7 @@ db_memorize()
    local nodeline="$3"
    local owner="$4"
    local filename="$5"
-   local evaledurl="$5"
+   local evaledurl="$6"
 
    [ -z "${nodeline}" ] && internal_fail "nodeline is missing"
    [ -z "${uuid}" ]     && internal_fail "uuid is missing"
@@ -609,7 +653,7 @@ db_fetch_all_filenames()
 
       for i in "${databasedir}"/*
       do
-         tail -1 "${i}"
+         _db_filename < "${i}"
       done
    )
 }
@@ -689,6 +733,21 @@ db_add_missing()
 #
 # dbtype
 #
+
+_db_get_dbtype()
+{
+   log_entry "_db_get_dbtype" "$@"
+
+   local databasedir="$1"
+   # for -e tests
+   if ! head -1 "${databasedir}/.db_type" 2> /dev/null
+   then
+      log_fluff "\"${databasedir}/.db_type\" is missing"
+      :
+   fi
+}
+
+
 db_get_dbtype()
 {
    log_entry "db_get_dbtype" "$@"
@@ -699,10 +758,7 @@ db_get_dbtype()
    __db_common_databasedir "$@"
 
    # for -e tests
-   if ! head -1 "${databasedir}/.db_type" 2> /dev/null
-   then
-      :
-   fi
+   _db_get_dbtype "${databasedir}"
 }
 
 
@@ -779,21 +835,21 @@ db_dir_exists()
 
 __db_environment()
 {
-   echo "${MULLE_VIRTUAL_ROOT}
-${databasedir}
+   echo "${databasedir}
 ${MULLE_SOURCETREE_SHARE_DIR}"
 }
 
 
 db_environment()
 {
+   log_entry "db_is_ready" "$@"
+
    local database
    local databasedir
 
    __db_common_databasedir "$@"
 
-   echo "${MULLE_VIRTUAL_ROOT}
-${databasedir}
+   echo "${databasedir}
 ${MULLE_SOURCETREE_SHARE_DIR}"
 }
 
@@ -1041,7 +1097,7 @@ If you want to change that to \"${dbtype}\" do:
    ${C_RESET_BOLD}cd '$PWD'${C_ERROR}
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} clean${C_ERROR}
    ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} reset${C_ERROR}
-   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} update --${dbtype}${C_ERROR}"
+   ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} --${dbtype} update${C_ERROR}"
 }
 
 
@@ -1264,9 +1320,9 @@ db_set_uuid_alive()
 }
 
 
-db_is_address_inuse()
+db_is_filename_inuse()
 {
-   log_entry "db_is_address_inuse" "$@"
+   log_entry "db_is_filename_inuse" "$@"
 
    local database="$1"
    local filename="$2"
@@ -1387,7 +1443,7 @@ db_safe_bury_dbentry()
       return
    fi
 
-   if db_is_address_inuse "${database}" "${filename}"
+   if db_is_filename_inuse "${database}" "${filename}"
    then
       log_fluff "Another node is using \"${filename}\" now"
       return
@@ -1466,6 +1522,25 @@ db_state_description()
 }
 
 
+db_fetch_uuid_for_url()
+{
+   log_entry "db_fetch_uuid_for_url" "$@"
+
+   local database="$1"
+   local url="$2"
+
+   local evaledurl
+
+   evaledurl="`eval echo "${url}"`"
+   if [ -z "${evaledurl}" ]
+   then
+      fail "URL \"${url}\" evaluates to empty"
+   fi
+
+   db_fetch_uuid_for_evaledurl "${database}" "${evaledurl}"
+}
+
+
 #
 # Figure out the filename for a node marked share (which is the default)
 # It is assumed, that this particular node is not in the database yet.
@@ -1493,8 +1568,7 @@ db_update_determine_share_filename()
    evaledurl="`eval echo "${url}"`"
    if [ -z "${evaledurl}" ]
    then
-      log_fluff  "URL \"${url}\" evaluates to empty"
-      return 1
+      fail "URL \"${url}\" evaluates to empty"
    fi
 
    #
@@ -1532,3 +1606,6 @@ db_update_determine_share_filename()
    echo "${filename}"
    return 0
 }
+
+
+

@@ -7,9 +7,8 @@ src/mulle-sourcetree-dotdump.sh \
 src/mulle-sourcetree-node.sh \
 src/mulle-sourcetree-nodeline.sh \
 src/mulle-sourcetree-update.sh \
-src/mulle-sourcetree-walk.sh \
-src/mulle-sourcetree-zombie.sh
-
+src/mulle-sourcetree-walk.sh 
+	
 CHECKSTAMPS=$(SCRIPTS:.sh=.chk)
 
 #

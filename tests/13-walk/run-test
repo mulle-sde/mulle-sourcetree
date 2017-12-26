@@ -121,7 +121,7 @@ a/c"
    fi
    log_verbose "----- #1 PASSED -----"
 
-   results="`run_mulle_sourcetree walk --depth-first \
+   results="`run_mulle_sourcetree walk --in-order \
                                        --walk-config \
                                        "echo" "\\\${MULLE_VIRTUAL_ADDRESS}"`"
    if [ $? -ne 0 ]
@@ -146,7 +146,7 @@ a"
    #
    # example how to get the repositories in build order
    #
-   results="`run_mulle_sourcetree walk --no-depth-first \
+   results="`run_mulle_sourcetree walk --pre-order \
                                        --marks build \
                                        --walk-config \
                                        "echo" \

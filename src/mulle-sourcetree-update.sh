@@ -960,58 +960,6 @@ _update_perform_actions()
 }
 
 
-# sourcetree_root_has_minion_with_name()
-# {
-#    log_entry "sourcetree_root_has_minion" "$@"
-
-#    local address="$1"
-
-#    local name
-#    local uuid
-
-#    #
-#    # minion can not have a "path" only a name
-#    #
-#    name="`basename -- "${_address}" `"
-
-#    uuid="`db_fetch_uuid_for_address "/" "${name}" `"
-#    if [ -z "${uuid}" ]
-#    then
-#       return 1
-#    fi
-
-#    local nodeline
-#    local marks
-#    local nodetype
-
-#    nodeline="`db_fetch_nodeline_for_uuid "/" "${uuid}" `"
-#    marks="`nodeline_get_marks "${nodeline}" `"
-#    nodetype="`nodeline_get_nodetype "${nodeline}" `"
-#    if [ "${nodetype}" != "local" ]
-#    then
-#       return 1
-#    fi
-
-#    nodeline_contains_nodelete "${marks}"
-# }
-
-#
-# Only allowable combinations are shown
-#
-# Style   | Projectdir | Database   || Owner
-# --------|------------|------------||---------------
-# flat    | /          | /          || -
-#
-# recurse | /          | /          || -
-# recurse | foo        | foo        || -
-#
-# share   | /          | /          || -
-# share   | foo        | /          || foo
-# share   | foo        | foo        || -
-#
-# partial | /          | /          || -
-# partial | foo        | foo        || -
-#
 update_with_nodeline()
 {
    log_entry "update_with_nodeline" "$@"
@@ -1315,10 +1263,10 @@ recursive_update_with_nodeline()
    newdatabase="${newconfig}"
 
    log_debug "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
-   log_debug "config         : ${config}"
+   log_debug "config             : ${config}"
    log_debug "database           : ${database}"
    log_debug "filename           : ${filename}"
-   log_debug "newconfig      : ${newconfig}"
+   log_debug "newconfig          : ${newconfig}"
    log_debug "newdatabase        : ${newdatabase}"
 
    #
@@ -1328,8 +1276,14 @@ recursive_update_with_nodeline()
    #
    if [ ! -d "${filename}" ]
    then
-      log_fluff "Will not recursively update \"${filename}\" as it's not \
+      if [ -e "${filename}" ]
+      then
+         log_fluff "Will not recursively update \"${filename}\" as it's not \
 a directory"
+         return
+      fi
+      # isn't this a fail ?
+      internal_fail "\"${filename}\" does not exist, so database is corrupt"
       return
    fi
 
@@ -1763,11 +1717,6 @@ sourcetree_update_initialize()
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
    fi
 
-   if [ -z "${MULLE_SOURCETREE_ZOMBIFY_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-zombie.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-zombie.sh"
-   fi
    if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
    then
       # shellcheck source=mulle-sourcetree-db.sh

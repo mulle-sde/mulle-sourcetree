@@ -58,7 +58,8 @@ Options:
    -m <value>       : specify _marks to match (e.g. build)
    --cd             : change directory to node's working directory
    --lenient        : allow shell command to error
-   --no-depth-first : walk tree in pre-order
+   --pre-order      : walk tree in pre-order  (Root, Left, Right)
+   --in-order       : walk tree in in-order (Left, Root, Right)
    --walk-db        : walk over information contained in the virtual instead
 EOF
   exit 1
@@ -274,6 +275,51 @@ __docd_postamble()
 #   then
 #      MULLE_SOURCETREE_SHARE_DIR="${oldshared}"
 #   fi
+}
+
+
+#
+# convenience for callbacks in shared configuration
+#
+__walk_get_filename()
+{
+   log_entry "__walk_get_filename" "$@"
+
+   local database
+
+   database="${MULLE_DATASOURCE}"
+
+   if nodemarks_contain_share "${MULLE_MARKS}" && \
+      [ "${SOURCETREE_MODE}" = "share" -a ! -z "${MULLE_URL}" ]
+   then
+      database="/"
+      if db_is_ready "${database}"
+      then
+         local uuid
+
+         uuid="`db_fetch_uuid_for_url "${database}" "${MULLE_URL}" `"
+         if [ -z "${uuid}" ]
+         then
+            internal_fail "${MULLE_URL} not found in database \"${database}\""
+         fi
+
+         db_fetch_filename_for_uuid "${database}" "${uuid}"
+         return
+      fi
+
+      local name
+
+      name="`basename -- "${MULLE_ADDRESS}"`"
+      filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${name}"
+      return
+   fi
+
+   if db_is_ready "${database}"
+   then
+      db_fetch_filename_for_uuid "${database}" "${MULLE_UUID}"
+   else
+      echo "${MULLE_FILENAME}"
+   fi
 }
 
 
@@ -519,28 +565,32 @@ _visit_node()
 
    local mode="$8"
 
+   #
    # filename comes from "environment"
+   #
    if [ "${VISIT_TWICE}" != "YES" ]
    then
       if fgrep -q -s -x "${_filename}" <<< "${VISITED}"
       then
-         return 1
+         log_fluff "A node for \"${_filename}\" has already been visited"
+         return 0  # error condition too hard
       fi
       VISITED="`add_line "${VISITED}" "${_filename}"`"
    fi
 
-   #
-   # pre-order callback first before recursion
-   #
    case "${mode}" in
+      *flat*)
+         _visit_callback "$@"
+      ;;
+
+      *in-order*)
+         _visit_recurse "$@"
+         _visit_callback "$@"
+      ;;
+
       *pre-order*)
          _visit_callback "$@"
          _visit_recurse "$@"
-      ;;
-
-      *)
-         _visit_recurse "$@"
-         _visit_callback "$@"
       ;;
    esac
 }
@@ -818,9 +868,9 @@ _print_walk_info()
    then
       if [ -z "${datasource}" ]
       then
-         log_fluff "Nothing to walk over ($PWD)"
+         log_debug "Nothing to walk over ($PWD)"
       else
-         log_fluff "Nothing to walk over ($datasource)"
+         log_debug "Nothing to walk over ($datasource)"
       fi
       return 1
    fi
@@ -830,16 +880,17 @@ _print_walk_info()
          log_verbose "Flat walk \"${datasource:-.}\""
       ;;
 
-      *)
-         case "${mode}" in
-            *pre-order*)
-               log_fluff "Recursive pre-order walk \"${datasource:-.}\""
-            ;;
+      *in-order*)
+         log_debug "Recursive depth-first walk \"${datasource:-.}\""
+      ;;
 
-            *)
-               log_fluff "Recursive depth-first walk \"${datasource:-.}\""
-            ;;
-         esac
+      *pre-order*)
+         log_debug "Recursive pre-order walk \"${datasource:-.}\""
+      ;;
+
+
+      *)
+         internal_fail "Mode \"${mode}\" incomplete"
       ;;
    esac
 
@@ -865,8 +916,6 @@ _print_walk_info()
 # callback
 # ...
 #
-
-
 
 _walk_config_uuids()
 {
@@ -971,10 +1020,22 @@ sourcetree_walk()
    MULLE_ROOT_DIR="`pwd -P`"
    export MULLE_ROOT_DIR
 
+   #
+   # make pre-order default if no order set for share or recurse
+   #
    case "${mode}" in
-      *pre-order*)
+      flat|*-order*)
+      ;;
+
+      *)
+         mode="`concat "${mode}" "pre-order"`"
+      ;;
+   esac
+
+   case "${mode}" in
+      *callroot*)
          case "${mode}" in
-            *callroot*)
+            *pre-order*)
                _visit_root_callback "${mode}" "${callback}" "$@"
             ;;
          esac
@@ -1002,12 +1063,12 @@ sourcetree_walk()
    esac
 
    case "${mode}" in
-      *pre-order*)
-      ;;
-
-      *)
+      *callroot*)
          case "${mode}" in
-            *callroot*)
+            *pre-order*)
+            ;;
+
+            *)
                _visit_root_callback "${mode}" "${callback}" "$@"
             ;;
          esac
@@ -1016,12 +1077,13 @@ sourcetree_walk()
 }
 
 
-sourcetree_walk_config_internal()
+sourcetree_walk_internal()
 {
-   log_entry "sourcetree_walk_config_internal" "$@"
+   log_entry "sourcetree_walk_internal" "$@"
 
    sourcetree_walk "" "" "" "$@"
 }
+
 
 
 sourcetree_walk_main()
@@ -1032,7 +1094,7 @@ sourcetree_walk_main()
 
    local OPTION_CALLBACK_ROOT="DEFAULT"
    local OPTION_CD="DEFAULT"
-   local OPTION_DEPTH_FIRST="YES"
+   local OPTION_TRAVERSE_STYLE="PREORDER"
    local OPTION_EXTERNAL_CALL="YES"
    local OPTION_LENIENT="NO"
    local OPTION_MARKS="ANY"
@@ -1077,12 +1139,12 @@ sourcetree_walk_main()
             OPTION_WALK_DB="NO"
          ;;
 
-         --depth-first)
-            OPTION_DEPTH_FIRST="YES"
+         --in-order)
+            OPTION_TRAVERSE_STYLE="INORDER"
          ;;
 
-         --no-depth-first)
-            OPTION_DEPTH_FIRST="NO"
+         --pre-order)
+            OPTION_TRAVERSE_STYLE="PREORDER"
          ;;
 
          -l|--lenient)
@@ -1149,10 +1211,15 @@ sourcetree_walk_main()
 
    mode="${SOURCETREE_MODE}"
 
-   if [ "${OPTION_DEPTH_FIRST}" = "NO" ] # is default
-   then
-      mode="`concat "${mode}" "pre-order"`"
-   fi
+   case "${OPTION_TRAVERSE_STYLE}" in
+      "INORDER")
+         mode="`concat "${mode}" "in-order"`"
+      ;;
+      "PREORDER")
+         mode="`concat "${mode}" "pre-order"`"
+      ;;
+   esac
+
    if [ "${OPTION_LENIENT}" = "YES" ]
    then
       mode="`concat "${mode}" "lenient"`"
@@ -1221,10 +1288,10 @@ sourcetree_buildorder_main()
 
    if [ "${OPTION_MARKS}" = "YES" ]
    then
-      sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE}" \
+      sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE} --in-order" \
          "echo" '"${MULLE_FILENAME};${MULLE_MARKS}"'
    else
-      sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE}" \
+      sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE} --in-order" \
          "echo" '"${MULLE_FILENAME}"'
    fi
 }

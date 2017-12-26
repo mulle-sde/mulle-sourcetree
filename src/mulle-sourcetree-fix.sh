@@ -1,4 +1,3 @@
-   local fixdir
 #! /usr/bin/env bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
@@ -342,6 +341,14 @@ sourcetree_fix_main()
    if ! db_is_ready "${SOURCETREE_START}"
    then
       fail "The sourcetree isn't updated. Can't fix config entries"
+   fi
+
+   local mode
+
+   mode="${SOURCETREE_MODE}"
+   if [ "${SOURCETREE_MODE}" != "flat" ]
+   then
+      mode="`concat "${mode}" "pre-order"`"
    fi
 
    sourcetree_fix "${OPTION_NODETYPES}" \

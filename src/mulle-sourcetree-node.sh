@@ -190,13 +190,6 @@ node_augment()
 
    case "${_nodetype}" in
       "local")
-         # locals have no _url and that is important
-         if [ ! -z "${_url}" ]
-         then
-            log_warning "Url is always empty for _nodetype \"${_nodetype}\""
-         fi
-         _url=
-
          #
          # since they are local, they can not be deleted and are always required
          #
@@ -215,7 +208,7 @@ node_augment()
 
          if [ "${before}" != "${_marks}" ]
          then
-            log_verbose "Node of _nodetype \"${_nodetype}\" gained _marks \"nodelete,require\""
+            log_verbose "Node of nodetype \"${_nodetype}\" gained marks \"nodelete,require\""
          fi
       ;;
    esac
@@ -266,7 +259,7 @@ nodemarks_key_check()
 
    case "${1}" in
       "")
-         internal_fail "empty key"
+         internal_fail "Empty key"
       ;;
 
       no*)
@@ -274,7 +267,7 @@ nodemarks_key_check()
 
       *)
          #
-         internal_fail "nodemarks key \"$1\" must start with \"no\""
+         internal_fail "Nodemarks key \"$1\" must start with \"no\""
       ;;
    esac
 }

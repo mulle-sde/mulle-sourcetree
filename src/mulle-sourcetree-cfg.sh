@@ -36,14 +36,35 @@ MULLE_SOURCETREE_CFG_SH="included"
 #
 __cfg_common_configfile()
 {
-   [ -z "${SOURCETREE_CONFIG_FILE}" ] && internal_fail "SOURCETREE_CONFIG_FILE is not set"
-   [ -z "${MULLE_VIRTUAL_ROOT}" ]     && internal_fail "MULLE_VIRTUAL_ROOT is not set"
+   [ -z "${SOURCETREE_CONFIG_FILE}" ]     && internal_fail "SOURCETREE_CONFIG_FILE is not set"
+   [ -z "${MULLE_VIRTUAL_ROOT}" ]         && internal_fail "MULLE_VIRTUAL_ROOT is not set"
+
+   case "${MULLE_SOURCETREE_SHARE_DIR}" in
+      /*)
+         if string_has_prefix "$1" "${MULLE_SOURCETREE_SHARE_DIR}"
+         then
+            case "$1" in
+               "/")
+                  configfile="${SOURCETREE_CONFIG_FILE}"
+               ;;
+
+               /*/)
+                  configfile="$1${SOURCETREE_CONFIG_FILE}"
+               ;;
+
+               *)
+                  configfile="$1/${SOURCETREE_CONFIG_FILE}"
+               ;;
+            esac
+            return
+         fi
+      ;;
+   esac
 
    case "$1" in
       "/")
          configfile="${MULLE_VIRTUAL_ROOT}/${SOURCETREE_CONFIG_FILE}"
       ;;
-
 
       /*/)
          configfile="${MULLE_VIRTUAL_ROOT}$1${SOURCETREE_CONFIG_FILE}"
@@ -56,7 +77,6 @@ __cfg_common_configfile()
       *)
          internal_fail "database \"$1\" must start with '/'"
       ;;
-
    esac
 }
 
@@ -64,6 +84,28 @@ __cfg_common_configfile()
 __cfg_common_rootdir()
 {
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
+
+   case "${MULLE_SOURCETREE_SHARE_DIR}" in
+      /*)
+         if string_has_prefix "$1" "${MULLE_SOURCETREE_SHARE_DIR}"
+         then
+            case "$1" in
+               "/")
+                  rootdir="."
+               ;;
+
+               /*/)
+                  rootdir="$(sed 's|/$||g' <<< "$1")"
+               ;;
+
+               *)
+                  rootdir="$1"
+               ;;
+            esac
+            return
+         fi
+      ;;
+   esac
 
    case "$1" in
       "/")

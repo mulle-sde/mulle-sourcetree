@@ -41,6 +41,7 @@ Usage:
    Emit status of your sourcetree.
 
 Options:
+   --all          : visit all nodes, even if they are unused due to sharing
    --is-uptodate  : return with 0 if sourcetree does not need to run update
    -n <value>     : node types to walk (default: ALL)
    -p <value>     : specify permissions (missing)
@@ -69,6 +70,7 @@ sourcetree_is_uptodate()
    configtimestamp="`cfg_timestamp "${datasource}"`"
    if [ -z "${configtimestamp}" ]
    then
+      log_fluff "No timestamp available for \"${datasource}\""
       return 2
    fi
 
@@ -76,7 +78,13 @@ sourcetree_is_uptodate()
 
    log_debug "Timestamps: config=${configtimestamp} db=${dbtimestamp:-0}"
 
-   [ "${configtimestamp}" -le "${dbtimestamp:-0}" ]
+   if [ "${configtimestamp}" -gt "${dbtimestamp:-0}" ]
+   then
+      log_fluff "Config \"${datasource}\" is newer than the database"
+      return 1
+   fi
+
+   return 0
 }
 
 
@@ -92,8 +100,6 @@ sourcetree_is_db_compatible()
    local database="$1"
    local mode="$2"
 
-   [ -z "${database}" ] && internal_fail "database is empty"
-
    local dbtype
 
    dbtype="`db_get_dbtype "${database}"`"
@@ -104,6 +110,7 @@ sourcetree_is_db_compatible()
                return 0
             ;;
          esac
+         log_debug "${dbtype} != flat|recurse"
          return 1
       ;;
 
@@ -113,22 +120,17 @@ sourcetree_is_db_compatible()
                return 0
             ;;
          esac
+         log_debug "${dbtype} != recurse"
          return 1
       ;;
 
       *share*)
          case "${dbtype}" in
-            partial)
-               if [ "${database}" != "${SOURCETREE_START}" ]
-               then
-                  return 0
-               fi
-            ;;
-
             share)
                return 0
             ;;
          esac
+         log_debug "${dbtype} != share"
          return 1
       ;;
    esac
@@ -161,8 +163,19 @@ emit_status()
       directory="."
       filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${SOURCETREE_START}" `"
    else
-      datasource="/${MULLE_VIRTUAL_ADDRESS}"
+      filename="`__walk_get_filename`"
+      if ! string_has_prefix "${filename}" "${MULLE_SOURCETREE_SHARE_DIR}"
+      then
+         datasource="`string_remove_prefix "${filename}" "${MULLE_VIRTUAL_ROOT}"`"
+         if [ -z "${datasource}" ]
+         then
+            datasource="`pretty_datasource "${MULLE_VIRTUAL_ADDRESS}"`"
+         fi
+      else
+         datasource="${filename}"
+      fi
    fi
+
 
    log_debug "address:    ${address}"
    log_debug "directory:  ${directory}"
@@ -178,12 +191,12 @@ emit_status()
    configexists="NO"
    dbexists="NO"
 
-   if cfg_exists "${datasource}"
+   if [ -e "${filename}/${SOURCETREE_CONFIG_FILE}" ]
    then
       configexists="YES"
    fi
 
-   if db_dir_exists "${datasource}"
+   if [ -d "${filename}/${SOURCETREE_DB_NAME}" ]
    then
       dbexists="YES"
    fi
@@ -198,9 +211,9 @@ emit_status()
    # not exists | yes | norequire | norequire
    #
 
-   if [ ! -e "${directory}" ]
+   if [ ! -e "${filename}" ]
    then
-      if [ -L "${directory}" ]
+      if [ -L "${filename}" ]
       then
          fs="broken"
       fi
@@ -212,7 +225,7 @@ emit_status()
          # build and updates for non-required stuff thats
          # never there. Fix: (always need a require node)
          #
-         log_fluff "\"${directory}\" does not exist but it isn't required ($PWD)"
+         log_fluff "\"${filename}\" does not exist but it isn't required ($PWD)"
          if [ "${OPTION_IS_UPTODATE}" = "YES" ]
          then
             return 0
@@ -221,7 +234,7 @@ emit_status()
       else
          if [ -z "${_url}" ]
          then
-            log_fluff "\"${directory}\" does not exist and and is required ($PWD), but _url is empty"
+            log_fluff "\"${filename}\" does not exist and and is required ($PWD), but _url is empty"
             if [ "${OPTION_IS_UPTODATE}" = "YES" ]
             then
                exit 2   # indicate brokenness
@@ -230,7 +243,7 @@ emit_status()
             return 0
          fi
 
-         log_fluff "\"${directory}\" does not exist and is required ($PWD)"
+         log_fluff "\"${filename}\" does not exist and is required ($PWD)"
          if [ "${OPTION_IS_UPTODATE}" = "YES" ]
          then
             exit 1
@@ -240,11 +253,11 @@ emit_status()
       return
    else
       fs="file"
-      if [ -L "${directory}" ]
+      if [ -L "${filename}" ]
       then
          fs="symlink"
       else
-         if [ -d "${directory}" ]
+         if [ -d "${filename}" ]
          then
             fs="directory"
          fi
@@ -252,8 +265,10 @@ emit_status()
    fi
 
    if [ "${dbexists}" = "YES" ] && \
-      ! sourcetree_is_db_compatible "${datasource}" "${mode}"
+      ! sourcetree_is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
    then
+      log_fluff "Database \"${datasource}\" is not compatible with \"${SOURCETREE_MODE}\" ($PWD)"
+
       if [ "${OPTION_IS_UPTODATE}" = "YES" ]
       then
          exit 1
@@ -301,11 +316,12 @@ emit_status()
 
          if ! db_is_ready "${datasource}"
          then
+            log_fluff "Database \"${datasource}\" is not ready"
             status="update"
          else
             if db_is_updating "${datasource}"
             then
-               log_fluff "\"${directory}\" is marked as updating ($PWD)"
+               log_fluff "\"${filename}\" is marked as updating ($PWD)"
 
                if [ "${OPTION_IS_UPTODATE}" = "YES" ]
                then
@@ -318,7 +334,7 @@ emit_status()
 
             if ! sourcetree_is_uptodate "${datasource}"
             then
-               log_fluff "\"${directory}\" database is stale ($PWD)"
+               log_fluff "\"${filename}\" database is stale ($PWD)"
 
                status="update"
             fi
@@ -341,20 +357,7 @@ walk_status()
    local filename
    local name
 
-   if db_is_ready "${MULLE_DATASOURCE}"
-   then
-      filename="`db_fetch_filename_for_uuid "${MULLE_DATASOURCE}" "${MULLE_UUID}" `"
-   else
-      if nodemarks_contain_share "${MULLE_MARKS}" && \
-         "${SOURCETREE_MODE}" = "share" && \
-         "${MULLE_NODETYPE}" != "local"
-      then
-         name="`basename -- "${MULLE_ADDRESS}"`"
-         filename="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${MULLE_ADDRESS}"`"
-      else
-         filename="${MULLE_FILENAME}"
-      fi
-   fi
+   filename="`__walk_get_filename`"
 
    emit_status "${MULLE_ADDRESS}" \
                "${MULLE_VIRTUAL_ADDRESS}" \
@@ -384,7 +387,11 @@ sourcetree_status()
                                "${filtermarks}" \
                                "${mode}" \
                                "walk_status" \
-                               "$@"`" || exit 1
+                               "$@"`"
+   if [ $? -ne 0 ]
+   then
+      fail "Walk errored out"
+   fi
 
    if [ "${OPTION_IS_UPTODATE}" = "YES" ]
    then
@@ -445,6 +452,10 @@ sourcetree_status_main()
             sourcetree_status_usage
          ;;
 
+         --all)
+            VISIT_TWICE="YES"
+         ;;
+
          --output-header)
             OPTION_OUTPUT_HEADER="YES"
          ;;
@@ -473,9 +484,6 @@ sourcetree_status_main()
             OPTION_IS_UPTODATE="YES"
          ;;
 
-         --no-is-uptodate)
-            OPTION_IS_UPTODATE="YES"
-         ;;
          #
          # more common flags
          #
@@ -533,6 +541,10 @@ sourcetree_status_main()
    fi
 
    mode="${SOURCETREE_MODE}"
+   if [ "${SOURCETREE_MODE}" != "flat" ]
+   then
+      mode="`concat "${mode}" "pre-order"`"
+   fi
    if [ "${OPTION_OUTPUT_RAW}" != "YES" ]
    then
       mode="`concat "${mode}" "output-formatted"`"

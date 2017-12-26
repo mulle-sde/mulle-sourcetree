@@ -215,6 +215,10 @@ sourcetree_clean_main()
    local mode
 
    mode="${SOURCETREE_MODE}"
+   if [ "${SOURCETREE_MODE}" != "flat" ]
+   then
+      mode="`concat "${mode}" "pre-order"`"
+   fi
 
    sourcetree_clean "${OPTION_NODETYPES}" \
                     "${OPTION_PERMISSIONS}" \

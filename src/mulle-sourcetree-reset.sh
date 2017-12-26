@@ -37,9 +37,10 @@ sourcetree_db_reset()
    log_entry "sourcetree_db_reset" "$@"
 
    local database="${1:-/}"
-   local keepgraveyard="${2:-YES}"
 
-   db_reset "${database}" "${keepgraveyard}"
+   log_verbose "Reset database \"${database}\""
+
+   db_reset "${database}"
 }
 
 
@@ -47,7 +48,7 @@ walk_reset()
 {
    log_entry "walk_reset" "$@"
 
-   sourcetree_db_reset "/${MULLE_DESTINATION}" "$@"
+   sourcetree_db_reset "/${MULLE_VIRTUAL_ADDRESS}"
 }
 
 
@@ -115,11 +116,11 @@ sourcetree_reset_main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
       fi
 
-      sourcetree_walk_config_internal "${SOURCETREE_MODE}" \
-            walk_reset "${OPTION_REMOVE_GRAVEYARD}"
+      sourcetree_walk_internal "${SOURCETREE_MODE},walkdb" \
+            walk_reset
    fi
 
-   sourcetree_db_reset "" "${OPTION_REMOVE_GRAVEYARD}"
+   sourcetree_db_reset "/"
 }
 
 

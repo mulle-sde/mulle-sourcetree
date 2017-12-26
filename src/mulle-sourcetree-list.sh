@@ -300,7 +300,7 @@ list_nodes()
 
    IS_PRINTING="YES"; export IS_PRINTING
 
-   sourcetree_walk_main --no-depth-first --cd \
+   sourcetree_walk_main --pre-order --cd \
          "${MULLE_EXECUTABLE}" "${MULLE_TECHNICAL_FLAGS}" --flat -e list ${arguments}
 }
 

@@ -255,7 +255,7 @@ _get_fs_status()
       ;;
 
       2)
-         log_debug "\${datasource}\" db needs reset"
+         log_debug "\"${datasource}\" db needs reset"
          echo "reset"
          return 0
       ;;
@@ -768,7 +768,13 @@ sourcetree_dotdump_main()
 
    [ "$#" -eq 0 ] || sourcetree_dotdump_usage
 
+   local mode
+
    mode="${SOURCETREE_MODE}"
+   if [ "${SOURCETREE_MODE}" != "flat" ]
+   then
+      mode="`concat "${mode}" "in-order"`"
+   fi
 
    if [ "${OPTION_WALK_DB}" = "YES" ]
    then

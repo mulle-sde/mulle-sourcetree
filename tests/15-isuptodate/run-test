@@ -98,10 +98,14 @@ run_test1()
       fail "status produced \"${result}\", expected \"${expected}\""
    fi
 
+   log_verbose "----- #1 PASSED -----"
+
    if run_mulle_sourcetree status --is-uptodate
    then
       fail "--is-uptodate #1 says OK unexpectedly"
    fi
+
+   log_verbose "----- #2 PASSED -----"
 
    if ! run_mulle_sourcetree --recurse update
    then
@@ -112,6 +116,8 @@ run_test1()
    then
       fail "--is-uptodate #2 says NOT OK unexpectedly"
    fi
+
+   log_verbose "----- #3 PASSED -----"
 
    (
       cd "root/a/b" &&
@@ -126,6 +132,8 @@ run_test1()
       fail "--is-uptodate #3 says ok unexpectedly"
    fi
 
+   log_verbose "----- #4 PASSED -----"
+
    if ! run_mulle_sourcetree --recurse update
    then
       fail "update #2 failed unexpectedly"
@@ -135,6 +143,8 @@ run_test1()
    then
       fail "--is-uptodate #4 says not ok unexpectedly"
    fi
+
+   log_verbose "----- #5 PASSED -----"
 }
 
 
@@ -167,7 +177,6 @@ main()
       cd "${project}" &&
       run_test1 "${archives}"
    ) || exit 1
-   log_verbose "----- #1 PASSED -----"
 
    log_info "----- ALL PASSED -----"
 
