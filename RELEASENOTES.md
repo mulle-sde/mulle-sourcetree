@@ -1,3 +1,7 @@
+### 0.2.1
+
+* fix stuff for linux
+
 ## 0.2.0
 
 * use evaled url to unique sharable nodes

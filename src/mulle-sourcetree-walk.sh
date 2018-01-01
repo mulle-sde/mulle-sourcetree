@@ -888,7 +888,6 @@ _print_walk_info()
          log_debug "Recursive pre-order walk \"${datasource:-.}\""
       ;;
 
-
       *)
          internal_fail "Mode \"${mode}\" incomplete"
       ;;
@@ -1215,7 +1214,8 @@ sourcetree_walk_main()
       "INORDER")
          mode="`concat "${mode}" "in-order"`"
       ;;
-      "PREORDER")
+
+      *)
          mode="`concat "${mode}" "pre-order"`"
       ;;
    esac

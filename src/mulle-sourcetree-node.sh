@@ -842,7 +842,7 @@ node_print_nodeline()
       ;;
    esac
 
-   if egrep -q '[^A-Za-z0-9%&/()=+\-_.,$# ]' <<< "${_userinfo}"
+   if egrep -q '[^-A-Za-z0-9%&/()=+_.,$# ]' <<< "${_userinfo}"
    then
       _userinfo="base64:`base64 <<< "${_userinfo}"`"
    fi

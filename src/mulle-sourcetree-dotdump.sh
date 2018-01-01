@@ -278,6 +278,8 @@ print_node()
 
    case "${identifier}" in
       "")
+         [ -z "${destination}" ] && internal_fail "destination and identifer are empty for \"${MULLE_NODE}\""
+
          identifier="\"${destination}\""
       ;;
 
@@ -495,6 +497,7 @@ walk_dotdump()
       then
          local relidentifier
 
+         relidentifier=
          if [ -z "${previdentifier}" ]
          then
             if [ "${isglobalshared}" = "NO" ]
@@ -505,10 +508,13 @@ walk_dotdump()
             relidentifier="${previdentifier} -> ${identifier}"
          fi
 
-         if ! fgrep -q -s -x "${relidentifier}" <<< "${ALL_RELATIONSHIPS}"
+         if [ ! -z "${relidentifier}" ] 
          then
-            exekutor echo "   ${relidentifier} [ style=\"${style}\", label=\"${label}\" ]"
-            ALL_RELATIONSHIPS="`add_line "${ALL_RELATIONSHIPS}" "${relidentifier}"`"
+            if ! fgrep -q -s -x "${relidentifier}" <<< "${ALL_RELATIONSHIPS}"
+            then
+               exekutor echo "   ${relidentifier} [ style=\"${style}\", label=\"${label}\" ]"
+               ALL_RELATIONSHIPS="`add_line "${ALL_RELATIONSHIPS}" "${relidentifier}"`"
+            fi
          fi
       fi
 

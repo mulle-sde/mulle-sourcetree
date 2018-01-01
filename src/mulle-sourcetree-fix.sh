@@ -354,7 +354,7 @@ sourcetree_fix_main()
    sourcetree_fix "${OPTION_NODETYPES}" \
                   "${OPTION_PERMISSIONS}" \
                   "${OPTION_MARKS}" \
-                  "${SOURCETREE_MODE}"
+                  "${mode}"
 }
 
 
