@@ -56,7 +56,7 @@ walk_clean()
    #
    # the actual desired filename for a config file is pretty complicated though
    #
-   if nodemarks_contain_nodelete "${marks}"
+   if nodemarks_contain_no_delete "${marks}"
    then
       log_verbose "${C_RESET_BOLD}${filename}${C_VERBOSE} is protected from delete"
       NO_DELETES="`add_line "${NO_DELETES}" "${filename}" `"
@@ -101,7 +101,7 @@ sourcetree_clean()
 
    #
    # because of share configuration we can have duplicates
-   # but nodelete needs to be adhered to
+   # but no-delete needs to be adhered to
    #
    local NO_DELETES
    local DELETE_FILES

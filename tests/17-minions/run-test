@@ -69,7 +69,7 @@ run_test()
       fail "add failed unexpectedly"
    fi
 
-   # node is expected to be local and nodelete
+   # node is expected to be local and no-delete
    if ! run_mulle_sourcetree add b
    then
       fail "add failed unexpectedly"
@@ -80,9 +80,9 @@ run_test()
       fail "minion b is not local"
    fi
 
-   if [ "`mulle-sourcetree get b marks`" != "nodelete" ]
+   if [ "`mulle-sourcetree get b marks`" != "no-delete" ]
    then
-      fail "minion b is not nodelete"
+      fail "minion b is not no-delete"
    fi
 
    log_verbose "----- #1 PASSED -----"

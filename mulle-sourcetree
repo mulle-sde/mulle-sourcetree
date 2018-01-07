@@ -36,8 +36,8 @@ fi
 
 
 MULLE_EXECUTABLE_VERSION_MAJOR=0
-MULLE_EXECUTABLE_VERSION_MINOR=2
-MULLE_EXECUTABLE_VERSION_PATCH=1
+MULLE_EXECUTABLE_VERSION_MINOR=3
+MULLE_EXECUTABLE_VERSION_PATCH=0
 
 MULLE_EXECUTABLE_VERSION="${MULLE_EXECUTABLE_VERSION_MAJOR}.${MULLE_EXECUTABLE_VERSION_MINOR}.${MULLE_EXECUTABLE_VERSION_PATCH}"
 
@@ -54,29 +54,28 @@ trap_fail()
 
 
 SHOWN_COMMANDS="\
-   add           : add a node to the configuration
-   buildorder    : emit nodes that are buildable in proper dependency order
-   clean         : remove files added by an update
-   info          : print current sourcetree information
-   print         : list nodes recursively in the configuration
-   set           : set a node's properties in the configuration
-   status        : query state of the tree
-   update        : update the project tree [default]"
+   add            : add a node to the configuration
+   buildorder     : emit nodes that are buildable in proper dependency order
+   clean          : remove files added by an update
+   info           : print current sourcetree information
+   list           : list nodes in the current configuration
+   set            : set a node's properties in the configuration
+   status         : query state of the tree
+   update         : update the project tree [default]"
 
 HIDDEN_COMMANDS="\
-   dotdump       : create a picture of the tree or the database
-   fix           : support to track user modifications in the filesystem
-   get           : get a node's properties from the configuration
-   libexec-path  : print path to ${MULLE_EXECUTABLE_NAME} libexec
-   list          : list nodes in the current configuration
-   mark          : add or remove a mark from a node in the configuration
-   path          : print path to project
-   remove        : remove a node from the configuration
-   reset         : clear the database, to force an update
-   uname         : ${MULLE_EXECUTABLE_NAME}'s simplified uname(1)
-   unmark        : remove _marks from a node in the configuration
-   version       : print ${MULLE_EXECUTABLE_NAME} version
-   walk          : visit all the tree nodes with a callback"
+   dotdump        : create a picture of the tree or the database
+   fix            : support to track user modifications in the filesystem
+   get            : get a node's properties from the configuration
+   libexec-dir    : print path to ${MULLE_EXECUTABLE_NAME} libexec
+   mark           : add or remove a mark from a node in the configuration
+   sourcetree-dir : print path to project (if a sourcetree exists)
+   remove         : remove a node from the configuration
+   reset          : clear the database, to force an update
+   uname          : ${MULLE_EXECUTABLE_NAME}'s simplified uname(1)
+   unmark         : remove marks from a node in the configuration
+   version        : print ${MULLE_EXECUTABLE_NAME} version
+   walk           : visit all the tree nodes with a callback"
 
 
 print_commands()
@@ -458,7 +457,7 @@ main()
       share_dir="`db_get_shareddir "${SOURCETREE_START}"`" || exit 1
       if [ ! -z "${share_dir}" ]
       then
-         MULLE_SOURCETREE_SHARE_DIR="${share_dir}"
+         MULLE_SOURCETREE_SHARE_DIR="`physicalpath "${share_dir}" `"
       fi
    fi
    if [ "${MULLE_SOURCETREE_SHARE_DIR}" = "." ]
@@ -481,8 +480,15 @@ main()
       ;;
    esac
 
-   __check_sane_share_dir
+   # dont' check if resetting
+   case "${cmd}" in
+      reset)
+      ;;
 
+      *)
+         __check_sane_share_dir
+      ;;
+   esac
 
    case "${cmd}" in
       add)
@@ -493,8 +499,8 @@ main()
       ;;
 
       buildorder)
-         # shellcheck source=src/mulle-sourcetree-walk.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
+         # shellcheck source=src/mulle-sourcetree-buildorder.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-buildorder.sh"
 
          sourcetree_buildorder_main "$@"
       ;;
@@ -538,7 +544,7 @@ main()
          sourcetree_info_main "$@"
       ;;
 
-      libexec-path|library-path)
+      libexec-dir|library-path)
          echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
       ;;
 
@@ -556,9 +562,16 @@ main()
          sourcetree_mark_main "$@"
       ;;
 
-      pwd)
+      pwd|path)
          # shellcheck source=src/mulle-sourcetree-walk.sh
          pwd -P   # prefer physical path for our needs
+      ;;
+
+      sourcetree-dir)
+         if [ -d .mulle-sourcetree ]
+         then
+            pwd -P
+         fi
       ;;
 
       remove)
@@ -733,13 +746,13 @@ _init()
    # minimal setup exit
    #
    case "$1" in
-      "libexec-path"|"library-path")
+      "libexec-dir"|"library-path")
          echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
          exit 0
       ;;
    esac
 
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-path 2> /dev/null`"
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir 2> /dev/null`"
    if [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ]
    then
       if [ -z "`command -v "${executablepath}"`" ]

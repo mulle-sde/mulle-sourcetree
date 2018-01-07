@@ -32,6 +32,7 @@ mulle-bootstrap-to-sourcetree
 
 
 set( LIBRARY_SCRIPTS
+src/mulle-sourcetree-buildorder.sh
 src/mulle-sourcetree-config.sh
 src/mulle-sourcetree-db.sh
 src/mulle-sourcetree-dotdump.sh

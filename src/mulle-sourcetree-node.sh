@@ -61,7 +61,7 @@ node_guess_address()
       ;;
 
       *)
-         result="`${MULLE_FETCH:-mulle-fetch} guess -s "${nodetype}" "${evaledurl}"`"
+         result="`${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} guess -s "${nodetype}" "${evaledurl}"`"
          log_fluff "${MULLE_FETCH:-mulle-fetch} returned \"${result}\" as default address for url ($url)"
          echo "${result}"
       ;;
@@ -86,7 +86,7 @@ node_guess_nodetype()
       ;;
 
       *)
-         result="`${MULLE_FETCH:-mulle-fetch} typeguess "${evaledurl}"`"
+         result="`${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} typeguess "${evaledurl}"`"
          log_fluff "${MULLE_FETCH:-mulle-fetch} determined \"${result}\" as _nodetype from \
 url ($evaledurl)"
          echo "${result}"
@@ -142,7 +142,8 @@ node_fetch_operation()
 
    log_info "Fetching ${C_MAGENTA}${C_BOLD}${_address}${C_INFO} from \
 ${C_RESET_BOLD}${evaledurl}${C_INFO}"
-   eval_exekutor ${MULLE_FETCH:-mulle-fetch} "${opname}" --scm "'${_nodetype}'" \
+   eval_exekutor ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} \
+                                             "${opname}" --scm "'${_nodetype}'" \
                                                          --tag "'${evaledtag}'" \
                                                          --branch "'${evaledbranch}'" \
                                                          --options "'${evaledfetchoptions}'" \
@@ -158,7 +159,7 @@ node_list_operations()
 
    local nodetype="$1"
 
-   ${MULLE_FETCH:-mulle-fetch} operations -s "${nodetype}"
+   ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} operations -s "${nodetype}"
 }
 
 #
@@ -208,13 +209,13 @@ node_augment()
 
          if [ "${before}" != "${_marks}" ]
          then
-            log_verbose "Node of nodetype \"${_nodetype}\" gained marks \"nodelete,require\""
+            log_verbose "Node of nodetype \"${_nodetype}\" gained marks \"no-delete,require\""
          fi
       ;;
    esac
 
    case "${mode}" in
-      *nosafe*)
+      *unsafe*)
       ;;
 
       *)
@@ -262,12 +263,11 @@ nodemarks_key_check()
          internal_fail "Empty key"
       ;;
 
-      no*)
+      no-*|only-*)
       ;;
 
       *)
-         #
-         internal_fail "Nodemarks key \"$1\" must start with \"no\""
+         internal_fail "Nodemarks key \"$1\" must start with \"no-\" or \"only-\""
       ;;
    esac
 }
@@ -278,31 +278,31 @@ nodemarks_key_check()
 #
 nodemarks_add()
 {
-   local _marks="$1"
+   local marks="$1"
    local key="$2"
 
    nodemarks_key_check "${key}"
 
    # is this faster than case ?
    IFS=","
-   for i in ${_marks}
+   for i in ${marks}
    do
       IFS="${DEFAULT_IFS}"
       if [ "$i" = "${key}" ]
       then
-         echo "${_marks}"
+         echo "${marks}"
          return
       fi
    done
    IFS="${DEFAULT_IFS}"
 
-   comma_concat "${_marks}" "${key}"
+   comma_concat "${marks}" "${key}"
 }
 
 
 nodemarks_remove()
 {
-   local _marks="$1"
+   local marks="$1"
    local key="$2"
 
    nodemarks_key_check "${key}"
@@ -310,7 +310,7 @@ nodemarks_remove()
    local result
 
    IFS=","
-   for i in ${_marks}
+   for i in ${marks}
    do
       IFS="${DEFAULT_IFS}"
 
@@ -327,14 +327,14 @@ nodemarks_remove()
 
 _nodemarks_contain()
 {
-   local _marks="$1"
+   local marks="$1"
    local key="$2"
 
    nodemarks_key_check "${key}"
 
    # is this faster than case ?
    IFS=","
-   for i in ${_marks}
+   for i in ${marks}
    do
       IFS="${DEFAULT_IFS}"
       if [ "${i}" = "${key}" ]
@@ -350,16 +350,16 @@ _nodemarks_contain()
 
 nodemarks_contain()
 {
-   local _marks="$1"
+   local marks="$1"
    local key="$2"
 
    case "${key}" in
-      no*)
-         _nodemarks_contain "${_marks}" "${key}"
+      no-*|only-*)
+         _nodemarks_contain "${marks}" "${key}"
       ;;
 
       *)
-         ! _nodemarks_contain "${_marks}" "no${key}"
+         ! _nodemarks_contain "${marks}" "no-${key}"
       ;;
    esac
 
@@ -368,7 +368,7 @@ nodemarks_contain()
 
 nodemarks_intersect()
 {
-   local _marks="$1"
+   local marks="$1"
    local anymarks="$2"
 
    local key
@@ -377,7 +377,7 @@ nodemarks_intersect()
    for key in ${anymarks}
    do
       IFS="${DEFAULT_IFS}"
-      if nodemarks_contain "${_marks}" "${key}"
+      if nodemarks_contain "${marks}" "${key}"
       then
          return 0
       fi
@@ -395,21 +395,21 @@ nodemarks_add_build()
 {
    log_entry "nodemarks_add_build" "$@"
 
-   nodemarks_remove "$1" "nobuild"
+   nodemarks_remove "$1" "no-build"
 }
 
 nodemarks_add_delete()
 {
    log_entry "nodemarks_add_delete" "$@"
 
-   nodemarks_remove "$1" "nodelete"
+   nodemarks_remove "$1" "no-delete"
 }
 
 nodemarks_add_dependency()
 {
    log_entry "nodemarks_add_dependency" "$@"
 
-   nodemarks_remove "$1" "nodependency"
+   nodemarks_remove "$1" "no-dependency"
 }
 
 
@@ -417,35 +417,35 @@ nodemarks_add_recurse()
 {
    log_entry "nodemarks_add_recurse" "$@"
 
-   nodemarks_remove "$1" "norecurse"
+   nodemarks_remove "$1" "no-recurse"
 }
 
 nodemarks_add_require()
 {
    log_entry "nodemarks_add_require" "$@"
 
-   nodemarks_remove "$1" "norequire"
+   nodemarks_remove "$1" "no-require"
 }
 
 nodemarks_add_set()
 {
    log_entry "nodemarks_add_set" "$@"
 
-   nodemarks_remove "$1" "noset"
+   nodemarks_remove "$1" "no-set"
 }
 
 nodemarks_add_share()
 {
    log_entry "nodemarks_add_share" "$@"
 
-   nodemarks_remove "$1" "noshare"
+   nodemarks_remove "$1" "no-share"
 }
 
 nodemarks_add_update()
 {
    log_entry "nodemarks_add_update" "$@"
 
-   nodemarks_remove "$1" "noupdate"
+   nodemarks_remove "$1" "no-update"
 }
 
 
@@ -453,14 +453,14 @@ nodemarks_contain_build()
 {
    log_entry "nodemarks_contain_build" "$@"
 
-   ! _nodemarks_contain "$1" "nobuild"
+   ! _nodemarks_contain "$1" "no-build"
 }
 
 nodemarks_contain_delete()
 {
    log_entry "nodemarks_contain_delete" "$@"
 
-   ! _nodemarks_contain "$1" "nodelete"
+   ! _nodemarks_contain "$1" "no-delete"
 }
 
 
@@ -468,7 +468,7 @@ nodemarks_contain_dependency()
 {
    log_entry "nodemarks_contain_dependency" "$@"
 
-   ! _nodemarks_contain "$1" "nodependency"
+   ! _nodemarks_contain "$1" "no-dependency"
 }
 
 
@@ -476,35 +476,35 @@ nodemarks_contain_recurse()
 {
    log_entry "nodemarks_contain_recurse" "$@"
 
-   ! _nodemarks_contain "$1" "norecurse"
+   ! _nodemarks_contain "$1" "no-recurse"
 }
 
 nodemarks_contain_require()
 {
    log_entry "nodemarks_contain_require" "$@"
 
-   ! _nodemarks_contain "$1" "norequire"
+   ! _nodemarks_contain "$1" "no-require"
 }
 
 nodemarks_contain_set()
 {
    log_entry "nodemarks_contain_set" "$@"
 
-   ! _nodemarks_contain "$1" "noset"
+   ! _nodemarks_contain "$1" "no-set"
 }
 
 nodemarks_contain_share()
 {
    log_entry "nodemarks_contain_share" "$@"
 
-   ! _nodemarks_contain "$1" "noshare"
+   ! _nodemarks_contain "$1" "no-share"
 }
 
 nodemarks_contain_update()
 {
    log_entry "nodemarks_contain_update" "$@"
 
-   ! _nodemarks_contain "$1" "noupdate"
+   ! _nodemarks_contain "$1" "no-update"
 }
 
 
@@ -512,232 +512,232 @@ nodemarks_remove_build()
 {
    log_entry "nodemarks_remove_build" "$@"
 
-   nodemarks_add "$1" "nobuild"
+   nodemarks_add "$1" "no-build"
 }
 
 nodemarks_remove_delete()
 {
    log_entry "nodemarks_remove_delete" "$@"
 
-   nodemarks_add "$1" "nodelete"
+   nodemarks_add "$1" "no-delete"
 }
 
 nodemarks_remove_dependency()
 {
    log_entry "nodemarks_remove_dependency" "$@"
 
-   nodemarks_add "$1" "nodependency"
+   nodemarks_add "$1" "no-dependency"
 }
 
 nodemarks_remove_recurse()
 {
    log_entry "nodemarks_remove_recurse" "$@"
 
-   nodemarks_add "$1" "norecurse"
+   nodemarks_add "$1" "no-recurse"
 }
 
 nodemarks_remove_require()
 {
    log_entry "nodemarks_remove_require" "$@"
 
-   nodemarks_add "$1" "norequire"
+   nodemarks_add "$1" "no-require"
 }
 
 nodemarks_remove_set()
 {
    log_entry "nodemarks_remove_set" "$@"
 
-   nodemarks_add "$1" "noset"
+   nodemarks_add "$1" "no-set"
 }
 
 nodemarks_remove_share()
 {
    log_entry "nodemarks_remove_share" "$@"
 
-   nodemarks_add "$1" "noshare"
+   nodemarks_add "$1" "no-share"
 }
 
 nodemarks_remove_update()
 {
    log_entry "nodemarks_remove_update" "$@"
 
-   nodemarks_add "$1" "noupdate"
+   nodemarks_add "$1" "no-update"
 }
 
 
 #
 #
 #
-nodemarks_add_nobuild()
+nodemarks_add_no_build()
 {
-   log_entry "nodemarks_add_nobuild" "$@"
+   log_entry "nodemarks_add_no_build" "$@"
 
-   nodemarks_add "$1" "nobuild"
+   nodemarks_add "$1" "no-build"
 }
 
-nodemarks_add_nodelete()
+nodemarks_add_no_delete()
 {
-   log_entry "nodemarks_add_nodelete" "$@"
+   log_entry "nodemarks_add_no_delete" "$@"
 
-   nodemarks_add "$1" "nodelete"
+   nodemarks_add "$1" "no-delete"
 }
 
-nodemarks_add_nodependency()
+nodemarks_add_no_dependency()
 {
-   log_entry "nodemarks_add_nodependency" "$@"
+   log_entry "nodemarks_add_no_dependency" "$@"
 
-   nodemarks_add "$1" "nodependency"
+   nodemarks_add "$1" "no-dependency"
 }
 
-nodemarks_add_norecurse()
+nodemarks_add_no_recurse()
 {
-   log_entry "nodemarks_add_norecurse" "$@"
+   log_entry "nodemarks_add_no_recurse" "$@"
 
-   nodemarks_add "$1" "norecurse"
+   nodemarks_add "$1" "no-recurse"
 }
 
-nodemarks_add_norequire()
+nodemarks_add_no_require()
 {
-   log_entry "nodemarks_add_norequire" "$@"
+   log_entry "nodemarks_add_no_require" "$@"
 
-   nodemarks_add "$1" "norequire"
+   nodemarks_add "$1" "no-require"
 }
 
-nodemarks_add_noset()
+nodemarks_add_no_set()
 {
-   log_entry "nodemarks_add_noset" "$@"
+   log_entry "nodemarks_add_no_set" "$@"
 
-   nodemarks_add "$1" "noset"
+   nodemarks_add "$1" "no-set"
 }
 
-nodemarks_add_noshare()
+nodemarks_add_no_share()
 {
-   log_entry "nodemarks_add_noshare" "$@"
+   log_entry "nodemarks_add_no_share" "$@"
 
-   nodemarks_add "$1" "noshare"
+   nodemarks_add "$1" "no-share"
 }
 
-nodemarks_add_noupdate()
+nodemarks_add_no_update()
 {
-   log_entry "nodemarks_add_noupdate" "$@"
+   log_entry "nodemarks_add_no_update" "$@"
 
-   nodemarks_add "$1" "noupdate"
-}
-
-
-nodemarks_contain_nobuild()
-{
-   log_entry "nodemarks_contain_nobuild" "$@"
-
-   _nodemarks_contain "$1" "nobuild"
-}
-
-nodemarks_contain_nodelete()
-{
-   log_entry "nodemarks_contain_nodelete" "$@"
-
-   _nodemarks_contain "$1" "nodelete"
-}
-
-nodemarks_contain_nodependency()
-{
-   log_entry "nodemarks_contain_nodependency" "$@"
-
-   _nodemarks_contain "$1" "nodependency"
-}
-
-nodemarks_contain_norecurse()
-{
-   log_entry "nodemarks_contain_norecurse" "$@"
-
-   _nodemarks_contain "$1" "norecurse"
-}
-
-nodemarks_contain_norequire()
-{
-   log_entry "nodemarks_contain_norequire" "$@"
-
-   _nodemarks_contain "$1" "norequire"
-}
-
-nodemarks_contain_noset()
-{
-   log_entry "nodemarks_contain_noset" "$@"
-
-   _nodemarks_contain "$1" "noset"
-}
-
-nodemarks_contain_noshare()
-{
-   log_entry "nodemarks_contain_noshare" "$@"
-
-   _nodemarks_contain "$1" "noshare"
-}
-
-nodemarks_contain_noupdate()
-{
-   log_entry "nodemarks_contain_noupdate" "$@"
-
-   _nodemarks_contain "$1" "noupdate"
+   nodemarks_add "$1" "no-update"
 }
 
 
-nodemarks_remove_nobuild()
+nodemarks_contain_no_build()
 {
-   log_entry "nodemarks_remove_nobuild" "$@"
+   log_entry "nodemarks_contain_no_build" "$@"
 
-   nodemarks_remove "$1" "nobuild"
+   _nodemarks_contain "$1" "no-build"
 }
 
-nodemarks_remove_nodelete()
+nodemarks_contain_no_delete()
 {
-   log_entry "nodemarks_remove_nodelete" "$@"
+   log_entry "nodemarks_contain_no_delete" "$@"
 
-   nodemarks_remove "$1" "nodelete"
+   _nodemarks_contain "$1" "no-delete"
+}
+
+nodemarks_contain_no_dependency()
+{
+   log_entry "nodemarks_contain_no_dependency" "$@"
+
+   _nodemarks_contain "$1" "no-dependency"
+}
+
+nodemarks_contain_no_recurse()
+{
+   log_entry "nodemarks_contain_no_recurse" "$@"
+
+   _nodemarks_contain "$1" "no-recurse"
+}
+
+nodemarks_contain_no_require()
+{
+   log_entry "nodemarks_contain_no_require" "$@"
+
+   _nodemarks_contain "$1" "no-require"
+}
+
+nodemarks_contain_no_set()
+{
+   log_entry "nodemarks_contain_no_set" "$@"
+
+   _nodemarks_contain "$1" "no-set"
+}
+
+nodemarks_contain_no_share()
+{
+   log_entry "nodemarks_contain_no_share" "$@"
+
+   _nodemarks_contain "$1" "no-share"
+}
+
+nodemarks_contain_no_update()
+{
+   log_entry "nodemarks_contain_no_update" "$@"
+
+   _nodemarks_contain "$1" "no-update"
 }
 
 
-nodemarks_remove_nodependency()
+nodemarks_remove_no_build()
 {
-   log_entry "nodemarks_remove_nodependency" "$@"
+   log_entry "nodemarks_remove_no_build" "$@"
 
-   nodemarks_remove "$1" "nodependency"
+   nodemarks_remove "$1" "no-build"
+}
+
+nodemarks_remove_no_delete()
+{
+   log_entry "nodemarks_remove_no_delete" "$@"
+
+   nodemarks_remove "$1" "no-delete"
 }
 
 
-nodemarks_remove_norecurse()
+nodemarks_remove_no_dependency()
 {
-   log_entry "nodemarks_remove_norecurse" "$@"
+   log_entry "nodemarks_remove_no_dependency" "$@"
 
-   nodemarks_remove "$1" "norecurse"
+   nodemarks_remove "$1" "no-dependency"
 }
 
-nodemarks_remove_norequire()
-{
-   log_entry "nodemarks_remove_norequire" "$@"
 
-   nodemarks_remove "$1" "norequire"
+nodemarks_remove_no_recurse()
+{
+   log_entry "nodemarks_remove_no_recurse" "$@"
+
+   nodemarks_remove "$1" "no-recurse"
 }
 
-nodemarks_remove_noset()
+nodemarks_remove_no_require()
 {
-   log_entry "nodemarks_remove_noset" "$@"
+   log_entry "nodemarks_remove_no_require" "$@"
 
-   nodemarks_remove "$1" "noset"
+   nodemarks_remove "$1" "no-require"
 }
 
-nodemarks_remove_noshare()
+nodemarks_remove_no_set()
 {
-   log_entry "nodemarks_remove_noshare" "$@"
+   log_entry "nodemarks_remove_no_set" "$@"
 
-   nodemarks_remove "$1" "noshare"
+   nodemarks_remove "$1" "no-set"
 }
 
-nodemarks_remove_noupdate()
+nodemarks_remove_no_share()
 {
-   log_entry "nodemarks_remove_noupdate" "$@"
+   log_entry "nodemarks_remove_no_share" "$@"
 
-   nodemarks_remove "$1" "noupdate"
+   nodemarks_remove "$1" "no-share"
+}
+
+nodemarks_remove_no_update()
+{
+   log_entry "nodemarks_remove_no_update" "$@"
+
+   nodemarks_remove "$1" "no-update"
 }
 
 

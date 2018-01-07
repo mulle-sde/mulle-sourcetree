@@ -4,6 +4,8 @@
 
 ... for Linux, OS X, FreeBSD, Windows
 
+![Overview](mulle-sourcetree-overview.png)
+
 Organize your projects freely with multiple archives and repositories.
 
 #### Capabilities

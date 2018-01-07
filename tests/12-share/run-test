@@ -60,8 +60,8 @@ _change_demo_repo_a()
 {
    local reporoot="$1"
 
-   run_mulle_sourcetree -e mark "b" noshare
-   exekutor git commit -m "a: noshare version" .mulle-sourcetree
+   run_mulle_sourcetree -e mark "b" "no-share"
+   exekutor git commit -m "a: no-share version" .mulle-sourcetree
 }
 
 

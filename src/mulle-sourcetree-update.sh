@@ -233,14 +233,14 @@ _do_fetch_operation()
    log_entry "_do_fetch_operation" "$@"
 
    local _url="$1"            # URL of the node
-   local _address="$2"        # _address of this node (absolute or relative to $PWD)
-   local _branch="$3"         # _branch of the node
-   local _tag="$4"            # _tag to checkout of the node
-   local _nodetype="$5"       # _nodetype to use for this node
-   local _marks="$6"          # _marks on node
+   local _address="$2"        # address of this node (absolute or relative to $PWD)
+   local _branch="$3"         # branch of the node
+   local _tag="$4"            # tag to checkout of the node
+   local _nodetype="$5"       # nodetype to use for this node
+   local _marks="$6"          # marks on node
    local _fetchoptions="$7"   # options to use on _nodetype
    local _userinfo="$8"       # unused
-   local _uuid="$9"           # _uuid of the node
+   local _uuid="$9"           # uuid of the node
 
    [ $# -eq 9 ] || internal_fail "fail"
 
@@ -369,14 +369,14 @@ do_operation()
    [ -z "${opname}" ] && internal_fail "operation is empty"
 
    local _url="$1"            # URL of the node
-   local destination="$2"       # destination
-   local _branch="$3"         # _branch of the node
-   local _tag="$4"            # _tag to checkout of the node
-   local _nodetype="$5"       # _nodetype to use for this node
-#   local _marks="$6"         # _marks on node
+   local destination="$2"     # destination
+   local _branch="$3"         # branch of the node
+   local _tag="$4"            # tag to checkout of the node
+   local _nodetype="$5"       # nodetype to use for this node
+#   local _marks="$6"         # marks on node
    local _fetchoptions="$7"   # options to use on _nodetype
 #   local _userinfo="$8"      # userinfo
-#   local _uuid="$9"          # _uuid of the node
+#   local _uuid="$9"          # uuid of the node
 
 
    if [ ! -z "${OPTION_OVERRIDE_BRANCH}" ]
@@ -410,10 +410,10 @@ update_safe_move_node()
    [ -z "${previousfilename}" ] && internal_fail "empty previousfilename"
    [ -z "${filename}" ]         && internal_fail "empty filename"
 
-   if nodemarks_contain_nodelete "${_marks}"
+   if nodemarks_contain_no_delete "${_marks}"
    then
       fail "Can't move node ${_url} from to \"${previousfilename}\" \
-to \"${filename}\" as it is marked nodelete"
+to \"${filename}\" as it is marked no-delete"
    fi
 
    log_info "Moving \"${previousfilename}\" to \"${filename}\""
@@ -438,9 +438,9 @@ update_safe_remove_node()
    [ -z "${filename}" ] && internal_fail "empty filename"
    [ -z "${_uuid}" ]     && internal_fail "empty _uuid"
 
-   if nodemarks_contain_nodelete "${_marks}"
+   if nodemarks_contain_no_delete "${_marks}"
    then
-      fail "Can't remove \"${filename}\" as it is marked nodelete"
+      fail "Can't remove \"${filename}\" as it is marked no-delete"
    fi
 
    db_forget "${database}" "${_uuid}"
@@ -474,13 +474,13 @@ update_actions_for_node()
    local previousnodeline="$1" ; shift
    local previousfilename="$1"; shift
 
-   local newaddress="$1"    # _address of this node
-   local newnodetype="$2"   # _nodetype to use for this node
-   local newmarks="$3"      # _nodetype to use for this node
-   local newuuid="$4"       # _uuid of the node
+   local newaddress="$1"    # address of this node
+   local newnodetype="$2"   # nodetype to use for this node
+   local newmarks="$3"      # nodetype to use for this node
+   local newuuid="$4"       # uuid of the node
    local newurl="$5"        # URL of the node
-   local newbranch="$6"     # _branch of the node
-   local newtag="$7"        # _tag to checkout of the node
+   local newbranch="$6"     # branch of the node
+   local newtag="$7"        # tag to checkout of the node
 
    #
    # sanitize here because of paranoia and shit happes
@@ -536,7 +536,7 @@ chickening out"
          #    at this point in time, that should have already been checked
          #    against
 
-         if nodemarks_contain_nodelete "${newmarks}"
+         if nodemarks_contain_no_delete "${newmarks}"
          then
             case "${newnodetype}" in
                local)
@@ -546,7 +546,7 @@ Very well just remember it."
 
                *)
                   log_fluff "Node is new but \"${newfilename}\" exists. \
-As node is marked \"nodelete\" just remember it."
+As node is marked \"no-delete\" just remember it."
                ;;
             esac
 
@@ -642,7 +642,7 @@ chickening out"
          log_fluff "Nodetype has changed from \"${_nodetype}\" to \
 \"${newnodetype}\", need to fetch"
 
-         # nodelete check here ?
+         # no-delete check here ?
          if [ "${previousexists}" = "YES" ]
          then
             echo "remove"
@@ -851,7 +851,7 @@ __update_perform_item()
             ;;
 
             *)
-               if nodemarks_contain_norequire "${_marks}"
+               if nodemarks_contain_no_require "${_marks}"
                then
                   log_info "${C_MAGENTA}${C_BOLD}${_uuid}${C_INFO} is not required."
 
@@ -1019,21 +1019,21 @@ update_with_nodeline()
       filename="`cfg_absolute_filename "${config}" "${_address}"`"
    fi
 
-   if nodemarks_contain_noupdate "${_marks}"
+   if nodemarks_contain_no_update "${_marks}"
    then
       if [ -e "${filename}"  ]
       then
-         log_fluff "\"${_address}\" is marked as noupdate and exists"
+         log_fluff "\"${_address}\" is marked as no-update and exists"
          return
       fi
 
-      if nodemarks_contain_norequire "${_marks}"
+      if nodemarks_contain_no_require "${_marks}"
       then
-         log_fluff "\"${_address}\" is marked as noupdate and doesnt exist, \
+         log_fluff "\"${_address}\" is marked as no-update and doesnt exist, \
 but it is not required"
          return
       fi
-      fail "\${_address}\" is missing, marked as noupdate, but required"
+      fail "\${_address}\" is missing, marked as no-update, but required"
    fi
 
    #
@@ -1238,7 +1238,7 @@ recursive_update_with_nodeline()
    local _uuid
 
    nodeline_parse "${nodeline}"
-   if nodemarks_contain_norecurse "${_marks}"
+   if nodemarks_contain_no_recurse "${_marks}"
    then
       return
    fi
@@ -1287,9 +1287,9 @@ a directory"
       return
    fi
 
-   if nodemarks_contain_noshare "${_marks}"
+   if nodemarks_contain_no_share "${_marks}"
    then
-      style="noshare"
+      style="no-share"
    fi
 
    sourcetree_update "${style}" "${newconfig}" "${newdatabase}"
@@ -1509,7 +1509,7 @@ sourcetree_update()
 #            that has a config file (repeat)
 # share:     the trick for "share" is, that we use a joined database
 #            for nodes marked share and again (local) databases for those
-#            marked noshare like in recurse. This is stored in root.
+#            marked no-share like in recurse. This is stored in root.
 #
 sourcetree_update_start()
 {

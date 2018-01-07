@@ -208,7 +208,7 @@ emit_status()
    # -----------|-----|-----------|------------------
    # not exists | no  | -         | missing
    # not exists | yes | require   | update
-   # not exists | yes | norequire | norequire
+   # not exists | yes | no-require | no-require
    #
 
    if [ ! -e "${filename}" ]
@@ -218,7 +218,7 @@ emit_status()
          fs="broken"
       fi
 
-      if nodemarks_contain_norequire "${marks}"
+      if nodemarks_contain_no_require "${marks}"
       then
          #
          # if we say not uptodate here, it will retrigger
@@ -230,7 +230,7 @@ emit_status()
          then
             return 0
          fi
-         exekutor echo "${output_adress};norequire;${fs};${configexists};${dbexists};${filename}"
+         exekutor echo "${output_adress};no-require;${fs};${configexists};${dbexists};${filename}"
       else
          if [ -z "${_url}" ]
          then

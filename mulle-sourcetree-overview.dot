@@ -1,0 +1,14 @@
+digraph G {
+    graph [rankdir = TD];
+
+    node[shape=record];
+
+    subgraph agnostic
+    {
+        label = "Language agnostic";
+
+        "mulle-fetch" [label="{ mulle-fetch|{<p0>local|<p1>symlink|<p2>git|<p3>svn|<p4>tar|<p5>zip} }"];
+        "mulle-sourcetree" [ color="dodgerblue"; fontcolor="dodgerblue"; penwidth="2"]
+        "mulle-sourcetree" -> "mulle-fetch"
+    }
+}

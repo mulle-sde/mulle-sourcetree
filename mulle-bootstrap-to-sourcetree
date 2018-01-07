@@ -291,14 +291,14 @@ copy_repositories()
 
       if [ -z "${_scm}" ]
       then
-         _scm="`exekutor ${MULLE_FETCH:-mulle-fetch} typeguess "${evaledurl}"`"
+         _scm="`exekutor ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} typeguess "${evaledurl}"`"
       fi
       _scm="${_scm:-git}"
 
       # mark empty = normal
       if [ -z "${_dstdir}" ]
       then
-         _dstdir="`exekutor ${MULLE_FETCH:-mulle-fetch} guess -s "${_scm}" "${evaledurl}"`"
+         _dstdir="`exekutor ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} guess -s "${_scm}" "${evaledurl}"`"
          if [ -z "${marks}" ]
          then
             _dstdir="subproject/${_dstdir}"
@@ -336,12 +336,12 @@ The master can not be converted. Convert the minions! ($PWD)"
    #
    if [ -f ".bootstrap.local/embedded_repositories" ]
    then
-      copy_repositories ".bootstrap.local/embedded_repositories" "nobuild,noshare"
+      copy_repositories ".bootstrap.local/embedded_repositories" "no-build,no-share"
       found="YES"
    else
       if [ -f ".bootstrap/embedded_repositories" ]
       then
-         copy_repositories ".bootstrap/embedded_repositories" "nobuild,noshare"
+         copy_repositories ".bootstrap/embedded_repositories" "no-build,no-share"
          found="YES"
       fi
    fi

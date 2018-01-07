@@ -111,8 +111,8 @@ run_git_tests()
 
    log_verbose "----- #9 PASSED -----"
 
-   # change in _marks,_fetchoptions,_userinfo = don't care
-   new="paul/jones;git;nobuild;${uuid};https://github.com/mulle-nat/mulle-c11.git;release;;fetch=whatever;_userinfo"
+   # change in marks,fetchoptions,userinfo = don't care
+   new="paul/jones;git;no-build;${uuid};https://github.com/mulle-nat/mulle-c11.git;release;;fetch=whatever;_userinfo"
    actions="`update_actions_for_nodelines "normal" "${old}" "${new}"`" || fail "failed unexpectedly"
    expect_actions "${actions}" ""
 

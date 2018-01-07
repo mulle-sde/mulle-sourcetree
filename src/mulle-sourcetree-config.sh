@@ -124,23 +124,26 @@ sourcetree_mark_usage()
 {
    cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} mark <node> <mark>
+   ${MULLE_EXECUTABLE_NAME} mark [options] <node> <mark>
 
-   You can mark or unmark a node with this command. Only negative _marks
-   are actually stored in the node. All positive _marks are implicit.
+   You can mark or unmark a node with this command. Only negative marks
+   are actually stored in the node. All positive marks are implicit.
 
-   Examine the nodes _marks with
+   Examine the nodes marks with
        \`${MULLE_EXECUTABLE_NAME} -N list\`.
 
    This command only affects the config file.
 
+Options:
+   --extended-marks : allow the use of non-predefined marks
+
 Marks:
-   [no]build     : the node contains a buildable project (used by buildorder)
-   [no]delete    : the node may be deleted or moved
-   [no]recurse   : the node takes part in recursive operations
-   [no]require   : the node must exist
-   [no]set       : the nodes properies can be changed
-   [no]share     : the node may be shared with subtree nodes of the same url
+   [no-]build     : the node contains a buildable project (used by buildorder)
+   [no-]delete    : the node may be deleted or moved
+   [no-]recurse   : the node takes part in recursive operations
+   [no-]require   : the node must exist
+   [no-]set       : the nodes properies can be changed
+   [no-]share     : the node may be shared with subtree nodes of the same url
 EOF
    if [ "${MULLE_FLAG_LOG_VERBOSE}" = "YES" ]
    then
@@ -154,7 +157,7 @@ EOF
    [no]update    : the node takes part in the update
 
    Example:
-      ${MULLE_EXECUTABLE_NAME} mark src/bar nobuild
+      ${MULLE_EXECUTABLE_NAME} mark src/bar no-build
 EOF
 
   exit 1
@@ -166,22 +169,25 @@ sourcetree_unmark_usage()
 {
    cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} unmark <node> <mark>
+   ${MULLE_EXECUTABLE_NAME} unmark [options] <node> <mark>
 
-   Remove a negative mark from a node. A node stores only negative _marks,
-   prefixed by "no". All positive _marks are implicit.
+   Remove a negative mark from a node. A node stores only marks,
+   prefixed by either "no-" or "only-". All positive marks are implicit set.
+
+Options:
+   --extended-marks : allow the use of non-predefined marks
 
 Marks:
-   nobuild
-   nodelete
-   norecurse
-   norequire
-   noset
-   noshare
-   noupdate
+   no-build
+   no-delete
+   no-recurse
+   no-require
+   no-set
+   no-share
+   no-update
 
    Example:
-      ${MULLE_EXECUTABLE_NAME} unmark src/bar nobuild
+      ${MULLE_EXECUTABLE_NAME} unmark src/bar no-build
 EOF
 
   exit 1
@@ -337,10 +343,9 @@ in the sourcetree"
 
    if [ "${OPTION_UNSAFE}" = "YES" ]
    then
-      mode="`concat "${mode}" "nosafe"`"
+      mode="`concat "${mode}" "unsafe"`"
    fi
    node_augment "${mode}"
-
 
    if cfg_get_nodeline "${SOURCETREE_START}" "${_address}" > /dev/null
    then
@@ -443,9 +448,9 @@ sourcetree_set_node()
 
    nodeline_parse "${oldnodeline}"
 
-   if nodemarks_contain_noset "${_marks}"
+   if nodemarks_contain_no_set "${_marks}"
    then
-      fail "Node is marked as noset"
+      fail "Node is marked as no-set"
    fi
 
    local oldaddress
@@ -578,7 +583,7 @@ sourcetree_mark_node()
    if nodemarks_contain "${_marks}" "${mark}"
    then
       case "${mark}" in
-         no*)
+         no-*|only-*)
             log_verbose "Node already marked as \"${mark}\""
          ;;
 
@@ -591,7 +596,8 @@ sourcetree_mark_node()
 
    local operation
 
-   operation="nodemarks_add_${mark}"
+
+   operation="nodemarks_add_`tr '-' '_' <<< "${mark}"`"
    if [ "`type -t "${operation}"`" = "function" ]
    then
       _marks="`${operation} "${_marks}"`"
@@ -606,18 +612,18 @@ sourcetree_mark_node()
             fail "mark is empty"
          ;;
 
-         no*)
-            if egrep -q -s '[^a-z]' <<< "${mark}"
+         no-*|only-*)
+            if egrep -q -s '[^a-z-]' <<< "${mark}"
             then
-               fail "mark must contain only lowercase letters"
+               fail "mark must contain only lowercase letters and hyphens"
             fi
          ;;
 
          *)
-            fail "mark must start with no"
+            fail "mark must start with \"no-\" or \"only-\""
          ;;
       esac
-      _marks="${_marks} ${mark}"
+      _marks="`comma_concat "${_marks}" "${mark}" `"
    fi
 
    local newnodeline
@@ -638,12 +644,12 @@ sourcetree_unmark_node()
    [ -z "${mark}" ] && fail "mark is empty"
 
    case "${mark}" in
-      no*)
+      no-*|only-*)
          mark="${mark:2}"
       ;;
 
       *)
-         fail "Mark to unmark must start with \"no\""
+         fail "Mark to unmark must start with \"no-\" or \"only-\""
       ;;
    esac
 
@@ -784,7 +790,7 @@ sourcetree_common_main()
          ;;
 
          #
-         # _marks
+         # marks
          #
          --extended-marks)
             OPTION_EXTENDED_MARKS="YES"

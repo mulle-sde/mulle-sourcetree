@@ -1,3 +1,8 @@
+## 0.3.0
+
+* use no- instead of no, allow only- markers too
+
+
 ### 0.2.1
 
 * fix stuff for linux

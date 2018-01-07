@@ -55,35 +55,12 @@ Usage:
 Options:
    -n <value>       : node types to walk (default: ALL)
    -p <value>       : specify permissions (missing)
-   -m <value>       : specify _marks to match (e.g. build)
+   -m <value>       : specify marks to match (e.g. build)
    --cd             : change directory to node's working directory
    --lenient        : allow shell command to error
    --pre-order      : walk tree in pre-order  (Root, Left, Right)
    --in-order       : walk tree in in-order (Left, Root, Right)
    --walk-db        : walk over information contained in the virtual instead
-EOF
-  exit 1
-}
-
-
-sourcetree_buildorder_usage()
-{
-   cat <<EOF >&2
-Usage:
-   ${MULLE_EXECUTABLE_NAME} buildorder [options]
-
-   Print all sourcetree addresses according to the following rules:
-
-   * ignore nodes marked as "nobuild"
-   * ignore nodes marked as "norequire", whose address is missing
-   * ignore nodes marked as "no${UNAME}" (platform dependent of course)
-
-   In a make based project, this can be used to build everything like this:
-
-      ${MULLE_EXECUTABLE_NAME} buildorder | while read _address
-      do
-         ( cd "${_address}" ; make ) || break
-      done
 EOF
   exit 1
 }
@@ -98,11 +75,10 @@ walk_filter_permissions()
 {
    log_entry "walk_filter_permissions" "$@"
 
-   local _address="$1"
+   local address="$1"
    local permissions="$2"
-   local _marks="$3"
 
-   [ -z "${_address}" ] && internal_fail "empty _address"
+   [ -z "${address}" ] && internal_fail "empty address"
 
    local match
 
@@ -111,21 +87,21 @@ walk_filter_permissions()
       return
    fi
 
-   if [ ! -e "${_address}" ]
+   if [ ! -e "${address}" ]
    then
-      log_fluff "${_address} does not exist (yet)"
+      log_fluff "${address} does not exist (yet)"
       case "${permissions}" in
          *fail-noexist*)
-            fail "Missing \"${_address}\" is not yet fetched."
+            fail "Missing \"${address}\" is not yet fetched."
          ;;
 
          *warn-noexist*)
-            log_verbose "Repository expected in \"${_address}\" is not yet fetched"
+            log_verbose "Repository expected in \"${address}\" is not yet fetched"
             return 0
          ;;
 
          *skip-noexist*)
-            log_fluff "Repository expected in \"${_address}\" is not yet fetched, skipped"
+            log_fluff "Repository expected in \"${address}\" is not yet fetched, skipped"
             return 1
          ;;
 
@@ -135,24 +111,24 @@ walk_filter_permissions()
       esac
    fi
 
-   if [ ! -L "${_address}" ]
+   if [ ! -L "${address}" ]
    then
       return 0
    fi
 
-   log_fluff "${_address} is a symlink"
+   log_fluff "${address} is a symlink"
    case "${permissions}" in
       *fail-symlink*)
-         fail "Missing \"${_address}\" is a symlink."
+         fail "Missing \"${address}\" is a symlink."
       ;;
 
       *warn-symlink*)
-         log_verbose "\"${_address}\" is a symlink."
+         log_verbose "\"${address}\" is a symlink."
          return 0
       ;;
 
       *skip-symlink*)
-         log_fluff "\"${_address}\" is a symlink, skipped"
+         log_fluff "\"${address}\" is a symlink, skipped"
          return 1
       ;;
    esac
@@ -165,29 +141,29 @@ walk_filter_nodetypes()
 {
    log_entry "walk_filter_nodetypes" "$@"
 
-   local _nodetype="$1"
+   local nodetype="$1"
    local allowednodetypes="$2"
 
-   [ -z "${_nodetype}" ] && internal_fail "empty _nodetype"
+   [ -z "${nodetype}" ] && internal_fail "empty nodetype"
 
    if [ "${allowednodetypes}" = "ALL" ]
    then
       return 0
    fi
 
-   nodetypes_contain "${allowednodetypes}" "${_nodetype}"
+   nodetypes_contain "${allowednodetypes}" "${nodetype}"
 }
 
 
 #
-# you can pass a qualifier of the form <all>;<one>;<none>
-# inside all,one,none are comma separated _marks
+# you can pass a qualifier of the form <all>;<one>;<none>;<override>
+# inside all,one,none,override there are comma separated marks
 #
 walk_filter_marks()
 {
    log_entry "walk_filter_marks" "$@"
 
-   local _marks="$1"
+   local marks="$1"
    local qualifier="$2"
 
    if [ "${qualifier}" = "ANY" ]
@@ -198,10 +174,29 @@ walk_filter_marks()
    local all
    local one
    local none
+   local override
 
    all="$(cut -d';' -f 1 <<< "${qualifier}")"
    one="$(cut -s -d';' -f 2 <<< "${qualifier}")"
    none="$(cut -s -d';' -f 3 <<< "${qualifier}")"
+   override="$(cut -s -d';' -f 4 <<< "${qualifier}")"
+
+   local i
+
+   if [ ! -z "${override}" ]
+   then
+      IFS=","
+      for i in ${override}
+      do
+         IFS="${DEFAULT_IFS}"
+         if nodemarks_contain "${marks}" "${i}"
+         then
+            log_fluff "Pass: override mark \"$i\" found"
+            return 0
+         fi
+      done
+      IFS="${DEFAULT_IFS}"
+   fi
 
    if [ ! -z "${all}" ]
    then
@@ -209,8 +204,9 @@ walk_filter_marks()
       for i in ${all}
       do
          IFS="${DEFAULT_IFS}"
-         if ! nodemarks_contain "${_marks}" "${i}"
+         if ! nodemarks_contain "${marks}" "${i}"
          then
+            log_fluff "Blocked: required mark \"$i\" not found"
             return 1
          fi
       done
@@ -219,8 +215,9 @@ walk_filter_marks()
 
    if [ ! -z "${one}" ]
    then
-      if ! nodemarks_intersect "${_marks}" "${one}"
+      if ! nodemarks_intersect "${marks}" "${one}"
       then
+         log_fluff "Blocked: mark \"$i\" not present"
          return 1
       fi
    fi
@@ -231,8 +228,9 @@ walk_filter_marks()
       for i in ${none}
       do
          IFS="${DEFAULT_IFS}"
-         if nodemarks_contain "${_marks}" "${i}"
+         if nodemarks_contain "${marks}" "${i}"
          then
+            log_fluff "Blocked: mark \"$i\" inhibits"
             return 1
          fi
       done
@@ -514,9 +512,9 @@ _visit_recurse()
       ;;
    esac
 
-   if nodemarks_contain_norecurse "${_marks}"
+   if nodemarks_contain_no_recurse "${_marks}"
    then
-      log_debug "Do not recurse on \"${virtual}/${_destination}\" due to norecurse mark"
+      log_debug "Do not recurse on \"${virtual}/${_destination}\" due to no-recurse mark"
       return 0
    fi
 
@@ -695,7 +693,7 @@ _visit_filter_nodeline()
    # into the shared directory.
    #
    case "${mode}" in
-      *noshare*)
+      *no-share*)
          internal_fail "shouldn't exist anymore"
       ;;
 
@@ -1249,52 +1247,6 @@ sourcetree_walk_main()
                    "$@"
 }
 
-
-sourcetree_buildorder_main()
-{
-   log_entry "sourcetree_buildorder_main" "$@"
-
-   local OPTION_MARKS="NO"
-
-   while [ $# -ne 0 ]
-   do
-      case "$1" in
-         -h|-help|--help)
-            sourcetree_buildorder_usage
-         ;;
-
-         --marks)
-            OPTION_MARKS="YES"
-         ;;
-
-         --no-marks)
-            OPTION_MARKS="NO"
-         ;;
-
-         -*)
-            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown buildorder option $1"
-            sourcetree_buildorder_usage
-         ;;
-
-         *)
-            break
-         ;;
-      esac
-
-      shift
-   done
-
-   [ "$#" -eq 0 ] || sourcetree_buildorder_usage
-
-   if [ "${OPTION_MARKS}" = "YES" ]
-   then
-      sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE} --in-order" \
-         "echo" '"${MULLE_FILENAME};${MULLE_MARKS}"'
-   else
-      sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE} --in-order" \
-         "echo" '"${MULLE_FILENAME}"'
-   fi
-}
 
 
 sourcetree_walk_initialize()

@@ -1437,9 +1437,9 @@ db_safe_bury_dbentry()
 
    db_forget "${database}" "${_uuid}"
 
-   if nodemarks_contain_nodelete "${_marks}"
+   if nodemarks_contain_no_delete "${_marks}"
    then
-      log_fluff "${_url} is marked as nodelete so not burying"
+      log_fluff "${_url} is marked as no-delete so not burying"
       return
    fi
 

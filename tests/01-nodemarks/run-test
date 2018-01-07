@@ -17,61 +17,61 @@ main()
 
    log_verbose "----- #1 PASSED -----"
 
-   nodemarks_contain_nobuild    "${_marks}" && fail "Did not expect nobuild as default"
-   nodemarks_contain_nodelete   "${_marks}" && fail "Did not expect nodelete as default"
-   nodemarks_contain_norecurse  "${_marks}" && fail "Did not expect norecurse as default"
-   nodemarks_contain_norequire  "${_marks}" && fail "Did not expect norequire as default"
-   nodemarks_contain_noupdate   "${_marks}" && fail "Did not expect noupdate as default"
+   nodemarks_contain_no_build    "${_marks}" && fail "Did not expect no-build as default"
+   nodemarks_contain_no_delete   "${_marks}" && fail "Did not expect no-delete as default"
+   nodemarks_contain_no_recurse  "${_marks}" && fail "Did not expect no-recurse as default"
+   nodemarks_contain_no_require  "${_marks}" && fail "Did not expect no-require as default"
+   nodemarks_contain_no_update   "${_marks}" && fail "Did not expect no-update as default"
 
    log_verbose "----- #2 PASSED -----"
 
-   _marks="`nodemarks_add_nobuild "${_marks}"`"
+   _marks="`nodemarks_add_no_build "${_marks}"`"
 
-   nodemarks_contain_nobuild    "${_marks}" || fail "Did expect nobuild ($_marks)"
-   nodemarks_contain_nodelete   "${_marks}" && fail "Did not expect nodelete ($_marks)"
-   nodemarks_contain_norecurse  "${_marks}" && fail "Did not expect norecurse ($_marks)"
-   nodemarks_contain_norequire  "${_marks}" && fail "Did not expect norequire ($_marks)"
-   nodemarks_contain_noupdate   "${_marks}" && fail "Did not expect noupdate ($_marks)"
+   nodemarks_contain_no_build    "${_marks}" || fail "Did expect no-build ($_marks)"
+   nodemarks_contain_no_delete   "${_marks}" && fail "Did not expect no-delete ($_marks)"
+   nodemarks_contain_no_recurse  "${_marks}" && fail "Did not expect no-recurse ($_marks)"
+   nodemarks_contain_no_require  "${_marks}" && fail "Did not expect no-require ($_marks)"
+   nodemarks_contain_no_update   "${_marks}" && fail "Did not expect no-update ($_marks)"
 
    log_verbose "----- #3 PASSED -----"
 
-   _marks="`nodemarks_add_nodelete "${_marks}"`"
+   _marks="`nodemarks_add_no_delete "${_marks}"`"
 
-   nodemarks_contain_nobuild    "${_marks}" || fail "Did expect nobuild ($_marks)"
-   nodemarks_contain_nodelete   "${_marks}" || fail "Did expect nodelete ($_marks)"
-   nodemarks_contain_norecurse  "${_marks}" && fail "Did not expect norecurse ($_marks)"
-   nodemarks_contain_norequire  "${_marks}" && fail "Did not expect norequire ($_marks)"
-   nodemarks_contain_noupdate   "${_marks}" && fail "Did not expect noupdate ($_marks)"
+   nodemarks_contain_no_build    "${_marks}" || fail "Did expect no-build ($_marks)"
+   nodemarks_contain_no_delete   "${_marks}" || fail "Did expect no-delete ($_marks)"
+   nodemarks_contain_no_recurse  "${_marks}" && fail "Did not expect no-recurse ($_marks)"
+   nodemarks_contain_no_require  "${_marks}" && fail "Did not expect no-require ($_marks)"
+   nodemarks_contain_no_update   "${_marks}" && fail "Did not expect no-update ($_marks)"
 
    log_verbose "----- #4 PASSED -----"
 
-   _marks="`nodemarks_add_norecurse "${_marks}"`"
+   _marks="`nodemarks_add_no_recurse "${_marks}"`"
 
-   nodemarks_contain_nobuild    "${_marks}" || fail "Did expect nobuild ($_marks)"
-   nodemarks_contain_nodelete   "${_marks}" || fail "Did expect nodelete ($_marks)"
-   nodemarks_contain_norecurse  "${_marks}" || fail "Did expect norecurse ($_marks)"
-   nodemarks_contain_norequire  "${_marks}" && fail "Did not expect norequire ($_marks)"
-   nodemarks_contain_noupdate   "${_marks}" && fail "Did not expect noupdate ($_marks)"
+   nodemarks_contain_no_build    "${_marks}" || fail "Did expect no-build ($_marks)"
+   nodemarks_contain_no_delete   "${_marks}" || fail "Did expect no-delete ($_marks)"
+   nodemarks_contain_no_recurse  "${_marks}" || fail "Did expect no-recurse ($_marks)"
+   nodemarks_contain_no_require  "${_marks}" && fail "Did not expect no-require ($_marks)"
+   nodemarks_contain_no_update   "${_marks}" && fail "Did not expect no-update ($_marks)"
 
    log_verbose "----- #5 PASSED -----"
 
-   _marks="`nodemarks_add_norequire "${_marks}"`"
+   _marks="`nodemarks_add_no_require "${_marks}"`"
 
-   nodemarks_contain_nobuild    "${_marks}" || fail "Did expect nobuild ($_marks)"
-   nodemarks_contain_nodelete   "${_marks}" || fail "Did expect nodelete ($_marks)"
-   nodemarks_contain_norecurse  "${_marks}" || fail "Did expect norecurse ($_marks)"
-   nodemarks_contain_norequire  "${_marks}" || fail "Did expect norequire ($_marks)"
-   nodemarks_contain_noupdate   "${_marks}" && fail "Did not expect noupdate ($_marks)"
+   nodemarks_contain_no_build    "${_marks}" || fail "Did expect no-build ($_marks)"
+   nodemarks_contain_no_delete   "${_marks}" || fail "Did expect no-delete ($_marks)"
+   nodemarks_contain_no_recurse  "${_marks}" || fail "Did expect no-recurse ($_marks)"
+   nodemarks_contain_no_require  "${_marks}" || fail "Did expect no-require ($_marks)"
+   nodemarks_contain_no_update   "${_marks}" && fail "Did not expect no-update ($_marks)"
 
    log_verbose "----- #6 PASSED -----"
 
-   _marks="`nodemarks_add_noupdate "${_marks}"`"
+   _marks="`nodemarks_add_no_update "${_marks}"`"
 
-   nodemarks_contain_nobuild    "${_marks}" || fail "Did expect nobuild ($_marks)"
-   nodemarks_contain_nodelete   "${_marks}" || fail "Did expect nodelete ($_marks)"
-   nodemarks_contain_norecurse  "${_marks}" || fail "Did expect norecurse ($_marks)"
-   nodemarks_contain_norequire  "${_marks}" || fail "Did expect norequire ($_marks)"
-   nodemarks_contain_noupdate   "${_marks}" || fail "Did expect noupdate ($_marks)"
+   nodemarks_contain_no_build    "${_marks}" || fail "Did expect no-build ($_marks)"
+   nodemarks_contain_no_delete   "${_marks}" || fail "Did expect no-delete ($_marks)"
+   nodemarks_contain_no_recurse  "${_marks}" || fail "Did expect no-recurse ($_marks)"
+   nodemarks_contain_no_require  "${_marks}" || fail "Did expect no-require ($_marks)"
+   nodemarks_contain_no_update   "${_marks}" || fail "Did expect no-update ($_marks)"
 
    log_verbose "----- #7 PASSED -----"
 
@@ -79,64 +79,64 @@ main()
 
    _marks="`nodemarks_add_build "${_marks}"`"
 
-   nodemarks_contain_nobuild    "${_marks}" && fail "Did not expect nobuild ($_marks)"
-   nodemarks_contain_nodelete   "${_marks}" || fail "Did expect nodelete ($_marks)"
-   nodemarks_contain_norecurse  "${_marks}" || fail "Did expect norecurse ($_marks)"
-   nodemarks_contain_norequire  "${_marks}" || fail "Did expect norequire ($_marks)"
-   nodemarks_contain_noupdate   "${_marks}" || fail "Did expect noupdate ($_marks)"
+   nodemarks_contain_no_build    "${_marks}" && fail "Did not expect no-build ($_marks)"
+   nodemarks_contain_no_delete   "${_marks}" || fail "Did expect no-delete ($_marks)"
+   nodemarks_contain_no_recurse  "${_marks}" || fail "Did expect no-recurse ($_marks)"
+   nodemarks_contain_no_require  "${_marks}" || fail "Did expect no-require ($_marks)"
+   nodemarks_contain_no_update   "${_marks}" || fail "Did expect no-update ($_marks)"
 
    log_verbose "----- #8 PASSED -----"
 
-   _marks="`nodemarks_remove "${_marks}" "nodelete"`"
+   _marks="`nodemarks_remove "${_marks}" "no-delete"`"
 
-   nodemarks_contain_nobuild    "${_marks}" && fail "Did not expect nobuild ($_marks)"
-   nodemarks_contain_nodelete   "${_marks}" && fail "Did not expect nodelete ($_marks)"
-   nodemarks_contain_norecurse  "${_marks}" || fail "Did expect norecurse ($_marks)"
-   nodemarks_contain_norequire  "${_marks}" || fail "Did expect norequire ($_marks)"
-   nodemarks_contain_noupdate   "${_marks}" || fail "Did expect noupdate ($_marks)"
+   nodemarks_contain_no_build    "${_marks}" && fail "Did not expect no-build ($_marks)"
+   nodemarks_contain_no_delete   "${_marks}" && fail "Did not expect no-delete ($_marks)"
+   nodemarks_contain_no_recurse  "${_marks}" || fail "Did expect no-recurse ($_marks)"
+   nodemarks_contain_no_require  "${_marks}" || fail "Did expect no-require ($_marks)"
+   nodemarks_contain_no_update   "${_marks}" || fail "Did expect no-update ($_marks)"
 
    log_verbose "----- #9 PASSED -----"
 
-   _marks="`nodemarks_remove_norecurse "${_marks}"`"
+   _marks="`nodemarks_remove_no_recurse "${_marks}"`"
 
-   nodemarks_contain_nobuild    "${_marks}" && fail "Did not expect nobuild ($_marks)"
-   nodemarks_contain_nodelete   "${_marks}" && fail "Did not expect nodelete ($_marks)"
-   nodemarks_contain_norecurse  "${_marks}" && fail "Did not expect norecurse ($_marks)"
-   nodemarks_contain_norequire  "${_marks}" || fail "Did expect norequire ($_marks)"
-   nodemarks_contain_noupdate   "${_marks}" || fail "Did expect noupdate ($_marks)"
+   nodemarks_contain_no_build    "${_marks}" && fail "Did not expect no-build ($_marks)"
+   nodemarks_contain_no_delete   "${_marks}" && fail "Did not expect no-delete ($_marks)"
+   nodemarks_contain_no_recurse  "${_marks}" && fail "Did not expect no-recurse ($_marks)"
+   nodemarks_contain_no_require  "${_marks}" || fail "Did expect no-require ($_marks)"
+   nodemarks_contain_no_update   "${_marks}" || fail "Did expect no-update ($_marks)"
 
    log_verbose "----- #10 PASSED -----"
 
    _marks="`nodemarks_add_require "${_marks}"`"
 
-   nodemarks_contain_nobuild    "${_marks}" && fail "Did not expect nobuild ($_marks)"
-   nodemarks_contain_nodelete   "${_marks}" && fail "Did not expect nodelete ($_marks)"
-   nodemarks_contain_norecurse  "${_marks}" && fail "Did not expect norecurse ($_marks)"
-   nodemarks_contain_norequire  "${_marks}" && fail "Did not expect norequire ($_marks)"
-   nodemarks_contain_noupdate   "${_marks}" || fail "Did expect noupdate ($_marks)"
+   nodemarks_contain_no_build    "${_marks}" && fail "Did not expect no-build ($_marks)"
+   nodemarks_contain_no_delete   "${_marks}" && fail "Did not expect no-delete ($_marks)"
+   nodemarks_contain_no_recurse  "${_marks}" && fail "Did not expect no-recurse ($_marks)"
+   nodemarks_contain_no_require  "${_marks}" && fail "Did not expect no-require ($_marks)"
+   nodemarks_contain_no_update   "${_marks}" || fail "Did expect no-update ($_marks)"
 
    log_verbose "----- #11 PASSED -----"
 
    _marks="`nodemarks_add_update "${_marks}"`"
 
-   nodemarks_contain_nobuild    "${_marks}" && fail "Did not expect nobuild ($_marks)"
-   nodemarks_contain_nodelete   "${_marks}" && fail "Did not expect nodelete ($_marks)"
-   nodemarks_contain_norecurse  "${_marks}" && fail "Did not expect norecurse ($_marks)"
-   nodemarks_contain_norequire  "${_marks}" && fail "Did not expect norequire ($_marks)"
-   nodemarks_contain_noupdate   "${_marks}" && fail "Did not expect noupdate ($_marks)"
+   nodemarks_contain_no_build    "${_marks}" && fail "Did not expect no-build ($_marks)"
+   nodemarks_contain_no_delete   "${_marks}" && fail "Did not expect no-delete ($_marks)"
+   nodemarks_contain_no_recurse  "${_marks}" && fail "Did not expect no-recurse ($_marks)"
+   nodemarks_contain_no_require  "${_marks}" && fail "Did not expect no-require ($_marks)"
+   nodemarks_contain_no_update   "${_marks}" && fail "Did not expect no-update ($_marks)"
 
    log_verbose "----- #12 PASSED -----"
 
    local other
 
-   _marks="`nodemarks_add_noupdate "${_marks}"`"
-   other="`nodemarks_add_nodelete "${_marks}"`"
+   _marks="`nodemarks_add_no_update "${_marks}"`"
+   other="`nodemarks_add_no_delete "${_marks}"`"
 
    nodemarks_intersect "${_marks}" "${other}" || fail "intersect \"${_marks}\" \"${other}\""
 
    log_verbose "----- #13 PASSED -----"
 
-   other="`nodemarks_add_nodelete ""`"
+   other="`nodemarks_add_no_delete ""`"
 
    nodemarks_intersect "${_marks}" "${other}" && fail "! intersect \"${_marks}\" \"${other}\""
 

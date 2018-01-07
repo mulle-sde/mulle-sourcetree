@@ -85,7 +85,7 @@ main()
    mkdir_if_missing "${project}"
    cd "${project}"
 
-   if ! run_mulle_sourcetree add --marks nodelete --nodetype git --tag "2.0.0" "file://${repos}/a"
+   if ! run_mulle_sourcetree add --marks no-delete --nodetype git --tag "2.0.0" "file://${repos}/a"
    then
      fail "add failed unexpectedly"
    fi
@@ -96,21 +96,68 @@ main()
    fi
 
    local result
-   local expect="`physicalpath "${project}"`/a/b;
-`physicalpath "${project}"`/a;nodelete"
+   local expected="`physicalpath "${project}"`/a/b;
+`physicalpath "${project}"`/a;no-delete"
 
    result="`run_mulle_sourcetree buildorder --marks`"
-   if [ "${expect}" != "${result}" ]
+   if [ "${expected}" != "${result}" ]
    then
       fail "missed expectation:
 ---
-${expect}
+${expected}
 ---
 got
 ---
 ${result}
 ---"
    fi
+   log_info "----- #1 PASSED -----"
+
+   if ! run_mulle_sourcetree mark --extended-marks "a" "no-fantasy-os"
+   then
+     fail "mark failed unexpectedly"
+   fi
+
+   # should be the same
+   result="`run_mulle_sourcetree buildorder --marks`"
+   expected="`physicalpath "${project}"`/a/b;
+`physicalpath "${project}"`/a;no-delete,no-fantasy-os"
+   if [ "${expected}" != "${result}" ]
+   then
+      fail "missed expectation:
+---
+${expected}
+---
+got
+---
+${result}
+---"
+   fi
+   log_info "----- #2 PASSED -----"
+
+   if ! run_mulle_sourcetree mark --extended-marks "a" "no-${UNAME}"
+   then
+     fail "mark failed unexpectedly"
+   fi
+
+   #
+   # now a should not appear and therefore b misses out too
+   #
+   local expected=""
+
+   result="`run_mulle_sourcetree -vvv -ld buildorder --marks`"
+   if [ "${expected}" != "${result}" ]
+   then
+      fail "missed expectation:
+---
+${expected}
+---
+got
+---
+${result}
+---"
+   fi
+   log_info "----- #3 PASSED -----"
 
    log_info "----- ALL PASSED -----"
 
