@@ -98,10 +98,10 @@ sourcetree_buildorder_main()
 
    if [ "${OPTION_MARKS}" = "YES" ]
    then
-      sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE} --in-order" \
+      sourcetree_walk "" "" "build,os-${UNAME};;;only-os-${UNAME}" "${SOURCETREE_MODE} --in-order" \
          "echo" '"${MULLE_FILENAME};${MULLE_MARKS}"'
    else
-      sourcetree_walk "" "" "build,${UNAME}" "${SOURCETREE_MODE} --in-order" \
+      sourcetree_walk "" "" "build,os-${UNAME};;;only-os-${UNAME}" "${SOURCETREE_MODE} --in-order" \
          "echo" '"${MULLE_FILENAME}"'
    fi
 }

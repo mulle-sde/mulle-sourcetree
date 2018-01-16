@@ -188,6 +188,8 @@ _has_system_include()
       includedir=""
    fi
 
+   local i
+
    IFS=":"
    for i in ${include_search_path}
    do
@@ -1148,7 +1150,7 @@ nodetype        : ${nodetype}"
       local evaledurl
 
       evaledurl="`eval echo "${_url}"`"
-      nodeline="`node_print_nodeline`"
+      nodeline="`node_to_nodeline`"
       db_memorize "${database}" \
                   "${_uuid}" \
                   "${nodeline}" \

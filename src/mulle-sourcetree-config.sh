@@ -224,11 +224,20 @@ sourcetree_get_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} get <address> [fields]
+   ${MULLE_EXECUTABLE_NAME} get <address> [key]
 
-   Emit config values. The possible value for field are
+   Prints the node values for a node with the given key.
 
-   address branch fetchoptions marks nodetype tag uuid url userinfo
+Keys:
+   address      :
+   branch       :
+   fetchoptions :
+   marks        :
+   nodetype     :
+   tag          :
+   uuid         :
+   url          :
+   userinfo     :
 
    This command only reads the local config file.
 EOF
@@ -357,7 +366,7 @@ in the sourcetree"
    local appended
 
    contents="`egrep -s -v '^#' "${SOURCETREE_CONFIG_FILE}"`"
-   nodeline="`node_print_nodeline`"
+   nodeline="`node_to_nodeline`"
    appended="`add_line "${contents}" "${nodeline}"`"
 
    cfg_write "${SOURCETREE_START}" "${appended}"
@@ -381,6 +390,26 @@ sourcetree_remove_node()
    cfg_remove_nodeline "${SOURCETREE_START}" "${address}"
    cfg_file_remove_if_empty "${SOURCETREE_START}"
 }
+
+
+sourcetree_remove_node_by_url()
+{
+   log_entry "sourcetree_remove_node_by_url" "$@"
+
+   local url="$1"
+
+   local oldnodeline
+
+   if ! cfg_get_nodeline_by_url "${SOURCETREE_START}" "${url}"
+   then
+      log_warning "A node with URL \"${url}\" does not exist"
+      return 2  # also return non 0 , but lets's not be dramatic about it
+   fi
+
+   cfg_remove_nodeline_by_url "${SOURCETREE_START}" "${url}"
+   cfg_file_remove_if_empty "${SOURCETREE_START}"
+}
+
 
 
 sourcetree_change_nodeline()
@@ -422,19 +451,27 @@ _unfailing_get_nodeline()
    fi
 }
 
+
+_unfailing_get_nodeline_by_url()
+{
+   local url="$1"
+
+   if ! cfg_get_nodeline_by_url "${SOURCETREE_START}" "${url}"
+   then
+      fail "A node \"${url}\" does not exist (${MULLE_VIRTUAL_ROOT}${SOURCETREE_START})"
+   fi
+}
+
+
 #
 # we need to keep the position in the file as it is important
 # so add/remove is not the solution
 #
-sourcetree_set_node()
+_sourcetree_set_node()
 {
-   log_entry "sourcetree_set_node" "$@"
+   log_entry "_sourcetree_set_node" "$@"
 
-   local address="$1"; shift
-
-   local oldnodeline
-
-   oldnodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
+   local oldnodeline="$1"; shift
 
    local _branch
    local _address
@@ -467,15 +504,18 @@ sourcetree_set_node()
    _userinfo="${OPTION_USERINFO:-${_userinfo}}"
 
    local key
+   local value
 
    while [ "$#" -ge 2 ]
    do
       key="$1"
       shift
+      value="$1"
+      shift
 
       case "${key}" in
          branch|address|fetchoptions|marks|nodetype|tag|url|userinfo)
-            eval ${key}="'_$1'"
+            eval "_${key}"="'${value}'"
             log_debug "Set ${key} to \"`eval echo \\\$_${key}`\""
          ;;
 
@@ -484,7 +524,6 @@ sourcetree_set_node()
             sourcetree_set_usage
          ;;
       esac
-      shift
    done
 
    if [ "$#" -ne 0 ]
@@ -496,7 +535,7 @@ sourcetree_set_node()
    node_augment "${OPTION_AUGMENTMODE}"
 
    if [ "${oldaddress}" != "${_address}" ] &&
-       cfg_has_duplicate "${SOURCETREE_START}"  "${_uuid}" "${_address}"
+      cfg_has_duplicate "${SOURCETREE_START}" "${_uuid}" "${_address}"
    then
       fail "There is already a node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} \
 in the sourcetree
@@ -505,20 +544,44 @@ in the sourcetree
 
    local newnodeline
 
-   newnodeline="`node_print_nodeline`"
+   newnodeline="`node_to_nodeline`"
    sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}" "${_address}"
 }
 
 
-sourcetree_get_node()
+sourcetree_set_node()
 {
-   log_entry "sourcetree_get_node" "$@"
+   log_entry "sourcetree_set_node" "$@"
 
    local address="$1"; shift
 
-   local nodeline
+   local oldnodeline
 
-   nodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
+   oldnodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
+
+   _sourcetree_set_node "${oldnodeline}" "$@"
+}
+
+
+sourcetree_set_node_by_url()
+{
+   log_entry "sourcetree_set_node_by_url" "$@"
+
+   local address="$1"; shift
+
+   local oldnodeline
+
+   oldnodeline="`_unfailing_get_nodeline_by_url "${url}"`" || exit 1
+
+   _sourcetree_set_node "${oldnodeline}" "$@"
+}
+
+
+_sourcetree_get_node()
+{
+   log_entry "_sourcetree_get_node" "$@"
+
+   local nodeline="$1"; shift
 
    local _branch
    local _address
@@ -554,48 +617,37 @@ sourcetree_get_node()
 }
 
 
-sourcetree_mark_node()
+sourcetree_get_node()
 {
-   log_entry "sourcetree_mark_node" "$@"
+   log_entry "sourcetree_get_node" "$@"
 
-   local address="$1"
-   local mark="$2"
+   local address="$1"; shift
 
-   [ -z "${address}" ] && fail "address is empty"
-   [ -z "${mark}" ] && fail "mark is empty"
+   nodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
 
-   local oldnodeline
+   _sourcetree_get_node "${nodeline}" "$@"
+}
 
-   oldnodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
 
-   local _branch
-   local _address
-   local _fetchoptions
-   local _marks
-   local _nodetype
-   local _tag
-   local _url
-   local _userinfo
-   local _uuid
+sourcetree_get_node_by_url()
+{
+   log_entry "sourcetree_get_node_by_url" "$@"
 
-   nodeline_parse "${oldnodeline}"
+   local url="$1"; shift
 
-   if nodemarks_contain "${_marks}" "${mark}"
-   then
-      case "${mark}" in
-         no-*|only-*)
-            log_verbose "Node already marked as \"${mark}\""
-         ;;
+   nodeline="`_unfailing_get_nodeline_by_url "${url}"`" || exit 1
 
-         *)
-            log_info "Node is already implicitly marked as \"${mark}\"."
-         ;;
-      esac
-      return
-   fi
+   _sourcetree_get_node "${nodeline}" "$@"
+}
+
+
+_sourcetree_add_mark_known_absent()
+{
+   log_entry "_sourcetree_add_mark_known_absent" "$@"
+
+   local mark="$1"
 
    local operation
-
 
    operation="nodemarks_add_`tr '-' '_' <<< "${mark}"`"
    if [ "`type -t "${operation}"`" = "function" ]
@@ -623,13 +675,138 @@ sourcetree_mark_node()
             fail "mark must start with \"no-\" or \"only-\""
          ;;
       esac
-      _marks="`comma_concat "${_marks}" "${mark}" `"
+      _marks="`nodemarks_add "${_marks}" "${mark}" `"
    fi
 
    local newnodeline
 
-   newnodeline="`node_print_nodeline`"
+   newnodeline="`node_to_nodeline`"
    sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}" "${_address}"
+}
+
+
+_sourcetree_remove_mark_known_present()
+{
+   log_entry "_sourcetree_remove_mark_known_present" "$@"
+
+   local mark="$1"
+
+   local operation
+
+   operation="nodemarks_remove_`tr '-' '_' <<< "${mark}"`"
+   if [ "`type -t "${operation}"`" = "function" ]
+   then
+      _marks="`${operation} "${_marks}"`"
+   else
+      if [ "${OPTION_EXTENDED_MARKS}" != "YES" ]
+      then
+         fail "mark \"${mark}\" is unknown"
+      fi
+
+      case "${mark}" in
+         "")
+            fail "mark is empty"
+         ;;
+
+         no-*|only-*)
+            if egrep -q -s '[^a-z-]' <<< "${mark}"
+            then
+               fail "mark must contain only lowercase letters and hyphens"
+            fi
+         ;;
+
+         *)
+            fail "mark must start with \"no-\" or \"only-\""
+         ;;
+      esac
+      _marks="`nodemarks_remove "${_marks}" "${mark}" `"
+   fi
+
+   local newnodeline
+
+   newnodeline="`node_to_nodeline`"
+   sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}" "${_address}"
+}
+
+
+
+_sourcetree_mark_node()
+{
+   log_entry "_sourcetree_mark_node" "$@"
+
+   local oldnodeline="$1"
+   local mark="$2"
+
+   [ -z "${mark}" ] && fail "mark is empty"
+
+   local _branch
+   local _address
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _tag
+   local _url
+   local _userinfo
+   local _uuid
+
+   nodeline_parse "${oldnodeline}"
+
+   case "${mark}" in
+      no-*|only-*)
+         if nodemarks_contain "${_marks}" "${mark}"
+         then
+            log_info "Node is already marked as \"${mark}\"."
+            return
+         fi
+         _sourcetree_add_mark_known_absent "${mark}"
+      ;;
+
+      *)
+         if nodemarks_contain "${_marks}" "no-${mark}"
+         then
+            mark="no-${mark}"
+            _sourcetree_remove_mark_known_present "${mark}"
+         fi
+
+         if nodemarks_contain "${_marks}" "only-${mark}"
+         then
+            mark="only-${mark}"
+            _sourcetree_remove_mark_known_present "${mark}"
+         fi
+      ;;
+   esac
+}
+
+
+sourcetree_mark_node()
+{
+   log_entry "sourcetree_mark_node" "$@"
+
+   local address="$1"; shift
+
+   [ -z "${address}" ] && fail "address is empty"
+
+   local oldnodeline
+
+   oldnodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
+
+   _sourcetree_mark_node "${oldnodeline}" "$@"
+}
+
+
+sourcetree_mark_node_by_url()
+{
+   log_entry "sourcetree_mark_node_by_url" "$@"
+
+   local url="$1"; shift
+
+   [ -z "${url}" ] && fail "url is empty"
+
+   local oldnodeline
+
+   oldnodeline="`_unfailing_get_nodeline_by_url "${url}"`" || exit 1
+
+   _sourcetree_mark_node "${oldnodeline}" "$@"
 }
 
 
@@ -644,8 +821,12 @@ sourcetree_unmark_node()
    [ -z "${mark}" ] && fail "mark is empty"
 
    case "${mark}" in
-      no-*|only-*)
-         mark="${mark:2}"
+      no-*)
+         mark="${mark:3}"
+      ;;
+
+      only-*)
+         mark="${mark:5}"
       ;;
 
       *)
@@ -654,6 +835,34 @@ sourcetree_unmark_node()
    esac
 
    sourcetree_mark_node "${address}" "${mark}"
+}
+
+
+sourcetree_unmark_node_by_url()
+{
+   log_entry "sourcetree_unmark_node_by_url" "$@"
+
+   local url="$1"
+   local mark="$2"
+
+   [ -z "${url}" ] && fail "url is empty"
+   [ -z "${mark}" ] && fail "mark is empty"
+
+   case "${mark}" in
+      no-*)
+         mark="${mark:2}"
+      ;;
+
+      only-*)
+         mark="${mark:5}"
+      ;;
+
+      *)
+         fail "Mark to unmark must start with \"no-\" or \"only-\""
+      ;;
+   esac
+
+   sourcetree_mark_node_by_url "${url}" "${mark}"
 }
 
 
@@ -726,6 +935,8 @@ sourcetree_common_main()
    local OPTION_OUTPUT_UUID="DEFAULT"
    local OPTION_OUTPUT_EVAL="NO"
    local OPTION_OUTPUT_FULL="NO"
+
+   local suffix
 
    while [ $# -ne 0 ]
    do
@@ -838,6 +1049,10 @@ sourcetree_common_main()
          #
          # more common flags
          #
+         --url-addressing)
+            suffix="_by_url"
+         ;;
+
          -a|--address)
             [ $# -eq 1 ] && fail "missing argument to \"$1\""
             shift
@@ -942,7 +1157,7 @@ sourcetree_common_main()
          [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
-         sourcetree_${COMMAND}_node "${address}"
+         sourcetree_${COMMAND}_node${suffix} "${address}"
       ;;
 
       get|set)
@@ -950,9 +1165,8 @@ sourcetree_common_main()
          address="$1"
          [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
          shift
-         sourcetree_${COMMAND}_node "${address}" "$@"
+         sourcetree_${COMMAND}_node${suffix} "${address}" "$@"
       ;;
-
 
       mark|unmark)
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
@@ -964,7 +1178,7 @@ sourcetree_common_main()
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_${COMMAND}_node "${address}" "${mark}"
+         sourcetree_${COMMAND}_node${suffix} "${address}" "${mark}"
       ;;
 
       list|info)

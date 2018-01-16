@@ -34,7 +34,7 @@ run_test_1()
 
    local printed
 
-   printed="`node_print_nodeline "${nodeline}"`"
+   printed="`node_to_nodeline "${nodeline}"`"
 
    [ "${nodeline}" = "${printed}" ]     || \
       fail "printed nodeline differs \"${printed}\" vs. \"${nodeline}\""

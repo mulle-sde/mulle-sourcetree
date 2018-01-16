@@ -228,6 +228,19 @@ cfg_get_nodeline()
 }
 
 
+cfg_get_nodeline_by_url()
+{
+   log_entry "cfg_get_nodeline_by_url" "$@"
+
+   local address="$2"
+
+   local nodelines
+
+   nodelines="`cfg_read "$1"`"
+   nodeline_find "${nodelines}" "${address}"
+}
+
+
 cfg_has_duplicate()
 {
    log_entry "cfg_has_duplicate" "$@"
@@ -259,6 +272,28 @@ cfg_remove_nodeline()
    escaped="`escaped_sed_pattern "${address}"`"
    # linux don't like space after -i
    if ! exekutor sed -i'.bak' -e "/^${escaped};/d" "${configfile}"
+   then
+      internal_fail "sed address corrupt ?"
+   fi
+}
+
+
+cfg_remove_nodeline_by_url()
+{
+   log_entry "cfg_remove_nodeline_by_url" "$@"
+
+   local configfile
+
+   __cfg_common_configfile "$@"
+
+   local url="$2"
+
+   local escaped
+
+   log_debug "Removing \"${url}\" from \"${configfile}\""
+   escaped="`escaped_sed_pattern "${url}"`"
+   # linux don't like space after -i
+   if ! exekutor sed -i'.bak' -e "/^[^;]*;[^;]*[^;]*[^;]*${escaped};/d" "${configfile}"
    then
       internal_fail "sed address corrupt ?"
    fi

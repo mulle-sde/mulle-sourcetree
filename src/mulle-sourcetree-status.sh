@@ -176,6 +176,15 @@ emit_status()
       fi
    fi
 
+   local fs
+   local configexists
+   local dbexists
+   local status
+
+   configexists="NO"
+   dbexists="NO"
+   fs="library"
+   status="unknown"
 
    log_debug "address:    ${address}"
    log_debug "directory:  ${directory}"
@@ -184,163 +193,157 @@ emit_status()
    log_debug "mode:       ${mode}"
    log_debug "filename:   ${filename}"
 
-   local fs
-   local configexists
-   local dbexists
-
-   configexists="NO"
-   dbexists="NO"
-
-   if [ -e "${filename}/${SOURCETREE_CONFIG_FILE}" ]
+   if nodemarks_contain "${marks}" "fs"
    then
-      configexists="YES"
-   fi
+      fs="missing"
 
-   if [ -d "${filename}/${SOURCETREE_DB_NAME}" ]
-   then
-      dbexists="YES"
-   fi
-
-   fs="missing"
-
-   #
-   # Dstfile    | Url | Marks     | Output
-   # -----------|-----|-----------|------------------
-   # not exists | no  | -         | missing
-   # not exists | yes | require   | update
-   # not exists | yes | no-require | no-require
-   #
-
-   if [ ! -e "${filename}" ]
-   then
-      if [ -L "${filename}" ]
+      if [ -e "${filename}/${SOURCETREE_CONFIG_FILE}" ]
       then
-         fs="broken"
+         configexists="YES"
       fi
 
-      if nodemarks_contain_no_require "${marks}"
+      if [ -d "${filename}/${SOURCETREE_DB_NAME}" ]
       then
-         #
-         # if we say not uptodate here, it will retrigger
-         # build and updates for non-required stuff thats
-         # never there. Fix: (always need a require node)
-         #
-         log_fluff "\"${filename}\" does not exist but it isn't required ($PWD)"
-         if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+         dbexists="YES"
+      fi
+
+      #
+      # Dstfile    | Url | Marks     | Output
+      # -----------|-----|-----------|------------------
+      # not exists | no  | -         | missing
+      # not exists | yes | require   | update
+      # not exists | yes | no-require | no-require
+      #
+
+      if [ ! -e "${filename}" ]
+      then
+         if [ -L "${filename}" ]
          then
-            return 0
-         fi
-         exekutor echo "${output_adress};no-require;${fs};${configexists};${dbexists};${filename}"
-      else
-         if [ -z "${_url}" ]
-         then
-            log_fluff "\"${filename}\" does not exist and and is required ($PWD), but _url is empty"
-            if [ "${OPTION_IS_UPTODATE}" = "YES" ]
-            then
-               exit 2   # indicate brokenness
-            fi
-            exekutor echo "${output_adress};update;${fs};${configexists};${dbexists};${filename}"
-            return 0
+            fs="broken"
          fi
 
-         log_fluff "\"${filename}\" does not exist and is required ($PWD)"
+         if nodemarks_contain_no_require "${marks}"
+         then
+            #
+            # if we say not uptodate here, it will retrigger
+            # build and updates for non-required stuff thats
+            # never there. Fix: (always need a require node)
+            #
+            log_fluff "\"${filename}\" does not exist but it isn't required ($PWD)"
+            if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+            then
+               return 0
+            fi
+            exekutor echo "${output_adress};no-require;${fs};${configexists};${dbexists};${filename}"
+         else
+            if [ -z "${_url}" ]
+            then
+               log_fluff "\"${filename}\" does not exist and and is required ($PWD), but _url is empty"
+               if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+               then
+                  exit 2   # indicate brokenness
+               fi
+               exekutor echo "${output_adress};update;${fs};${configexists};${dbexists};${filename}"
+               return 0
+            fi
+
+            log_fluff "\"${filename}\" does not exist and is required ($PWD)"
+            if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+            then
+               exit 1
+            fi
+            exekutor echo "${output_adress};update;${fs};${configexists};${dbexists};${filename}"
+         fi
+         return
+      else
+         fs="file"
+         if [ -L "${filename}" ]
+         then
+            fs="symlink"
+         else
+            if [ -d "${filename}" ]
+            then
+               fs="directory"
+            fi
+         fi
+      fi
+
+      if [ "${dbexists}" = "YES" ] && \
+         ! sourcetree_is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
+      then
+         log_fluff "Database \"${datasource}\" is not compatible with \"${SOURCETREE_MODE}\" ($PWD)"
+
          if [ "${OPTION_IS_UPTODATE}" = "YES" ]
          then
             exit 1
          fi
          exekutor echo "${output_adress};update;${fs};${configexists};${dbexists};${filename}"
+         return 0
       fi
-      return
-   else
-      fs="file"
-      if [ -L "${filename}" ]
-      then
-         fs="symlink"
-      else
-         if [ -d "${filename}" ]
-         then
-            fs="directory"
-         fi
-      fi
-   fi
 
-   if [ "${dbexists}" = "YES" ] && \
-      ! sourcetree_is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
-   then
-      log_fluff "Database \"${datasource}\" is not compatible with \"${SOURCETREE_MODE}\" ($PWD)"
+      status="ok"
 
-      if [ "${OPTION_IS_UPTODATE}" = "YES" ]
-      then
-         exit 1
-      fi
-      exekutor echo "${output_adress};update;${fs};${configexists};${dbexists};${filename}"
-      return 0
-   fi
+      case "${mode}" in
+         *flat*)
+         ;;
 
-   local status
+         *)
 
-   status="ok"
-
-   case "${mode}" in
-      *flat*)
-      ;;
-
-      *)
-
-         #
-         # Config     | Database | Config > DB | Output
-         # -----------|----------|-------------|----------
-         # not exists | *        | *           | ok
-         #
-         if [ "${configexists}" = "NO" ]
-         then
-            log_fluff "\"${directory}\" does not have a ${SOURCETREE_CONFIG_FILE} ($PWD)"
-
-            if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+            #
+            # Config     | Database | Config > DB | Output
+            # -----------|----------|-------------|----------
+            # not exists | *        | *           | ok
+            #
+            if [ "${configexists}" = "NO" ]
             then
-               return 0
-            fi
-
-            exekutor echo "${output_adress};ok;${fs};${configexists};${dbexists};${filename}"
-            return
-         fi
-
-         #
-         # Config  | Database   | Config > DB | Output
-         # --------|------------|-------------|----------
-         # exists  | not exists | *           | update
-         # exists  | updating   | *           | incomplete
-         # exists  | exists     | -           | ok
-         # exists  | exists     | +           | update
-         #
-
-         if ! db_is_ready "${datasource}"
-         then
-            log_fluff "Database \"${datasource}\" is not ready"
-            status="update"
-         else
-            if db_is_updating "${datasource}"
-            then
-               log_fluff "\"${filename}\" is marked as updating ($PWD)"
+               log_fluff "\"${directory}\" does not have a ${SOURCETREE_CONFIG_FILE} ($PWD)"
 
                if [ "${OPTION_IS_UPTODATE}" = "YES" ]
                then
-                  exit 2  # only time we exit with 2 on IS_UPTODATE
+                  return 0
                fi
 
-               exekutor echo "${output_adress};incomplete;${fs};${configexists};${dbexists};${filename}"
-               return 0
+               exekutor echo "${output_adress};ok;${fs};${configexists};${dbexists};${filename}"
+               return
             fi
 
-            if ! sourcetree_is_uptodate "${datasource}"
+            #
+            # Config  | Database   | Config > DB | Output
+            # --------|------------|-------------|----------
+            # exists  | not exists | *           | update
+            # exists  | updating   | *           | incomplete
+            # exists  | exists     | -           | ok
+            # exists  | exists     | +           | update
+            #
+
+            if ! db_is_ready "${datasource}"
             then
-               log_fluff "\"${filename}\" database is stale ($PWD)"
-
+               log_fluff "Database \"${datasource}\" is not ready"
                status="update"
+            else
+               if db_is_updating "${datasource}"
+               then
+                  log_fluff "\"${filename}\" is marked as updating ($PWD)"
+
+                  if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+                  then
+                     exit 2  # only time we exit with 2 on IS_UPTODATE
+                  fi
+
+                  exekutor echo "${output_adress};incomplete;${fs};${configexists};${dbexists};${filename}"
+                  return 0
+               fi
+
+               if ! sourcetree_is_uptodate "${datasource}"
+               then
+                  log_fluff "\"${filename}\" database is stale ($PWD)"
+
+                  status="update"
+               fi
             fi
-         fi
-      ;;
-   esac
+         ;;
+      esac
+   fi
 
    if [ "${OPTION_IS_UPTODATE}" = "YES" ]
    then
@@ -537,7 +540,7 @@ sourcetree_status_main()
          exit 1
       fi
 
-      log_warning "Update has not run yet (mode=${SOURCETREE_MODE})"
+      log_fluff "Update has not run yet (mode=${SOURCETREE_MODE})"
    fi
 
    mode="${SOURCETREE_MODE}"

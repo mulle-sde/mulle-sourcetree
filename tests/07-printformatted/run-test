@@ -1,0 +1,70 @@
+#! /usr/bin/env bash
+
+[ "${TRACE}" = "YES" ] && set -x
+
+
+run_test_1()
+{
+   local printed
+   local expected
+
+   printed="`nodeline_printf_header "output_header" "btfiu_mna" `"
+   expected="branch;tag;fetchoptions;userinfo;url;uuid;marks;nodetype;address"
+
+   [ "${expected}" = "${printed}" ]     || \
+      fail "printed nodeline differs \"${printed}\" vs. \"${expected}\""
+}
+
+
+run_test_2()
+{
+   local nodeline
+
+   nodeline="address;nodetype;marks;uuid;url;branch;tag;fetchoptions;userinfo"
+
+   local printed
+   local expected
+
+   printed="`nodeline_printf "${nodeline}" "" "btfiu_mna" `"
+   expected="branch;tag;fetchoptions;userinfo;url;uuid;marks;nodetype;address"
+
+   [ "${expected}" = "${printed}" ]     || \
+      fail "printed nodeline differs \"${printed}\" vs. \"${expected}\""
+}
+
+
+main()
+{
+   MULLE_SOURCETREE_FLAGS="$@"
+
+   _options_mini_main "$@"
+
+   set -e # for tests
+
+   run_test_1
+   log_verbose "----- #1 PASSED -----"
+
+   run_test_2
+   log_verbose "----- #2 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+}
+
+
+init()
+{
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env library-path`" || exit 1
+
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
+   MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
+
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
+}
+
+
+init "$@"
+main "$@"
+

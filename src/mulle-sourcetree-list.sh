@@ -43,13 +43,17 @@ Usage:
    This command only reads config files.
 
 Options:
-   --no-output-header     : suppress header in raw and default lists
-   --no-output-separator  : suppress separator line if header is printed
-   --output-banner        : print a banner with config information
-   --output-cmd           : output as ${MULLE_EXECUTABLE_NAME} command line
-   --output-eval          : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
-   --output-full          : show _url and various fetch options
-   --output-raw           : output as CSV (semicolon separated values)
+   --nodetypes <value>      : node types to list (default: ALL)
+   --marks <value>          : specify marks to match (e.g. build)
+   --format <format>        : supply a custom format (abfimntu_)
+   --no-output-header       : suppress header in raw and default lists
+   --no-output-marks <list> : suppress output of certain marks (comma sep)
+   --no-output-separator    : suppress separator line if header is printed
+   --output-banner          : print a banner with config information
+   --output-cmd             : output as ${MULLE_EXECUTABLE_NAME} command line
+   --output-eval            : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
+   --output-full            : show _url and various fetch options
+   --output-raw             : output as CSV (semicolon separated values)
 EOF
   exit 1
 }
@@ -137,18 +141,60 @@ _sourcetree_augment_mode_with_output_options()
    echo "${mode}"
 }
 
+
+_sourcetree_nodeline_remove_marks()
+{
+   log_entry "_sourcetree_nodeline_remove_marks" "$@"
+
+   local nodeline="$1"
+   local nomarks="$2"
+
+
+   local _branch
+   local _address
+   local _fetchoptions
+   local _nodetype
+   local _marks
+   local _tag
+   local _url
+   local _uuid
+   local _userinfo
+
+   nodeline_parse "${nodeline}"
+
+   local marks
+
+   marks="${_marks}"
+   _marks=
+
+   IFS=","
+   for mark in ${marks}
+   do
+      if ! nodemarks_contain "${nomarks}" "${mark}"
+      then
+         _marks="`comma_concat "${_marks}" "${mark}" `"
+      fi
+   done
+
+   node_to_nodeline
+}
+
+
 _sourcetree_contents()
 {
    log_entry "_sourcetree_contents" "$@"
 
    local mode="$1"
+   local filternodetypes="$2"
+   local filtermarks="$3"
+   local formatstring="$4"
 
    local nodeline
    local nodelines
 
    nodelines="`cfg_read "${SOURCETREE_START}"`" || exit 1
 
-   nodeline_print_header "${mode}"
+   nodeline_printf_header "${mode}" "${formatstring}"
 
    IFS="
 "
@@ -156,10 +202,35 @@ _sourcetree_contents()
    do
       IFS="${DEFAULT_IFS}"
 
-      if [ ! -z "${nodeline}" ]
+      if [ -z "${nodeline}" ]
       then
-         nodeline_print "${nodeline}" "${mode}"
+         continue
       fi
+
+      local nodetype
+      local marks
+
+      nodetype="`nodeline_get_nodetype "${nodeline}" `"
+
+      if ! nodetype_filter_with_allowable_nodetypes "${nodetype}" "${filternodetypes}"
+      then
+         log_fluff "Node \"${nodeline}\": \"${nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
+         continue
+      fi
+
+      marks="`nodeline_get_marks "${nodeline}" `"
+      if ! nodemarks_filter_with_qualifier "${marks}" "${filtermarks}"
+      then
+         log_fluff "Node \"${nodeline}\": \"${marks}\" doesn't jive with marks \"${filtermarks}\""
+         continue
+      fi
+
+      if [ ! -z "${OPTION_NO_OUTPUT_MARKS}" ]
+      then
+         nodeline="`_sourcetree_nodeline_remove_marks "${nodeline}" "${OPTION_NO_OUTPUT_MARKS}" `"
+      fi
+
+      nodeline_printf "${nodeline}" "${mode}" "${formatstring}"
    done
    IFS="${DEFAULT_IFS}"
 }
@@ -188,12 +259,12 @@ _list_nodes()
 
    case "${mode}" in
       *output_column*)
-         _sourcetree_contents "${mode}" | column -t -s '|'
+         _sourcetree_contents "$@" | column -t -s '|'
          return $?
       ;;
    esac
 
-   _sourcetree_contents "${mode}"
+   _sourcetree_contents "$@"
 }
 
 
@@ -220,11 +291,10 @@ list_nodes()
 {
    log_entry "list_nodes" "$@"
 
-   local mode="$1"
-
    local rval
+   local formatstring="$4"
 
-   _list_nodes "${mode}"
+   _list_nodes "$@"
    rval=$?
 
    if [ "${SOURCETREE_MODE}" = "flat" ]
@@ -239,6 +309,12 @@ list_nodes()
    local flag
 
    arguments=
+
+   if [ -z "${formatstring}" ]
+   then
+      arguments="`concat "${arguments}" "--format" `"
+      arguments="`concat "${arguments}" "${formatstring}" `"
+   fi
 
    flag="`emit_commandline_flag "${OPTION_OUTPUT_BANNER}" "output-banner" `"
    arguments="`concat "${arguments}" "${flag}" `"
@@ -324,12 +400,38 @@ sourcetree_list_main()
    local OPTION_OUTPUT_UUID="DEFAULT"
    local OPTION_UNSAFE="NO"
 
+   local OPTION_NODETYPES="ALL"
+   local OPTION_MARKS
+   local OPTION_FORMAT
+
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h|-help|--help)
             sourcetree_list_usage
          ;;
+
+         -m|--marks)
+            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            shift
+
+            OPTION_MARKS="$1"
+         ;;
+
+         -n|--nodetypes)
+            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            shift
+
+            OPTION_NODETYPES="$1"
+         ;;
+
+         --format)
+            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            shift
+
+            OPTION_FORMAT="$1"
+         ;;
+
 
          --output-fmt|--output-format*)
             OPTION_OUTPUT_FORMAT="FMT"
@@ -402,6 +504,13 @@ sourcetree_list_main()
             OPTION_OUTPUT_EVAL="NO"
          ;;
 
+         --no-output-marks)
+            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            shift
+
+            OPTION_NO_OUTPUT_MARKS="$1"
+         ;;
+
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown ${COMMAND} option $1"
             sourcetree_list_usage
@@ -446,8 +555,9 @@ sourcetree_list_main()
 
    mode="`_sourcetree_augment_mode_with_output_options`"
 
-   list_nodes "${mode}"
+   list_nodes "${mode}" "${OPTION_NODETYPES}" "${OPTION_MARKS}" "${OPTION_FORMAT}"
 }
+
 
 
 sourcetree_list_initialize()

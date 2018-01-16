@@ -33,11 +33,17 @@ mulle-bootstrap-to-sourcetree
 
 set( LIBRARY_SCRIPTS
 src/mulle-sourcetree-buildorder.sh
+src/mulle-sourcetree-cfg.sh
+src/mulle-sourcetree-clean.sh
 src/mulle-sourcetree-config.sh
 src/mulle-sourcetree-db.sh
 src/mulle-sourcetree-dotdump.sh
-src/mulle-sourcetree-node.sh
+src/mulle-sourcetree-fix.sh
+src/mulle-sourcetree-list.sh
 src/mulle-sourcetree-nodeline.sh
+src/mulle-sourcetree-node.sh
+src/mulle-sourcetree-reset.sh
+src/mulle-sourcetree-status.sh
 src/mulle-sourcetree-update.sh
 src/mulle-sourcetree-walk.sh
 )

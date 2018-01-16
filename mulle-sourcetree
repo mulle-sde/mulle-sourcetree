@@ -37,7 +37,7 @@ fi
 
 MULLE_EXECUTABLE_VERSION_MAJOR=0
 MULLE_EXECUTABLE_VERSION_MINOR=3
-MULLE_EXECUTABLE_VERSION_PATCH=0
+MULLE_EXECUTABLE_VERSION_PATCH=1
 
 MULLE_EXECUTABLE_VERSION="${MULLE_EXECUTABLE_VERSION_MAJOR}.${MULLE_EXECUTABLE_VERSION_MINOR}.${MULLE_EXECUTABLE_VERSION_PATCH}"
 
@@ -244,8 +244,10 @@ __check_sane_share_dir()
          relative="`symlink_relpath "${MULLE_SOURCETREE_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT}" `"
          case "${relative}" in
             *..*)
-               log_warning "MULLE_SOURCETREE_SHARE_DIR (${MULLE_SOURCETREE_SHARE_DIR}) lies outside of MULLE_VIRTUAL_ROOT ($MULLE_VIRTUAL_ROOT).
-Hint: MULLE_SOURCETREE_SHARE_DIR must not contain symlinks."
+               log_warning "MULLE_SOURCETREE_SHARE_DIR \
+(${MULLE_SOURCETREE_SHARE_DIR}) lies outside of MULLE_VIRTUAL_ROOT \
+($MULLE_VIRTUAL_ROOT)."
+               log_fluff "Hint: MULLE_SOURCETREE_SHARE_DIR must not contain symlinks."
             ;;
          esac
       ;;
@@ -480,7 +482,10 @@ main()
       ;;
    esac
 
+   #
    # dont' check if resetting
+   # for status it's debatable, but I don't like it
+   #
    case "${cmd}" in
       reset)
       ;;

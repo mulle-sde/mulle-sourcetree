@@ -104,14 +104,14 @@ node_fetch_operation()
 
    [ -z "${opname}" ] && internal_fail "opname is empty"
 
-   local _url="$1"; shift
-   local _address="$1"; shift
-   local _branch="$1"; shift
-   local _tag="$1"; shift
-   local _nodetype="$1"; shift
-   local _fetchoptions="$1"; shift
+   local url="$1"; shift
+   local address="$1"; shift
+   local branch="$1"; shift
+   local tag="$1"; shift
+   local nodetype="$1"; shift
+   local fetchoptions="$1"; shift
 
-   [ -z "${_url}" ] && fail "URL is empty"
+   [ -z "${url}" ] && fail "URL is empty"
 
    local rval
    local evaledurl
@@ -119,37 +119,37 @@ node_fetch_operation()
    local evaledtag
    local evaledfetchoptions
 
-   evaledurl="`eval echo "${_url}"`"
-   [ -z "${evaledurl}" ] && fail "URL \"${_url}\" evaluates to empty"
-   evaledtag="`eval echo "${_tag}"`"
-   evaledbranch="`eval echo "${_branch}"`"
+   evaledurl="`eval echo "${url}"`"
+   [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
+   evaledtag="`eval echo "${tag}"`"
+   evaledbranch="`eval echo "${branch}"`"
    evaledfetchoptions="`eval echo "${_fetchoptions}"`"
 
    log_info "Looking for local source of ${C_RESET_BOLD}${evaledurl}${C_INFO}"
 
    local localurl
 
-   localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} "search-local" --scm "'${_nodetype}'" \
+   localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} "search-local" --scm "'${nodetype}'" \
                                                             --tag "'${evaledtag}'" \
                                                             --branch "'${evaledbranch}'" \
                                                             --options "'${evaledfetchoptions}'" \
                                                             --url "'${evaledurl}'" \
-                                                            "'${_address}'" )"
+                                                            "'${address}'" )"
    if [ ! -z "${localurl}" ]
    then
       evaledurl="${localurl}"
    fi
 
-   log_info "Fetching ${C_MAGENTA}${C_BOLD}${_address}${C_INFO} from \
+   log_info "Fetching ${C_MAGENTA}${C_BOLD}${address}${C_INFO} from \
 ${C_RESET_BOLD}${evaledurl}${C_INFO}"
    eval_exekutor ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} \
-                                             "${opname}" --scm "'${_nodetype}'" \
+                                             "${opname}" --scm "'${nodetype}'" \
                                                          --tag "'${evaledtag}'" \
                                                          --branch "'${evaledbranch}'" \
                                                          --options "'${evaledfetchoptions}'" \
                                                          --url "'${evaledurl}'" \
                                                          ${options} \
-                                                         "'${_address}'"
+                                                         "'${address}'"
 }
 
 
@@ -283,6 +283,8 @@ nodemarks_add()
 
    nodemarks_key_check "${key}"
 
+   local i
+
    # is this faster than case ?
    IFS=","
    for i in ${marks}
@@ -308,6 +310,7 @@ nodemarks_remove()
    nodemarks_key_check "${key}"
 
    local result
+   local i
 
    IFS=","
    for i in ${marks}
@@ -331,6 +334,8 @@ _nodemarks_contain()
    local key="$2"
 
    nodemarks_key_check "${key}"
+
+   local i
 
    # is this faster than case ?
    IFS=","
@@ -769,9 +774,12 @@ node_sanitized_address()
 }
 
 
-node_print_nodeline()
+#
+# this is unformatted
+#
+node_to_nodeline()
 {
-   log_entry "node_print_nodeline" "$@"
+   log_entry "node_to_nodeline" "$@"
 
    case "${_url}" in
       *\;*)
@@ -842,9 +850,12 @@ node_print_nodeline()
       ;;
    esac
 
-   if egrep -q '[^-A-Za-z0-9%&/()=+_.,$# ]' <<< "${_userinfo}"
+   if [ ! -z "${_userinfo}" ]
    then
-      _userinfo="base64:`base64 <<< "${_userinfo}"`"
+      if egrep -q '[^-A-Za-z0-9%&/()=|+_.,$# ]' <<< "${_userinfo}"
+      then
+         _userinfo="base64:`base64 -b 0 <<< "${_userinfo}"`"
+      fi
    fi
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
@@ -886,4 +897,108 @@ nodetypes_contain()
    done
    IFS="${DEFAULT_IFS}"
    return 1
+}
+
+
+nodetype_filter_with_allowable_nodetypes()
+{
+   log_entry "nodetypes_filter_with_allowable_nodetypes" "$@"
+
+   local nodetype="$1"
+   local allowednodetypes="$2"
+
+   [ -z "${nodetype}" ] && internal_fail "empty nodetype"
+
+   if [ "${allowednodetypes}" = "ALL" ]
+   then
+      log_fluff "ALL matches all"
+      return 0
+   fi
+
+   nodetypes_contain "${allowednodetypes}" "${nodetype}"
+}
+
+
+#
+# you can pass a qualifier of the form <all>;<one>;<none>;<override>
+# inside all,one,none,override there are comma separated marks
+#
+nodemarks_filter_with_qualifier()
+{
+   log_entry "nodemarks_filter_with_qualifier" "$@"
+
+   local marks="$1"
+   local qualifier="$2"
+
+   if [ "${qualifier}" = "ANY" ]
+   then
+      log_fluff "ANY matches all"
+      return 0
+   fi
+
+   local all
+   local one
+   local none
+   local override
+
+   all="$(cut -d';' -f 1 <<< "${qualifier}")"
+   one="$(cut -s -d';' -f 2 <<< "${qualifier}")"
+   none="$(cut -s -d';' -f 3 <<< "${qualifier}")"
+   override="$(cut -s -d';' -f 4 <<< "${qualifier}")"
+
+   local i
+
+   if [ ! -z "${override}" ]
+   then
+      IFS=","
+      for i in ${override}
+      do
+         IFS="${DEFAULT_IFS}"
+         if nodemarks_contain "${marks}" "${i}"
+         then
+            log_fluff "Pass: override mark \"$i\" found"
+            return 0
+         fi
+      done
+      IFS="${DEFAULT_IFS}"
+   fi
+
+   if [ ! -z "${all}" ]
+   then
+      IFS=","
+      for i in ${all}
+      do
+         IFS="${DEFAULT_IFS}"
+         if ! nodemarks_contain "${marks}" "${i}"
+         then
+            log_fluff "Blocked: required mark \"$i\" not found"
+            return 1
+         fi
+      done
+      IFS="${DEFAULT_IFS}"
+   fi
+
+   if [ ! -z "${one}" ]
+   then
+      if ! nodemarks_intersect "${marks}" "${one}"
+      then
+         log_fluff "Blocked: mark \"$i\" not present"
+         return 1
+      fi
+   fi
+
+   if [ ! -z "${none}" ]
+   then
+      IFS=","
+      for i in ${none}
+      do
+         IFS="${DEFAULT_IFS}"
+         if nodemarks_contain "${marks}" "${i}"
+         then
+            log_fluff "Blocked: mark \"$i\" inhibits"
+            return 1
+         fi
+      done
+      IFS="${DEFAULT_IFS}"
+   fi
 }

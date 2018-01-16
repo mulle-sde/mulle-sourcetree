@@ -44,6 +44,7 @@ nodeline_get_address()
   cut '-d;' -f 1 <<< "$*"
 }
 
+
 nodeline_get_nodetype()
 {
    cut -s '-d;' -f 2 <<< "$*"
@@ -144,11 +145,10 @@ nodeline_parse()
          _userinfo="`base64 --decode <<< "${_userinfo:7}"`"
          if [ "$?" -ne 0 ]
          then
-            internal_fail "_userinfo could not be base64 decoded."
+            internal_fail "userinfo could not be base64 decoded."
          fi
       ;;
    esac
-
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
    then
@@ -201,14 +201,15 @@ nodeline_remove()
 }
 
 
-nodeline_find()
+_nodeline_find()
 {
    log_entry "nodeline_find" "$@"
 
    local nodelines="$1"
-   local address="$2"
+   local value="$2"
+   local lookup="$3"
 
-   [ -z "${address}" ] && internal_fail "address is empty"
+   [ $# -ne 3 ] && internal_fail "API error"
 
    local nodeline
    local other
@@ -219,8 +220,8 @@ nodeline_find()
    do
       IFS="${DEFAULT_IFS}"
 
-      other="`nodeline_get_address "${nodeline}"`"
-      if [ "${address}" = "${other}" ]
+      other="`"${lookup}" "${nodeline}"`"
+      if [ "${value}" = "${other}" ]
       then
          log_debug "Found \"${nodeline}\""
          echo "${nodeline}"
@@ -232,6 +233,31 @@ nodeline_find()
    return 1
 }
 
+
+nodeline_find()
+{
+   log_entry "nodeline_find" "$@"
+
+   local nodelines="$1"
+   local address="$2"
+
+   [ -z "${address}" ] && internal_fail "address is empty"
+
+   _nodeline_find "${nodelines}" "${address}" nodeline_get_address
+}
+
+
+nodeline_find_by_url()
+{
+   log_entry "nodeline_find_by_url" "$@"
+
+   local nodelines="$1"
+   local address="$2"
+
+   [ -z "${address}" ] && internal_fail "address is empty"
+
+   _nodeline_find_url "${nodelines}" "${address}" nodeline_get_url
+}
 
 
 nodeline_has_duplicate()
@@ -273,12 +299,12 @@ nodeline_read_file()
 }
 
 
-
-nodeline_print_header()
+nodeline_printf_header()
 {
-   log_entry "nodeline_print_header" "$@"
+   log_entry "nodeline_printf_header" "$@"
 
    local mode="$1"
+   local formatstring="$2"
 
    case "${mode}" in
       *output_header*)
@@ -296,45 +322,112 @@ nodeline_print_header()
       ;;
    esac
 
-   printf "%s" "address${sep}nodetype${sep}marks${sep}userinfo${sep}url"
+   if [ -z "${formatstring}" ]
+   then
+      formatstring="anmiu"
+      case "${mode}" in
+         *output_full*)
+            formatstring="${formatstring}btf"
+         ;;
+      esac
+      case "${mode}" in
+         *output_uuid*)
+            formatstring="${formatstring}_"
+         ;;
+      esac
+   fi
 
-   case "${mode}" in
-      *output_full*)
-         printf "%s" "${sep}branch${sep}tag${sep}fetchoptions"
-      ;;
-   esac
-   case "${mode}" in
-      *output_uuid*)
-         printf "%s" "${sep}uuid"
-      ;;
-   esac
-   printf "\n"
+   local h_line
+   local s_line
+
+   local name
+   local dash
+
+   while [ ! -z "${formatstring}" ]
+   do
+      case "${formatstring:0:1}" in
+         a)
+            name="address"
+            dash="-------"
+         ;;
+
+         b)
+            name="branch"
+            dash="------"
+         ;;
+
+         f)
+            name="fetchoptions"
+            dash="------------"
+         ;;
+
+         i)
+            if [ "${formatstring:1:1}" = "=" ]
+            then
+               name="`sed -n 's/i={\([^,]*\),[^,]*,[^}]*}.*/\1/p' <<< "${formatstring}" `"
+               dash="`sed   -n 's/i={[^,]*,\([^,]*\),[^}]*}.*/\1/p' <<< "${formatstring}" `"
+
+               # skip over format string
+               formatstring="`sed 's/i={[^,]*,[^,]*,[^}]*}\(.*\)/i\1/' <<< "${formatstring}" `"
+            else
+               name="userinfo"
+               dash="--------"
+            fi
+         ;;
+
+         m)
+            name="marks"
+            dash="-----"
+         ;;
+
+         n)
+            name="nodetype"
+            dash="--------"
+         ;;
+
+         t)
+            name="tag"
+            dash="---"
+         ;;
+
+         u)
+            name="url"
+            dash="---"
+         ;;
+
+         _)
+            name="uuid"
+            dash="----"
+         ;;
+
+         *)
+            fail "unknown format character \"${formatstring:1:1}\""
+         ;;
+      esac
+
+      h_line="`concat "${h_line}" "${name}" "${sep}" `"
+      s_line="`concat "${s_line}" "${dash}" "${sep}" `"
+
+      formatstring="${formatstring:1}"
+   done
+
+   echo "${h_line}"
 
    case "${mode}" in
       *output_separator*)
-         printf "%s" "-------${sep}--------${sep}-----${sep}--------${sep}---"
-         case "${mode}" in
-            *output_full*)
-               printf "%s" "${sep}------${sep}---${sep}------------"
-            ;;
-         esac
-         case "${mode}" in
-            *output_uuid*)
-               printf "%s" "${sep}----"
-            ;;
-         esac
-         printf "\n"
+         echo "${s_line}"
       ;;
    esac
 }
 
 
-nodeline_print()
+nodeline_printf()
 {
-   log_entry "nodeline_print" "$@"
+   log_entry "nodeline_printf" "$@"
 
    local nodeline=$1
    local mode="$2"
+   local formatstring="$3"
 
    local _branch
    local _address
@@ -345,7 +438,6 @@ nodeline_print()
    local _url
    local _userinfo
    local _uuid
-
 
    nodeline_parse "${nodeline}"
 
@@ -367,86 +459,135 @@ nodeline_print()
       ;;
    esac
 
+   if [ -z "${formatstring}" ]
+   then
+      formatstring="anmiu"
+      case "${mode}" in
+         *output_full*)
+            formatstring="${formatstring}btf"
+         ;;
+      esac
+      case "${mode}" in
+         *output_uuid*)
+            formatstring="${formatstring}_"
+         ;;
+      esac
+   fi
+
+   local line
+   local cmd_line
+
+   cmd_line="${MULLE_EXECUTABLE_NAME} -N add"
+
+   while [ ! -z "${formatstring}" ]
+   do
+      local guess
+      local value
+      local switch
+
+      guess=
+      case "${mode}" in
+         *output_cmd*)
+            if [ ! -z "${_url}" ]
+            then
+               guess="`node_guess_nodetype "${_url}"`"
+            fi
+         ;;
+      esac
+
+      case "${formatstring:0:1}" in
+         a)
+            switch=""
+            value="${_address}"
+         ;;
+
+         b)
+            switch="--branch"
+            value="${_branch}"
+         ;;
+
+         f)
+            switch="--fetchoptions"
+            value="${_fetchoptions}"
+         ;;
+
+         i)
+            if [ "${formatstring:1:1}" = "=" ]
+            then
+               switch=""
+               key="`sed -n 's/i={[^,]*,[^,]*,\([^}]*\)}.*/\1/p'  <<< "${formatstring}" `"
+               value="`assoc_array_get "${_userinfo}" "${key}" `"
+
+               # skip over format string
+               formatstring="`sed 's/i={[^,]*,[^,]*,[^}]*}\(.*\)/i\1/' <<< "${formatstring}" `"
+            else
+               switch="--userinfo"
+               value="${_userinfo}"
+            fi
+
+         ;;
+
+         m)
+            switch="--marks"
+            value="${_marks}"
+         ;;
+
+         n)
+            switch="--nodetype"
+            value="${_nodetype}"
+
+            if [ "${_nodetype}" = "git" -o "${guess}" = "git" ]
+            then
+               switch=""
+            fi
+         ;;
+
+         t)
+            switch="--tag"
+            value="${_tag}"
+         ;;
+
+         u)
+            switch="--url"
+            value="${_url}"
+         ;;
+
+         _)
+            switch=""
+            value="${_uuid}"
+         ;;
+
+         *)
+            fail "unknown format character \"${formatstring:1:1}\""
+         ;;
+      esac
+
+      case "${mode}" in
+         *output_column*)
+            if [ -z "${value}" ]
+            then
+               value=" "
+            fi
+         ;;
+      esac
+
+      line="`concat "${line}" "${value}" "${sep}" `"
+      if [ ! -z "${switch}" -a ! -z "${value}" ]
+      then
+         cmd_line="`concat "${cmd_line}" "${switch} '${value}'"`"
+      fi
+
+      formatstring="${formatstring:1}"
+   done
+
+
    case "${mode}" in
       *output_cmd*)
-         local line
-
-         line="${MULLE_EXECUTABLE_NAME} -N add"
-
-         local guess
-
-         if [ ! -z "${_url}" ]
-         then
-            guess="`node_guess_nodetype "${_url}"`"
-         fi
-
-         if [ "${_nodetype}" != "git" -o "${guess}" != "git" ]
-         then
-            line="`concat "${line}" "--nodetype '${_nodetype}'"`"
-         fi
-         if [ ! -z "${_url}" ]
-         then
-            line="`concat "${line}" "--url '${_url}'"`"
-         fi
-         if [ ! -z "${_marks}" ]
-         then
-            line="`concat "${line}" "--marks '${_marks}'"`"
-         fi
-
-         if [ ! -z "${_branch}" -a "${_branch}" != "master" ]
-         then
-            line="`concat "${line}" "--branch '${_branch}'"`"
-         fi
-         if [ ! -z "${_fetchoptions}" ]
-         then
-            line="`concat "${line}" "--fetchoptions '${_fetchoptions}'"`"
-         fi
-         if [ ! -z "${_tag}" ]
-         then
-            line="`concat "${line}" "--tag '${_tag}'"`"
-         fi
-         if [ ! -z "${_userinfo}" ]
-         then
-            line="`concat "${line}" "--userinfo '${_userinfo}'"`"
-         fi
-
-         line="`concat "${line}" "'${_address}'"`"
-
-         echo "${line}"
-      ;;
-
-      *output_column*)
-         # need space for column if empty
-         printf "%s" "${_address:-" "}${sep}${_nodetype:- }\
-${sep}${_marks:- }${sep}${_userinfo:- }${sep}${_url:-  }"
-         case "${mode}" in
-            *output_full*)
-               printf "%s" "${sep}${_branch:- }\
-${sep}${_tag:- }${sep}${_fetchoptions:- }"
-            ;;
-         esac
-         case "${mode}" in
-            *output_uuid*)
-               printf "%s" "${sep}${_uuid:-" "}"
-            ;;
-         esac
-         printf "\n"
+         echo "${cmd_line}" "'${_address}'"
       ;;
 
       *)
-         printf "%s" "${_address}${sep}${_nodetype}${sep}${_marks}${sep}${_userinfo}${sep}${_url}"
-         case "${mode}" in
-            *output_full*)
-               printf "%s" "${sep}${_branch}${sep}${_tag}${sep}${_fetchoptions}"
-
-            ;;
-         esac
-         case "${mode}" in
-            *output_uuid*)
-               printf "%s" "${sep}${_uuid}"
-            ;;
-         esac
-         printf "\n"
+         echo "${line}"
       ;;
    esac
 }

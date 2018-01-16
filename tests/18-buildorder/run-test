@@ -113,7 +113,7 @@ ${result}
    fi
    log_info "----- #1 PASSED -----"
 
-   if ! run_mulle_sourcetree mark --extended-marks "a" "no-fantasy-os"
+   if ! run_mulle_sourcetree mark --extended-marks "a" "no-os-fantasy"
    then
      fail "mark failed unexpectedly"
    fi
@@ -121,7 +121,7 @@ ${result}
    # should be the same
    result="`run_mulle_sourcetree buildorder --marks`"
    expected="`physicalpath "${project}"`/a/b;
-`physicalpath "${project}"`/a;no-delete,no-fantasy-os"
+`physicalpath "${project}"`/a;no-delete,no-os-fantasy"
    if [ "${expected}" != "${result}" ]
    then
       fail "missed expectation:
@@ -135,7 +135,7 @@ ${result}
    fi
    log_info "----- #2 PASSED -----"
 
-   if ! run_mulle_sourcetree mark --extended-marks "a" "no-${UNAME}"
+   if ! run_mulle_sourcetree mark --extended-marks "a" "no-os-${UNAME}"
    then
      fail "mark failed unexpectedly"
    fi

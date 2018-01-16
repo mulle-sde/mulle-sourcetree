@@ -60,7 +60,7 @@ Options:
    --lenient        : allow shell command to error
    --pre-order      : walk tree in pre-order  (Root, Left, Right)
    --in-order       : walk tree in in-order (Left, Root, Right)
-   --walk-db        : walk over information contained in the virtual instead
+   --walk-db        : walk over information contained in the database instead
 EOF
   exit 1
 }
@@ -70,6 +70,7 @@ EOF
 # Walkers
 #
 # Possible permissions: "symlink\nmissing"
+# Useful for buildorder it would seem
 #
 walk_filter_permissions()
 {
@@ -141,17 +142,7 @@ walk_filter_nodetypes()
 {
    log_entry "walk_filter_nodetypes" "$@"
 
-   local nodetype="$1"
-   local allowednodetypes="$2"
-
-   [ -z "${nodetype}" ] && internal_fail "empty nodetype"
-
-   if [ "${allowednodetypes}" = "ALL" ]
-   then
-      return 0
-   fi
-
-   nodetypes_contain "${allowednodetypes}" "${nodetype}"
+   nodetype_filter_with_allowable_nodetypes "$@"
 }
 
 
@@ -163,79 +154,7 @@ walk_filter_marks()
 {
    log_entry "walk_filter_marks" "$@"
 
-   local marks="$1"
-   local qualifier="$2"
-
-   if [ "${qualifier}" = "ANY" ]
-   then
-      return 0
-   fi
-
-   local all
-   local one
-   local none
-   local override
-
-   all="$(cut -d';' -f 1 <<< "${qualifier}")"
-   one="$(cut -s -d';' -f 2 <<< "${qualifier}")"
-   none="$(cut -s -d';' -f 3 <<< "${qualifier}")"
-   override="$(cut -s -d';' -f 4 <<< "${qualifier}")"
-
-   local i
-
-   if [ ! -z "${override}" ]
-   then
-      IFS=","
-      for i in ${override}
-      do
-         IFS="${DEFAULT_IFS}"
-         if nodemarks_contain "${marks}" "${i}"
-         then
-            log_fluff "Pass: override mark \"$i\" found"
-            return 0
-         fi
-      done
-      IFS="${DEFAULT_IFS}"
-   fi
-
-   if [ ! -z "${all}" ]
-   then
-      IFS=","
-      for i in ${all}
-      do
-         IFS="${DEFAULT_IFS}"
-         if ! nodemarks_contain "${marks}" "${i}"
-         then
-            log_fluff "Blocked: required mark \"$i\" not found"
-            return 1
-         fi
-      done
-      IFS="${DEFAULT_IFS}"
-   fi
-
-   if [ ! -z "${one}" ]
-   then
-      if ! nodemarks_intersect "${marks}" "${one}"
-      then
-         log_fluff "Blocked: mark \"$i\" not present"
-         return 1
-      fi
-   fi
-
-   if [ ! -z "${none}" ]
-   then
-      IFS=","
-      for i in ${none}
-      do
-         IFS="${DEFAULT_IFS}"
-         if nodemarks_contain "${marks}" "${i}"
-         then
-            log_fluff "Blocked: mark \"$i\" inhibits"
-            return 1
-         fi
-      done
-      IFS="${DEFAULT_IFS}"
-   fi
+   nodemarks_filter_with_qualifier "$@"
 }
 
 
@@ -286,6 +205,11 @@ __walk_get_filename()
    local database
 
    database="${MULLE_DATASOURCE}"
+
+   if ! nodemarks_contain "${MULLE_MARKS}" "fs"
+   then
+      return
+   fi
 
    if nodemarks_contain_share "${MULLE_MARKS}" && \
       [ "${SOURCETREE_MODE}" = "share" -a ! -z "${MULLE_URL}" ]
@@ -670,7 +594,7 @@ _visit_filter_nodeline()
 
    if ! walk_filter_marks "${_marks}" "${filtermarks}"
    then
-      log_fluff "Node \"${_address}\": \"${_marks}\" doesn't jive with _marks \"${filtermarks}\""
+      log_fluff "Node \"${_address}\": \"${_marks}\" doesn't jive with marks \"${filtermarks}\""
       return 0
    fi
 
