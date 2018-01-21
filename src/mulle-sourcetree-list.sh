@@ -52,7 +52,7 @@ Options:
    --output-banner          : print a banner with config information
    --output-cmd             : output as ${MULLE_EXECUTABLE_NAME} command line
    --output-eval            : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
-   --output-full            : show _url and various fetch options
+   --output-full            : show url and various fetch options
    --output-raw             : output as CSV (semicolon separated values)
 EOF
   exit 1
@@ -400,7 +400,7 @@ sourcetree_list_main()
    local OPTION_OUTPUT_UUID="DEFAULT"
    local OPTION_UNSAFE="NO"
 
-   local OPTION_NODETYPES="ALL"
+   local OPTION_NODETYPES
    local OPTION_MARKS
    local OPTION_FORMAT
 
@@ -415,14 +415,15 @@ sourcetree_list_main()
             [ $# -eq 1 ] && fail "missing argument to \"$1\""
             shift
 
-            OPTION_MARKS="$1"
+            # allow to concatenate multiple flags
+            OPTION_MARKS="`comma_concat "${OPTION_MARKS}" "$1" `"
          ;;
 
          -n|--nodetypes)
             [ $# -eq 1 ] && fail "missing argument to \"$1\""
             shift
 
-            OPTION_NODETYPES="$1"
+            OPTION_NODETYPES="`comma_concat "${OPTION_NODETYPES}" "$1" `"
          ;;
 
          --format)
@@ -551,11 +552,12 @@ sourcetree_list_main()
       OPTION_OUTPUT_BANNER="YES"
    fi
 
+
    local mode
 
    mode="`_sourcetree_augment_mode_with_output_options`"
 
-   list_nodes "${mode}" "${OPTION_NODETYPES}" "${OPTION_MARKS}" "${OPTION_FORMAT}"
+   list_nodes "${mode}" "${OPTION_NODETYPES:-ALL}" "${OPTION_MARKS}" "${OPTION_FORMAT}"
 }
 
 
@@ -568,6 +570,11 @@ sourcetree_list_initialize()
    then
    # shellcheck source=mulle-sourcetree-db.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
+   fi
+   if [ -z "${MULLE_SOURCETREE_NODEMARKS_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-nodemarks.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
    fi
    if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
    then

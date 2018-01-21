@@ -1,3 +1,7 @@
+### 0.3.2
+
+* add some more nodemarks for mulle-sde
+
 ### 0.3.1
 
 * changes for mulle-sde

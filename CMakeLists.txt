@@ -40,6 +40,7 @@ src/mulle-sourcetree-db.sh
 src/mulle-sourcetree-dotdump.sh
 src/mulle-sourcetree-fix.sh
 src/mulle-sourcetree-list.sh
+src/mulle-sourcetree-nodemarks.sh
 src/mulle-sourcetree-nodeline.sh
 src/mulle-sourcetree-node.sh
 src/mulle-sourcetree-reset.sh

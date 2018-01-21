@@ -220,13 +220,12 @@ __walk_get_filename()
          local uuid
 
          uuid="`db_fetch_uuid_for_url "${database}" "${MULLE_URL}" `"
-         if [ -z "${uuid}" ]
+         if [ ! -z "${uuid}" ]
          then
-            internal_fail "${MULLE_URL} not found in database \"${database}\""
+            db_fetch_filename_for_uuid "${database}" "${uuid}"
+            return
          fi
-
-         db_fetch_filename_for_uuid "${database}" "${uuid}"
-         return
+         # ok could be an edit
       fi
 
       local name
@@ -1189,6 +1188,11 @@ sourcetree_walk_initialize()
    then
       # shellcheck source=mulle-sourcetree-db.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
+   fi
+   if [ -z "${MULLE_SOURCETREE_NODEMARKS_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-nodemarks.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
    fi
    if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
    then

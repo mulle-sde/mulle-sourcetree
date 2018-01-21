@@ -37,7 +37,7 @@ fi
 
 MULLE_EXECUTABLE_VERSION_MAJOR=0
 MULLE_EXECUTABLE_VERSION_MINOR=3
-MULLE_EXECUTABLE_VERSION_PATCH=1
+MULLE_EXECUTABLE_VERSION_PATCH=2
 
 MULLE_EXECUTABLE_VERSION="${MULLE_EXECUTABLE_VERSION_MAJOR}.${MULLE_EXECUTABLE_VERSION_MINOR}.${MULLE_EXECUTABLE_VERSION_PATCH}"
 
@@ -430,6 +430,8 @@ main()
 
    # shellcheck source=mulle-sourcetree-db.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   # shellcheck source=mulle-sourcetree-nodemarks.sh
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
    # shellcheck source=mulle-sourcetree-node.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    # shellcheck source=mulle-sourcetree-nodeline.sh

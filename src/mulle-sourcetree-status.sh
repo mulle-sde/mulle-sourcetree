@@ -391,14 +391,15 @@ sourcetree_status()
                                "${mode}" \
                                "walk_status" \
                                "$@"`"
-   if [ $? -ne 0 ]
-   then
-      fail "Walk errored out"
-   fi
-
+   rval="$?"
    if [ "${OPTION_IS_UPTODATE}" = "YES" ]
    then
-      return 0
+      return $rval
+   fi
+
+   if [ $rval -ne 0 ]
+   then
+      fail "Walk errored out (%rval)"
    fi
 
    #

@@ -3,7 +3,7 @@
 # formula operations.
 #
 PROJECT="mulle-sourcetree"      # your project/repository uuid
-DESC="🌲 Project composition and maintainance with build support"
+DESC="🌲 Project composition and maintenance with build support"
 LANGUAGE="bash"                # c,cpp, objc, bash ...
 # NAME="${PROJECT}"        # formula filename without .rb extension
 

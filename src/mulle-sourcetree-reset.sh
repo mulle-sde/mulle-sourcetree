@@ -141,6 +141,11 @@ sourcetree_reset_initialize()
       # shellcheck source=mulle-sourcetree-db.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
    fi
+   if [ -z "${MULLE_SOURCETREE_NODEMARKS_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-nodemarks.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
+   fi
    if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
    then
       # shellcheck source=mulle-sourcetree-node.sh

@@ -568,10 +568,23 @@ nodeline_printf()
             then
                value=" "
             fi
+            line="`concat "${line}" "${value}" "${sep}" `"
+         ;;
+
+         *output_raw*)
+            if [ -z "${line}" ]
+            then
+               line="${value}"
+            else
+               line="${line}${sep}${value}"
+            fi
+         ;;
+
+         *)
+            line="`concat "${line}" "${value}" "${sep}" `"
          ;;
       esac
 
-      line="`concat "${line}" "${value}" "${sep}" `"
       if [ ! -z "${switch}" -a ! -z "${value}" ]
       then
          cmd_line="`concat "${cmd_line}" "${switch} '${value}'"`"
@@ -580,10 +593,13 @@ nodeline_printf()
       formatstring="${formatstring:1}"
    done
 
-
    case "${mode}" in
       *output_cmd*)
          echo "${cmd_line}" "'${_address}'"
+      ;;
+
+      *output_raw*)
+         sed 's/;$//g' <<< "${line}"
       ;;
 
       *)
