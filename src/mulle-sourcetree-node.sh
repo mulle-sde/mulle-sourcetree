@@ -61,8 +61,10 @@ node_guess_address()
       ;;
 
       *)
-         result="`${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} guess -s "${nodetype}" "${evaledurl}"`"
-         log_fluff "${MULLE_FETCH:-mulle-fetch} returned \"${result}\" as default address for url ($url)"
+         result="`${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} \
+                     nameguess -s "${nodetype}" "${evaledurl}"`"
+         log_fluff "${MULLE_FETCH:-mulle-fetch} returned \"${result}\" as \
+default address for url ($url)"
          echo "${result}"
       ;;
    esac

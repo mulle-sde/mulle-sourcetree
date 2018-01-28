@@ -270,11 +270,13 @@ sourcetree_add_node()
    if [ -z "${_nodetype}" -a ! -z "${_url}" ]
    then
       _nodetype="`node_guess_nodetype "${_url}"`"
+      log_fluff "Guessed \"${_nodetype}\" from \"${_url}\""
    fi
 
    if [ -z "${_nodetype}" -a ! -z "${input}" ]
    then
       _nodetype="`node_guess_nodetype "${input}"`"
+      log_fluff "Guessed \"${_nodetype}\" from \"${input}\""
    fi
 
    if [ -z "${_nodetype}" ]
