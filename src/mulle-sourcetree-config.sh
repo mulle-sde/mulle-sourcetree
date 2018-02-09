@@ -338,7 +338,14 @@ in the sourcetree"
    then
       if ! [ -e "${_address}" ]
       then
-         log_warning "There is no directory or file named \"${_address}\""
+         case "${marks}" in
+            *no-fs*)
+            ;;
+
+            *)
+               log_warning "There is no directory or file named \"${_address}\""
+            ;;
+         esac
       fi
    else
       if [ -e "${_address}" ]

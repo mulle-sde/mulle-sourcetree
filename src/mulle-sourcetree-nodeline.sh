@@ -177,14 +177,14 @@ nodeline_remove()
    local nodelines="$1"
    local addresstoremove="$2"
 
-   IFS="
-"
    local nodeline
    local address
 
+   set -o noglob ; IFS="
+"
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}"; set +o noglob
       case "${nodeline}" in
          ^#*)
             echo "${nodeline}"
@@ -198,6 +198,7 @@ nodeline_remove()
          echo "${nodeline}"
       fi
    done
+   IFS="${DEFAULT_IFS}"; set +o noglob
 }
 
 
@@ -214,11 +215,11 @@ _nodeline_find()
    local nodeline
    local other
 
-   IFS="
+   set -o noglob ; IFS="
 "
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}"; set +o noglob
 
       other="`"${lookup}" "${nodeline}"`"
       if [ "${value}" = "${other}" ]
@@ -228,7 +229,7 @@ _nodeline_find()
          return 0
       fi
    done
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}"; set +o noglob
 
    return 1
 }
@@ -268,11 +269,11 @@ nodeline_has_duplicate()
    local address="$2"
    local uuid="$3"
 
-   IFS="
+   set -o noglob ; IFS="
 "
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}"; set +o noglob
       if [ "${address}" = "`nodeline_get_address "${nodeline}"`" ]
       then
          if [ -z "${uuid}" ] || [ "${uuid}" = "`nodeline_get_uuid "${nodeline}"`" ]
@@ -281,7 +282,7 @@ nodeline_has_duplicate()
          fi
       fi
    done
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}"; set +o noglob
 
    return 1
 }

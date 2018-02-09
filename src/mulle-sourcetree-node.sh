@@ -398,16 +398,16 @@ nodetypes_contain()
 
    local key
 
-   IFS=","
+   set -o noglob ; IFS=","
    for key in ${nodetypes}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}"; set +o noglob
       if [ "${nodetype}" = "${key}" ]
       then
          return 0
       fi
    done
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}"; set +o noglob
    return 1
 }
 
@@ -462,32 +462,32 @@ nodemarks_filter_with_qualifier()
 
    if [ ! -z "${override}" ]
    then
-      IFS=","
+      set -o noglob ; IFS=","
       for i in ${override}
       do
-         IFS="${DEFAULT_IFS}"
+         IFS="${DEFAULT_IFS}"; set +o noglob
          if nodemarks_contain "${marks}" "${i}"
          then
             log_fluff "Pass: override mark \"$i\" found"
             return 0
          fi
       done
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}"; set +o noglob
    fi
 
    if [ ! -z "${all}" ]
    then
-      IFS=","
+      set -o noglob ; IFS=","
       for i in ${all}
       do
-         IFS="${DEFAULT_IFS}"
+         IFS="${DEFAULT_IFS}"; set +o noglob
          if ! nodemarks_contain "${marks}" "${i}"
          then
             log_fluff "Blocked: required mark \"$i\" not found"
             return 1
          fi
       done
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}"; set +o noglob
    fi
 
    if [ ! -z "${one}" ]
@@ -501,16 +501,16 @@ nodemarks_filter_with_qualifier()
 
    if [ ! -z "${none}" ]
    then
-      IFS=","
+      set -o noglob ; IFS=","
       for i in ${none}
       do
-         IFS="${DEFAULT_IFS}"
+         IFS="${DEFAULT_IFS}"; set +o noglob
          if nodemarks_contain "${marks}" "${i}"
          then
             log_fluff "Blocked: mark \"$i\" inhibits"
             return 1
          fi
       done
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}"; set +o noglob
    fi
 }

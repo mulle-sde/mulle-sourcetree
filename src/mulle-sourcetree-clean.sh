@@ -131,11 +131,11 @@ sourcetree_clean()
 
    local uuid
 
-   IFS="
+   set -o noglob ; IFS="
 "
    for filename in ${DELETE_FILES} ${DELETE_DIRECTORIES}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}"; set +o noglob
 
       if ! fgrep -q -x "${filename}" <<< "${NO_DELETES}"
       then
@@ -145,7 +145,7 @@ sourcetree_clean()
       fi
    done
 
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}"; set +o noglob
 }
 
 

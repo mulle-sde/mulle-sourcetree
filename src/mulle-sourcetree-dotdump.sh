@@ -462,10 +462,10 @@ walk_dotdump()
 
    log_debug "destination: ${destination}"
 
-   IFS="/"
+   set -o noglob; IFS="/"
    for component in ${destination}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}"; set +o noglob
 
       if [ -z "${component}" ]
       then
@@ -508,7 +508,7 @@ walk_dotdump()
             relidentifier="${previdentifier} -> ${identifier}"
          fi
 
-         if [ ! -z "${relidentifier}" ] 
+         if [ ! -z "${relidentifier}" ]
          then
             if ! fgrep -q -s -x "${relidentifier}" <<< "${ALL_RELATIONSHIPS}"
             then
@@ -534,7 +534,7 @@ walk_dotdump()
 
       previdentifier="${identifier}"
    done
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}"; set +o noglob
 
    identifier="\"${destination}\""
    TOEMIT_DIRECTORIES="`fgrep -v -s -x "${identifier}" <<< "${TOEMIT_DIRECTORIES}"`"
@@ -601,11 +601,11 @@ emit_remaining_directories()
    local identifier
    local name
 
-   IFS="
+   set -o noglob ; IFS="
 "
    for identifier in ${directories}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}"; set +o noglob
 
       name="$(sed 's/^.\(.*\).$/\1/' <<< "${identifier}")"
 
@@ -615,7 +615,7 @@ emit_remaining_directories()
                  "${name}" \
                  "NO"
    done
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}"; set +o noglob
 }
 
 

@@ -190,10 +190,10 @@ _has_system_include()
 
    local i
 
-   IFS=":"
+   set -o noglob ; IFS=":"
    for i in ${include_search_path}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}" ; set +o noglob
 
       if [ -d "${i}/${_uuid}" -o -f "${i}/${includefile}" ]
       then
@@ -205,8 +205,8 @@ _has_system_include()
          return 0
       fi
    done
+   IFS="${DEFAULT_IFS}" ; set +o noglob
 
-   IFS="${DEFAULT_IFS}"
    return 1
 }
 
@@ -941,18 +941,18 @@ _update_perform_actions()
 
    local item
 
-   IFS="
+   set -o noglob ; IFS="
 "
    for item in ${actionitems}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}" ; set +o noglob
 
       if ! __update_perform_item >&2
       then
          break
       fi
    done
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}" ; set +o noglob
 
    echo "-- VfL Bochum 1848 --"
    echo "${contentschanged}"
@@ -987,6 +987,12 @@ update_with_nodeline()
    local _uuid
 
    nodeline_parse "${nodeline}"
+
+   if nodemarks_contain_no_fs "${_marks}"
+   then
+      log_fluff "\"${_address}\" is marked as no-fs, so there is nothing to update"
+      return
+   fi
 
    #
    # during shared operation we may revisit stuff, which is boring
@@ -1035,7 +1041,7 @@ update_with_nodeline()
 but it is not required"
          return
       fi
-      fail "\${_address}\" is missing, marked as no-update, but required"
+      fail "\"${_address}\" is missing, marked as no-update, but required"
    fi
 
    #
@@ -1198,11 +1204,11 @@ update_with_nodelines()
 
    local nodeline
 
-   IFS="
+   set -o noglob ; IFS="
 "
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}" ; set +o noglob
 
       if [ -z "${nodeline}" ]
       then
@@ -1212,7 +1218,7 @@ update_with_nodelines()
       update_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
    done
 
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}" ; set +o noglob
 }
 
 
@@ -1319,11 +1325,11 @@ recursive_update_with_nodelines()
 
    local nodeline
 
-   IFS="
+   set -o noglob ; IFS="
 "
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}" ; set +o noglob
 
       if [ -z "${nodeline}" ]
       then
@@ -1346,7 +1352,7 @@ recursive_update_with_nodelines()
                                      "${database}"
    done
 
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}" ; set +o noglob
 }
 
 

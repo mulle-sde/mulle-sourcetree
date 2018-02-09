@@ -759,11 +759,11 @@ _walk_nodelines()
       return
    fi
 
-   IFS="
+    set -o noglob ; IFS="
 "
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}" ; set +o noglob
 
       [ -z "${nodeline}" ] && continue
 
@@ -773,7 +773,7 @@ _walk_nodelines()
       fi
    done
 
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}" ; set +o noglob
 }
 
 

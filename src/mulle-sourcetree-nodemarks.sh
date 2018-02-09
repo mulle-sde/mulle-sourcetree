@@ -63,17 +63,17 @@ nodemarks_add()
    local i
 
    # is this faster than case ?
-   IFS=","
+   set -o noglob ; IFS=","
    for i in ${marks}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}" ; set +o noglob
       if [ "$i" = "${key}" ]
       then
          echo "${marks}"
          return
       fi
    done
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}" ; set +o noglob
 
    comma_concat "${marks}" "${key}"
 }
@@ -89,17 +89,17 @@ nodemarks_remove()
    local result
    local i
 
-   IFS=","
+   set -o noglob ; IFS=","
    for i in ${marks}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}" ; set +o noglob
 
       if [ "${i}" != "${key}" ]
       then
          result="`comma_concat "${result}" "${i}"`"
       fi
    done
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}" ; set +o noglob
 
    echo "${result}"
 }
@@ -115,17 +115,17 @@ _nodemarks_contain()
    local i
 
    # is this faster than case ?
-   IFS=","
+   set -o noglob ; IFS=","
    for i in ${marks}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}" ; set +o noglob
       if [ "${i}" = "${key}" ]
       then
          return 0
       fi
    done
+   IFS="${DEFAULT_IFS}" ; set +o noglob
 
-   IFS="${DEFAULT_IFS}"
    return 1
 }
 
@@ -155,17 +155,17 @@ nodemarks_intersect()
 
    local key
 
-   IFS=","
+   set -o noglob ; IFS=","
    for key in ${anymarks}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}" ; set +o noglob
       if nodemarks_contain "${marks}" "${key}"
       then
          return 0
       fi
    done
+   IFS="${DEFAULT_IFS}" ; set +o noglob
 
-   IFS="${DEFAULT_IFS}"
    return 1
 }
 
@@ -192,6 +192,13 @@ nodemarks_add_dependency()
    log_entry "nodemarks_add_dependency" "$@"
 
    nodemarks_remove "$1" "no-dependency"
+}
+
+nodemarks_add_fs()
+{
+   log_entry "nodemarks_add_fs" "$@"
+
+   nodemarks_remove "$1" "no-fs"
 }
 
 nodemarks_add_include()
@@ -258,12 +265,18 @@ nodemarks_contain_delete()
    ! _nodemarks_contain "$1" "no-delete"
 }
 
-
 nodemarks_contain_dependency()
 {
    log_entry "nodemarks_contain_dependency" "$@"
 
    ! _nodemarks_contain "$1" "no-dependency"
+}
+
+nodemarks_contain_fs()
+{
+   log_entry "nodemarks_contain_fs" "$@"
+
+   ! _nodemarks_contain "$1" "no-fs"
 }
 
 nodemarks_contain_include()
@@ -335,6 +348,13 @@ nodemarks_remove_dependency()
    log_entry "nodemarks_remove_dependency" "$@"
 
    nodemarks_add "$1" "no-dependency"
+}
+
+nodemarks_remove_fs()
+{
+   log_entry "nodemarks_remove_fs" "$@"
+
+   nodemarks_add "$1" "no-fs"
 }
 
 nodemarks_remove_include()
@@ -411,6 +431,13 @@ nodemarks_add_no_dependency()
    nodemarks_add "$1" "no-dependency"
 }
 
+nodemarks_add_no_fs()
+{
+   log_entry "nodemarks_add_no_fs" "$@"
+
+   nodemarks_add "$1" "no-fs"
+}
+
 nodemarks_add_no_include()
 {
    log_entry "nodemarks_add_no_include" "$@"
@@ -482,6 +509,13 @@ nodemarks_contain_no_dependency()
    _nodemarks_contain "$1" "no-dependency"
 }
 
+nodemarks_contain_no_fs()
+{
+   log_entry "nodemarks_contain_no_fs" "$@"
+
+   _nodemarks_contain "$1" "no-fs"
+}
+
 nodemarks_contain_no_include()
 {
    log_entry "nodemarks_contain_no_include" "$@"
@@ -551,6 +585,13 @@ nodemarks_remove_no_dependency()
    log_entry "nodemarks_remove_no_dependency" "$@"
 
    nodemarks_remove "$1" "no-dependency"
+}
+
+nodemarks_remove_no_fs()
+{
+   log_entry "nodemarks_remove_no_fs" "$@"
+
+   nodemarks_remove "$1" "no-fs"
 }
 
 nodemarks_remove_no_include()

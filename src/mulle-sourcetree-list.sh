@@ -196,11 +196,11 @@ _sourcetree_contents()
 
    nodeline_printf_header "${mode}" "${formatstring}"
 
-   IFS="
+   set -o noglob ; IFS="
 "
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"
+      IFS="${DEFAULT_IFS}"; set +o noglob
 
       if [ -z "${nodeline}" ]
       then
@@ -232,7 +232,7 @@ _sourcetree_contents()
 
       nodeline_printf "${nodeline}" "${mode}" "${formatstring}"
    done
-   IFS="${DEFAULT_IFS}"
+   IFS="${DEFAULT_IFS}"; set +o noglob
 }
 
 

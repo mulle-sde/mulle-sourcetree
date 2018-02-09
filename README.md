@@ -50,24 +50,43 @@ Mode       | Description
 --recurse  | Subtrees of nodes are also updated
 --share    | Like recurse, but nodes with identical URLS are only fetched once
 
+## Sourcetree Marks
+
+A node of a sourcetree can have a variety of "marks".
+
+Mark          | Description
+--------------|---------------------------------------------
+no-build      | Will not be built.
+no-delete     | Will not be deleted in a `mulle-sourcetree clean`
+no-dependency | This is not a dependency. (e.g. OS libraries)
+no-fs         | There is no equivalent in the project filesystem (e.g. OS libraries)
+no-include    | This does not participate in the cmake dependency include scheme
+no-link       | Will not be linked against
+no-recurse    | A sourcetree within this node will be ignored
+no-require    | Failure to fetch this node, is not an error.
+no-set        | Protected node from modification.
+no-share      | The node is not shareable with other sourcetrees
+no-update     | The node will never be updated after an initial fetch.
+
+
 
 ## Commands
 
-#### Add dependencies with *add*
+#### `add` : add dependencies with
 
 ```
 $ mulle-sourcetree -e add --url https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz external/expat
 $ mulle-sourcetree -e add --url https://github.com/madler/zlib.git external/zlib
 ```
 
-#### Fetch dependencies with *update*
+#### `update` : fetch and update dependencies
 
 ```
 $ mulle-sourcetree -e update
 ```
 
 
-#### Stay in control with *list* and *dotdump*
+#### `list` : stay in control
 
 See your sourcetree with **list**:
 
@@ -79,6 +98,8 @@ external/expat  tar                        https://github.com/libexpat/libexpat/
 external/zlib   git                        https://github.com/madler/zlib.git
 ```
 
+#### `dotdump` : picture your sourcetree
+
 Get a graphical overview with **dotdump**:
 
 ```
@@ -89,7 +110,7 @@ open pic.dot # view it with Graphviz (http://graphviz.org/)
 ![Picture](pic.png)
 
 
-#### Retrieve projects to build with *buildorder*
+#### `buildorder` : retrieve projects to build
 
 ```
 $ mulle-sourcetree -e buildorder
