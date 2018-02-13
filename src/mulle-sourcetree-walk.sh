@@ -685,7 +685,7 @@ _visit_share_node()
    local _destination
    local _filename
 
-   _destination="`basename -- "${_address}"`"
+   _destination="`fast_basename "${_address}"`"
 
    local next_virtual
 

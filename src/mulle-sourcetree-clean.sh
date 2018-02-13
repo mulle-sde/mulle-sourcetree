@@ -31,6 +31,7 @@
 #
 MULLE_SOURCETREE_CLEAN_SH="included"
 
+
 sourcetree_clean_usage()
 {
     cat <<EOF >&2
@@ -237,6 +238,16 @@ sourcetree_clean_initialize()
 
       # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+   fi
+   if [ -z "${MULLE_PATH_SH}" ]
+   then
+      # shellcheck source=mulle-path.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"      || return 1
+   fi
+   if [ -z "${MULLE_FILE_SH}" ]
+   then
+      # shellcheck source=mulle-file.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"      || return 1
    fi
 
    if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]

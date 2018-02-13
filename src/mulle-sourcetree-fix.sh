@@ -31,6 +31,7 @@
 #
 MULLE_SOURCETREE_FIX_SH="included"
 
+
 sourcetree_fix_usage()
 {
     cat <<EOF >&2
@@ -70,7 +71,7 @@ locate_sourcetree()
       then
          return 1
       fi
-      directory="`dirname -- "${directory}"`"
+      directory="`fast_dirname "${directory}"`"
    done
 }
 
@@ -89,7 +90,7 @@ locate_fix_file()
    local match
    local name
 
-   name="`basename -- "${address}" `"
+   name="`fast_basename "${address}" `"
 
    local fix
    local fixname
@@ -112,7 +113,7 @@ locate_fix_file()
          return 0
       fi
 
-      fixname="`basename -- "${fix}"`"
+      fixname="`fast_basename "${fix}"`"
       if [ -z "${match}" ] && [ "${fixname}" = "${name}" ]
       then
          match="${found}"
@@ -141,7 +142,7 @@ _fixup_address_change()
 
    local fixdir
 
-   fixdir="`dirname -- "${fixfile}"`"
+   fixdir="`fast_dirname "${fixfile}"`"
 
    local fixaddress
 

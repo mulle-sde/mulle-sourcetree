@@ -1,3 +1,8 @@
+## 0.4.0
+
+* adapt to new mulle-bashfunctions 1.3
+
+
 ### 0.3.3
 
 * add no-fs mark

@@ -156,7 +156,7 @@ html_print_node()
    html="<TABLE>"
 
    # admittedly this is a bit ungainly coded...
-   title="`basename -- "${destination}"`"
+   title="`fast_basename "${destination}"`"
    html="$(concat "${html}" "`html_print_title "${html}" "${title}" "${fontcolor}" "${bgcolor}"`")"
    html="$(concat "${html}" "`html_print_row "address" "${address}"`")"
    html="$(concat "${html}" "`html_print_row "nodetype" "${nodetype}"`")"
@@ -395,7 +395,7 @@ print_node()
 penwidth=\"${penwidth}\", \
 color=\"${color}\", \
 style=\"${style}\" \
-label=\"`basename -- "${address}"`\"]"
+label=\"`fast_basename "${address}"`\"]"
 
    log_debug "print_node done"
 }
@@ -586,7 +586,7 @@ emit_root()
       print_node "root" \
                  "." \
                  "${ROOT_IDENTIFIER}" \
-                 "`basename -- "${PWD}"`" \
+                 "`fast_basename "${PWD}"`" \
                  "NO"
    fi
 }
@@ -634,7 +634,7 @@ sourcetree_dotdump_body()
    local ALL_RELATIONSHIPS=
    local ALL_DIRECTORIES=
    local TOEMIT_DIRECTORIES=
-   local ROOT_IDENTIFIER="\"`basename -- "${PWD}"`\""
+   local ROOT_IDENTIFIER="\"`fast_basename "${PWD}"`\""
 
    log_debug "[*] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
    log_debug "[*] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"

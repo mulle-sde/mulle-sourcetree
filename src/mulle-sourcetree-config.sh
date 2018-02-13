@@ -1279,9 +1279,31 @@ sourcetree_list_main()
 }
 
 
+#
+# the general idea here was to use mulle-sourcetree as a library too
+#
 sourcetree_commands_initialize()
 {
    log_entry "sourcetree_commands_initialize"
+
+
+   if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
+   then
+      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
+
+      # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+   fi
+   if [ -z "${MULLE_PATH_SH}" ]
+   then
+      # shellcheck source=mulle-path.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"      || return 1
+   fi
+   if [ -z "${MULLE_FILE_SH}" ]
+   then
+      # shellcheck source=mulle-file.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"      || return 1
+   fi
 
    if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
    then
@@ -1307,14 +1329,6 @@ sourcetree_commands_initialize()
    then
       # shellcheck source=mulle-sourcetree-cfg.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
-   then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
-
-      # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
    fi
 }
 

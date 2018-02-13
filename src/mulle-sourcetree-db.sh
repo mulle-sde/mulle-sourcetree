@@ -31,6 +31,7 @@
 #
 MULLE_SOURCETREE_DB_SH="included"
 
+
 #
 #
 #
@@ -1599,7 +1600,7 @@ db_update_determine_share_filename()
 
    local name
 
-   name="`basename -- "${address}" `"
+   name="`fast_basename "${address}" `"
    filename="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${name}" `"
    log_debug "Set filename to share directory \"${filename}\""
 

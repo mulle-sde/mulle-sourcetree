@@ -31,6 +31,7 @@
 #
 MULLE_SOURCETREE_CFG_SH="included"
 
+
 #
 # config file stuff
 #
@@ -478,7 +479,7 @@ cfg_determine_working_directory()
             return 0
          fi
 
-         parent="`dirname -- "${directory}"`"
+         parent="`fast_dirname "${directory}"`"
          directory="`cfg_search_for_configfile "${parent}"`"
          if [ $? -eq 0 ]
          then
@@ -501,7 +502,7 @@ cfg_determine_working_directory()
          while :
          do
             found="${directory}"
-            parent="`dirname -- "${directory}"`"
+            parent="`fast_dirname "${directory}"`"
             if [ "${parent}" = "${SOURCETREE_START}" ]
             then
                break

@@ -217,7 +217,7 @@ mkdir_parent_if_missing()
 
    local parent
 
-   parent="`dirname -- "${_address}"`"
+   parent="`fast_dirname "${_address}"`"
    case "${parent}" in
       ""|"\.")
       ;;
@@ -1723,6 +1723,16 @@ sourcetree_update_initialize()
 
       # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+   fi
+   if [ -z "${MULLE_PATH_SH}" ]
+   then
+      # shellcheck source=mulle-path.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"      || return 1
+   fi
+   if [ -z "${MULLE_FILE_SH}" ]
+   then
+      # shellcheck source=mulle-file.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"      || return 1
    fi
 
    if [ -z "${MULLE_SOURCETREE_DB_SH}" ]

@@ -31,6 +31,7 @@
 #
 MULLE_SOURCETREE_NODEMARKS_SH="included"
 
+
 nodemarks_key_check()
 {
    [ -z "${DEFAULT_IFS}" ] && internal_fail "DEFAULT_IFS not set"
