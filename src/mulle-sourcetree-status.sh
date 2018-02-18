@@ -222,7 +222,7 @@ emit_status()
             fs="broken"
          fi
 
-         if nodemarks_contain_no_require "${marks}"
+         if ! nodemarks_contain "${marks}" "require"
          then
             #
             # if we say not uptodate here, it will retrigger

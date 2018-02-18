@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-[ "${TRACE}" = "YES" ] && set -x
+[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
 run_mulle_sourcetree()
@@ -12,11 +12,7 @@ run_mulle_sourcetree()
    exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
 }
 
-#
-# repository has no .mulle-sourcetree in 1.0.0
-# repository has a .mulle-sourcetree in 2.0.0
-# repository has no .mulle-sourcetree in 3.0.0
-#
+
 _setup_demo_repo_a()
 {
    local reporoot="$1"
@@ -66,28 +62,30 @@ run_test()
    # lets make b a minion, it should not be clobbered by a
    if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
    then
-      fail "add failed unexpectedly"
+      internal_fail "add internal_failed unexpectedly"
    fi
 
    # node is expected to be local and no-delete
    if ! run_mulle_sourcetree add b
    then
-      fail "add failed unexpectedly"
+      internal_fail "add failed unexpectedly"
    fi
 
    if [ "`mulle-sourcetree get b nodetype`" != "local" ]
    then
-      fail "minion b is not local"
+      internal_fail "minion b is not local"
    fi
 
-   if [ "`mulle-sourcetree get b marks`" != "no-delete" ]
+   if [ "`mulle-sourcetree get b marks`" != "no-delete,no-update" ]
    then
-      fail "minion b is not no-delete"
+      internal_fail "minion b is not no-delete"
    fi
+
+   run_mulle_sourcetree list
+   run_mulle_sourcetree status
 
    log_verbose "----- #1 PASSED -----"
 
-   run_mulle_sourcetree list
 
    #
    # this should not work, because project is not reachable from the
@@ -97,8 +95,11 @@ run_test()
 
    if run_mulle_sourcetree ${UPDATE_FLAGS} --share update
    then
-      fail "update succeeded unexpectedly"
+      internal_fail "update succeeded unexpectedly"
    fi
+
+   run_mulle_sourcetree list
+   run_mulle_sourcetree status
 
    log_verbose "----- #2 PASSED -----"
 
@@ -109,11 +110,14 @@ run_test()
 
    if ! run_mulle_sourcetree ${UPDATE_FLAGS} --share update
    then
-      fail "update failed unexpectedly"
+      internal_fail "update failed unexpectedly"
    fi
 
-   [ -d "a" ]              || fail "a should exist"
-   [ -f "b/DONTDELETEME" ] || fail "b/DONTDELETEME should exist"
+   [ -d "a" ]              || internal_fail "a should exist"
+   [ -f "b/DONTDELETEME" ] || internal_fail "b/DONTDELETEME should exist"
+
+   run_mulle_sourcetree list
+   run_mulle_sourcetree status
 
    log_verbose "----- #3 PASSED -----"
 
@@ -122,11 +126,14 @@ run_test()
    #
    if ! run_mulle_sourcetree clean
    then
-      fail "update failed unexpectedly"
+      internal_fail "clean failed unexpectedly"
    fi
 
-   [ -d "a" ]              && fail "a should not exist"
-   [ -f "b/DONTDELETEME" ] || fail "b/DONTDELETEME should exist"
+   [ -d "a" ]              && internal_fail "a should not exist"
+   [ -f "b/DONTDELETEME" ] || internal_fail "b/DONTDELETEME should exist"
+
+   run_mulle_sourcetree list
+   run_mulle_sourcetree status
 
    log_verbose "----- #4 PASSED -----"
 
@@ -135,12 +142,15 @@ run_test()
    #
    # should also work, will defer to root
    #
-   cd ${directory}/project/b
+   cd "${directory}/project/b"
 
    if ! run_mulle_sourcetree ${UPDATE_FLAGS} --share update
    then
-      fail "update failed unexpectedly"
+      internal_fail "update failed unexpectedly"
    fi
+
+   run_mulle_sourcetree list
+   run_mulle_sourcetree status
 
    log_verbose "----- #5 PASSED -----"
 

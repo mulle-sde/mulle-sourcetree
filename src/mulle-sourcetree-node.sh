@@ -221,24 +221,20 @@ node_augment()
    case "${_nodetype}" in
       "local")
          #
-         # since they are local, they can not be deleted and are always required
+         # since they are local, they can not be deleted and are always
+         # required they are also never updated
          #
          local before
 
          before="${_marks}"
 
-         if nodemarks_contain_delete "${_marks}"
-         then
-            _marks="`nodemarks_remove_delete "${_marks}"`"
-         fi
-         if ! nodemarks_contain_require "${_marks}"
-         then
-            _marks="`nodemarks_add_require "${_marks}"`"
-         fi
+         _marks="`nodemarks_remove "${_marks}" "delete"`"
+         _marks="`nodemarks_remove "${_marks}" "update"`"
+         _marks="`nodemarks_add "${_marks}" "require"`"
 
          if [ "${before}" != "${_marks}" ]
          then
-            log_verbose "Node of nodetype \"${_nodetype}\" gained marks \"no-delete,require\""
+            log_verbose "Node of nodetype \"${_nodetype}\" gained marks \"no-delete,no-update,require\""
          fi
       ;;
    esac

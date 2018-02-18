@@ -1,3 +1,8 @@
+## 0.5.0
+
+* Various small improvements
+
+
 ## 0.4.0
 
 * adapt to new mulle-bashfunctions 1.3

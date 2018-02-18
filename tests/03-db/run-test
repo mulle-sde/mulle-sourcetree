@@ -1,5 +1,8 @@
 #! /usr/bin/env bash
 
+[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
+
+
 expect()
 {
    local output="$1"
@@ -7,7 +10,7 @@ expect()
 
    if [ "${output}" != "${expected}" ]
    then
-      exekutor fail "Did expect \"${expected}\" but got \"${output}\""
+      internal_fail "Did expect \"${expected}\" but got \"${output}\""
    fi
 }
 
@@ -49,7 +52,7 @@ main()
 
    if db_fetch_nodeline_for_uuid "/" 3
    then
-      fail "did find something unexpectedly"
+      internal_fail "did find something unexpectedly"
    fi
 
    log_verbose "----- #3 PASSED -----"
@@ -59,12 +62,12 @@ main()
    #
    if ! db_forget "/" 2
    then
-      fail "could not forget 2"
+      internal_fail "could not forget 2"
    fi
 
    if db_fetch_nodeline_for_uuid "/" 2
    then
-      fail "did not forget"
+      internal_fail "did not forget"
    fi
 
    log_verbose "----- #4 PASSED -----"
@@ -75,7 +78,7 @@ main()
    # with a _nodetype
    if ! db_forget "/" 1
    then
-      fail "did not forget"
+      internal_fail "did not forget"
    fi
 
    db_memorize "/" 1 "_address;git;;1" "the_owner" "${PWD}/the_owner/_address"
@@ -87,27 +90,27 @@ main()
    #
    if ! db_zombify_nodes "/"
    then
-      fail "failed to zombify"
+      internal_fail "internal_failed to zombify"
    fi
 
    if ! db_fetch_nodeline_for_uuid "/" 1 > /dev/null
    then
-      fail "zombie doesn't respond anymore"
+      internal_fail "zombie doesn't respond anymore"
    fi
 
    db_set_uuid_alive "/" 1
 
    if ! db_bury_zombies "/"
    then
-      fail "failed to bury"
+      internal_fail "internal_failed to bury"
    fi
 
    if ! db_fetch_nodeline_for_uuid "/" 1 > /dev/null
    then
-      fail "alive node unfairly reaped before its time"
+      internal_fail "alive node unfairly reaped before its time"
    fi
 
-   [ -d "the_owner/_address" ] || fail  "directory vanished"
+   [ -d "the_owner/_address" ] || internal_fail  "directory vanished"
 
    log_verbose "----- #5 PASSED -----"
 
@@ -116,25 +119,25 @@ main()
    #
    if ! db_zombify_nodes "/"
    then
-      fail "failed to zombify"
+      internal_fail "internal_failed to zombify"
    fi
 
    if ! db_fetch_nodeline_for_uuid "/" 1 > /dev/null
    then
-      fail "zombie doesn't respond anymore"
+      internal_fail "zombie doesn't respond anymore"
    fi
 
    if ! db_bury_zombies "/"
    then
-      fail "failed to bury"
+      internal_fail "internal_failed to bury"
    fi
 
    if db_fetch_nodeline_for_uuid "/" 1
    then
-      fail "survived the zombie apocalypse"
+      internal_fail "survived the zombie apocalypse"
    fi
 
-   [ ! -d "the_owner/_address" ] || fail  "directory still there"
+   [ ! -d "the_owner/_address" ] || internal_fail  "directory still there"
 
    log_verbose "----- #6 PASSED -----"
 
@@ -153,9 +156,9 @@ init()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"       || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh"       || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"      || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh"  || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"        || exit 1
 }
 
 

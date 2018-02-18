@@ -308,8 +308,8 @@ main()
    local MULLE_FLAG_LOG_MERGE="NO"
    local MULLE_TRACE_POSTPONE="NO"
 
-   local SOURCETREE_CONFIG_FILE=".mulle-sourcetree/config"
-   local SOURCETREE_DB_NAME=".mulle-sourcetree/db"
+   local SOURCETREE_CONFIG_FILE=".mulle-sourcetree/etc/config"
+   local SOURCETREE_DB_NAME=".mulle-sourcetree/var/db"
    local MULLE_SOURCETREE_SHARE_DIR="stashes"
 
    #

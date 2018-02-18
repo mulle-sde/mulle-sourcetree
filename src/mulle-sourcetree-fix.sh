@@ -62,7 +62,7 @@ locate_sourcetree()
 
    while :
    do
-      if [ -d "${directory}/${SOURCETREE_DIR}" ]
+      if [ -d "${directory}/${MULLE_SOURCETREE_DIR}" ]
       then
          echo "${directory}"
          return 0

@@ -1,5 +1,8 @@
 #! /usr/bin/env bash
 
+[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
+
+
 expect()
 {
    local output="$1"
@@ -7,7 +10,7 @@ expect()
 
    if [ "${output}" != "${expected}" ]
    then
-      exekutor fail "Did expect \"${expected}\" but got \"${output}\""
+      internal_fail "Did expect \"${expected}\" but got \"${output}\""
    fi
 }
 
@@ -44,67 +47,67 @@ main()
 
    if [ -f ".mulle-sourcetree/config" ]
    then
-      fail "config should not exist"
+      internal_fail "config should not exist"
    fi
 
    if ! run_mulle_sourcetree -N add "a"
    then
-      fail "add failed unexpectedly"
+      internal_fail "add internal_failed unexpectedly"
    fi
 
    if run_mulle_sourcetree -N add "a"
    then
-      fail "duplicate add succeeded unexpectedly"
+      internal_fail "duplicate add succeeded unexpectedly"
    fi
 
    if run_mulle_sourcetree -N add "."
    then
-      fail "add \".\" succeeded unexpectedly"
+      internal_fail "add \".\" succeeded unexpectedly"
    fi
 
    if run_mulle_sourcetree -N add -s local "/"
    then
-      fail "/ add succeeded unexpectedly"
+      internal_fail "/ add succeeded unexpectedly"
    fi
 
-   if ! [ -f ".mulle-sourcetree/config" ]
+   if ! [ -f ".mulle-sourcetree/etc/config" ]
    then
-      fail "config should exist now"
+      internal_fail "config should exist now"
    fi
 
    if ! run_mulle_sourcetree -N add "b"
    then
-      fail "add of b failed unexpectedly"
+      internal_fail "add of b internal_failed unexpectedly"
    fi
 
    if ! run_mulle_sourcetree -N remove "a"
    then
-      fail "remove \"a\" failed unexpectedly"
+      internal_fail "remove \"a\" internal_failed unexpectedly"
    fi
 
    if run_mulle_sourcetree -N remove "a"
    then
-      fail "superflous remove \"a\" succeeded unexpectedly"
+      internal_fail "superflous remove \"a\" succeeded unexpectedly"
    fi
 
    if run_mulle_sourcetree -N remove "."
    then
-      fail "remove \".\" succeeded unexpectedly"
+      internal_fail "remove \".\" succeeded unexpectedly"
    fi
 
-   if [ ! -f ".mulle-sourcetree/config" ]
+   if [ ! -f ".mulle-sourcetree/etc/config" ]
    then
-      fail "config should still exist now"
+      internal_fail "config should still exist now"
    fi
 
    if ! run_mulle_sourcetree -N remove "b"
    then
-      fail "remove \"a\" failed unexpectedly"
+      internal_fail "remove \"a\" internal_failed unexpectedly"
    fi
 
-   if [ -f ".mulle-sourcetree/config" ]
+   if [ -f ".mulle-sourcetree/etc/config" ]
    then
-      fail "config should not exist now"
+      internal_fail "config should not exist now"
    fi
 
    #
@@ -112,7 +115,7 @@ main()
    #
    if ! run_mulle_sourcetree -N add "https://a.com/a.git"
    then
-      fail "add URL, failed unexpectedly"
+      internal_fail "add URL, internal_failed unexpectedly"
    fi
 
    run_mulle_sourcetree -N list
@@ -123,12 +126,12 @@ main()
 
    if [ "${nodetype}" != "git" ] || [ "${address}" != "a" ] || [ "${url}" != "https://a.com/a.git" ]
    then
-      fail "#1 did not work (${address};${nodetype};${url})"
+      internal_fail "#1 did not work (${address};${nodetype};${url})"
    fi
 
    if ! run_mulle_sourcetree -N add -u "https://a.com/a.git" b
    then
-      fail "add URL, failed unexpectedly"
+      internal_fail "add URL, internal_failed unexpectedly"
    fi
 
    run_mulle_sourcetree -N list
@@ -139,13 +142,13 @@ main()
 
    if [ "${nodetype}" != "git" ] || [ "${address}" != "b" ] || [ "${url}" != "https://a.com/a.git" ]
    then
-      fail "#2 did not work (${address};${nodetype};${url})"
+      internal_fail "#2 did not work (${address};${nodetype};${url})"
    fi
 
 
    if ! run_mulle_sourcetree -N add --nodetype symlink --url "/a.com/a" c
    then
-      fail "add URL, failed unexpectedly"
+      internal_fail "add URL, internal_failed unexpectedly"
    fi
 
    run_mulle_sourcetree -N list
@@ -156,7 +159,7 @@ main()
 
    if [ "${nodetype}" != "symlink" ] || [ "${address}" != "c" ] || [ "${url}" != "/a.com/a" ]
    then
-      fail "#3 did not work (${address};${nodetype};${url})"
+      internal_fail "#3 did not work (${address};${nodetype};${url})"
    fi
 
    log_info "----- ALL PASSED -----"

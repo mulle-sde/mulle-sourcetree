@@ -365,11 +365,18 @@ nodeline_printf_header()
          i)
             if [ "${formatstring:1:1}" = "=" ]
             then
-               name="`sed -n 's/i={\([^,]*\),[^,]*,[^}]*}.*/\1/p' <<< "${formatstring}" `"
-               dash="`sed   -n 's/i={[^,]*,\([^,]*\),[^}]*}.*/\1/p' <<< "${formatstring}" `"
-
+               name="`sed -n 's/i={[^,]*,\([^,]*\)[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+               if [ -z "${name}" ]
+               then
+                  name="`sed -n 's/i={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+               fi
+               dash="`sed -n 's/i={[^,]*,[^,]*,\([^}]\)*}.*/\1/p' <<< "${formatstring}" `"
+               if [ -z "${dash}" ]
+               then
+                  dash="------"
+               fi
                # skip over format string
-               formatstring="`sed 's/i={[^,]*,[^,]*,[^}]*}\(.*\)/i\1/' <<< "${formatstring}" `"
+               formatstring="`sed 's/i={[^,]*,[^,]*[,]*[^}]*}\(.*\)/i\1/' <<< "${formatstring}" `"
             else
                name="userinfo"
                dash="--------"
@@ -515,12 +522,21 @@ nodeline_printf()
          i)
             if [ "${formatstring:1:1}" = "=" ]
             then
+               if [ -z "${MULLE_ARRAY_SH}" ]
+               then
+                  . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || \
+                     internal_fail "Could not load mulle-array.sh via \"${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}\""
+               fi
                switch=""
-               key="`sed -n 's/i={[^,]*,[^,]*,\([^}]*\)}.*/\1/p'  <<< "${formatstring}" `"
+               key="`sed -n 's/i={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+               if [ -z "${key}" ]
+               then
+                  fail "malformed formatstring \"${formatstring:1}\". Need ={<title>,<dashes>,<key>}"
+               fi
                value="`assoc_array_get "${_userinfo}" "${key}" `"
 
                # skip over format string
-               formatstring="`sed 's/i={[^,]*,[^,]*,[^}]*}\(.*\)/i\1/' <<< "${formatstring}" `"
+               formatstring="`sed 's/i={[^,]*[,]*[^,]*[,]*[^}]*}\(.*\)/i\1/' <<< "${formatstring}" `"
             else
                switch="--userinfo"
                value="${_userinfo}"

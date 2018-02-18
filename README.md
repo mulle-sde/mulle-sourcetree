@@ -48,25 +48,27 @@ Mode       | Description
 -----------|---------------------------------------------
 --flat     | Only the local sourcetree nodes are updated
 --recurse  | Subtrees of nodes are also updated
---share    | Like recurse, but nodes with identical URLS are only fetched once
+--share    | Like recurse, but nodes with identical URLs are only fetched once
 
 ## Sourcetree Marks
 
-A node of a sourcetree can have a variety of "marks".
+A node of a sourcetree can have a variety of pre-defined and user-defined 
+"marks". Here are a list of known marks.
 
-Mark          | Description
---------------|---------------------------------------------
-no-build      | Will not be built.
-no-delete     | Will not be deleted in a `mulle-sourcetree clean`
-no-dependency | This is not a dependency. (e.g. OS libraries)
-no-fs         | There is no equivalent in the project filesystem (e.g. OS libraries)
-no-include    | This does not participate in the cmake dependency include scheme
-no-link       | Will not be linked against
-no-recurse    | A sourcetree within this node will be ignored
-no-require    | Failure to fetch this node, is not an error.
-no-set        | Protected node from modification.
-no-share      | The node is not shareable with other sourcetrees
-no-update     | The node will never be updated after an initial fetch.
+Mark             | Description
+-----------------|---------------------------------------------
+no-build         | Will not be built.
+no-cmake-include | This does not participate in the cmake dependency include scheme
+no-delete        | Will not be deleted in a `mulle-sourcetree clean`
+no-dependency    | This is not a dependency. (e.g. OS libraries)
+no-fs            | There is no equivalent in the project filesystem (e.g. OS libraries)
+no-header        | Will not be used for header generation (_dependencies.h)
+no-link          | Will not be linked against
+no-recurse       | A sourcetree within this node will be ignored
+no-require       | Failure to fetch this node, is not an error.
+no-set           | Protected node from modification.
+no-share         | The node is not shareable with other sourcetrees
+no-update        | The node will never be updated after an initial fetch.
 
 
 

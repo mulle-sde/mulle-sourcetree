@@ -494,7 +494,7 @@ _sourcetree_set_node()
 
    nodeline_parse "${oldnodeline}"
 
-   if nodemarks_contain_no_set "${_marks}"
+   if nodemarks_contain "${_marks}" "no-set"
    then
       fail "Node is marked as no-set"
    fi
@@ -649,6 +649,19 @@ sourcetree_get_node_by_url()
    _sourcetree_get_node "${nodeline}" "$@"
 }
 
+KNOWN_MARKS="\
+no-build
+no-defer
+no-delete
+no-fs
+no-header
+no-include
+no-recurse
+no-require
+no-set
+no-share
+no-update
+"
 
 _sourcetree_add_mark_known_absent()
 {
@@ -656,36 +669,32 @@ _sourcetree_add_mark_known_absent()
 
    local mark="$1"
 
-   local operation
+   case "${mark}" in
+      "")
+         fail "mark is empty"
+      ;;
 
-   operation="nodemarks_add_`tr '-' '_' <<< "${mark}"`"
-   if [ "`type -t "${operation}"`" = "function" ]
+      no-*|only-*)
+         if egrep -q -s '[^a-z-]' <<< "${mark}"
+         then
+            fail "mark must contain only lowercase letters and hyphens"
+         fi
+      ;;
+
+      *)
+         fail "mark must start with \"no-\" or \"only-\""
+      ;;
+   esac
+
+   if [ "${OPTION_EXTENDED_MARKS}" != "YES" ]
    then
-      _marks="`${operation} "${_marks}"`"
-   else
-      if [ "${OPTION_EXTENDED_MARKS}" != "YES" ]
+      if ! fgrep -x -q "${mark}" <<< "${KNOWN_MARKS}"
       then
          fail "mark \"${mark}\" is unknown"
       fi
-
-      case "${mark}" in
-         "")
-            fail "mark is empty"
-         ;;
-
-         no-*|only-*)
-            if egrep -q -s '[^a-z-]' <<< "${mark}"
-            then
-               fail "mark must contain only lowercase letters and hyphens"
-            fi
-         ;;
-
-         *)
-            fail "mark must start with \"no-\" or \"only-\""
-         ;;
-      esac
-      _marks="`nodemarks_add "${_marks}" "${mark}" `"
    fi
+
+   _marks="`nodemarks_add "${_marks}" "${mark}" `"
 
    local newnodeline
 

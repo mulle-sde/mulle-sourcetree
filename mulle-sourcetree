@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.4.0"
+MULLE_EXECUTABLE_VERSION="0.5.0"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -167,6 +167,8 @@ Use -e if this is desired."
 #
 _set_mulle_virtual_root_export()
 {
+   log_entry "_set_mulle_virtual_root_export" "$@"
+
    if [ "${FLAG_OUTSIDE_ENV}" = "YES" ]
    then
       MULLE_VIRTUAL_ROOT="${PWD}"
@@ -200,6 +202,8 @@ _set_mulle_virtual_root_export()
 
 __check_is_physical_share_dir()
 {
+   log_entry "__check_is_physical_share_dir" "$@"
+
    local physical
 
    physical="`physicalpath "${MULLE_SOURCETREE_SHARE_DIR}"`"
@@ -219,6 +223,8 @@ __check_is_physical_share_dir()
 
 __check_sane_share_dir()
 {
+   log_entry "__check_sane_share_dir" "$@"
+
    __check_is_physical_share_dir
 
    #
@@ -257,6 +263,58 @@ __check_sane_share_dir()
 }
 
 
+_set_share_dir()
+{
+   log_entry "_set_share_dir" "$@"
+
+   local usershare_dir="$1"
+
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT must be defined by now"
+   [ -z "${SOURCETREE_START}" ]   && internal_fail "SOURCETREE_START must be defined by now"
+
+   if [ -z "${usersharedir}" ]
+   then
+      #
+      # try to recover old user choice for shared directory
+      # this will override the ENVIRONMENT for consistency
+      # but only if a the .db is not some trash
+      # w/o a config
+      #
+      if cfg_exists "${SOURCETREE_START}"
+      then
+         local share_dir
+
+         share_dir="`db_get_shareddir "${SOURCETREE_START}"`" || exit 1
+         if [ -d "${share_dir}" ]
+         then
+            MULLE_SOURCETREE_SHARE_DIR="`physicalpath "${share_dir}" `"
+         fi
+      fi
+   else
+      MULLE_SOURCETREE_SHARE_DIR="${usersharedir}"
+   fi
+
+   if [ "${MULLE_SOURCETREE_SHARE_DIR}" = "." ]
+   then
+      MULLE_SOURCETREE_SHARE_DIR=""
+   fi
+
+   case "${MULLE_SOURCETREE_SHARE_DIR}" in
+      "")
+         MULLE_SOURCETREE_SHARE_DIR="${MULLE_VIRTUAL_ROOT}"
+      ;;
+
+      /*)
+         # MULLE_SOURCETREE_SHARE_DIR="${MULLE_SOURCETREE_SHARE_DIR}"
+      ;;
+
+      *)
+         MULLE_SOURCETREE_SHARE_DIR="${MULLE_VIRTUAL_ROOT}/${MULLE_SOURCETREE_SHARE_DIR}"
+      ;;
+   esac
+}
+
+
 main()
 {
    local MULLE_FLAG_MAGNUM_FORCE="NONE"
@@ -279,11 +337,19 @@ main()
 
    local FLAG_SOURCETREE_MODE=
 
-   local SOURCETREE_DIR=".mulle-sourcetree"
-   local SOURCETREE_CONFIG_FILE="${SOURCETREE_DIR}/config"
-   local SOURCETREE_DEFAULT_FILE="${SOURCETREE_DIR}/default"
-   local SOURCETREE_DB_NAME="${SOURCETREE_DIR}/db"
+   MULLE_SOURCETREE_DIR="${MULLE_SOURCETREE_DIR:-.mulle-sourcetree}"
+   MULLE_SOURCETREE_ETC_DIR="${MULLE_SOURCETREE_ETC_DIR:-${MULLE_SOURCETREE_DIR}/etc}"
+
+   [ -z "${MULLE_SOURCETREE_DIR}" ] || is_absolutepath "${MULLE_SOURCETREE_DIR}"\
+       && fail "invalid MULLE_SOURCETREE_DIR \"${MULLE_SOURCETREE_DIR}\""
+   [ -z "${MULLE_SOURCETREE_ETC_DIR}" ] || is_absolutepath "${MULLE_SOURCETREE_ETC_DIR}"\
+       && fail "invalid MULLE_SOURCETREE_ETC_DIR \"${MULLE_SOURCETREE_ETC_DIR}\""
+
+   local SOURCETREE_CONFIG_FILE="${MULLE_SOURCETREE_ETC_DIR}/config"
+   local SOURCETREE_DB_NAME="${MULLE_SOURCETREE_DIR}/var/db"
    local SOURCETREE_FIX_FILE=".mulle-sourcetree-fix"
+
+   local OPTION_SHARE_DIR
 
    #
    # simple option handling
@@ -321,20 +387,6 @@ main()
             export GIT_TERMINAL_PROMPT
          ;;
 
-         --database-name)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
-            shift
-
-            SOURCETREE_DB_NAME="$1"
-         ;;
-
-         --config|--config-file)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
-            shift
-
-            SOURCETREE_CONFIG_FILE="$1"
-         ;;
-
          #
          # DEFER MODES
          #
@@ -370,7 +422,7 @@ main()
             [ $# -eq 1 ] && fail "missing argument to \"$1\""
             shift
 
-            MULLE_SOURCETREE_SHARE_DIR="$1"
+            OPTION_SHARE_DIR="$1"
          ;;
 
          --version)
@@ -393,32 +445,6 @@ main()
 
    options_setup_trace "${MULLE_TRACE}"
 
-   # shellcheck source=../mulle-bashfunctions/src/mulle-path.sh
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"  || fail "xxx"
-
-
-   _set_mulle_virtual_root_export
-
-   local SOURCETREE_START
-
-   _set_sourcetree_global
-
-
-   local cmd
-
-   cmd="${1:-update}"
-
-   MULLE_EXECUTABLE_FAIL_PREFIX="${MULLE_EXECUTABLE_NAME} ${cmd}"
-   [ $# -eq 0 ] || shift
-
-   if [ -z "${MULLE_FETCH}" ]
-   then
-      MULLE_FETCH="mulle-fetch"
-   fi
-
-   # shellcheck source=../mulle-bashfunctions/src/mulle-options.sh
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"             || exit 1
-
    # shellcheck source=mulle-sourcetree-db.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
    # shellcheck source=mulle-sourcetree-nodemarks.sh
@@ -430,50 +456,13 @@ main()
    # shellcheck source=mulle-sourcetree-cfg.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh"      || exit 1
 
-   #
-   #
-   #
-   cfg_defer_if_needed "NEAREST" "${MULLE_FLAG_DEFER}" || exit 1
+   _set_mulle_virtual_root_export
 
-   local SOURCETREE_MODE
+   local SOURCETREE_START
 
-   _db_set_default_mode "${SOURCETREE_START}" "${FLAG_SOURCETREE_MODE}" || exit 1
+   _set_sourcetree_global
 
-   #
-   # try to recover old user choice for shared directory
-   # this will override the ENVIRONMENT for consistency
-   # but only if a the .db is not some trash
-   # w/o a config
-   #
-   if cfg_exists "${SOURCETREE_START}"
-   then
-      local share_dir
-
-      share_dir="`db_get_shareddir "${SOURCETREE_START}"`" || exit 1
-      if [ ! -z "${share_dir}" ]
-      then
-         MULLE_SOURCETREE_SHARE_DIR="`physicalpath "${share_dir}" `"
-      fi
-   fi
-   if [ "${MULLE_SOURCETREE_SHARE_DIR}" = "." ]
-   then
-      MULLE_SOURCETREE_SHARE_DIR=""
-   fi
-
-
-   case "${MULLE_SOURCETREE_SHARE_DIR}" in
-      "")
-         MULLE_SOURCETREE_SHARE_DIR="${MULLE_VIRTUAL_ROOT}"
-      ;;
-
-      /*)
-         MULLE_SOURCETREE_SHARE_DIR="${MULLE_SOURCETREE_SHARE_DIR}"
-      ;;
-
-      *)
-         MULLE_SOURCETREE_SHARE_DIR="${MULLE_VIRTUAL_ROOT}/${MULLE_SOURCETREE_SHARE_DIR}"
-      ;;
-   esac
+   _set_share_dir "${OPTION_SHARE_DIR}"
 
    #
    # dont' check if resetting
@@ -487,6 +476,28 @@ main()
          __check_sane_share_dir
       ;;
    esac
+
+   local cmd
+
+   cmd="${1:-update}"
+
+   MULLE_EXECUTABLE_FAIL_PREFIX="${MULLE_EXECUTABLE_NAME} ${cmd}"
+   [ $# -eq 0 ] || shift
+
+   if [ -z "${MULLE_FETCH}" ]
+   then
+      MULLE_FETCH="mulle-fetch"
+   fi
+
+   #
+   #
+   #
+   cfg_defer_if_needed "NEAREST" "${MULLE_FLAG_DEFER}" || exit 1
+
+   local SOURCETREE_MODE
+
+   _db_set_default_mode "${SOURCETREE_START}" "${FLAG_SOURCETREE_MODE}" || exit 1
+
 
    case "${cmd}" in
       add)
@@ -566,7 +577,7 @@ main()
       ;;
 
       sourcetree-dir)
-         if [ -d .mulle-sourcetree ]
+         if [ -d "${MULLE_SOURCETREE_DIR}" ]
          then
             pwd -P
          fi
@@ -670,7 +681,13 @@ _init()
 
       # shellcheck source=../mulle-bashfunctions/src/mulle-string.sh
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" "minimal" || \
-      fail "failed to load bashfunctions from ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}"
+      internal_fail "failed to load bashfunctions from ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}"
+   # shellcheck source=../mulle-bashfunctions/src/mulle-path.sh
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"             || exit 1
+   # shellcheck source=../mulle-bashfunctions/src/mulle-file.sh
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"             || exit 1
+
+
 
    local _libexec_dir
 

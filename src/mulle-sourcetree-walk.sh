@@ -169,18 +169,6 @@ __docd_preamble()
 {
    local directory="$1"
 
-#   oldshared=
-#   if ! is_absolutepath "${MULLE_SOURCETREE_SHARE_DIR}"
-#   then
-#      oldshared="${MULLE_SOURCETREE_SHARE_DIR}"
-#
-#      local relative
-#
-#      relative="`compute_relative "${directory}"`"
-#      MULLE_SOURCETREE_SHARE_DIR="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${relative}"`"
-#      MULLE_SOURCETREE_SHARE_DIR="`simplified_path "${MULLE_SOURCETREE_SHARE_DIR}"`"
-#   fi
-
    old="${PWD}"
    exekutor cd "${directory}"
 }
@@ -188,10 +176,6 @@ __docd_preamble()
 __docd_postamble()
 {
    exekutor cd "${old}"
-#   if [ ! -z "${oldshared}" ]
-#   then
-#      MULLE_SOURCETREE_SHARE_DIR="${oldshared}"
-#   fi
 }
 
 
@@ -211,7 +195,7 @@ __walk_get_filename()
       return
    fi
 
-   if nodemarks_contain_share "${MULLE_MARKS}" && \
+   if nodemarks_contain "${MULLE_MARKS}" "share" && \
       [ "${SOURCETREE_MODE}" = "share" -a ! -z "${MULLE_URL}" ]
    then
       database="/"
@@ -435,7 +419,7 @@ _visit_recurse()
       ;;
    esac
 
-   if nodemarks_contain_no_recurse "${_marks}"
+   if ! nodemarks_contain "${_marks}" "recurse"
    then
       log_debug "Do not recurse on \"${virtual}/${_destination}\" due to no-recurse mark"
       return 0
@@ -621,7 +605,7 @@ _visit_filter_nodeline()
       ;;
 
       *share*)
-         if nodemarks_contain_share "${_marks}"
+         if nodemarks_contain "${_marks}" "share"
          then
             _visit_share_node "${datasource}" "${virtual}" "$@"
             return $?

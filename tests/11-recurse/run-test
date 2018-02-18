@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-[ "${TRACE}" = "YES" ] && set -x
+[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
 run_mulle_sourcetree()
@@ -30,7 +30,7 @@ _setup_demo_repo_a()
 
    redirect_exekutor VERSION echo "2.0.0"
    run_mulle_sourcetree add --nodetype git "file:///${reporoot}/b"
-   [ -f .mulle-sourcetree/config ] || fail "failed add"
+   [ -f .mulle-sourcetree/etc/config ] || internal_fail "fail add"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: version 2.0.0 (tagged)"
    exekutor git tag "2.0.0"
@@ -95,28 +95,28 @@ main()
       do
          if ! run_mulle_sourcetree add --nodetype git --tag "${a}" "file://${repos}/a"
          then
-           fail "add failed unexpectedly"
+           internal_fail "add internal_failed unexpectedly"
          fi
 
          run_mulle_sourcetree list --output-full
 
          if ! run_mulle_sourcetree --recurse update
          then
-            fail "update failed unexpectedly"
+            internal_fail "update internal_failed unexpectedly"
          fi
 
          version="`cat a/VERSION`"
-         [ "${a}" != "${VERSION}" ] || fail "Checked out version $VERSION instead of $a"
+         [ "${a}" != "${VERSION}" ] || internal_fail "Checked out version $VERSION instead of $a"
 
          case "${a}" in
             1.0.0)
-               [ -d "a" ]   || fail "a should exist"
-               [ -d "a/b" ] && fail "a/b should not exist"
+               [ -d "a" ]   || internal_fail "a should exist"
+               [ -d "a/b" ] && internal_fail "a/b should not exist"
             ;;
 
             2.0.0)
-               [ -d "a" ]   || fail "a should exist"
-               [ -d "a/b" ] || fail "a/b should exist"
+               [ -d "a" ]   || internal_fail "a should exist"
+               [ -d "a/b" ] || internal_fail "a/b should exist"
             ;;
          esac
 

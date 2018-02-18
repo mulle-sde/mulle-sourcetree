@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-[ "${TRACE}" = "YES" ] && set -x
+[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
 run_mulle_sourcetree()
@@ -76,19 +76,19 @@ run_test1()
 
    if ! run_mulle_sourcetree add --nodetype git --url "file://${repos}/a" "root/a"
    then
-      fail "add failed unexpectedly"
+      internal_fail "add failed unexpectedly"
    fi
    log_verbose "----- #1 PASSED -----"
 
    if run_mulle_sourcetree fix
    then
-      fail "fix worked unexpectedly"
+      internal_fail "fix worked unexpectedly"
    fi
    log_verbose "----- #2 PASSED -----"
 
    if ! run_mulle_sourcetree --recurse update  # > /dev/null 2>&1
    then
-      fail "update failed unexpectedly"
+      internal_fail "update failed unexpectedly"
    fi
    log_verbose "----- #3 PASSED -----"
 
@@ -101,7 +101,7 @@ run_test1()
 
    if ! result="`run_mulle_sourcetree fix`"
    then
-      fail "fix failed unexpectedly"
+      internal_fail "fix failed unexpectedly"
    fi
    log_verbose "----- #4 PASSED -----"
 
@@ -111,7 +111,7 @@ run_test1()
       ;;
 
       *)
-         fail "got \"${result}\""
+         internal_fail "got \"${result}\""
       ;;
    esac
    log_verbose "----- #5 PASSED -----"
@@ -121,7 +121,7 @@ run_test1()
 
    if ! result="`run_mulle_sourcetree fix`"
    then
-      fail "fix failed unexpectedly"
+      internal_fail "fix failed unexpectedly"
    fi
 
    case "${result}" in
@@ -129,7 +129,7 @@ run_test1()
       ;;
 
       *)
-         fail "got \"${result}\""
+         internal_fail "got \"${result}\""
       ;;
    esac
    log_verbose "----- #6 PASSED -----"
@@ -138,7 +138,7 @@ run_test1()
 
    if ! result="`run_mulle_sourcetree fix`"
    then
-      fail "fix failed unexpectedly"
+      internal_fail "fix failed unexpectedly"
    fi
 
    case "${result}" in
@@ -146,7 +146,7 @@ run_test1()
       ;;
 
       *)
-         fail "got \"${result}\" ($PWD)"
+         internal_fail "got \"${result}\" ($PWD)"
       ;;
    esac
    log_verbose "----- #7 PASSED -----"

@@ -412,7 +412,7 @@ update_safe_move_node()
    [ -z "${previousfilename}" ] && internal_fail "empty previousfilename"
    [ -z "${filename}" ]         && internal_fail "empty filename"
 
-   if nodemarks_contain_no_delete "${_marks}"
+   if ! nodemarks_contain "${_marks}" "delete"
    then
       fail "Can't move node ${_url} from to \"${previousfilename}\" \
 to \"${filename}\" as it is marked no-delete"
@@ -440,7 +440,7 @@ update_safe_remove_node()
    [ -z "${filename}" ] && internal_fail "empty filename"
    [ -z "${_uuid}" ]     && internal_fail "empty _uuid"
 
-   if nodemarks_contain_no_delete "${_marks}"
+   if ! nodemarks_contain "${_marks}" "delete"
    then
       fail "Can't remove \"${filename}\" as it is marked no-delete"
    fi
@@ -538,7 +538,7 @@ chickening out"
          #    at this point in time, that should have already been checked
          #    against
 
-         if nodemarks_contain_no_delete "${newmarks}"
+         if ! nodemarks_contain "${newmarks}" "delete "
          then
             case "${newnodetype}" in
                local)
@@ -561,7 +561,7 @@ As node is marked \"no-delete\" just remember it."
       else
          if [ -z "${_url}" ]
          then
-            fail "Node \"${newfilename}\" has no URL and it doesn't exist"
+            fail "Node \"${newfilename}\" has no URL and it doesn't exist ($PWD)"
          fi
 
          log_fluff "Node \"${newfilename}\" is missing, so fetch"
@@ -853,7 +853,7 @@ __update_perform_item()
             ;;
 
             *)
-               if nodemarks_contain_no_require "${_marks}"
+               if ! nodemarks_contain "${_marks}" "require"
                then
                   log_info "${C_MAGENTA}${C_BOLD}${_uuid}${C_INFO} is not required."
 
@@ -862,7 +862,7 @@ __update_perform_item()
                   return 1
                fi
 
-               fail "Don't continue with ${_url}, because a required fetch failed"
+               fail "The fetch of ${_url} failed and it is required."
             ;;
          esac
          remember="YES"
@@ -962,6 +962,52 @@ _update_perform_actions()
 }
 
 
+_memorize_nodeline_in_db()
+{
+   log_entry "_memorize_nodeline_in_db" "$@"
+
+   local config="$1"
+   local database="$2"
+   local filename="$3"
+
+   [ -z "${filename}" ] && internal_fail "Memorizing non existing file"
+
+   log_debug "${C_INFO}Remembering ${nodeline} located at \"${filename}\"..."
+
+   local evaledurl
+
+   evaledurl="`eval echo "${_url}"`"
+   nodeline="`node_to_nodeline`"
+   db_memorize "${database}" \
+               "${_uuid}" \
+               "${nodeline}" \
+               "${config}" \
+               "${filename}" \
+               "${evaledurl}"
+}
+
+
+write_fix_info()
+{
+   log_entry "write_fix_info" "$@"
+
+   local address="$1"
+   local filename="$2"
+
+   local output
+
+   # don't do this as it resolved symlinks that we might need
+   # filename="`physicalpath "${filename}" `"
+
+   [ -z "${SOURCETREE_FIX_FILE}" ] && internal_fail "SOURCETREE_FIX_FILE is empty"
+   output="`filepath_concat "${filename}" "${SOURCETREE_FIX_FILE}"`"
+
+   log_fluff "Writing fix info into \"${output}\""
+
+   redirect_exekutor "${output}" echo "${address}" || internal_fail "failed to write fixinfo \"${output}\""
+}
+
+
 update_with_nodeline()
 {
    log_entry "update_with_nodeline" "$@"
@@ -988,7 +1034,7 @@ update_with_nodeline()
 
    nodeline_parse "${nodeline}"
 
-   if nodemarks_contain_no_fs "${_marks}"
+   if ! nodemarks_contain "${_marks}" "fs"
    then
       log_fluff "\"${_address}\" is marked as no-fs, so there is nothing to update"
       return
@@ -1003,7 +1049,8 @@ update_with_nodeline()
    # the _address is what is relative to the current config (configfile)
    # the filename is an absolute path
    #
-   if [ ! -z "${_url}" -a "${style}" = "share" ] && nodemarks_contain_share "${_marks}"
+   if [ ! -z "${_url}" -a "${style}" = "share" ] && \
+      nodemarks_contain "${_marks}" "share"
    then
       filename="`db_update_determine_share_filename "${database}" \
                                                     "${_address}" \
@@ -1027,21 +1074,29 @@ update_with_nodeline()
       filename="`cfg_absolute_filename "${config}" "${_address}"`"
    fi
 
-   if nodemarks_contain_no_update "${_marks}"
+   if ! nodemarks_contain "${_marks}" "update"
    then
-      if [ -e "${filename}"  ]
+      if [ ! -e "${filename}"  ]
       then
-         log_fluff "\"${_address}\" is marked as no-update and exists"
-         return
+         if nodemarks_contain "${_marks}" "require"
+         then
+            log_fluff "\"${_address}\" is marked as no-update and doesnt exist, \
+but it is not required"
+            return
+         fi
+         fail "\"${_address}\" is missing, marked as no-update, but required"
       fi
 
-      if nodemarks_contain_no_require "${_marks}"
+      log_fluff "\"${_address}\" is marked as no-update and exists"
+      # still need to memorize this though, so it can be shared
+
+      if ! is_absolutepath "${filename}"
       then
-         log_fluff "\"${_address}\" is marked as no-update and doesnt exist, \
-but it is not required"
-         return
+         filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${filename}" `"
       fi
-      fail "\"${_address}\" is missing, marked as no-update, but required"
+
+      _memorize_nodeline_in_db "${config}" "${database}" "${filename}"
+      return
    fi
 
    #
@@ -1140,40 +1195,16 @@ nodetype        : ${nodetype}"
 
    if [ "${remember}" = "YES" ]
    then
-      # _branch could be overwritten
-
-      # don't do this as it resolved symlinks that we might need
-      # filename="`physicalpath "${filename}" `"
       if ! is_absolutepath "${filename}"
       then
          filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${filename}" `"
       fi
 
-      [ -z "${filename}" ] && internal_fail "Memorizing non existing file"
-
-      log_debug "${C_INFO}Remembering ${nodeline} located at \"${filename}\"..."
-
-      local evaledurl
-
-      evaledurl="`eval echo "${_url}"`"
-      nodeline="`node_to_nodeline`"
-      db_memorize "${database}" \
-                  "${_uuid}" \
-                  "${nodeline}" \
-                  "${config}" \
-                  "${filename}" \
-                  "${evaledurl}"
+      _memorize_nodeline_in_db "${config}" "${database}" "${filename}"
 
       if [ "${OPTION_FIX}" != "NO" ] && [ -d "${filename}" ]
       then
-         local output
-
-         [ -z "${SOURCETREE_FIX_FILE}" ] && internal_fail "SOURCETREE_FIX_FILE is empty"
-         output="`filepath_concat "${filename}" "${SOURCETREE_FIX_FILE}"`"
-
-         log_fluff "Writing fix info into \"${output}\""
-
-         redirect_exekutor "${output}" echo "${_address}"
+         write_fix_info "${_address}" "${filename}"
       fi
    else
       log_debug "Don't need to remember \"${nodeline}\" (should be unchanged)"
@@ -1246,7 +1277,7 @@ recursive_update_with_nodeline()
    local _uuid
 
    nodeline_parse "${nodeline}"
-   if nodemarks_contain_no_recurse "${_marks}"
+   if ! nodemarks_contain "${_marks}" "recurse"
    then
       return
    fi
@@ -1264,7 +1295,7 @@ recursive_update_with_nodeline()
 
    filename="`db_fetch_filename_for_uuid "${database}" "${_uuid}" `"
 
-   [ -z "${filename}" ] && internal_fail "corrupted db"
+   [ -z "${filename}" ] && internal_fail "corrupted db, better clean it"
 
    newconfig="`string_remove_prefix "${filename}" "${MULLE_VIRTUAL_ROOT}"`"
    newconfig="${newconfig}/"
@@ -1290,12 +1321,13 @@ recursive_update_with_nodeline()
 a directory"
          return
       fi
+
       # isn't this a fail ?
-      internal_fail "\"${filename}\" does not exist, so database is corrupt"
+      internal_fail "\"${filename}\" does not exist, so database \"${database}\" is corrupt"
       return
    fi
 
-   if nodemarks_contain_no_share "${_marks}"
+   if ! nodemarks_contain "${_marks}" "share"
    then
       style="no-share"
    fi

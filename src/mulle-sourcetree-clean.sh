@@ -57,7 +57,7 @@ walk_clean()
    #
    # the actual desired filename for a config file is pretty complicated though
    #
-   if nodemarks_contain_no_delete "${marks}"
+   if nodemarks_contain "${marks}" "no-delete"
    then
       log_verbose "${C_RESET_BOLD}${filename}${C_VERBOSE} is protected from delete"
       NO_DELETES="`add_line "${NO_DELETES}" "${filename}" `"

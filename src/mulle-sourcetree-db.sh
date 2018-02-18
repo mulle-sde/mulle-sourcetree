@@ -1130,11 +1130,7 @@ _db_set_default_mode()
       dbtype="${actualdbtype}"
       if [ -z "${dbtype}" ]
       then
-         dbtype="`egrep -s -v '^#' "${SOURCETREE_DEFAULT_FILE}"`"
-         if [ -z "${dbtype}" ]
-         then
-            dbtype="recurse"
-         fi
+         dbtype="recurse"
       else
          log_verbose "Database: ${C_RESET_BOLD}`filepath_concat "${PWD}" "${rootdir}"`${C_INFO} ${C_MAGENTA}${C_BOLD}${actualdbtype}${C_INFO}"
       fi
@@ -1161,6 +1157,7 @@ _db_set_default_mode()
       log_verbose "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
       if [ "${SOURCETREE_MODE}" = share ]
       then
+         [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ] && internal_fail "MULLE_SOURCETREE_SHARE_DIR is empty"
          log_verbose "Shared directory: ${C_RESET_BOLD}${MULLE_SOURCETREE_SHARE_DIR}${C_INFO}"
       fi
    fi
@@ -1438,11 +1435,12 @@ db_safe_bury_dbentry()
 
    db_forget "${database}" "${_uuid}"
 
-   if nodemarks_contain_no_delete "${_marks}"
-   then
-      log_fluff "${_url} is marked as no-delete so not burying"
-      return
-   fi
+   case "${_marks}" in
+      *no-delete|*no-delete,*)
+         log_fluff "${_url} is marked as no-delete so not burying"
+         return
+      ;;
+   esac
 
    if db_is_filename_inuse "${database}" "${filename}"
    then
