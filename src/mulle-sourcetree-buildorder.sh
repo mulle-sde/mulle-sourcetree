@@ -42,8 +42,8 @@ Usage:
 
    * ignore nodes marked as "no-build"
    * ignore nodes marked as "no-require", whose are missing
-   * ignore nodes marked as "no-${UNAME}" (platform dependent of course)
-   * include nodes marked as "only-${UNAME}, regardless of the previous
+   * ignore nodes marked as "no-os-${UNAME}" (platform dependent of course)
+   * include nodes marked as "only-os-${UNAME}, regardless of the previous
      rules
 
    In a make based project, this can be used to build everything like this:

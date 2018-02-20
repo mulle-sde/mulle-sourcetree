@@ -370,7 +370,7 @@ nodeline_printf_header()
                then
                   name="`sed -n 's/i={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
                fi
-               dash="`sed -n 's/i={[^,]*,[^,]*,\([^}]\)*}.*/\1/p' <<< "${formatstring}" `"
+               dash="`sed -n 's/i={[^,]*,[^,]*,\([^}]*\)}.*/\1/p' <<< "${formatstring}" `"
                if [ -z "${dash}" ]
                then
                   dash="------"

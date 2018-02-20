@@ -7,6 +7,8 @@
 ![Overview](mulle-sourcetree-overview.png)
 
 Organize your projects freely with multiple archives and repositories.
+It is not meant to manage individual source files.
+
 
 #### Capabilities
 
@@ -18,6 +20,7 @@ Organize your projects freely with multiple archives and repositories.
 * can walk the sourcetree with qualifiers
 * supports the repair of the sourcetree after manual filesystem changes
 * can symlink other local projects
+
 
 #### What this enables you to do
 
@@ -42,65 +45,127 @@ macos | `brew install mulle-kybernetik/software/mulle-sourcetree`
 other | ./install.sh  (Requires: [mulle-fetch](https://github.com/mulle-nat/mulle-sourcetree))
 
 
-## Sourcetree Modes
+## Sourcetree Nodes
 
-Mode       | Description
------------|---------------------------------------------
---flat     | Only the local sourcetree nodes are updated
---recurse  | Subtrees of nodes are also updated
---share    | Like recurse, but nodes with identical URLs are only fetched once
+A local sourcetree is a list of nodes. A node typically has a representation
+in the filesystem. An easy example is a node called `zlib`, that is present
+in the project as a folder called `zlib`.
+
+A node consists of a of nine different fields. The most important fields are
+
+* the address, which is its place in the project filesystem
+* the nodetype, which distinguishes between local subprojects, remote repositories, operating system libraries and the like
+* the url, which is used to identify and possibly retrieve a repository or archive for this node.
+
+A node can also be decorated with various "marks" (see below) and can carry
+a user-defined "userinfo" payload.
+
+These are the fields of a node:
+
+Field          | Required | Description
+---------------|----------|---------------------------------------------
+`address`      | YES      | name of the node and relative position in the project
+`branch`       | NO       | repository branch (git)
+`fetchoptions` | NO       | The node is not shareable with other sourcetrees
+`marks`        | NO       | marks of the node
+`nodetype`     | YES      | type of node
+`tag`          | NO       | repository tag (git)
+`url`          | NO       | URL of node. 
+`userinfo`     | NO       | userinfo of node. can be binary.  
+`uuid`         | NO       | internal node identifier. Don't touch.  
+
+
+## Sourcetree Nodetypes
+
+These are the known nodetypes. In addition to `address` and `nodetype` some
+of the other fields may be used or ignored, depending on the nodetype.
+
+Nodetype  | Url | Branch | Tag | Fetchoptions | Description
+----------|-----|--------|-----|--------------|------------------------
+`git`     | YES | YES    | YES | YES          | git repository
+`local`   | NO  | NO     | NO  | NO           | used for subprojects
+`svn`     | YES | YES    | NO  | YES          | svn repository
+`symlink` | YES | NO     | NO  | NO           | symbolic link 
+`tar`     | YES | NO     | NO  | YES          | tar archive. fetchoptions enable check shasum integrity
+`zip`     | YES | NO     | NO  | YES          | zip archive. fetchoptions enable check shasum integrity
+
 
 ## Sourcetree Marks
 
 A node of a sourcetree can have a variety of pre-defined and user-defined 
-"marks". Here are a list of known marks.
+"marks". These are a list of marks that are interpreted by mulle-sourcetree.
+By default a node has all possible marks. You can selectively remove marks.
 
-Mark             | Description
------------------|---------------------------------------------
-no-build         | Will not be built.
-no-cmake-include | This does not participate in the cmake dependency include scheme
-no-delete        | Will not be deleted in a `mulle-sourcetree clean`
-no-dependency    | This is not a dependency. (e.g. OS libraries)
-no-fs            | There is no equivalent in the project filesystem (e.g. OS libraries)
-no-header        | Will not be used for header generation (_dependencies.h)
-no-link          | Will not be linked against
-no-recurse       | A sourcetree within this node will be ignored
-no-require       | Failure to fetch this node, is not an error.
-no-set           | Protected node from modification.
-no-share         | The node is not shareable with other sourcetrees
-no-update        | The node will never be updated after an initial fetch.
+Mark       | Description
+-----------|---------------------------------------------
+`delete`   | Will be deleted in a `mulle-sourcetree clean`
+`fs`       | The node has/should have a corresponding  file or folder  
+`recurse`  | An inferior sourcetree within this node will be used
+`require`  | Failure to fetch this node is an error.
+`set`      | The node itself can be modified.
+`share`    | The node is shareable with other sourcetrees
+`update`   | The node will be updated after an initial fetch.
 
+These are some marks, that are used by mulle-sde tools:
+
+Mark              | Description
+-------- ---------|---------------------------------------------
+`build`           | Will be built.
+`cmake-include`   | Participates in the cmake dependency include scheme
+`dependency`      | This is a dependency
+`header`          | Will be used for header generation (_dependencies.h)
+`link`            | Will be linked against
+
+
+#### Sourcetree Modes
+
+Mode         | Description
+-------------|---------------------------------------------
+`--flat`     | Only the local sourcetree nodes are updated
+`--recurse`  | Subtrees of nodes are also updated
+`--share`    | Like recurse, but nodes with identical URLs are only fetched once
 
 
 ## Commands
 
-#### `add` : add dependencies with
+#### `mulle-sourcetree add` : add nodes with
 
 ```
 $ mulle-sourcetree -e add --url https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz external/expat
-$ mulle-sourcetree -e add --url https://github.com/madler/zlib.git external/zlib
 ```
 
-#### `update` : fetch and update dependencies
+You can specify your URL with environment variables, to make them more portable:
+
+```
+$ mulle-sourcetree -e add --url '${ZLIB_URL:-https://github.com/madler/zlib.git}' external/zlib
+```
+
+
+#### `mulle-sourcetree update` : fetch and update nodes
+
+After changing the sourcetree, run *update* to reflect the changes back 
+into your project:
+
+
 
 ```
 $ mulle-sourcetree -e update
 ```
 
 
-#### `list` : stay in control
+#### `mulle-sourcetree list` : stay in control
 
 See your sourcetree with **list**:
 
 ```
-$ mulle-sourcetree -e list --output-header
+$ mulle-sourcetree -e list --output-header --output-eval
 address         nodetype  marks  userinfo  url
 -------         --------  -----  --------  ---
 external/expat  tar                        https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz
 external/zlib   git                        https://github.com/madler/zlib.git
 ```
 
-#### `dotdump` : picture your sourcetree
+#### `mulle-sourcetree dotdump` : picture your sourcetree
 
 Get a graphical overview with **dotdump**:
 
@@ -112,7 +177,7 @@ open pic.dot # view it with Graphviz (http://graphviz.org/)
 ![Picture](pic.png)
 
 
-#### `buildorder` : retrieve projects to build
+#### `mulle-sourcetree buildorder` : retrieve projects to build
 
 ```
 $ mulle-sourcetree -e buildorder

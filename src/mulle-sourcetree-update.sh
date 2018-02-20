@@ -538,7 +538,7 @@ chickening out"
          #    at this point in time, that should have already been checked
          #    against
 
-         if ! nodemarks_contain "${newmarks}" "delete "
+         if ! nodemarks_contain "${newmarks}" "delete"
          then
             case "${newnodetype}" in
                local)

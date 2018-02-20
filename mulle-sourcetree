@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.5.0"
+MULLE_EXECUTABLE_VERSION="0.5.1"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -59,11 +59,13 @@ HIDDEN_COMMANDS="\
    dotdump        : create a picture of the tree or the database
    fix            : support to track user modifications in the filesystem
    get            : get a node's properties from the configuration
+   nameguess      : guess name of repository from URL
    libexec-dir    : print path to ${MULLE_EXECUTABLE_NAME} libexec
    mark           : add or remove a mark from a node in the configuration
    sourcetree-dir : print path to project (if a sourcetree exists)
    remove         : remove a node from the configuration
    reset          : clear the database, to force an update
+   typeguess      : guess type of repository from URL
    uname          : ${MULLE_EXECUTABLE_NAME}'s simplified uname(1)
    unmark         : remove marks from a node in the configuration
    version        : print ${MULLE_EXECUTABLE_NAME} version
@@ -571,6 +573,13 @@ main()
          sourcetree_mark_main "$@"
       ;;
 
+      nameguess)
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+
+         sourcetree_nameguess_main "$@"
+      ;;
+
       pwd|path)
          # shellcheck source=src/mulle-sourcetree-walk.sh
          pwd -P   # prefer physical path for our needs
@@ -609,6 +618,13 @@ main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-status.sh"
 
          sourcetree_status_main "$@"
+      ;;
+
+      typeguess)
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+
+         sourcetree_typeguess_main "$@"
       ;;
 
       uname)

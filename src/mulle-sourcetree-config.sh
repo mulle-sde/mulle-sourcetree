@@ -81,6 +81,30 @@ EOF
 }
 
 
+sourcetree_nameguess_usage()
+{
+    cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} nameguess <url>
+
+   Guess the project name of the given url.
+EOF
+  exit 1
+}
+
+
+sourcetree_typeguess_usage()
+{
+    cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} typeguess <url>
+
+   Guess the nodetype of the given url.
+EOF
+  exit 1
+}
+
+
 sourcetree_info_usage()
 {
     cat <<EOF >&2
@@ -245,32 +269,29 @@ EOF
 }
 
 
+
 #
+# returns
 #
+#   _nodetype
 #
-sourcetree_add_node()
+_sourcetree_typeguess_node()
 {
-   log_entry "sourcetree_add_node" "$@"
+   log_entry "_sourcetree_typeguess_node" "$@"
 
    local input="$1"
+   local nodetype="$2"
+   local url="$3"
 
-   local _address
-   local _branch="${OPTION_BRANCH}"
-   local _fetchoptions="${OPTION_FETCHOPTIONS}"
-   local _marks="${OPTION_MARKS}"
-   local _nodetype="${OPTION_NODETYPE}"
-   local _tag="${OPTION_TAG}"
-   local _url="${OPTION_URL}"
-   local _userinfo="${OPTION_USERINFO}"
-   local _uuid
+   _nodetype="${nodetype}"
 
    #
    # try to figure out _nodetype. At this point adre
    #
-   if [ -z "${_nodetype}" -a ! -z "${_url}" ]
+   if [ -z "${_nodetype}" -a ! -z "${url}" ]
    then
-      _nodetype="`node_guess_nodetype "${_url}"`"
-      log_fluff "Guessed \"${_nodetype}\" from \"${_url}\""
+      _nodetype="`node_guess_nodetype "${url}"`"
+      log_fluff "Guessed \"${_nodetype}\" from \"${url}\""
    fi
 
    if [ -z "${_nodetype}" -a ! -z "${input}" ]
@@ -287,7 +308,7 @@ sourcetree_add_node()
          ;;
 
          *)
-            if [ ! -z "${_url}" ]
+            if [ ! -z "${url}" ]
             then
                fail "Please specify --nodetype"
             fi
@@ -295,6 +316,27 @@ sourcetree_add_node()
          ;;
       esac
    fi
+}
+
+
+#
+# returns
+#
+#   _nodetype
+#   _address
+#   _url
+#
+_sourcetree_nameguess_node()
+{
+   log_entry "_sourcetree_nameguess_node" "$@"
+
+   local input="$1"
+   local nodetype="$2"
+   local url="$3"
+
+   _sourcetree_typeguess_node "${input}" "${nodetype}" "${url}"
+
+   _url="${url}"
 
    #
    # try to figure out if input is an _url
@@ -322,6 +364,61 @@ sourcetree_add_node()
          ;;
       esac
    fi
+}
+
+
+sourcetree_nameguess_node()
+{
+   log_entry "sourcetree_nameguess_node" "$@"
+
+   local input="$1"
+
+   local _address
+   local _url
+   local _nodetype
+
+   _sourcetree_nameguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
+
+   echo "${_address}"
+}
+
+
+sourcetree_typeguess_node()
+{
+   log_entry "sourcetree_typeguess_node" "$@"
+
+   local input="$1"
+
+   local _address
+   local _url
+   local _nodetype
+
+   _sourcetree_typeguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
+
+   echo "${_nodetype}"
+}
+
+#
+#
+#
+sourcetree_add_node()
+{
+   log_entry "sourcetree_add_node" "$@"
+
+   local input="$1"
+
+   local _address
+   local _url
+   local _nodetype
+
+   _sourcetree_nameguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
+
+   local _branch="${OPTION_BRANCH}"
+   local _fetchoptions="${OPTION_FETCHOPTIONS}"
+   local _marks="${OPTION_MARKS}"
+   local _tag="${OPTION_TAG}"
+   local _userinfo="${OPTION_USERINFO}"
+   local _uuid
 
    if [ -z "${_address}" ]
    then
@@ -420,7 +517,6 @@ sourcetree_remove_node_by_url()
 }
 
 
-
 sourcetree_change_nodeline()
 {
    log_entry "sourcetree_change_nodeline" "$@"
@@ -494,7 +590,7 @@ _sourcetree_set_node()
 
    nodeline_parse "${oldnodeline}"
 
-   if nodemarks_contain "${_marks}" "no-set"
+   if ! nodemarks_contain "${_marks}" "set"
    then
       fail "Node is marked as no-set"
    fi
@@ -1159,14 +1255,14 @@ sourcetree_common_main()
    [ -z "${SOURCETREE_CONFIG_FILE}" ] && fail "config file empty name"
 
    case "${COMMAND}" in
-      add)
+      add|nameguess|typeguess)
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
-         address="$1"
-         [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
+         argument="$1"
+         [ -z "${argument}" ] && log_error "empty argument" && ${USAGE}
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_add_node "${address}"
+         sourcetree_${COMMAND}_node "${argument}"
       ;;
 
       remove)
@@ -1254,6 +1350,26 @@ sourcetree_mark_main()
 
    USAGE="sourcetree_mark_usage"
    COMMAND="mark"
+   sourcetree_common_main "$@"
+}
+
+
+sourcetree_nameguess_main()
+{
+   log_entry "sourcetree_nameguess_main" "$@"
+
+   USAGE="sourcetree_nameguess_usage"
+   COMMAND="nameguess"
+   sourcetree_common_main "$@"
+}
+
+
+sourcetree_typeguess_main()
+{
+   log_entry "sourcetree_typeguess_main" "$@"
+
+   USAGE="sourcetree_typeguess_usage"
+   COMMAND="typeguess"
    sourcetree_common_main "$@"
 }
 
