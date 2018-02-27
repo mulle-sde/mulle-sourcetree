@@ -45,7 +45,12 @@ trap_fail()
 }
 
 
-SHOWN_COMMANDS="\
+
+print_commands()
+{
+   local  show_all="${1:-NO}"
+
+   SHOWN_COMMANDS="\
    add            : add a node to the sourcetree
    buildorder     : emit nodes that are buildable in proper dependency order
    clean          : remove files added by an update
@@ -55,7 +60,7 @@ SHOWN_COMMANDS="\
    status         : query state of the tree
    update         : update the project tree [default]"
 
-HIDDEN_COMMANDS="\
+   HIDDEN_COMMANDS="\
    dotdump        : create a picture of the sourcetree or the database
    fix            : support to track user modifications in the filesystem
    get            : get a node's properties from the sourcetree
@@ -71,10 +76,6 @@ HIDDEN_COMMANDS="\
    version        : print ${MULLE_EXECUTABLE_NAME} version
    walk           : visit all the sourcetree nodes with a callback"
 
-
-print_commands()
-{
-   local  show_all="${1:-NO}"
 
    echo "${SHOWN_COMMANDS}"
 
