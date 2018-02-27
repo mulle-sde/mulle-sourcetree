@@ -1,3 +1,8 @@
+## 0.6.0
+
+* new -if-missing option
+
+
 ## 0.5.0
 
 * Various small improvements

@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.5.1"
+MULLE_EXECUTABLE_VERSION="0.6.0"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -46,30 +46,30 @@ trap_fail()
 
 
 SHOWN_COMMANDS="\
-   add            : add a node to the configuration
+   add            : add a node to the sourcetree
    buildorder     : emit nodes that are buildable in proper dependency order
    clean          : remove files added by an update
-   info           : print current sourcetree information
-   list           : list nodes in the current configuration
-   set            : set a node's properties in the configuration
+   info           : print current sourcetree
+   list           : list nodes in the current sourcetree
+   set            : set a node's properties in the sourcetree
    status         : query state of the tree
    update         : update the project tree [default]"
 
 HIDDEN_COMMANDS="\
-   dotdump        : create a picture of the tree or the database
+   dotdump        : create a picture of the sourcetree or the database
    fix            : support to track user modifications in the filesystem
-   get            : get a node's properties from the configuration
+   get            : get a node's properties from the sourcetree
    nameguess      : guess name of repository from URL
    libexec-dir    : print path to ${MULLE_EXECUTABLE_NAME} libexec
-   mark           : add or remove a mark from a node in the configuration
+   mark           : add or remove a mark from a node in the sourcetree
    sourcetree-dir : print path to project (if a sourcetree exists)
-   remove         : remove a node from the configuration
+   remove         : remove a node from the sourcetree
    reset          : clear the database, to force an update
    typeguess      : guess type of repository from URL
    uname          : ${MULLE_EXECUTABLE_NAME}'s simplified uname(1)
-   unmark         : remove marks from a node in the configuration
+   unmark         : remove marks from a node in the sourcetree
    version        : print ${MULLE_EXECUTABLE_NAME} version
-   walk           : visit all the tree nodes with a callback"
+   walk           : visit all the sourcetree nodes with a callback"
 
 
 print_commands()
@@ -99,16 +99,23 @@ Usage:
    ${MULLE_EXECUTABLE_NAME} [flags] [command] [options]
 
    Maintain a project sourcetree composed of multiple repositories
-   and archives.
+   and archives and other things. The sourcetree is backed by a database,
+   which is created during \`update\`.
 
 Flags:
+EOF
+
+   (
+      cat <<EOF
    -e        : bypass mulle-env check
    -N        : bypass search for enclosing source tree
    --flat    : flat operation
    --recurse : recursive operation
    --share   : share operation
 EOF
-   options_technical_flags_usage
+
+      options_technical_flags_usage "     : "
+   ) | sort
 
    cat <<EOF
 

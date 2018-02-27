@@ -42,23 +42,24 @@ sourcetree_add_usage()
 Usage:
    ${MULLE_EXECUTABLE_NAME} add [options] <address|url>
 
-   You can add without specifying an URL any existing subdirectory.
-   This will create a node of nodetype "none"
+   Add a node to the sourcetree. Generally you specify the url for
+   external repositories and archives and the address for an exisiting
+   subdirectory.
 
-   When specifying a nodetype other than node, you can also add git or
-   svn repositories, be tar or zip archives.
-
-   These will be fetched and possibly unpacked on the next update.
+   Nodes with an url will be fetched and possibly unpacked on the next update.
 
    Examples:
       ${MULLE_EXECUTABLE_NAME} add ./src
       ${MULLE_EXECUTABLE_NAME} add --url https://x.com/x external/x
 
+   This command only affects the local sourcetree.
+
 Options:
    --branch <value>       : branch to use instead of the default
    --nodetype <value>     : the node type (default: local)
    --fetchoptions <value> : options for mulle-fetch --options
-   --marks <value>        : key-value sourcetree marks (e.g. build=yes)
+   --if-missing           : a duplicate node is not an error, do nothing
+   --marks <value>        : key-value sourcetree marks (e.g. no-build)
    --tag <value>          : tag to checkout
    --url <value>          : url to fetch the node from
    --userinfo <value>     : userinfo for node
@@ -75,7 +76,7 @@ Usage:
 
    Remove a nodes with the given url.
 
-   This command only reads the local config file.
+   This command only affects the local sourcetree.
 EOF
   exit 1
 }
@@ -129,7 +130,7 @@ Usage:
 
    List nodes in the sourcetree.
 
-   This command only reads the local config file.
+   This command only affects the local sourcetree.
 
 Options:
    --no-output-header     : suppress header in raw and default lists
@@ -156,7 +157,7 @@ Usage:
    Examine the nodes marks with
        \`${MULLE_EXECUTABLE_NAME} -N list\`.
 
-   This command only affects the config file.
+   This command only affects the local sourcetree.
 
 Options:
    --extended-marks : allow the use of non-predefined marks
@@ -198,6 +199,8 @@ Usage:
    Remove a negative mark from a node. A node stores only marks,
    prefixed by either "no-" or "only-". All positive marks are implicit set.
 
+   This command only affects the local sourcetree.
+
 Options:
    --extended-marks : allow the use of non-predefined marks
 
@@ -228,7 +231,7 @@ Usage:
    with the next update. You can can specify values with the options or
    parameter key value pairs, which have precedence.
 
-   This command only reads the local config file.
+   This command only affects the local sourcetree.
 
 Options:
    --branch <value>       : branch to use instead of the default (git)
@@ -263,7 +266,7 @@ Keys:
    url          :
    userinfo     :
 
-   This command only reads the local config file.
+   This command only affects the local sourcetree.
 EOF
   exit 1
 }
@@ -427,6 +430,10 @@ sourcetree_add_node()
 
    if cfg_has_duplicate "${SOURCETREE_START}" "${_address}"
    then
+      if [ "${OPTION_IF_MISSING}" = "YES" ]
+      then
+         return 0
+      fi
       fail "There is already a node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} \
 in the sourcetree"
    fi
@@ -1024,6 +1031,7 @@ sourcetree_common_main()
    ROOT_DIR="`pwd -P`"
 
    # must be empty initially for set
+
    local OPTION_URL
    local OPTION_DSTFILE
    local OPTION_BRANCH
@@ -1049,6 +1057,7 @@ sourcetree_common_main()
    local OPTION_OUTPUT_UUID="DEFAULT"
    local OPTION_OUTPUT_EVAL="NO"
    local OPTION_OUTPUT_FULL="NO"
+   local OPTION_IF_MISSING="NO"
 
    local suffix
 
@@ -1098,6 +1107,10 @@ sourcetree_common_main()
          #
          # just for add
          #
+         --if-missing)
+            OPTION_IF_MISSING="YES"
+         ;;
+
          --guess-nodetype)
             OPTION_GUESS_NODETYPE="YES"
          ;;
