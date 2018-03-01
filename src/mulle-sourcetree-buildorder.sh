@@ -36,7 +36,7 @@ sourcetree_buildorder_usage()
 {
    cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} buildorder [options]
+   ${MULLE_USAGE_NAME} buildorder [options]
 
    Print all sourcetree addresses according to the following rules:
 

@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.6.0"
+MULLE_EXECUTABLE_VERSION="0.6.1"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -65,15 +65,15 @@ print_commands()
    fix            : support to track user modifications in the filesystem
    get            : get a node's properties from the sourcetree
    nameguess      : guess name of repository from URL
-   libexec-dir    : print path to ${MULLE_EXECUTABLE_NAME} libexec
+   libexec-dir    : print path to ${MULLE_USAGE_NAME} libexec
    mark           : add or remove a mark from a node in the sourcetree
    sourcetree-dir : print path to project (if a sourcetree exists)
    remove         : remove a node from the sourcetree
    reset          : clear the database, to force an update
    typeguess      : guess type of repository from URL
-   uname          : ${MULLE_EXECUTABLE_NAME}'s simplified uname(1)
+   uname          : ${MULLE_USAGE_NAME}'s simplified uname(1)
    unmark         : remove marks from a node in the sourcetree
-   version        : print ${MULLE_EXECUTABLE_NAME} version
+   version        : print ${MULLE_USAGE_NAME} version
    walk           : visit all the sourcetree nodes with a callback"
 
 
@@ -97,7 +97,7 @@ usage()
 
    cat <<EOF
 Usage:
-   ${MULLE_EXECUTABLE_NAME} [flags] [command] [options]
+   ${MULLE_USAGE_NAME} [flags] [command] [options]
 
    Maintain a project sourcetree composed of multiple repositories
    and archives and other things. The sourcetree is backed by a database,

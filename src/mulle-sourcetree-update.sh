@@ -36,7 +36,7 @@ sourcetree_update_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} update [options]
+   ${MULLE_USAGE_NAME} update [options]
 
    Apply recent edits to the source tree. The configuration is read and
    the changes applies. This will fetch, if the destination is absent.

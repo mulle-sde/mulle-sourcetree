@@ -56,7 +56,7 @@ usage()
 
    cat <<EOF
 Usage:
-   ${MULLE_EXECUTABLE_NAME} [flags]
+   ${MULLE_USAGE_NAME} [flags]
 
    Convert a mulle-bootstrap enabled to a sourcetree project.
    This will work on files for ${UNAME} only.

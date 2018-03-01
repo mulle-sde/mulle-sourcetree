@@ -36,7 +36,7 @@ sourcetree_dotdump_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} dotdump [options]
+   ${MULLE_USAGE_NAME} dotdump [options]
 
    Produces a picture of your sourcetree by emitting .dot output.
 

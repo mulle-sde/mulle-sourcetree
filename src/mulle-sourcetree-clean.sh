@@ -36,7 +36,7 @@ sourcetree_clean_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} clean
+   ${MULLE_USAGE_NAME} clean
 
    Remove everything fetched or symlinked.
 EOF

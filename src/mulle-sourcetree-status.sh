@@ -36,7 +36,7 @@ sourcetree_status_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} status [options]
+   ${MULLE_USAGE_NAME} status [options]
 
    Emit status of your sourcetree.
 

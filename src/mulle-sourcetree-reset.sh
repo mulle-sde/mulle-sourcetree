@@ -56,14 +56,14 @@ sourcetree_reset_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} reset [options]
+   ${MULLE_USAGE_NAME} reset [options]
 
    Throw away the local database for a fresh update. A graveyard will be kept,
    unless you use the -g option.
 
    You can use the -r flag, to clean recursively:
 
-      ${MULLE_EXECUTABLE_NAME} -r reset
+      ${MULLE_USAGE_NAME} -r reset
 
 Options:
    -g   : also remove the graveyard (where old zombies are buried)

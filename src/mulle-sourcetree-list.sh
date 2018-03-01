@@ -36,7 +36,7 @@ sourcetree_list_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} list [options]
+   ${MULLE_USAGE_NAME} list [options]
 
    List nodes in the sourcetree.
 

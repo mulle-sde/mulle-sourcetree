@@ -36,7 +36,7 @@ sourcetree_walk_usage()
 {
    cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} walk [options] <shell command>
+   ${MULLE_USAGE_NAME} walk [options] <shell command>
 
    Walk over the nodes described by the config file and execute <shell command>
    for each node. The working directory will be the node (if it is a directory).

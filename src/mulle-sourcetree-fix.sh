@@ -36,7 +36,7 @@ sourcetree_fix_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} fix
+   ${MULLE_USAGE_NAME} fix
 
    Emit commands that would fix the sourcetree node, when nodes have been
    moved by the user.
