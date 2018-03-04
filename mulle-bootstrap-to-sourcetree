@@ -328,7 +328,7 @@ main()
             MULLE_FLAG_MAGNUM_FORCE="BOTH"
          ;;
 
-         -h|--help)
+         -h*|--help|help)
             usage "${MULLE_TRACE}"
          ;;
 

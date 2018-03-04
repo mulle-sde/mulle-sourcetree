@@ -33,9 +33,12 @@ MULLE_SOURCETREE_NODELINE_SH="included"
 
 
 # first field no -s
-_nodeline_get_address()
+
+__nodeline_get_address()
 {
-   cut '-d;' -f 1
+   local nodeline="$1"
+
+   _address="${nodeline%%;*}"
 }
 
 
@@ -45,66 +48,49 @@ nodeline_get_address()
 }
 
 
-nodeline_get_nodetype()
+__nodeline_get_address_nodetype()
 {
-   cut -s '-d;' -f 2 <<< "$*"
+   local nodeline="$1"
+
+   _nodetype="${nodeline#*;}"
+
+   _address="${nodeline%%;*}"
+   _nodetype="${_nodetype%%;*}"
 }
 
 
-nodeline_get_marks()
+__nodeline_get_address_nodetype_marks()
 {
-   cut '-d;' -f 3 <<< "$*"
+   local nodeline="$1"
+
+   _nodetype="${nodeline#*;}"
+   _marks="${_nodetype#*;}"
+
+   _address="${nodeline%%;*}"
+   _nodetype="${_nodetype%%;*}"
+   _marks="${_marks%%;*}"
 }
 
 
-_nodeline_get_uuid()
+__nodeline_get_address_nodetype_marks_uuid()
 {
-   cut -s '-d;' -f 4
+   local nodeline="$1"
+
+   _nodetype="${nodeline#*;}"
+   _marks="${_nodetype#*;}"
+   _uuid="${_marks#*;}"
+
+   _address="${nodeline%%;*}"
+   _nodetype="${_nodetype%%;*}"
+   _marks="${_marks%%;*}"
+   _uuid="${_uuid%%;*}"
 }
 
-
-nodeline_get_uuid()
-{
-   cut '-d;' -f 4 <<< "$*"
-}
-
-
-_nodeline_get_url()
-{
-   cut -s '-d;' -f 5
-}
 
 nodeline_get_url()
 {
    cut '-d;' -f 5 <<< "$*"
 }
-
-
-nodeline_get_branch()
-{
-   cut -s '-d;' -f 6 <<< "$*"
-}
-
-
-nodeline_get_tag()
-{
-   cut -s '-d;' -f 7 <<< "$*"
-}
-
-
-nodeline_get_fetchoptions()
-{
-   cut '-d;' -f 8 <<< "$*"
-}
-
-
-# if _userinfo was last it could contain unquoted ;
-# but who cares ?
-nodeline_get_userinfo()
-{
-   cut '-d;' -f 9 <<< "$*"
-}
-
 
 
 #
@@ -123,6 +109,34 @@ nodeline_get_userinfo()
 #   local _uuid
 #   local _userinfo
 #
+# #   This is a bit faster but not by much
+# #   _address="${nodeline%%;*}"
+# #   nodeline="${nodeline#*;}"
+# #
+# #   _nodetype="${nodeline%%;*}"
+# #   nodeline="${nodeline#*;}"
+# #
+# #   _marks="${nodeline%%;*}"
+# #   nodeline="${nodeline#*;}"
+# #
+# #   _uuid="${nodeline%%;*}"
+# #   nodeline="${nodeline#*;}"
+# #
+# #   _url="${nodeline%%;*}"
+# #   nodeline="${nodeline#*;}"
+# #
+# #   _branch="${nodeline%%;*}"
+# #   nodeline="${nodeline#*;}"
+# #
+# #   _tag="${nodeline%%;*}"
+# #   nodeline="${nodeline#*;}"
+# #
+# #   _fetchoptions="${nodeline%%;*}"
+# #   nodeline="${nodeline#*;}"
+# #
+# #   _userinfo="${nodeline%%;*}"
+# #   nodeline="${nodeline#*;}"
+
 nodeline_parse()
 {
    log_entry "nodeline_parse" "$@"
@@ -178,7 +192,6 @@ nodeline_remove()
    local addresstoremove="$2"
 
    local nodeline
-   local address
 
    set -o noglob ; IFS="
 "
@@ -192,8 +205,11 @@ nodeline_remove()
          ;;
       esac
 
-      address="`nodeline_get_address "${nodeline}"`" || internal_fail "nodeline_get_address \"${nodeline}\""
-      if [ "${address}" != "${addresstoremove}" ]
+      local _address
+
+      __nodeline_get_address "${nodeline}"
+
+      if [ "${_address}" != "${addresstoremove}" ]
       then
          echo "${nodeline}"
       fi
@@ -274,9 +290,17 @@ nodeline_has_duplicate()
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob
-      if [ "${address}" = "`nodeline_get_address "${nodeline}"`" ]
+
+      local _address
+      local _nodetype
+      local _marks
+      local _uuid
+
+      __nodeline_get_address_nodetype_marks_uuid "${nodeline}"
+
+      if [ "${address}" = "${_address}" ]
       then
-         if [ -z "${uuid}" ] || [ "${uuid}" = "`nodeline_get_uuid "${nodeline}"`" ]
+         if [ -z "${uuid}" ] || [ "${uuid}" = "${_uuid}" ]
          then
             return 0
          fi
@@ -300,6 +324,38 @@ nodeline_read_file()
 }
 
 
+__set_sep_and_formatstring()
+{
+   local mode="$1"
+
+   case "${mode}" in
+      *output_raw*|*output_column*)
+         sep=";"
+      ;;
+
+      *output_column*)
+         sep="|"
+      ;;
+   esac
+
+   if [ -z "${formatstring}" ]
+   then
+      formatstring="%a${sep}%n{sep}%m{sep}%i{sep}%u"
+      case "${mode}" in
+         *output_full*)
+            formatstring="${formatstring}{sep}%b{sep}%t{sep}%f"
+         ;;
+      esac
+
+      case "${mode}" in
+         *output_uuid*)
+            formatstring="${formatstring}{sep}%_"
+         ;;
+      esac
+      formatstring="${formatstring}\\n"
+   fi   
+}
+
 nodeline_printf_header()
 {
    log_entry "nodeline_printf_header" "$@"
@@ -316,27 +372,10 @@ nodeline_printf_header()
       ;;
    esac
 
-   sep=";"
-   case "${mode}" in
-      *output_column*)
-         sep="|"
-      ;;
-   esac
+   local sep
 
-   if [ -z "${formatstring}" ]
-   then
-      formatstring="anmiu"
-      case "${mode}" in
-         *output_full*)
-            formatstring="${formatstring}btf"
-         ;;
-      esac
-      case "${mode}" in
-         *output_uuid*)
-            formatstring="${formatstring}_"
-         ;;
-      esac
-   fi
+   __set_sep_and_formatstring "${mode}"
+
 
    local h_line
    local s_line
@@ -346,84 +385,135 @@ nodeline_printf_header()
 
    while [ ! -z "${formatstring}" ]
    do
-      case "${formatstring:0:1}" in
-         a)
+      case "${formatstring}" in
+         %a*)
             name="address"
             dash="-------"
          ;;
 
-         b)
+         %b*)
             name="branch"
             dash="------"
          ;;
 
-         f)
+         %f*)
             name="fetchoptions"
             dash="------------"
          ;;
 
-         i)
-            if [ "${formatstring:1:1}" = "=" ]
+         %i*)
+            if [ "${formatstring:2:1}" = "=" ]
             then
-               name="`sed -n 's/i={[^,]*,\([^,]*\)[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+               name="`sed -n 's/%i={[^,]*,\([^,]*\)[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
                if [ -z "${name}" ]
                then
-                  name="`sed -n 's/i={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+                  name="`sed -n 's/%i={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
                fi
-               dash="`sed -n 's/i={[^,]*,[^,]*,\([^}]*\)}.*/\1/p' <<< "${formatstring}" `"
+               dash="`sed -n 's/%i={[^,]*,[^,]*,\([^}]*\)}.*/\1/p' <<< "${formatstring}" `"
                if [ -z "${dash}" ]
                then
                   dash="------"
                fi
                # skip over format string
-               formatstring="`sed 's/i={[^,]*,[^,]*[,]*[^}]*}\(.*\)/i\1/' <<< "${formatstring}" `"
+               formatstring="`sed 's/%i={[^,]*,[^,]*[,]*[^}]*}\(.*\)}/\1/' <<< "${formatstring}" `"
+               formatstring="%i${formatstring}"
             else
                name="userinfo"
                dash="--------"
             fi
          ;;
 
-         m)
+         %m*)
             name="marks"
             dash="-----"
          ;;
 
-         n)
+         %n*)
             name="nodetype"
             dash="--------"
          ;;
 
-         t)
+         %t*)
             name="tag"
             dash="---"
          ;;
 
-         u)
+         %u*)
             name="url"
             dash="---"
          ;;
 
-         _)
+         %_*)
             name="uuid"
             dash="----"
          ;;
 
-         *)
+         %*)
             fail "unknown format character \"${formatstring:1:1}\""
          ;;
+
+         \\n)
+            case "${mode}" in
+               *output_column*|*output_raw*|*output_cmd*)
+               ;;
+
+               *)
+               name="
+"
+               dash="
+"
+               ;;
+            esac
+         ;;
+
+         *)
+            # extra chars are only used in default mode
+            # otherwise ignored
+            case "${mode}" in
+               *output_column*|*output_raw*|*output_cmd*)
+               ;;
+
+               *)
+                  h_line="${h_line}${formatstring:0:1}"
+                  s_line="${s_line}${formatstring:0:1}"
+               ;;
+            esac
+            formatstring="${formatstring:1}"
+            continue
+         ;; 
       esac
 
-      h_line="`concat "${h_line}" "${name}" "${sep}" `"
-      s_line="`concat "${s_line}" "${dash}" "${sep}" `"
+      if [ -z "${sep}" ]
+      then
+         h_line="${h_line}${name}"
+         s_line="${s_line}${dash}"
+      else
+         h_line="`concat "${h_line}" "${name}" "${sep}"`"
+         s_line="`concat "${s_line}" "${dash}" "${sep}"`"
+      fi
 
-      formatstring="${formatstring:1}"
+      formatstring="${formatstring:2}"
    done
 
-   echo "${h_line}"
-
    case "${mode}" in
-      *output_separator*)
-         echo "${s_line}"
+      *output_column*|*output_raw*|*output_cmd*)
+         echo "${h_line}"
+
+         case "${mode}" in
+            *output_separator*)
+               echo "${s_line}"
+            ;;
+         esac
+      ;;
+
+      *)
+         printf "%s" "${h_line}"
+
+         case "${mode}" in
+            *output_separator*)
+               printf "%s" "${s_line}"
+            ;;
+         esac
       ;;
    esac
 }
@@ -460,67 +550,52 @@ nodeline_printf()
 
    local sep
 
-   sep=";"
-   case "${mode}" in
-      *output_column*)
-         sep="|"
-      ;;
-   esac
-
-   if [ -z "${formatstring}" ]
-   then
-      formatstring="anmiu"
-      case "${mode}" in
-         *output_full*)
-            formatstring="${formatstring}btf"
-         ;;
-      esac
-      case "${mode}" in
-         *output_uuid*)
-            formatstring="${formatstring}_"
-         ;;
-      esac
-   fi
+   __set_sep_and_formatstring "${mode}"
 
    local line
    local cmd_line
 
    cmd_line="${MULLE_EXECUTABLE_NAME} -N add"
 
+   local guess
+
+   guess=
+   case "${formatstring}" in
+      *%m*)
+         case "${mode}" in
+            *output_cmd*)
+               if [ ! -z "${_url}" ]
+               then
+                  guess="`node_guess_nodetype "${_url}"`"
+               fi
+            ;;
+         esac
+      ;;
+   esac
+
    while [ ! -z "${formatstring}" ]
    do
-      local guess
       local value
       local switch
 
-      guess=
-      case "${mode}" in
-         *output_cmd*)
-            if [ ! -z "${_url}" ]
-            then
-               guess="`node_guess_nodetype "${_url}"`"
-            fi
-         ;;
-      esac
-
-      case "${formatstring:0:1}" in
-         a)
+      case "${formatstring}" in
+         %a*)
             switch=""
             value="${_address}"
          ;;
 
-         b)
+         %b*)
             switch="--branch"
             value="${_branch}"
          ;;
 
-         f)
+         %f*)
             switch="--fetchoptions"
             value="${_fetchoptions}"
          ;;
 
-         i)
-            if [ "${formatstring:1:1}" = "=" ]
+         %i*)
+            if [ "${formatstring:2:1}" = "=" ]
             then
                if [ -z "${MULLE_ARRAY_SH}" ]
                then
@@ -528,7 +603,7 @@ nodeline_printf()
                      internal_fail "Could not load mulle-array.sh via \"${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}\""
                fi
                switch=""
-               key="`sed -n 's/i={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+               key="`sed -n 's/%i={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
                if [ -z "${key}" ]
                then
                   fail "malformed formatstring \"${formatstring:1}\". Need ={<title>,<dashes>,<key>}"
@@ -536,20 +611,20 @@ nodeline_printf()
                value="`assoc_array_get "${_userinfo}" "${key}" `"
 
                # skip over format string
-               formatstring="`sed 's/i={[^,]*[,]*[^,]*[,]*[^}]*}\(.*\)/i\1/' <<< "${formatstring}" `"
+               formatstring="`sed 's/%i={[^,]*[,]*[^,]*[,]*[^}]*}\(.*\)}/i\1/' <<< "${formatstring}" `"
+               formatstring="%i${formatstring}"
             else
                switch="--userinfo"
                value="${_userinfo}"
             fi
-
          ;;
 
-         m)
+         %m*)
             switch="--marks"
             value="${_marks}"
          ;;
 
-         n)
+         %n*)
             switch="--nodetype"
             value="${_nodetype}"
 
@@ -559,25 +634,48 @@ nodeline_printf()
             fi
          ;;
 
-         t)
+         %t*)
             switch="--tag"
             value="${_tag}"
          ;;
 
-         u)
+         %u*)
             switch="--url"
             value="${_url}"
          ;;
 
-         _)
+         %_*)
             switch=""
             value="${_uuid}"
          ;;
 
-         *)
-            fail "unknown format character \"${formatstring:1:1}\""
+         %*)
+            fail "unknown format character \"${formatstring:0:2}\""
          ;;
+
+         \\n)
+            switch=""
+            value="
+"
+         ;;
+
+         *)
+            # extra chars are only used in default mode
+            # otherwise ignored
+            case "${mode}" in
+               *output_column*|*output_raw*|*output_cmd*)
+               ;;
+
+               *)
+                  line="${line}${formatstring:0:1}"
+               ;;
+            esac
+            formatstring="${formatstring:1}"
+            continue
+         ;; 
       esac
+
+      formatstring="${formatstring:2}"
 
       case "${mode}" in
          *output_column*)
@@ -598,7 +696,7 @@ nodeline_printf()
          ;;
 
          *)
-            line="`concat "${line}" "${value}" "${sep}" `"
+            line="${line}${value}"
          ;;
       esac
 
@@ -606,8 +704,6 @@ nodeline_printf()
       then
          cmd_line="`concat "${cmd_line}" "${switch} '${value}'"`"
       fi
-
-      formatstring="${formatstring:1}"
    done
 
    case "${mode}" in
@@ -615,12 +711,12 @@ nodeline_printf()
          echo "${cmd_line}" "'${_address}'"
       ;;
 
-      *output_raw*)
-         sed 's/;$//g' <<< "${line}"
+      *output_column*|*output_raw*)
+        echo "${line}" | sed 's/;$//g' 
       ;;
 
       *)
-         echo "${line}"
+         printf "%s" "${line}"
       ;;
    esac
 }

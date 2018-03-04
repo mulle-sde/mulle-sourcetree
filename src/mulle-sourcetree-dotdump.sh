@@ -700,7 +700,7 @@ sourcetree_dotdump_main()
    while [ $# -ne 0 ]
    do
       case "$1" in
-         -h|-help|--help)
+         -h*|--help|help)
             sourcetree_dotdump_usage
          ;;
 

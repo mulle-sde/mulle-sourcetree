@@ -88,8 +88,8 @@ node_guess_nodetype()
 
       *)
          result="`${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} typeguess "${evaledurl}"`"
-         log_fluff "${MULLE_FETCH:-mulle-fetch} determined \"${result}\" as _nodetype from \
-url ($evaledurl)"
+         log_fluff "${MULLE_FETCH:-mulle-fetch} determined \"${result}\" as \
+nodetype from url ($evaledurl)"
          echo "${result}"
       ;;
    esac
@@ -128,17 +128,17 @@ node_fetch_operation()
 {
    log_entry "node_fetch_operation" "$@"
 
-   local opname="$1"; shift
-   local options="$1"; shift
+   local opname="$1"
+   local options="$2"
 
    [ -z "${opname}" ] && internal_fail "opname is empty"
 
-   local url="$1"; shift
-   local address="$1"; shift
-   local branch="$1"; shift
-   local tag="$1"; shift
-   local nodetype="$1"; shift
-   local fetchoptions="$1"; shift
+   local url="$3"
+   local address="$4"
+   local branch="$5"
+   local tag="$6"
+   local nodetype="$7"
+   local fetchoptions="$8"
 
    [ -z "${url}" ] && fail "URL is empty"
 
@@ -149,14 +149,16 @@ node_fetch_operation()
    local evaledfetchoptions
 
    evaledurl="`eval echo "${url}"`"
-   [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
    evaledtag="`eval echo "${tag}"`"
    evaledbranch="`eval echo "${branch}"`"
    evaledfetchoptions="`eval echo "${_fetchoptions}"`"
 
+   [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
+
    log_info "Looking for local source of ${C_RESET_BOLD}${evaledurl}${C_INFO}"
 
    local localurl
+   local localnodetype
 
    localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} "search-local" --scm "'${nodetype}'" \
                                                             --tag "'${evaledtag}'" \
@@ -167,6 +169,14 @@ node_fetch_operation()
    if [ ! -z "${localurl}" ]
    then
       evaledurl="${localurl}"
+      log_verbose "Local URL found \"${localurl}\""
+      localnodetype="`node_guess_nodetype "${localurl}"`"
+      if [ ! -z "${localnodetype}" ]
+      then
+         nodetype="${localnodetype}"
+      fi
+   else
+      log_fluff "No local URL found"
    fi
 
    log_info "Fetching ${C_MAGENTA}${C_BOLD}${address}${C_INFO} from \
@@ -188,7 +198,7 @@ node_list_operations()
 
    local nodetype="$1"
 
-   ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} operations -s "${nodetype}"
+   ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} operation -s "${nodetype}" list
 }
 
 #
@@ -277,8 +287,6 @@ node_augment()
 
    :
 }
-
-
 
 
 #
@@ -448,10 +456,17 @@ nodemarks_filter_with_qualifier()
    local none
    local override
 
-   all="$(cut -d';' -f 1 <<< "${qualifier}")"
-   one="$(cut -s -d';' -f 2 <<< "${qualifier}")"
-   none="$(cut -s -d';' -f 3 <<< "${qualifier}")"
-   override="$(cut -s -d';' -f 4 <<< "${qualifier}")"
+   all="${qualifier%%;*}"
+   qualifier="${qualifier#*;}"
+
+   one="${qualifier%%;*}"
+   qualifier="${qualifier#*;}"
+
+   none="${qualifier%%;*}"
+   qualifier="${qualifier#*;}"
+
+   override="${qualifier%%;*}"
+   qualifier="${qualifier#*;}"
 
    local i
 

@@ -59,7 +59,6 @@ EOF
 }
 
 
-
 _sourcetree_banner()
 {
    log_entry "_sourcetree_banner" "$@"
@@ -207,21 +206,21 @@ _sourcetree_contents()
          continue
       fi
 
-      local nodetype
-      local marks
+      local _address
+      local _nodetype
+      local _marks
 
-      nodetype="`nodeline_get_nodetype "${nodeline}" `"
+      __nodeline_get_address_nodetype_marks "${nodeline}"
 
-      if ! nodetype_filter_with_allowable_nodetypes "${nodetype}" "${filternodetypes}"
+      if ! nodetype_filter_with_allowable_nodetypes "${_nodetype}" "${filternodetypes}"
       then
-         log_fluff "Node \"${nodeline}\": \"${nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
+         log_fluff "Node \"${nodeline}\": \"${_nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
          continue
       fi
 
-      marks="`nodeline_get_marks "${nodeline}" `"
-      if ! nodemarks_filter_with_qualifier "${marks}" "${filtermarks}"
+      if ! nodemarks_filter_with_qualifier "${_marks}" "${filtermarks}"
       then
-         log_fluff "Node \"${nodeline}\": \"${marks}\" doesn't jive with marks \"${filtermarks}\""
+         log_fluff "Node \"${nodeline}\": \"${_marks}\" doesn't jive with marks \"${filtermarks}\""
          continue
       fi
 
@@ -407,7 +406,7 @@ sourcetree_list_main()
    while [ $# -ne 0 ]
    do
       case "$1" in
-         -h|-help|--help)
+         -h*|--help|help)
             sourcetree_list_usage
          ;;
 

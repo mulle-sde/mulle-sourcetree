@@ -1,3 +1,7 @@
+### 0.6.2
+
+* * don't produce .bak files anymore
+
 ## 0.6.0
 
 * new -if-missing option

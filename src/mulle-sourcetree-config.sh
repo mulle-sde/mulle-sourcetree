@@ -401,6 +401,65 @@ sourcetree_typeguess_node()
    echo "${_nodetype}"
 }
 
+
+_assert_sane_mark()
+{
+   log_entry "_assert_sane_mark" "$@"
+
+   local mark="$1"
+
+   case "${mark}" in
+      "")
+         fail "mark is empty"
+      ;;
+
+      *[^a-z-]*)
+         fail "mark \"${mark}\" may only contain lowercase letters and hyphens"
+      ;;
+
+      no-*|only-*)
+      ;;
+
+      *)
+         fail "mark \"${mark}\" must start with \"no-\" or \"only-\""
+      ;;
+   esac
+}
+
+
+_sanitized_marks()
+{
+   log_entry "_sanitized_marks" "$@"
+
+   local marks="$1"
+
+   local mark
+   local result
+
+   IFS=","; set -o noglob
+   for mark in ${marks}
+   do
+      IFS="${DEFAULT_IFS}"; set +o noglob
+      case "${mark}" in
+         "")
+            continue
+         ;;
+
+         *[^a-z-]*)
+            fail "mark \"${mark}\" may only contain lowercase letters and hyphens"
+         ;;
+
+         no-*|only-*)
+            result="`comma_concat "${result}" "${mark}"`"
+         ;;
+      esac
+   done
+   IFS="${DEFAULT_IFS}"; set +o noglob
+
+   echo "${result}"
+}
+
+
 #
 #
 #
@@ -438,12 +497,14 @@ sourcetree_add_node()
 in the sourcetree"
    fi
 
+   _marks="`_sanitized_marks "${_marks}"`" || exit 1
+
    if [ -z "${_url}" ]
    then
       if ! [ -e "${_address}" ]
       then
-         case "${marks}" in
-            *no-fs*)
+         case "${_marks}" in
+            no-fs|no-fs,*|*,no-fs,*|*,no-fs)
             ;;
 
             *)
@@ -494,7 +555,7 @@ sourcetree_remove_node()
 
    local oldnodeline
 
-   if ! cfg_get_nodeline "${SOURCETREE_START}" "${address}"
+   if ! cfg_get_nodeline "${SOURCETREE_START}" "${address}" > /dev/null
    then
       log_warning "A node \"${address}\" does not exist"
       return 2  # also return non 0 , but lets's not be dramatic about it
@@ -513,7 +574,7 @@ sourcetree_remove_node_by_url()
 
    local oldnodeline
 
-   if ! cfg_get_nodeline_by_url "${SOURCETREE_START}" "${url}"
+   if ! cfg_get_nodeline_by_url "${SOURCETREE_START}" "${url}" > /dev/null
    then
       log_warning "A node with URL \"${url}\" does not exist"
       return 2  # also return non 0 , but lets's not be dramatic about it
@@ -557,7 +618,7 @@ _unfailing_get_nodeline()
 {
    local address="$1"
 
-   if ! cfg_get_nodeline "${SOURCETREE_START}" "${address}"
+   if ! cfg_get_nodeline "${SOURCETREE_START}" "${address}" 
    then
       fail "A node \"${address}\" does not exist (${MULLE_VIRTUAL_ROOT}${SOURCETREE_START})"
    fi
@@ -568,7 +629,7 @@ _unfailing_get_nodeline_by_url()
 {
    local url="$1"
 
-   if ! cfg_get_nodeline_by_url "${SOURCETREE_START}" "${url}"
+   if ! cfg_get_nodeline_by_url "${SOURCETREE_START}" "${url}"  
    then
       fail "A node \"${url}\" does not exist (${MULLE_VIRTUAL_ROOT}${SOURCETREE_START})"
    fi
@@ -614,6 +675,8 @@ _sourcetree_set_node()
    _url="${OPTION_URL:-${_url}}"
    _tag="${OPTION_TAG:-${_tag}}"
    _userinfo="${OPTION_USERINFO:-${_userinfo}}"
+
+   _marks="`_sanitized_marks "${_marks}"`" || exit 1
 
    local key
    local value
@@ -759,6 +822,7 @@ no-delete
 no-fs
 no-header
 no-include
+no-link
 no-recurse
 no-require
 no-set
@@ -772,28 +836,13 @@ _sourcetree_add_mark_known_absent()
 
    local mark="$1"
 
-   case "${mark}" in
-      "")
-         fail "mark is empty"
-      ;;
-
-      no-*|only-*)
-         if egrep -q -s '[^a-z-]' <<< "${mark}"
-         then
-            fail "mark must contain only lowercase letters and hyphens"
-         fi
-      ;;
-
-      *)
-         fail "mark must start with \"no-\" or \"only-\""
-      ;;
-   esac
+   _assert_sane_mark "${mark}"
 
    if [ "${OPTION_EXTENDED_MARKS}" != "YES" ]
    then
       if ! fgrep -x -q "${mark}" <<< "${KNOWN_MARKS}"
       then
-         fail "mark \"${mark}\" is unknown"
+         fail "mark \"${mark}\" is unknown. If this is not a type use --extended"
       fi
    fi
 
@@ -814,34 +863,17 @@ _sourcetree_remove_mark_known_present()
 
    local operation
 
-   operation="nodemarks_remove_`tr '-' '_' <<< "${mark}"`"
-   if [ "`type -t "${operation}"`" = "function" ]
+   _assert_sane_mark "${mark}"
+
+   if [ "${OPTION_EXTENDED_MARKS}" != "YES" ]
    then
-      _marks="`${operation} "${_marks}"`"
-   else
-      if [ "${OPTION_EXTENDED_MARKS}" != "YES" ]
+      if ! fgrep -x -q "${mark}" <<< "${KNOWN_MARKS}"
       then
-         fail "mark \"${mark}\" is unknown"
+         fail "mark \"${mark}\" is unknown. If this is not a type use --extended"
       fi
-
-      case "${mark}" in
-         "")
-            fail "mark is empty"
-         ;;
-
-         no-*|only-*)
-            if egrep -q -s '[^a-z-]' <<< "${mark}"
-            then
-               fail "mark must contain only lowercase letters and hyphens"
-            fi
-         ;;
-
-         *)
-            fail "mark must start with \"no-\" or \"only-\""
-         ;;
-      esac
-      _marks="`nodemarks_remove "${_marks}" "${mark}" `"
    fi
+
+   _marks="`nodemarks_remove "${_marks}" "${mark}" `"
 
    local newnodeline
 
@@ -1064,7 +1096,7 @@ sourcetree_common_main()
    while [ $# -ne 0 ]
    do
       case "$1" in
-         -h|-help|--help)
+         -h*|--help|help)
             ${USAGE}
          ;;
 

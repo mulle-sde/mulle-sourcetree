@@ -272,7 +272,7 @@ cfg_remove_nodeline()
    log_debug "Removing \"${address}\" from  \"${configfile}\""
    escaped="`escaped_sed_pattern "${address}"`"
    # linux don't like space after -i
-   if ! exekutor sed -i'.bak' -e "/^${escaped};/d" "${configfile}"
+   if ! inplace_sed -e "/^${escaped};/d" "${configfile}"
    then
       internal_fail "sed address corrupt ?"
    fi
@@ -294,7 +294,7 @@ cfg_remove_nodeline_by_url()
    log_debug "Removing \"${url}\" from \"${configfile}\""
    escaped="`escaped_sed_pattern "${url}"`"
    # linux don't like space after -i
-   if ! exekutor sed -i'.bak' -e "/^[^;]*;[^;]*[^;]*[^;]*${escaped};/d" "${configfile}"
+   if ! inplace_sed -e "/^[^;]*;[^;]*[^;]*[^;]*${escaped};/d" "${configfile}"
    then
       internal_fail "sed address corrupt ?"
    fi
@@ -336,7 +336,7 @@ cfg_change_nodeline()
    log_debug "Editing \"${SOURCETREE_CONFIG_FILE}\""
 
    # linux don't like space after -i
-   if ! exekutor sed -i'.bak' -e "s/^${oldescaped}$/${newescaped}/" "${configfile}"
+   if ! inplace_sed -e "s/^${oldescaped}$/${newescaped}/" "${configfile}"
    then
       fail "Edit of config file failed unexpectedly"
    fi

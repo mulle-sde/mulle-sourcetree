@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.6.1"
+MULLE_EXECUTABLE_VERSION="0.6.2"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -381,7 +381,7 @@ main()
             MULLE_FLAG_MAGNUM_FORCE="BOTH"
          ;;
 
-         -h|--help)
+         -h*|--help|help)
             usage "${MULLE_TRACE}"
          ;;
 
@@ -550,10 +550,6 @@ main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
 
          sourcetree_get_main "$@"
-      ;;
-
-      help)
-         usage "${MULLE_TRACE}"
       ;;
 
       info)

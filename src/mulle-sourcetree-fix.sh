@@ -291,7 +291,7 @@ sourcetree_fix_main()
    while [ $# -ne 0 ]
    do
       case "$1" in
-         -h|-help|--help)
+         -h*|--help|help)
             sourcetree_fix_usage
          ;;
 

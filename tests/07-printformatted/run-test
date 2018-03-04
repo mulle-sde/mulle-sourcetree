@@ -8,7 +8,7 @@ run_test_1()
    local printed
    local expected
 
-   printed="`nodeline_printf_header "output_header" "btfiu_mna" `"
+   printed="`nodeline_printf_header "output_header" "%b;%t;%f;%i;%u;%_;%m;%n;%a" `"
    expected="branch;tag;fetchoptions;userinfo;url;uuid;marks;nodetype;address"
 
    [ "${expected}" = "${printed}" ]     || \
@@ -25,7 +25,7 @@ run_test_2()
    local printed
    local expected
 
-   printed="`nodeline_printf "${nodeline}" "" "btfiu_mna" `"
+   printed="`nodeline_printf "${nodeline}" "" "%b;%t;%f;%i;%u;%_;%m;%n;%a" `"
    expected="branch;tag;fetchoptions;userinfo;url;uuid;marks;nodetype;address"
 
    [ "${expected}" = "${printed}" ]     || \
@@ -53,7 +53,7 @@ main()
 
 init()
 {
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env library-path`" || exit 1
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
 
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
 
