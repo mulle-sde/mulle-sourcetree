@@ -108,10 +108,10 @@ Mark       | Description
 
 These are some marks, that are used by mulle-sde tools:
 
+
 Mark              | Description
 -------- ---------|---------------------------------------------
 `build`           | Will be built.
-`cmake-include`   | Participates in the cmake dependency include scheme
 `dependency`      | This is a dependency
 `header`          | Will be used for header generation (_dependencies.h)
 `link`            | Will be linked against
