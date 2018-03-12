@@ -329,7 +329,7 @@ __set_sep_and_formatstring()
    local mode="$1"
 
    case "${mode}" in
-      *output_raw*|*output_column*)
+      *output_raw*)
          sep=";"
       ;;
 
@@ -353,7 +353,7 @@ __set_sep_and_formatstring()
          ;;
       esac
       formatstring="${formatstring}\\n"
-   fi   
+   fi
 }
 
 nodeline_printf_header()
@@ -427,7 +427,7 @@ nodeline_printf_header()
                   dash="------"
                fi
                # skip over format string
-               formatstring="`sed 's/%i={[^,]*,[^,]*[,]*[^}]*}\(.*\)}/\1/' <<< "${formatstring}" `"
+               formatstring="`sed 's/%i={[^}]*}//' <<< "${formatstring}" `"
                formatstring="%i${formatstring}"
             else
                name="userinfo"
@@ -504,7 +504,7 @@ nodeline_printf_header()
             esac
             formatstring="${formatstring:1}"
             continue
-         ;; 
+         ;;
       esac
 
       if [ -z "${sep}" ]
@@ -647,7 +647,7 @@ nodeline_printf()
                value="`assoc_array_get "${_userinfo}" "${key}" `"
 
                # skip over format string
-               formatstring="`sed 's/%i={[^,]*[,]*[^,]*[,]*[^}]*}\(.*\)}/i\1/' <<< "${formatstring}" `"
+               formatstring="`sed 's/^%i={[^}]*}//' <<< "${formatstring}" `"
                formatstring="%i${formatstring}"
             else
                switch="--userinfo"
@@ -721,7 +721,7 @@ nodeline_printf()
             esac
             formatstring="${formatstring:1}"
             continue
-         ;; 
+         ;;
       esac
 
       formatstring="${formatstring:2}"
@@ -761,7 +761,7 @@ nodeline_printf()
       ;;
 
       *output_column*|*output_raw*)
-        echo "${line}" | sed 's/;$//g' 
+        echo "${line}" | sed 's/;$//g'
       ;;
 
       *)

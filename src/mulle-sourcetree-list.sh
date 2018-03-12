@@ -258,7 +258,7 @@ _list_nodes()
 
    case "${mode}" in
       *output_column*)
-         _sourcetree_contents "$@" | column -t -s '|'
+         _sourcetree_contents "$@" | exekutor column -t -s '|'
          return $?
       ;;
    esac

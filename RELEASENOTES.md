@@ -1,3 +1,7 @@
+### 0.7.1
+
+* fix listing bug
+
 ## 0.7.0
 
 * change format to use % like other tools
