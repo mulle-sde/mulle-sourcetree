@@ -1560,6 +1560,7 @@ db_update_determine_share_filename()
    local url="$3"
    local nodetype="$4"
    local marks="$5"
+   local uuid="$6"
 
    local filename
    local evaledurl
@@ -1578,10 +1579,19 @@ db_update_determine_share_filename()
    otheruuid="`db_fetch_uuid_for_evaledurl "/" "${evaledurl}"`"
    if [ ! -z "${otheruuid}" ]
    then
-      log_fluff "The \"${url}\" is already used in root. So skip it."
-      return 2
-   fi
+      if [ "${otheruuid}" = "${uuid}" ]
+      then
+         [ "${database}" != "/" ] && internal_fail "unexpected not root ($database)"
 
+         # ok 
+      else
+         log_debug "uuid     : ${uuid}"
+         log_debug "otheruuid: ${otheruuid}"
+         [ "${database}" = "/" ] && internal_fail "unexpected root"
+         log_fluff "The \"${url}\" is already used in root. So skip it."
+         return 2
+      fi
+   fi
    log_debug "Use root database for share node \"${address}\""
 
    #

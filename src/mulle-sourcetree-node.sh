@@ -271,6 +271,8 @@ node_augment()
       log_trace2 "USERINFO:     \"${_userinfo}\""
    fi
 
+   _marks="`nodemarks_sort "${_marks}"`"
+
    # this is done  during auto already
    # case "${_address}" in
    #    ..*|~*|/*)

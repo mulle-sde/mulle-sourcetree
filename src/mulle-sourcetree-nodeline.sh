@@ -391,9 +391,21 @@ nodeline_printf_header()
             dash="-------"
          ;;
 
+         %b!*)
+            name="branch"
+            dash="------"
+            formatstring="${formatstring:1}"
+         ;;
+
          %b*)
             name="branch"
             dash="------"
+         ;;
+
+         %f!*)
+            name="fetchoptions"
+            dash="------------"
+            formatstring="${formatstring:1}"
          ;;
 
          %f*)
@@ -433,9 +445,21 @@ nodeline_printf_header()
             dash="--------"
          ;;
 
+         %t!*)
+            name="tag"
+            dash="---"
+            formatstring="${formatstring:1}"
+         ;;
+
          %t*)
             name="tag"
             dash="---"
+         ;;
+
+         %u!*)
+            name="url"
+            dash="---"
+            formatstring="${formatstring:1}"
          ;;
 
          %u*)
@@ -584,9 +608,21 @@ nodeline_printf()
             value="${_address}"
          ;;
 
+         %b!*)
+            switch="--branch"
+            value="`eval echo "${_branch}"`"
+            formatstring="${formatstring:1}"
+         ;;
+
          %b*)
             switch="--branch"
             value="${_branch}"
+         ;;
+
+         %f!*)
+            switch="--fetchoptions"
+            value="`eval echo "${_fetchoptions}"`"
+            formatstring="${formatstring:1}"
          ;;
 
          %f*)
@@ -634,15 +670,28 @@ nodeline_printf()
             fi
          ;;
 
+         %t!*)
+            switch="--tag"
+            value="`eval echo "${_tag}"`"
+            formatstring="${formatstring:1}"
+         ;;
+
          %t*)
             switch="--tag"
             value="${_tag}"
+         ;;
+
+         %u!*)
+            switch="--url"
+            value="`eval echo "${_url}"`"
+            formatstring="${formatstring:1}"
          ;;
 
          %u*)
             switch="--url"
             value="${_url}"
          ;;
+
 
          %_*)
             switch=""

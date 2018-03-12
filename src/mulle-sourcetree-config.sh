@@ -189,7 +189,6 @@ EOF
 }
 
 
-
 sourcetree_unmark_usage()
 {
    cat <<EOF >&2
@@ -270,7 +269,6 @@ Keys:
 EOF
   exit 1
 }
-
 
 
 #
@@ -539,11 +537,14 @@ in the sourcetree"
    local nodeline
    local appended
 
+   log_info "Adding node ${C_MAGENTA}${C_BOLD}${_address}"
+
    contents="`egrep -s -v '^#' "${SOURCETREE_CONFIG_FILE}"`"
    nodeline="`node_to_nodeline`"
    appended="`add_line "${contents}" "${nodeline}"`"
 
    cfg_write "${SOURCETREE_START}" "${appended}"
+
 }
 
 
@@ -618,7 +619,7 @@ _unfailing_get_nodeline()
 {
    local address="$1"
 
-   if ! cfg_get_nodeline "${SOURCETREE_START}" "${address}" 
+   if ! cfg_get_nodeline "${SOURCETREE_START}" "${address}"
    then
       fail "A node \"${address}\" does not exist (${MULLE_VIRTUAL_ROOT}${SOURCETREE_START})"
    fi
@@ -629,7 +630,7 @@ _unfailing_get_nodeline_by_url()
 {
    local url="$1"
 
-   if ! cfg_get_nodeline_by_url "${SOURCETREE_START}" "${url}"  
+   if ! cfg_get_nodeline_by_url "${SOURCETREE_START}" "${url}"
    then
       fail "A node \"${url}\" does not exist (${MULLE_VIRTUAL_ROOT}${SOURCETREE_START})"
    fi

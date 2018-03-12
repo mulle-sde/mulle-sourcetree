@@ -153,7 +153,6 @@ run_test()
    run_mulle_sourcetree status
 
    log_verbose "----- #5 PASSED -----"
-
 }
 
 

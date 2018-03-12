@@ -1056,7 +1056,8 @@ update_with_nodeline()
                                                     "${_address}" \
                                                     "${_url}" \
                                                     "${_nodetype}" \
-                                                    "${_marks}" `"
+                                                    "${_marks}" \
+                                                    "${_uuid}" `"
       case $? in
          0)
          ;;

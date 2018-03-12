@@ -1,6 +1,13 @@
+## 0.7.0
+
+* change format to use % like other tools
+* nodemarks are now always stored sorted
+* don't produce .bak files anymore
+
+
 ### 0.6.2
 
-* * don't produce .bak files anymore
+* don't produce .bak files anymore
 
 ## 0.6.0
 

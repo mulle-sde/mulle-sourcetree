@@ -193,7 +193,6 @@ nodemarks_contain()
          ! _nodemarks_contain "${marks}" "no-${key}"
       ;;
    esac
-
 }
 
 
@@ -217,4 +216,22 @@ nodemarks_intersect()
 
    return 1
 }
+
+
+nodemarks_sort()
+{
+   local result
+   local i
+
+   IFS="
+"
+   for i in `tr ',' '\n' <<< "$*" | sort -u`
+   do
+      result="`comma_concat "${result}" "${i}"`"
+   done
+   IFS="${DEFAULT_IFS}"
+
+   echo "${result}"
+}
+
 
