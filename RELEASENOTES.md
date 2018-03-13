@@ -1,6 +1,13 @@
+### 0.7.2
+
+* fix column output
+* fix column output
+* fix listing bug
+
 ### 0.7.1
 
 * fix column output
+
 
 ## 0.7.0
 
