@@ -1,3 +1,8 @@
+### 0.7.3
+
+* up the version
+* lose outdated and unmaintained migration tool for now, improve fix code, make db local to host
+
 ### 0.7.2
 
 * fix column output
