@@ -225,6 +225,9 @@ main()
    MULLE_VIRTUAL_ROOT="${directory}"
    export MULLE_VIRTUAL_ROOT
 
+   SOURCETREE_DB_NAME=".mulle-sourcetree/var/db"
+   export SOURCETREE_DB_NAME
+
    local project
    local repos
 

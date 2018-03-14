@@ -459,16 +459,48 @@ nodemarks_filter_with_qualifier()
    local override
 
    all="${qualifier%%;*}"
-   qualifier="${qualifier#*;}"
+   case "${qualifier}" in
+      *\;*)
+         qualifier="${qualifier#*;}"
+      ;;
+
+      *)
+         qualifier=""
+      ;;
+   esac
 
    one="${qualifier%%;*}"
-   qualifier="${qualifier#*;}"
+   case "${qualifier}" in
+      *\;*)
+         qualifier="${qualifier#*;}"
+      ;;
+
+      *)
+         qualifier=""
+      ;;
+   esac
 
    none="${qualifier%%;*}"
-   qualifier="${qualifier#*;}"
+   case "${qualifier}" in
+      *\;*)
+         qualifier="${qualifier#*;}"
+      ;;
+
+      *)
+         qualifier=""
+      ;;
+   esac
 
    override="${qualifier%%;*}"
-   qualifier="${qualifier#*;}"
+   case "${qualifier}" in
+      *\;*)
+         qualifier="${qualifier#*;}"
+      ;;
+
+      *)
+         qualifier=""
+      ;;
+   esac
 
    local i
 

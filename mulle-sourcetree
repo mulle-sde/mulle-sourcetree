@@ -163,6 +163,23 @@ Use -e if this is desired."
    fi
    SOURCETREE_START="${SOURCETREE_START}/"
    log_debug "SOURCETREE_START=${SOURCETREE_START}"
+
+
+   #
+   # our db is specific to a host
+   #
+   if [ -z "${MULLE_HOSTNAME}" ]
+   then
+      MULLE_HOSTNAME="`hostname`"
+   fi
+
+   [ -z "${MULLE_SOURCETREE_DIR}" ] && internal_fail "MULLE_SOURCETREE_DIR is empty"
+
+   # for testing let it be overrideable
+   if [ -z "${SOURCETREE_DB_NAME}" ]
+   then
+      SOURCETREE_DB_NAME="${MULLE_SOURCETREE_DIR}/var/db.${MULLE_HOSTNAME}"
+   fi
 }
 
 
@@ -356,7 +373,6 @@ main()
        && fail "invalid MULLE_SOURCETREE_ETC_DIR \"${MULLE_SOURCETREE_ETC_DIR}\""
 
    local SOURCETREE_CONFIG_FILE="${MULLE_SOURCETREE_ETC_DIR}/config"
-   local SOURCETREE_DB_NAME="${MULLE_SOURCETREE_DIR}/var/db"
    local SOURCETREE_FIX_FILE=".mulle-sourcetree-fix"
 
    local OPTION_SHARE_DIR

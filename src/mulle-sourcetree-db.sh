@@ -1583,7 +1583,7 @@ db_update_determine_share_filename()
       then
          [ "${database}" != "/" ] && internal_fail "unexpected not root ($database)"
 
-         # ok 
+         # ok
       else
          log_debug "uuid     : ${uuid}"
          log_debug "otheruuid: ${otheruuid}"

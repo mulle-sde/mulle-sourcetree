@@ -100,7 +100,7 @@ main()
       internal_fail "config should still exist now"
    fi
 
-   if ! run_mulle_sourcetree -vvv -ld -t -N remove "b"
+   if ! run_mulle_sourcetree -N remove "b"
    then
       internal_fail "remove \"a\" internal_failed unexpectedly"
    fi

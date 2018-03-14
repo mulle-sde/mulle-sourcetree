@@ -92,8 +92,6 @@ locate_fix_file()
 
    name="`fast_basename "${address}" `"
 
-   local fix
-   local fixname
 
    IFS="
 "
@@ -104,7 +102,12 @@ locate_fix_file()
       #
       # fix file contains the basename of the old directory
       #
-      fix="`egrep -s -v '^#' "${found}"`"
+
+      local nodeline
+      local fix
+
+      nodeline="`rexekutor egrep -s -v '^#' "${found}"`"
+      fix="`nodeline_get_address "${nodeline}"`"
 
       if [ "${fix}" = "${address}" ]
       then
@@ -112,6 +115,8 @@ locate_fix_file()
          echo "${found}"
          return 0
       fi
+
+      local fixname
 
       fixname="`fast_basename "${fix}"`"
       if [ -z "${match}" ] && [ "${fixname}" = "${name}" ]
@@ -146,7 +151,7 @@ _fixup_address_change()
 
    local fixaddress
 
-   fixaddress="`string_remove_prefix "${fixdir}" "${MULLE_VIRTUAL_ADRESSS}" `"
+   fixaddress="`string_remove_prefix "${fixdir}" "${MULLE_VIRTUAL_ROOT}" `"
    fixaddress="`string_remove_prefix "${fixaddress}" "${datasource}" `"
 
    exekutor echo "cd \"\${MULLE_VIRTUAL_ROOT}${datasource}\""
@@ -177,12 +182,16 @@ _fixup_dir_exists()
    local fix
    local fixname
 
-   fix="`egrep -s -v '^#' "${filename}/${SOURCETREE_FIX_FILE}"`"
-   if [ -z "${fix}" ] # can't determine looks ok
+   local nodeline
+   local fix
+
+   nodeline="`rexekutor egrep -s -v '^#' "${filename}/${SOURCETREE_FIX_FILE}"`"
+   if [ -z "${nodeline}" ] # can't determine looks ok
    then
       return
    fi
 
+   fix="`nodeline_get_address "${nodeline}"`"
    if [ "${address}" = "${fix}" ]  # looks good
    then
       return
@@ -196,7 +205,7 @@ _fixup_dir_exists()
    fixfile="`locate_fix_file "${PWD}" "${address}"`"
    if [ -z "${fixfile}" ]
    then
-      fixfile="`locate_fix_file "${MULLE_VIRTUAL_ADRESSS}" "${address}"`"
+      fixfile="`locate_fix_file "${MULLE_VIRTUAL_ROOT}" "${address}"`"
    fi
 
    if [ -z "${fixfile}" ]
@@ -219,7 +228,7 @@ _fixup_dir_not_found()
 
    local fixfile
 
-   fixfile="`locate_fix_file "${MULLE_VIRTUAL_ADRESSS}" "${address}"`"
+   fixfile="`locate_fix_file "${MULLE_VIRTUAL_ROOT}" "${address}"`"
    if [ -z "${fixfile}" ]
    then
       _fixup_manual_removal "${datasource}" "${address}"

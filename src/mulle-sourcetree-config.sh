@@ -485,16 +485,6 @@ sourcetree_add_node()
       _address="${input}"
    fi
 
-   if cfg_has_duplicate "${SOURCETREE_START}" "${_address}"
-   then
-      if [ "${OPTION_IF_MISSING}" = "YES" ]
-      then
-         return 0
-      fi
-      fail "There is already a node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} \
-in the sourcetree"
-   fi
-
    _marks="`_sanitized_marks "${_marks}"`" || exit 1
 
    if [ -z "${_url}" ]
@@ -530,7 +520,12 @@ in the sourcetree"
 
    if cfg_get_nodeline "${SOURCETREE_START}" "${_address}" > /dev/null
    then
-      fail "${C_RESET_BOLD}${_address}${C_ERROR_TEXT} already exists"
+      if [ "${OPTION_IF_MISSING}" = "YES" ]
+      then
+         return 0
+      fi
+      fail "There is already a node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} \
+in the sourcetree"
    fi
 
    local contents
