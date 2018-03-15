@@ -1,3 +1,7 @@
+### 0.7.4
+
+* store marks sorted, don't update sourcetrees of symlinked projects
+
 ### 0.7.3
 
 * up the version

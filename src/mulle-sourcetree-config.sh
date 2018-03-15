@@ -843,6 +843,7 @@ _sourcetree_add_mark_known_absent()
    fi
 
    _marks="`nodemarks_add "${_marks}" "${mark}" `"
+   _marks="`nodemarks_sort "${_marks}"`"
 
    local newnodeline
 
@@ -870,6 +871,7 @@ _sourcetree_remove_mark_known_present()
    fi
 
    _marks="`nodemarks_remove "${_marks}" "${mark}" `"
+   _marks="`nodemarks_sort "${_marks}"`"
 
    local newnodeline
 

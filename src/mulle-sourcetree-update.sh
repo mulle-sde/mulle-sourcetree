@@ -1023,6 +1023,12 @@ write_fix_info()
 
    local output
 
+   if [ -L "${filename}" ]
+   then
+      log_fluff "Not putting fix info into a symlink (${filename})"
+      return
+   fi
+
    # don't do this as it resolved symlinks that we might need
    # filename="`physicalpath "${filename}" `"
 
@@ -1074,14 +1080,24 @@ update_with_nodeline()
    fi
 
    #
-   # during shared operation we may revisit stuff, which is boring
+   # only-share happens when we look for shared information in a symlink
+   # we just ignore all nodes, that are not share
    #
-   local filename
+   if [ "${style}" = "only-share" ]
+   then
+      if ! nodemarks_contain "${_marks}" "share"
+      then
+         return 1
+      fi
+      style="share"
+   fi
 
    #
    # the _address is what is relative to the current config (configfile)
    # the filename is an absolute path
    #
+   local filename
+
    if [ ! -z "${_url}" -a "${style}" = "share" ] && \
       nodemarks_contain "${_marks}" "share"
    then
@@ -1348,6 +1364,17 @@ recursive_update_with_nodeline()
    # and the node is shared. But this switch is not done here
    # but in update_with_nodeline
    #
+   if [ -L "${filename}" ]
+   then
+      # it's a symlink. We assume that the this project is setup itself
+      # properly, we also don't really want to write our .mulle-sourcetree
+      # database into it.
+      #
+      log_fluff "\"${filename}\" as is a symlink, just collect shared"
+      sourcetree_share_only_update "${newconfig}" "/"
+      return
+   fi
+
    if [ ! -d "${filename}" ]
    then
       if [ -e "${filename}" ]
@@ -1423,6 +1450,27 @@ recursive_update_with_nodelines()
 }
 
 
+sourcetree_share_only_update()
+{
+   log_entry "sourcetree_share_only_update" "$@"
+
+   local config="$1"
+
+   local nodelines
+
+   if ! nodelines="`cfg_read "${config}"`"
+   then
+      log_debug "There is no sourcetree configuration in \"${config}\""
+      return 2
+   fi
+
+   log_verbose "Doing a \"share-only\" update for \"${config}\"."
+
+   # flat update
+   update_with_nodelines "${nodelines}" "only-share" "${config}" "/" || return 1
+}
+
+
 #
 # style      : flat, recurse, share
 # config     : config relative to MULLE_VIRTUAL_ROOT
@@ -1494,7 +1542,9 @@ sourcetree_update()
    case "${style}" in
       recurse|share)
          #
-         # This is the "recursive" part over the stuff generated during "flat".
+         # This is the "recursive" part over all the stuff, that was generated
+         # during the previous "flat" run.
+         #
          # Its the same for recurse and share.
          #
          # Unsorted, the order of the recursive updates would depend on
@@ -1612,7 +1662,7 @@ sourcetree_update_start()
 
    #
    # TODO: make this a MULLE_FETCH_ENVIRONMENT variable
-   # SOURCETREE_UPDATE_CACHEis used to suppress asking git mirrors to refetch
+   # SOURCETREE_UPDATE_CACHE is used to suppress asking git mirrors to refetch
    # superflously. For configurations where dependencies appear twice in
    # the sourcetree (recurse)
    #

@@ -220,12 +220,14 @@ nodemarks_intersect()
 
 nodemarks_sort()
 {
+   local marks="$1"
+
    local result
    local i
 
    IFS="
 "
-   for i in `tr ',' '\n' <<< "$*" | sort -u`
+   for i in `tr ',' '\n' <<< "${marks}" | sort -u`
    do
       result="`comma_concat "${result}" "${i}"`"
    done
@@ -233,5 +235,3 @@ nodemarks_sort()
 
    echo "${result}"
 }
-
-
