@@ -41,6 +41,10 @@ _nodemarks_key_check()
          internal_fail "Empty key"
       ;;
 
+      *[^a-z-_0-9]*)
+         internal_fail "Nodemarks key \"$1\" contains invalid characters"
+      ;;
+
       no-*|only-*)
       ;;
 
@@ -161,19 +165,12 @@ _nodemarks_contain()
 
    _nodemarks_key_check "${key}"
 
-   local i
-
-   # is this faster than case ?
-   set -o noglob ; IFS=","
-   for i in ${marks}
-   do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
-      if [ "${i}" = "${key}" ]
-      then
+   # this is a bit faster than IFS=, parsing but not much
+   case ",${marks}," in
+      *,${key},*)
          return 0
-      fi
-   done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+      ;;
+   esac
 
    return 1
 }

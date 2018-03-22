@@ -1,3 +1,7 @@
+### 0.7.5
+
+* a bit faster marks checking
+
 ### 0.7.4
 
 * store marks sorted, don't update sourcetrees of symlinked projects
