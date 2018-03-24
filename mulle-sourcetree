@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.7.5"
+MULLE_EXECUTABLE_VERSION="0.7.6"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -112,7 +112,7 @@ EOF
    -N        : bypass search for enclosing source tree
    --flat    : flat operation
    --recurse : recursive operation
-   --share   : share operation
+   --share   : share operation (default)
 EOF
 
       options_technical_flags_usage "     : "

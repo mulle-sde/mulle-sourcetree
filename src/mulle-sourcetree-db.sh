@@ -1130,7 +1130,7 @@ _db_set_default_mode()
       dbtype="${actualdbtype}"
       if [ -z "${dbtype}" ]
       then
-         dbtype="recurse"
+         dbtype="share"       # the default
       else
          log_verbose "Database: ${C_RESET_BOLD}`filepath_concat "${PWD}" "${rootdir}"`${C_INFO} ${C_MAGENTA}${C_BOLD}${actualdbtype}${C_INFO}"
       fi

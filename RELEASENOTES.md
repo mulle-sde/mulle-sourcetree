@@ -1,3 +1,7 @@
+### 0.7.6
+
+* share is the new default now
+
 ### 0.7.5
 
 * a bit faster marks checking
