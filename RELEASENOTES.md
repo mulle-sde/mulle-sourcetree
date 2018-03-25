@@ -1,3 +1,7 @@
+### 0.7.7
+
+* fix two harmless bugs
+
 ### 0.7.6
 
 * share is the new default now

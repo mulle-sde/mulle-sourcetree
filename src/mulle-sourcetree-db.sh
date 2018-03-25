@@ -339,6 +339,7 @@ db_bury()
    if [ ! -e "${filename}" ]
    then
       log_fluff "\"${filename}\" vanished or never existed ($databasedir)"
+      return
    fi
 
    if [ -e "${gravepath}" ]

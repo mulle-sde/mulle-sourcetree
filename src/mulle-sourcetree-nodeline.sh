@@ -479,6 +479,8 @@ nodeline_printf_header()
          \\n)
             case "${mode}" in
                *output_column*|*output_raw*|*output_cmd*)
+                  name=""
+                  dash=""
                ;;
 
                *)
