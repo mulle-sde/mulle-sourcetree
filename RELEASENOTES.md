@@ -1,3 +1,7 @@
+### 0.7.8
+
+* fix bug with only-share
+
 ### 0.7.7
 
 * fix two harmless bugs

@@ -1085,10 +1085,12 @@ update_with_nodeline()
    #
    if [ "${style}" = "only-share" ]
    then
-      if ! nodemarks_contain "${_marks}" "share"
+      if [ -z "${_url}" ] || ! nodemarks_contain "${_marks}" "share"
       then
          return 1
       fi
+
+      # we know now that database will be /, because of code below
       style="share"
    fi
 
@@ -1119,10 +1121,12 @@ update_with_nodeline()
             return
          ;;
       esac
-      database="/"
+      database="/"   # see only-share if you're tempted to change this
    else
       filename="`cfg_absolute_filename "${config}" "${_address}"`"
    fi
+
+   [ -z "${database}" ] && internal_fail "A share-only update gone wrong"
 
    if ! nodemarks_contain "${_marks}" "update"
    then
@@ -1371,7 +1375,7 @@ recursive_update_with_nodeline()
       # database into it.
       #
       log_fluff "\"${filename}\" as is a symlink, just collect shared"
-      sourcetree_share_only_update "${newconfig}" "/"
+      sourcetree_share_only_update "${newconfig}"
       return
    fi
 
@@ -1467,7 +1471,7 @@ sourcetree_share_only_update()
    log_verbose "Doing a \"share-only\" update for \"${config}\"."
 
    # flat update
-   update_with_nodelines "${nodelines}" "only-share" "${config}" "/" || return 1
+   update_with_nodelines "${nodelines}" "only-share" "${config}" "" || return 1
 }
 
 

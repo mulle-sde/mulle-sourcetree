@@ -838,7 +838,7 @@ _sourcetree_add_mark_known_absent()
    then
       if ! fgrep -x -q "${mark}" <<< "${KNOWN_MARKS}"
       then
-         fail "mark \"${mark}\" is unknown. If this is not a type use --extended"
+         fail "mark \"${mark}\" is unknown. If this is not a type use --extended-marks"
       fi
    fi
 
@@ -866,7 +866,7 @@ _sourcetree_remove_mark_known_present()
    then
       if ! fgrep -x -q "${mark}" <<< "${KNOWN_MARKS}"
       then
-         fail "mark \"${mark}\" is unknown. If this is not a type use --extended"
+         fail "mark \"${mark}\" is unknown. If this is not a type use --extended-marks"
       fi
    fi
 
@@ -1160,7 +1160,7 @@ sourcetree_common_main()
          #
          # marks
          #
-         --extended-marks)
+         -e|--extended-marks)
             OPTION_EXTENDED_MARKS="YES"
          ;;
 

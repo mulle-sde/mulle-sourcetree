@@ -1574,7 +1574,7 @@ db_update_determine_share_filename()
 
    #
    # Check root database if there is not the same URL in there already.
-   # It is assumed
+   #
    local otheruuid
 
    otheruuid="`db_fetch_uuid_for_evaledurl "/" "${evaledurl}"`"
@@ -1588,7 +1588,11 @@ db_update_determine_share_filename()
       else
          log_debug "uuid     : ${uuid}"
          log_debug "otheruuid: ${otheruuid}"
-         [ "${database}" = "/" ] && internal_fail "unexpected root"
+
+         [ "${database}" = "/" ] &&
+            internal_fail "Unexpected root database for \"${address}\". \
+But uuids differ \"${uuid}\" vs \"${otheruuid}\""
+
          log_fluff "The \"${url}\" is already used in root. So skip it."
          return 2
       fi
