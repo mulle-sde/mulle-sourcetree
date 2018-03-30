@@ -157,7 +157,7 @@ _has_system_include()
 
    if [ -z "${include_search_path}" ]
    then
-      case "${UNAME}" in
+      case "${MULLE_UNAME}" in
          mingw)
             include_search_path="~/include"
          ;;

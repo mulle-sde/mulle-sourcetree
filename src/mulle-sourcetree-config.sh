@@ -220,6 +220,20 @@ EOF
 }
 
 
+sourcetree_move_usage()
+{
+    cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} move <address> <top|bottom|up|down>
+
+   Change the position of a node with a certain address in the sourcetree.
+   This changes the buildorder, which may be very important.
+
+EOF
+  exit 1
+}
+
+
 sourcetree_set_usage()
 {
     cat <<EOF >&2
@@ -540,6 +554,129 @@ in the sourcetree"
 
    cfg_write "${SOURCETREE_START}" "${appended}"
 
+}
+
+
+# get mit sed vermutlich einfacher
+line_mover()
+{
+   log_entry "line_mover" "$@"
+
+   local nodeline="$1"
+   local direction="$2"
+
+   case "${direction}" in
+      top)
+         echo "${nodeline}"
+      ;;
+      bottom|up|down)
+      ;;
+
+      *)
+         sourcetree_move_usage "Unknown direction \"${direction}\""
+      ;;
+   esac
+
+   local line
+   local prev
+
+   IFS="
+"
+   while read line
+   do
+      case "${direction}" in
+         top|bottom)
+            if [ "${line}" != "${nodeline}" ]
+            then
+               echo "${line}"
+            fi
+         ;;
+
+         up)
+            if [ "${line}" = "${nodeline}" ]
+            then
+               echo "${line}"
+               if [ ! -z "${prev}" ]
+               then
+                  echo "${prev}"
+                  prev=
+               fi
+               continue
+            fi
+
+            if [ ! -z "${prev}" ]
+            then
+               echo "${prev}"
+            fi
+            prev="${line}"
+         ;;
+
+         down)
+            if [ "${line}" != "${nodeline}" ]
+            then
+               echo "${line}"
+               if [ ! -z "${prev}" ]
+               then
+                  echo "${prev}"
+                  prev=
+               fi
+            else
+               prev="${nodeline}"
+            fi
+         ;;
+
+      esac
+   done
+
+   case "${direction}" in
+      up|down)
+         if [ ! -z "${prev}" ]
+         then
+            echo "${prev}"
+         fi
+      ;;
+
+      bottom)
+         echo "${nodeline}"
+      ;;
+   esac
+}
+
+
+#
+#
+#
+sourcetree_move_node()
+{
+   log_entry "sourcetree_add_node" "$@"
+
+   local input="$1"
+   local direction="$2"
+
+   local _address
+   local _url
+   local _nodetype
+
+   _sourcetree_nameguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
+
+   if [ -z "${_address}" ]
+   then
+      _address="${input}"
+   fi
+
+   local nodeline
+
+   if ! nodeline="`cfg_get_nodeline "${SOURCETREE_START}" "${_address}"`"
+   then
+      fail "No node \"${_address}\" found"
+   fi
+
+   if ! moved="`line_mover "${nodeline}" "${direction}" < <( cfg_read "${SOURCETREE_START}" )`"
+   then
+      exit 1
+   fi
+
+   cfg_write "${SOURCETREE_START}" "${moved}"
 }
 
 
@@ -1286,6 +1423,7 @@ sourcetree_common_main()
    local key
    local mark
    local mode
+   local direction
 
    #
    # make simple commands flat by default, except if the user wants it
@@ -1306,6 +1444,19 @@ sourcetree_common_main()
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree_${COMMAND}_node "${argument}"
+      ;;
+
+      move)
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         address="$1"
+         [ -z "${address}" ] && log_error "empty address" && ${USAGE}
+         shift
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         direction="$1"
+         shift
+         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+
+         sourcetree_${COMMAND}_node "${address}" "${direction}"
       ;;
 
       remove)
@@ -1393,6 +1544,15 @@ sourcetree_mark_main()
 
    USAGE="sourcetree_mark_usage"
    COMMAND="mark"
+   sourcetree_common_main "$@"
+}
+
+sourcetree_move_main()
+{
+   log_entry "sourcetree_move_main" "$@"
+
+   USAGE="sourcetree_move_usage"
+   COMMAND="move"
    sourcetree_common_main "$@"
 }
 

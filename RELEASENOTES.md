@@ -1,3 +1,7 @@
+### 0.7.9
+
+* add move command
+
 ### 0.7.8
 
 * fix bug with only-share

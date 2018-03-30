@@ -217,7 +217,7 @@ db_memorize()
 
    case "${filename}" in
       /*)
-#         if [ "${UNAME}" = "darwin" ]
+#         if [ "${MULLE_UNAME}" = "darwin" ]
 #         then
 #            internal_fail "non physical path"
 #         fi

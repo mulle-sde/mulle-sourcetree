@@ -135,7 +135,7 @@ ${result}
    fi
    log_info "----- #2 PASSED -----"
 
-   if ! run_mulle_sourcetree mark --extended-marks "a" "no-os-${UNAME}"
+   if ! run_mulle_sourcetree mark --extended-marks "a" "no-os-${MULLE_UNAME}"
    then
      fail "mark failed unexpectedly"
    fi

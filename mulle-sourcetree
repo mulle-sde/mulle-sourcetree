@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.7.8"
+MULLE_EXECUTABLE_VERSION="0.7.9"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -67,6 +67,7 @@ print_commands()
    nameguess      : guess name of repository from URL
    libexec-dir    : print path to ${MULLE_USAGE_NAME} libexec
    mark           : add or remove a mark from a node in the sourcetree
+   move           : move a node within the sourcetree
    sourcetree-dir : print path to project (if a sourcetree exists)
    remove         : remove a node from the sourcetree
    reset          : clear the database, to force an update
@@ -79,7 +80,7 @@ print_commands()
 
    echo "${SHOWN_COMMANDS}"
 
-   if [ "${UNAME}" = 'darwin' ]
+   if [ "${MULLE_UNAME}" = 'darwin' ]
    then
       echo "${DARWIN_COMMANDS}"
    fi
@@ -348,6 +349,7 @@ main()
    local MULLE_FLAG_IGNORE_GRAVEYARD="NO"
 
    # technical flags
+   local MULLE_TRACE
    local MULLE_FLAG_EXEKUTOR_DRY_RUN="NO"
    local MULLE_FLAG_LOG_LOCAL="NO"
    local MULLE_FLAG_LOG_DEBUG="NO"
@@ -593,6 +595,13 @@ main()
          sourcetree_mark_main "$@"
       ;;
 
+      move)
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+
+         sourcetree_move_main "$@"
+      ;;
+
       nameguess)
          # shellcheck source=src/mulle-sourcetree-config.sh
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
@@ -648,7 +657,7 @@ main()
       ;;
 
       uname)
-         echo "${UNAME}"
+         echo "${MULLE_UNAME}"
       ;;
 
       unmark)

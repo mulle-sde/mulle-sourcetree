@@ -27,7 +27,7 @@ main()
       then
          case "$i" in
             *.darwin)
-               if [ "${UNAME}" != darwin ]
+               if [ "${MULLE_UNAME}" != darwin ]
                then
                   continue
                fi

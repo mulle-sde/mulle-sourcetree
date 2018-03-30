@@ -42,8 +42,8 @@ Usage:
 
    * ignore nodes marked as "no-build"
    * ignore nodes marked as "no-require", whose are missing
-   * ignore nodes marked as "no-os-${UNAME}" (platform dependent of course)
-   * include nodes marked as "only-os-${UNAME}, regardless of the previous
+   * ignore nodes marked as "no-os-${MULLE_UNAME}" (platform dependent of course)
+   * include nodes marked as "only-os-${MULLE_UNAME}, regardless of the previous
      rules
 
    In a make based project, this can be used to build everything like this:
@@ -98,10 +98,10 @@ sourcetree_buildorder_main()
 
    if [ "${OPTION_MARKS}" = "YES" ]
    then
-      sourcetree_walk "" "" "build,os-${UNAME};;;only-os-${UNAME}" "${SOURCETREE_MODE} --in-order" \
+      sourcetree_walk "" "" "build,os-${MULLE_UNAME};;;only-os-${MULLE_UNAME}" "${SOURCETREE_MODE} --in-order" \
          "echo" '"${MULLE_FILENAME};${MULLE_MARKS}"'
    else
-      sourcetree_walk "" "" "build,os-${UNAME};;;only-os-${UNAME}" "${SOURCETREE_MODE} --in-order" \
+      sourcetree_walk "" "" "build,os-${MULLE_UNAME};;;only-os-${MULLE_UNAME}" "${SOURCETREE_MODE} --in-order" \
          "echo" '"${MULLE_FILENAME}"'
    fi
 }
