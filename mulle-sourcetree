@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.7.10"
+MULLE_EXECUTABLE_VERSION="0.7.11"
 
 #
 # This is the main user interface to mulle-sourcetree

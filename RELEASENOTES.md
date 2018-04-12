@@ -1,3 +1,7 @@
+### 0.7.11
+
+* fix CMakeLists.txt
+
 ### 0.7.10
 
 * support no-all-load
