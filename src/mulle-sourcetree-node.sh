@@ -198,7 +198,7 @@ node_list_operations()
 
    local nodetype="$1"
 
-   ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} operation -s "${nodetype}" list
+   ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} -s operation -s "${nodetype}" list
 }
 
 #

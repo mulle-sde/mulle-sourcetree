@@ -70,7 +70,7 @@ mark|nameguess|remove|reset|set|status|typeguess|unmark|update|walk)
    case "${prevprev}" in
       mark|unmark)
          mulle_uname="`mulle-sourcetree -s -e uname`"
-         COMPREPLY=( $( compgen -W "no-build no-defer no-delete no-fs \
+         COMPREPLY=( $( compgen -W "no-all-load no-build no-defer no-delete no-fs \
 no-header no-include no-link no-recurse no-require no-set no-share \
 no-update no-${mulle_uname} only-${mulle_uname}" -- "$cur" ) )
          return

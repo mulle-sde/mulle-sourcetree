@@ -1,3 +1,7 @@
+### 0.7.10
+
+* support no-all-load
+
 ### 0.7.9
 
 * add move command

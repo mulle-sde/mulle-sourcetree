@@ -949,6 +949,7 @@ sourcetree_get_node_by_url()
 }
 
 KNOWN_MARKS="\
+no-all-load
 no-build
 no-defer
 no-delete
@@ -1003,7 +1004,7 @@ _sourcetree_remove_mark_known_present()
    then
       if ! fgrep -x -q "${mark}" <<< "${KNOWN_MARKS}"
       then
-         fail "mark \"${mark}\" is unknown. If this is not a type use --extended-marks"
+         fail "mark \"${mark}\" is unknown. If this is not a typo use --extended-marks"
       fi
    fi
 
