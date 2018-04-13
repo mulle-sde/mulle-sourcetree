@@ -305,6 +305,10 @@ node_to_nodeline()
    esac
 
    case "${_address}" in
+      .*)
+         fail "Address \"${_address}\" starts with a dot"
+      ;;
+
       *\;*)
          fail "Address \"${_address}\" contains semicolon"
       ;;
