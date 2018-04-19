@@ -70,9 +70,9 @@ Field          | Required | Description
 `marks`        | NO       | marks of the node
 `nodetype`     | YES      | type of node
 `tag`          | NO       | repository tag (git)
-`url`          | NO       | URL of node. 
-`userinfo`     | NO       | userinfo of node. can be binary.  
-`uuid`         | NO       | internal node identifier. Don't touch.  
+`url`          | NO       | URL of node.
+`userinfo`     | NO       | userinfo of node. can be binary.
+`uuid`         | NO       | internal node identifier. Don't touch.
 
 
 ## Sourcetree Nodetypes
@@ -85,21 +85,21 @@ Nodetype  | Url | Branch | Tag | Fetchoptions | Description
 `git`     | YES | YES    | YES | YES          | git repository
 `local`   | NO  | NO     | NO  | NO           | used for subprojects
 `svn`     | YES | YES    | NO  | YES          | svn repository
-`symlink` | YES | NO     | NO  | NO           | symbolic link 
+`symlink` | YES | NO     | NO  | NO           | symbolic link
 `tar`     | YES | NO     | NO  | YES          | tar archive. fetchoptions enable check shasum integrity
 `zip`     | YES | NO     | NO  | YES          | zip archive. fetchoptions enable check shasum integrity
 
 
 ## Sourcetree Marks
 
-A node of a sourcetree can have a variety of pre-defined and user-defined 
+A node of a sourcetree can have a variety of pre-defined and user-defined
 "marks". These are a list of marks that are interpreted by mulle-sourcetree.
 By default a node has all possible marks. You can selectively remove marks.
 
 Mark       | Description
 -----------|---------------------------------------------
 `delete`   | Will be deleted in a `mulle-sourcetree clean`
-`fs`       | The node has/should have a corresponding  file or folder  
+`fs`       | The node has/should have a corresponding  file or folder
 `recurse`  | An inferior sourcetree within this node will be used
 `require`  | Failure to fetch this node is an error.
 `set`      | The node itself can be modified.
@@ -109,12 +109,12 @@ Mark       | Description
 These are some marks, that are used by mulle-sde tools:
 
 
-Mark              | Description
--------- ---------|---------------------------------------------
-`build`           | Will be built.
-`dependency`      | This is a dependency
-`header`          | Will be used for header generation (_dependencies.h)
-`link`            | Will be linked against
+Mark         | Description
+-------------|---------------------------------------------
+`build`      | Will be built.
+`dependency` | This is a dependency
+`header`     | Will be used for header generation (_dependencies.h)
+`link`       | Will be linked against
 
 
 #### Sourcetree Modes
@@ -143,7 +143,7 @@ $ mulle-sourcetree -e add --url '${ZLIB_URL:-https://github.com/madler/zlib.git}
 
 #### `mulle-sourcetree update` : fetch and update nodes
 
-After changing the sourcetree, run *update* to reflect the changes back 
+After changing the sourcetree, run *update* to reflect the changes back
 into your project:
 
 
@@ -189,6 +189,7 @@ $ mulle-sourcetree -e buildorder
 
 ## GitHub and Mulle kybernetiK
 
-The development is done on [Mulle kybernetiK](https://www.mulle-kybernetik.com/software/git/mulle-sourcetree/master). Releases and bug-tracking are on [GitHub](https://github.com/{{PUBLISHER}}/mulle-sourcetree).
-
-
+The development is done on
+[Mulle kybernetiK](https://www.mulle-kybernetik.com/software/git/mulle-sourcetree/master).
+Releases and bug-tracking are on
+[GitHub](https://github.com/{{PUBLISHER}}/mulle-sourcetree).
