@@ -81,8 +81,6 @@ walk_filter_permissions()
 
    [ -z "${address}" ] && internal_fail "empty address"
 
-   local match
-
    if [ -z "${permissions}" ]
    then
       return
@@ -118,6 +116,7 @@ walk_filter_permissions()
    fi
 
    log_fluff "${address} is a symlink"
+
    case "${permissions}" in
       *fail-symlink*)
          fail "Missing \"${address}\" is a symlink."
@@ -468,19 +467,37 @@ _visit_node()
 {
    log_entry "_visit_node" "$@"
 
+   local datasource="$1"
+   local virtual="$2"
    local mode="$8"
+
+   case "${virtual}" in
+      */)
+         internal_fail "virtual \"${virtual}\" not well formed"
+      ;;
+   esac
+
+   case "${datasource}" in
+      /|/*/)
+      ;;
+
+      *)
+         internal_fail "datasource \"${datasource}\" not well formed"
+      ;;
+   esac
 
    #
    # filename comes from "environment"
    #
    if [ "${VISIT_TWICE}" != "YES" ]
    then
-      if fgrep -q -s -x "${_filename}" <<< "${VISITED}"
-      then
-         log_fluff "A node for \"${_filename}\" has already been visited"
-         return 0  # error condition too hard
-      fi
-      VISITED="`add_line "${VISITED}" "${_filename}"`"
+      case "${VISITED}:" in
+         *\:${_filename}\:*)
+            log_fluff "A node for \"${_filename}\" has already been visited"
+            return 0  # error condition too hard
+         ;;
+      esac
+      VISITED="${VISITED}:${_filename}"
    fi
 
    case "${mode}" in
@@ -500,31 +517,6 @@ _visit_node()
    esac
 }
 
-
-pretty_datasource()
-{
-   local datasource="$1"
-
-   case "${datasource}" in
-      /*)
-      ;;
-
-      *)
-         datasource="/${datasource}"
-      ;;
-   esac
-
-   case "${datasource}" in
-      */)
-      ;;
-
-      *)
-         datasource="${datasource}/"
-      ;;
-   esac
-
-   echo "${datasource}"
-}
 
 #
 # datasource          // place of the config/db where we read the nodeline from
@@ -619,29 +611,37 @@ _visit_filter_nodeline()
    # "value addition" of a quasi global
 
    local _destination
+   local _filename  # always absolute!
+   local _virtual_address
 
    _destination="${_address}"
 
-   local next_datasource
    local next_virtual
 
-   next_datasource="`filepath_concat "${datasource}" "${_destination}" `"
-   next_datasource="`pretty_datasource "${next_datasource}" `"
-
-   next_virtual="`filepath_concat "${virtual}" "${_destination}" `"
-
-   # another quasi global
-
-   local _filename  # always absolute!
-   local _virtual_address
+   # must be fast cant use concat
+   if [ -z "${virtual}" ]
+   then
+      next_virtual="${_destination}"
+   else
+      next_virtual="${virtual}/${_destination}"
+   fi
 
    _virtual_address="${next_virtual}"
 
    _filename="${next_virtual}"
-   if ! is_absolutepath "${_filename}"
-   then
-      _filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${_filename}" `"
-   fi
+   case "${_filename}" in
+      /*)
+         # happens for share all the time
+      ;;
+
+      *)
+         _filename="${MULLE_VIRTUAL_ROOT}/${_filename}"
+      ;;
+   esac
+
+   local next_datasource
+
+   next_datasource="${datasource}${_destination}/"
 
    _visit_node "${datasource}" \
                "${virtual}" \
@@ -668,22 +668,25 @@ _visit_share_node()
    #
    local _destination
    local _filename
+   local _virtual_address
 
-   _destination="`fast_basename "${_address}"`"
+   _destination="${_address##*/}" # like fast_basename
 
    local next_virtual
 
-   next_virtual="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${_destination}" `"
-
-   local _virtual_address
+   next_virtual="${MULLE_SOURCETREE_SHARE_DIR}/${_destination}"
 
    _virtual_address="${next_virtual}"
 
    _filename="${next_virtual}"
-   if ! is_absolutepath "${_filename}"
-   then
-      _filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${next_virtual}" `"
-   fi
+   case "${_filename}" in
+      /*)
+      ;;
+
+      *)
+         _filename="${MULLE_VIRTUAL_ROOT}/${next_virtual}"
+      ;;
+   esac
 
    #
    # hacky hack. If shareddir exists visit that.
@@ -692,22 +695,47 @@ _visit_share_node()
    #
    local next_datasource
 
-   next_datasource="${next_virtual}"
+   next_datasource="${next_virtual}/"
 
    if [ ! -e "${_filename}" ]
    then
-      local optimistic
+      local va
+      local vaf
 
-      optimistic="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${virtual}" "${_address}" `"
-      if [ -e "${optimistic}" ]
+      # must be fast cant use concat
+      case "${virtual}" in
+         "")
+            va="${_address}"
+            vaf="${MULLE_VIRTUAL_ROOT}/${va}"
+         ;;
+
+         /*)
+            va="${virtual}/${_address}"
+            vaf="${va}"
+         ;;
+
+         *)
+            va="${virtual}/${_address}"
+            vaf="${MULLE_VIRTUAL_ROOT}/${va}"
+         ;;
+      esac
+
+      if [ -e "${vaf}" ]
       then
-         next_datasource="`filepath_concat "${virtual}" "${_address}" `"
+         case "${va}" in
+            /*)
+               next_datasource="${va}/"
+            ;;
 
+            *)
+               next_datasource="/${va}/"
+            ;;
+         esac
+      else
          log_debug "Visit \"${next_datasource}\" as \"${_filename}\" doesn't exist yet"
       fi
    fi
 
-   next_datasource="`pretty_datasource "${next_datasource}" `"
    _visit_node "${datasource}" \
                "${MULLE_SOURCETREE_SHARE_DIR}" \
                "${next_datasource}" \

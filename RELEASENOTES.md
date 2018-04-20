@@ -1,3 +1,7 @@
+### 0.7.15
+
+* considerable speed improvements
+
 ### 0.7.14
 
 * fix test

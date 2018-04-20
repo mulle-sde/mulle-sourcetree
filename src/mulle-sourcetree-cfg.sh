@@ -351,9 +351,9 @@ cfg_search_for_configfile()
 {
    log_entry "cfg_search_for_configfile" "$@"
 
-   local directory="$1"
+   local physdirectory="$1"
 
-   [ -z "${directory}" ] && internal_fail "empty directory"
+   [ -z "${physdirectory}" ] && internal_fail "empty directory"
 
    local ceiling
 
@@ -369,27 +369,36 @@ cfg_search_for_configfile()
       ceiling="${SOURCETREE_START}"
    fi
 
-   ceiling="`physicalpath "${ceiling}"`"
-   directory="`physicalpath "${directory}"`"
+   local physceiling
 
-   local relative
+   physceiling="$( cd "${ceiling}" ; pwd -P 2> /dev/null )"
+   [ -z "${physceiling}" ] && fail "SOURCETREE_START/MULLE_VIRTUAL_ROOT does not exist (${ceiling})"
 
-   relative="`symlink_relpath "${directory}" "${ceiling}"`"
-   case "${relative}" in
-      ..*)
+   # check that physdirectory is inside physceiling
+
+   case "${physdirectory}" in
+      ${physceiling})
+         echo "${physdirectory}"  # common cheap equality
+         return
+      ;;
+
+      ${physceiling}/*)
+      ;;
+
+      *)
          log_debug "Start is now outside of the ceiling"
          return 1
       ;;
    esac
 
-   log_debug "Searching for configfile from \"${directory}\" to \"${ceiling}\""
+   log_debug "Searching for configfile from \"${physdirectory}\" to \"${physceiling}\""
 
    (
-      cd "${directory}" &&
+      cd "${physdirectory}" &&
       while ! cfg_exists "${SOURCETREE_START}"
       do
          # since we do physical paths, PWD is ok here
-         if [ "${PWD}" = "${ceiling}" ]
+         if [ "${PWD}" = "${physceiling}" ]
          then
             log_debug "Touched the ceiling"
             exit 1
@@ -397,7 +406,7 @@ cfg_search_for_configfile()
          cd ..
       done &&
 
-      log_debug "Found \"${PWD}\""
+      log_debug "Found \"${PWD}\"" &&
       echo "${PWD}"
    )
 }
@@ -406,12 +415,13 @@ cfg_search_for_configfile()
 
 #
 # Return the directory, that we should be using for the following defer
-# possibilities. The returned directory is always a physical patha
+# possibilities. The returned directory is always a physical path
 #
 # NONE:    do not search
 # NEAREST: search up until we find a sourcetree
 # PARENT:  get the enveloping sourcetree of PWD (even if PWD has a sourcetree)
 # ROOT:    get the outermost enveloping sourcetree (can be PWD)
+#
 #
 cfg_determine_working_directory()
 {
@@ -419,6 +429,7 @@ cfg_determine_working_directory()
 
    local preference="$1"
    local deferflag="$2"
+   local physpwd="$3"
 
    local directory
    local parent
@@ -454,26 +465,24 @@ cfg_determine_working_directory()
       ;;
 
       NEAREST)
-         directory="`cfg_search_for_configfile "${PWD}"`"
-         if [ $? -ne 0 ]
+         if ! cfg_search_for_configfile "${physpwd}"
          then
             log_debug "No config found or db found"
             return 1
          fi
-         echo "${directory}"
          return 0
       ;;
 
       # not sure when this is useful
       PARENT)
-         directory="`cfg_search_for_configfile "${PWD}"`"
+         directory="`cfg_search_for_configfile "${physpwd}"`"
          if [ $? -ne 0 ]
          then
             log_debug "No config found or db found"
             return 1
          fi
 
-         if [ "${directory}" != "`pwd -P`" ]
+         if [ "${directory}" != "${physpwd}" ]
          then
             echo "${directory}"
             return 0
@@ -492,7 +501,7 @@ cfg_determine_working_directory()
       ;;
 
       ROOT)
-         directory="`cfg_search_for_configfile "${PWD}"`"
+         directory="`cfg_search_for_configfile "${physpwd}"`"
          if [ $? -ne 0 ]
          then
             log_debug "No config found"
@@ -536,10 +545,12 @@ cfg_defer_if_needed()
    local defer="$2"
 
    local directory
+   local physpwd
 
-   if directory="`cfg_determine_working_directory "${preference}" "${defer}"`"
+   physpwd="`pwd -P`"
+   if directory="`cfg_determine_working_directory "${preference}" "${defer}" "${physpwd}"`"
    then
-      if [ "${directory}" != "`pwd -P`" ]
+      if [ "${directory}" != "${physpwd}" ]
       then
          log_info "Using \"${directory}\" as sourcetree root"
          exekutor cd "${directory}"

@@ -169,12 +169,29 @@ emit_status()
          datasource="`string_remove_prefix "${filename}" "${MULLE_VIRTUAL_ROOT}"`"
          if [ -z "${datasource}" ]
          then
-            datasource="`pretty_datasource "${MULLE_VIRTUAL_ADDRESS}"`"
+            datasource="${MULLE_VIRTUAL_ADDRESS}"
          fi
       else
          datasource="${filename}"
       fi
    fi
+
+   case "${datasource}" in
+      /*/)
+      ;;
+
+      /*)
+         datasource="${datasource}/"
+      ;;
+
+      */)
+         datasource="/${datasource}"
+      ;;
+
+      *)
+         datasource="/${datasource}/"
+      ;;
+   esac
 
    local fs
    local configexists

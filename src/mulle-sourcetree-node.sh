@@ -405,18 +405,12 @@ nodetypes_contain()
    local nodetypes="$1"
    local nodetype="$2"
 
-   local key
-
-   set -o noglob ; IFS=","
-   for key in ${nodetypes}
-   do
-      IFS="${DEFAULT_IFS}"; set +o noglob
-      if [ "${nodetype}" = "${key}" ]
-      then
+   case ",${nodetypes}," in
+      *,${nodetype},*)
          return 0
-      fi
-   done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+      ;;
+   esac
+
    return 1
 }
 

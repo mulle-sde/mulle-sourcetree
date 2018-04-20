@@ -59,10 +59,8 @@ _db_evaledurl()
 }
 
 
-__db_common_rootdir()
+__db_common_sharedir()
 {
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
-
    case "${MULLE_SOURCETREE_SHARE_DIR}" in
       /*)
          if string_has_prefix "$1" "${MULLE_SOURCETREE_SHARE_DIR}"
@@ -72,26 +70,40 @@ __db_common_rootdir()
                   rootdir="$1"
                ;;
 
+               /*//)
+                  __db_common_sharedir "${1%/}"
+               ;;
+
                /*/)
-                  rootdir="$(sed 's|/$||g' <<< "$1")"
+                  rootdir="${1%/}"
                ;;
 
                *)
                   rootdir="$1"
                ;;
             esac
-            return
+            return 0
          fi
       ;;
    esac
 
+   return 1
+}
+
+
+__db_common__rootdir()
+{
    case "$1" in
       "/")
          rootdir="${MULLE_VIRTUAL_ROOT}"
       ;;
 
+      /*//)
+         __db_common__rootdir "${1%/}"
+      ;;
+
       /*/)
-         rootdir="${MULLE_VIRTUAL_ROOT}/$(sed 's|/$||g' <<< "$1")"
+         rootdir="${MULLE_VIRTUAL_ROOT}/${1%/}"
       ;;
 
       /*)
@@ -102,6 +114,19 @@ __db_common_rootdir()
          internal_fail "database \"$1\" must start with '/'"
       ;;
    esac
+}
+
+
+__db_common_rootdir()
+{
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
+
+   if __db_common_sharedir "$1"
+   then
+      return
+   fi
+
+   __db_common__rootdir "$1"
 }
 
 
@@ -1033,7 +1058,8 @@ db_get_shareddir()
 
    __db_common_databasedir "$@"
 
-   cat "${databasedir}/.db_shareddir" 2> /dev/null || :
+   cat "${databasedir}/.db_shareddir" 2> /dev/null
+   :
 }
 
 #

@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.7.14"
+MULLE_EXECUTABLE_VERSION="0.7.15"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -220,6 +220,7 @@ _set_mulle_virtual_root_export()
 
    physicalroot="`physicalpath "${MULLE_VIRTUAL_ROOT}"`"
    [ -z "${physicalroot}" ] && fail "MULLE_VIRTUAL_ROOT \"${MULLE_VIRTUAL_ROOT}\" must exist"
+   [ "${physicalroot}" = "/" ] && fail "MULLE_VIRTUAL_ROOT must not be /"
 
    MULLE_VIRTUAL_ROOT="${physicalroot}"
    export MULLE_VIRTUAL_ROOT
@@ -280,6 +281,10 @@ __check_sane_share_dir()
 
       "")
          internal_fail "MULLE_SOURCETREE_SHARE_DIR (${MULLE_SOURCETREE_SHARE_DIR}) is empty"
+      ;;
+
+      */)
+         internal_fail "MULLE_SOURCETREE_SHARE_DIR (${MULLE_SOURCETREE_SHARE_DIR}) ends with /"
       ;;
 
       *)
@@ -492,24 +497,9 @@ main()
 
    _set_share_dir "${OPTION_SHARE_DIR}"
 
-   #
-   # dont' check if resetting
-   # for status it's debatable, but I don't like it
-   #
-   case "${cmd}" in
-      reset)
-      ;;
-
-      *)
-         __check_sane_share_dir
-      ;;
-   esac
-
    local cmd
 
-   cmd="${1:-update}"
-
-   MULLE_EXECUTABLE_FAIL_PREFIX="${MULLE_EXECUTABLE_NAME} ${cmd}"
+   cmd="${1}"
    [ $# -eq 0 ] || shift
 
    if [ -z "${MULLE_FETCH}" ]
@@ -522,10 +512,25 @@ main()
    #
    cfg_defer_if_needed "NEAREST" "${MULLE_FLAG_DEFER}" || exit 1
 
+
+   #
+   # dont' check if resetting
+   # for status it's debatable, but I don't like it
+   # for buildorder, we want to be fast so we don't check and dont get
+   # default mode
+   #
+   case "${cmd}" in
+      reset|buildorder)
+      ;;
+
+      *)
+         __check_sane_share_dir
+      ;;
+   esac
+
    local SOURCETREE_MODE
 
    _db_set_default_mode "${SOURCETREE_START}" "${FLAG_SOURCETREE_MODE}" || exit 1
-
 
    case "${cmd}" in
       add)
