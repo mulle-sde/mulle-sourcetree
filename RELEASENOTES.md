@@ -1,3 +1,8 @@
+## 0.8.0
+
+* add dbstatus command
+
+
 ### 0.7.15
 
 * considerable speed improvements

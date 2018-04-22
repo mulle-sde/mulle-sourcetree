@@ -893,16 +893,15 @@ db_is_ready()
    local dbdonefile
 
    dbdonefile="${databasedir}/.db_done"
-   if [ ! -f "${dbdonefile}" ]
-   then
-      log_debug "\"${dbdonefile}\" not found (${databasedir})"
-      return 1
-   fi
 
    local oldenvironment
    local environment
 
-   oldenvironment="`cat "${dbdonefile}" `"
+   if ! oldenvironment="`cat "${dbdonefile}" 2> /dev/null`"
+   then
+      log_debug "\"${dbdonefile}\" not found (${databasedir})"
+      return 1
+   fi
    environment="`__db_environment`"
 
    if [ "${oldenvironment}" != "${environment}" ]
@@ -1215,27 +1214,6 @@ db_graveyard_dir()
    __db_common_databasedir "$@"
 
    echo "${databasedir}/../graveyard"
-}
-
-
-
-db_contains_entries()
-{
-   log_entry "db_contains_entries" "$@"
-
-   local database
-   local databasedir
-
-   __db_common_databasedir "$@"
-
-   (
-      shopt -s nullglob
-
-      # the echo snarfs the newline in the expansion
-      controlfiles="`echo "${databasedir}"/.db*`"
-
-      ! [ -z "${controlfiles}" ] # will have linefeed for some reason don't quote
-   )
 }
 
 

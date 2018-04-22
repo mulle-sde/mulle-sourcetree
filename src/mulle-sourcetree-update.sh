@@ -1046,7 +1046,6 @@ ${nodeline}"
 }
 
 
-
 update_with_nodeline()
 {
    log_entry "update_with_nodeline" "$@"
@@ -1186,7 +1185,6 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    else
       log_debug "Filename \"${filename}\" is not yet in \"${database}\""
    fi
-
 
    #
    # check if this nodeline is already known (this being an update)
@@ -1614,10 +1612,7 @@ sourcetree_update()
    fi
 
    db_clear_update "${database}"
-   if db_contains_entries "${database}"
-   then
-      db_set_ready "${database}"
-   fi
+   db_set_ready "${database}"
 }
 
 

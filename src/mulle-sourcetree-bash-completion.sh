@@ -46,14 +46,14 @@ _mulle_sourcetree_complete()
    do
       case "$i" in
          add|buildorder|clean|dotdump|fix|get|info|list|\
-mark|nameguess|remove|reset|set|status|typeguess|unmark|update|walk)
+mark|move|nameguess|remove|reset|set|status|typeguess|unmark|update|walk)
             context="$i"
          ;;
       esac
    done
 
    case "$prev" in
-      get|set|mark|unmark)
+      get|set|mark|move|unmark)
          list="`mulle-sourcetree -s -e list --no-output-header --format "%a\\n"`"
          COMPREPLY=( $( compgen -W "${list}" -- "$cur" ) )
          return
@@ -73,12 +73,15 @@ mark|nameguess|remove|reset|set|status|typeguess|unmark|update|walk)
          COMPREPLY=( $( compgen -W "no-all-load no-build no-defer no-delete no-fs \
 no-header no-include no-link no-recurse no-require no-set no-share \
 no-update no-${mulle_uname} only-${mulle_uname}" -- "$cur" ) )
-         return
+      ;;
+
+      move)
+         COMPREPLY=( $( compgen -W "up down top bottom" -- "$cur" ) )
       ;;
 
       *)
          COMPREPLY=( $( compgen -W "add buildorder clean dotdump fix get info \
-list mark nameguess remove reset set status typeguess unmark update walk" -- "$cur" ) )
+list mark move nameguess remove reset set status typeguess unmark update walk" -- "$cur" ) )
       ;;
    esac
 }

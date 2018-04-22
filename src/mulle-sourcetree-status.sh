@@ -31,10 +31,30 @@
 #
 MULLE_SOURCETREE_STATUS_SH="included"
 
+sourcetree_dbstatus_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+   cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} dbstatus
+
+   Tests if a database is up to date.
+
+Returns:
+    0 : yes
+    1 : error
+    2 : no
+EOF
+  exit 1
+}
+
 
 sourcetree_status_usage()
 {
-    cat <<EOF >&2
+   [ $# -ne 0 ] && log_error "$1"
+
+   cat <<EOF >&2
 Usage:
    ${MULLE_USAGE_NAME} status [options]
 
@@ -86,7 +106,6 @@ sourcetree_is_uptodate()
 
    return 0
 }
-
 
 
 #
@@ -454,6 +473,39 @@ sourcetree_status()
 }
 
 
+sourcetree_dbstatus_main()
+{
+   log_entry "sourcetree_dbstatus_main" "$@"
+
+   [ "$#" -eq 0 ] || sourcetree_dbstatus_usage
+
+   if ! cfg_exists "${SOURCETREE_START}"
+   then
+      log_warning "There is no ${SOURCETREE_CONFIG_FILE} here"
+      return 1
+   fi
+
+   local configfile
+
+   __cfg_common_configfile "${SOURCETREE_START}"
+
+   local database
+   local databasedir
+   __db_common_databasedir "/"
+
+   dbdonefile="${databasedir}/.db_done"
+
+   if [ "${configfile}" -nt "${dbdonefile}" ] || \
+      ! db_is_ready "${SOURCETREE_START}"
+   then
+      log_info "Needs update"
+      return 2
+   fi
+
+   log_info "Is uptodate"
+}
+
+
 sourcetree_status_main()
 {
    log_entry "sourcetree_status_main" "$@"
@@ -509,29 +561,28 @@ sourcetree_status_main()
          # more common flags
          #
          -m|--marks)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_status_usage "missing argument to \"$1\""
             shift
 
             OPTION_MARKS="$1"
          ;;
 
          -n|--nodetypes)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_status_usage "missing argument to \"$1\""
             shift
 
             OPTION_NODETYPES="$1"
          ;;
 
          -p|--permissions)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_status_usage "missing argument to \"$1\""
             shift
 
             OPTION_PERMISSIONS="$1"
          ;;
 
          -*)
-            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown status option $1"
-            sourcetree_status_usage
+            sourcetree_status_usage "Unknown option $1"
          ;;
 
          *)
@@ -542,7 +593,7 @@ sourcetree_status_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_status_usage
+   [ "$#" -eq 0 ] || sourcetree_status_usage "superflous arguments \"$*\""
 
    if ! cfg_exists "${SOURCETREE_START}"
    then

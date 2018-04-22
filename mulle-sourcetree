@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.7.15"
+MULLE_EXECUTABLE_VERSION="0.8.0"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -61,6 +61,7 @@ print_commands()
    update         : update the project tree [default]"
 
    HIDDEN_COMMANDS="\
+   dbstatus       : query state of database
    dotdump        : create a picture of the sourcetree or the database
    fix            : support to track user modifications in the filesystem
    get            : get a node's properties from the sourcetree
@@ -171,7 +172,7 @@ Use -e if this is desired."
    #
    if [ -z "${MULLE_HOSTNAME}" ]
    then
-      MULLE_HOSTNAME="`hostname`"
+      MULLE_HOSTNAME="`hostname -s`"
    fi
 
    [ -z "${MULLE_SOURCETREE_DIR}" ] && internal_fail "MULLE_SOURCETREE_DIR is empty"
@@ -179,7 +180,7 @@ Use -e if this is desired."
    # for testing let it be overrideable
    if [ -z "${SOURCETREE_DB_NAME}" ]
    then
-      SOURCETREE_DB_NAME="${MULLE_SOURCETREE_DIR}/var/db.${MULLE_HOSTNAME}"
+      SOURCETREE_DB_NAME="${MULLE_SOURCETREE_DIR}/var/${MULLE_HOSTNAME}/db"
    fi
 }
 
@@ -552,6 +553,13 @@ main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-clean.sh"
 
          sourcetree_clean_main "$@"
+      ;;
+
+      dbstatus)
+         # shellcheck source=src/mulle-sourcetree-clean.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-status.sh"
+
+         sourcetree_dbstatus_main "$@"
       ;;
 
       dotdump)

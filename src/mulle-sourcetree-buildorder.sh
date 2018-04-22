@@ -34,6 +34,8 @@ MULLE_SOURCETREE_BUILDORDER_SH="included"
 
 sourcetree_buildorder_usage()
 {
+   [ $# -ne 0 ] && log_error "$1"
+
    cat <<EOF >&2
 Usage:
    ${MULLE_USAGE_NAME} buildorder [options]
@@ -60,11 +62,31 @@ EOF
 }
 
 
+print_buildorder_line()
+{
+   local line="$1"
+
+   if [ ! -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
+   then
+      case "${line}" in
+         ${MULLE_SOURCETREE_SHARE_DIR}/*)
+            echo '${MULLE_SOURCETREE_SHARE_DIR}'"${line#${MULLE_SOURCETREE_SHARE_DIR}}"
+            return 0
+         ;;
+      esac
+   fi
+
+   echo "${line#${MULLE_VIRTUAL_ROOT}/}"
+}
+
+
+
 sourcetree_buildorder_main()
 {
    log_entry "sourcetree_buildorder_main" "$@"
 
    local OPTION_MARKS="NO"
+   local OPTION_PRINT_ENV="YES"
 
    while [ $# -ne 0 ]
    do
@@ -81,9 +103,12 @@ sourcetree_buildorder_main()
             OPTION_MARKS="NO"
          ;;
 
+         --no-print-env)
+            OPTION_PRINT_ENV="NO"
+         ;;
+
          -*)
-            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown buildorder option $1"
-            sourcetree_buildorder_usage
+            sourcetree_buildorder_usage "Unknown buildorder option $1"
          ;;
 
          *)
@@ -94,16 +119,27 @@ sourcetree_buildorder_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_buildorder_usage
+   [ "$#" -eq 0 ] || sourcetree_buildorder_usage "Superflous arguments \"$*\""
+
+   local echocmd
+   local formatstr
+
+   echocmd="echo"
+   formatstr='"${MULLE_FILENAME}"'
+
+   if [ "${OPTION_PRINT_ENV}" = "YES" ]
+   then
+      echocmd="print_buildorder_line"
+   fi
 
    if [ "${OPTION_MARKS}" = "YES" ]
    then
-      sourcetree_walk "" "" "build,os-${MULLE_UNAME};;;only-os-${MULLE_UNAME}" "${SOURCETREE_MODE} --in-order" \
-         "echo" '"${MULLE_FILENAME};${MULLE_MARKS}"'
-   else
-      sourcetree_walk "" "" "build,os-${MULLE_UNAME};;;only-os-${MULLE_UNAME}" "${SOURCETREE_MODE} --in-order" \
-         "echo" '"${MULLE_FILENAME}"'
+      formatstr='"${MULLE_FILENAME};${MULLE_MARKS}"'
    fi
+
+   sourcetree_walk "" "" "build,os-${MULLE_UNAME};;;only-os-${MULLE_UNAME}" \
+                   "${SOURCETREE_MODE} --in-order" \
+                   "${echocmd}" "${formatstr}"
 }
 
 
