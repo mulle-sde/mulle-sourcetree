@@ -1,3 +1,7 @@
+### 0.8.1
+
+* fix some bugs
+
 ## 0.8.0
 
 * add dbstatus command

@@ -100,14 +100,6 @@ _sourcetree_augment_mode_with_output_options()
 
    local mode="$1"
 
-   if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
-   then
-      mode="`concat "${mode}" "output_header"`"
-      if [ "${OPTION_OUTPUT_SEPARATOR}" != "NO" ]
-      then
-         mode="`concat "${mode}" "output_separator"`"
-      fi
-   fi
    if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
    then
       mode="`concat "${mode}" "output_full"`"
@@ -124,6 +116,10 @@ _sourcetree_augment_mode_with_output_options()
    case "${OPTION_OUTPUT_FORMAT}" in
       "RAW")
          mode="`concat "${mode}" "output_raw"`"
+         if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
+         then
+            mode="`concat "${mode}" "output_header"`"
+         fi
       ;;
 
       "CMD")
@@ -133,7 +129,19 @@ _sourcetree_augment_mode_with_output_options()
       *)
          [ -z "`command -v column`" ] && fail "Tool \"column\" is not available, use --output-raw"
 
-         mode="`concat "${mode}" "output_column"`"
+         if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
+         then
+            mode="`concat "${mode}" "output_header"`"
+            if [ "${OPTION_OUTPUT_SEPARATOR}" != "NO" ]
+            then
+               mode="`concat "${mode}" "output_separator"`"
+            fi
+         fi
+
+         if [ "${OPTION_OUTPUT_COLUMN}" != "NO" ]
+         then
+            mode="`concat "${mode}" "output_column"`"
+         fi
       ;;
    esac
 
@@ -166,7 +174,7 @@ _sourcetree_nodeline_remove_marks()
    marks="${_marks}"
    _marks=
 
-   IFS=","
+   set -f; IFS=","
    for mark in ${marks}
    do
       if ! nodemarks_contain "${nomarks}" "${mark}"
@@ -174,6 +182,7 @@ _sourcetree_nodeline_remove_marks()
          _marks="`comma_concat "${_marks}" "${mark}" `"
       fi
    done
+   set +f; IFS="${DEFAULT_IFS}"
 
    node_to_nodeline
 }
@@ -396,6 +405,7 @@ sourcetree_list_main()
    local OPTION_OUTPUT_FULL="DEFAULT"
    local OPTION_OUTPUT_HEADER="" # empty more convenient default
    local OPTION_OUTPUT_SEPARATOR="DEFAULT"
+   local OPTION_OUTPUT_COLUMN="DEFAULT"
    local OPTION_OUTPUT_UUID="DEFAULT"
    local OPTION_UNSAFE="NO"
 
@@ -437,7 +447,7 @@ sourcetree_list_main()
             OPTION_OUTPUT_FORMAT="FMT"
          ;;
 
-         --output-cmd)
+         --output-cmd|--out-command)
             OPTION_OUTPUT_FORMAT="CMD"
          ;;
 
@@ -451,6 +461,14 @@ sourcetree_list_main()
 
          --no-output-color)
             OPTION_OUTPUT_COLOR="NO"
+         ;;
+
+         --output-column)
+            OPTION_OUTPUT_COLUMN="YES"
+         ;;
+
+         --no-output-column)
+            OPTION_OUTPUT_COLUMN="NO"
          ;;
 
          --output-header)
@@ -550,7 +568,6 @@ sourcetree_list_main()
    then
       OPTION_OUTPUT_BANNER="YES"
    fi
-
 
    local mode
 

@@ -763,7 +763,7 @@ nodeline_printf()
       ;;
 
       *output_column*|*output_raw*)
-        echo "${line}" | sed 's/;$//g'
+         printf "%s" "${line}" | sed 's/;$//g'
       ;;
 
       *)
