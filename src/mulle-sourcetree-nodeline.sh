@@ -93,6 +93,12 @@ nodeline_get_url()
 }
 
 
+nodeline_get_evaled_url()
+{
+   eval echo "`cut '-d;' -f 5 <<< "$*"`"
+}
+
+
 #
 # This function sets values of variables that should be declared
 # in the caller! That's why they have a _ prefix
@@ -217,7 +223,6 @@ nodeline_remove()
    IFS="${DEFAULT_IFS}"; set +o noglob
 }
 
-
 _nodeline_find()
 {
    log_entry "nodeline_find" "$@"
@@ -269,11 +274,24 @@ nodeline_find_by_url()
    log_entry "nodeline_find_by_url" "$@"
 
    local nodelines="$1"
-   local address="$2"
+   local url="$2"
 
-   [ -z "${address}" ] && internal_fail "address is empty"
+   [ -z "${url}" ] && internal_fail "url is empty"
 
-   _nodeline_find_url "${nodelines}" "${address}" nodeline_get_url
+   _nodeline_find "${nodelines}" "${url}" nodeline_get_url
+}
+
+
+nodeline_find_by_evaled_url()
+{
+   log_entry "nodeline_find_by_evaled_url" "$@"
+
+   local nodelines="$1"
+   local url="$2"
+
+   [ -z "${url}" ] && internal_fail "url is empty"
+
+   _nodeline_find "${nodelines}" "${url}" nodeline_get_evaled_url
 }
 
 
@@ -329,27 +347,27 @@ __set_sep_and_formatstring()
    local mode="$1"
 
    case "${mode}" in
-      *output_raw*)
-         sep=";"
+      *output_column*)
+         sep="; "
       ;;
 
-      *output_column*)
-         sep="|"
+      *)
+         sep=";"
       ;;
    esac
 
    if [ -z "${formatstring}" ]
    then
-      formatstring="%a${sep}%n{sep}%m{sep}%i{sep}%u"
+      formatstring="%a${sep}%n${sep}%m${sep}%i${sep}%u"
       case "${mode}" in
          *output_full*)
-            formatstring="${formatstring}{sep}%b{sep}%t{sep}%f"
+            formatstring="${formatstring}${sep}%b${sep}%t${sep}%f"
          ;;
       esac
 
       case "${mode}" in
          *output_uuid*)
-            formatstring="${formatstring}{sep}%_"
+            formatstring="${formatstring}${sep}%_"
          ;;
       esac
       formatstring="${formatstring}\\n"
@@ -375,7 +393,6 @@ nodeline_printf_header()
    local sep
 
    __set_sep_and_formatstring "${mode}"
-
 
    local h_line
    local s_line
@@ -456,13 +473,13 @@ nodeline_printf_header()
             dash="---"
          ;;
 
-         %u!*)
+         %[uU]!*)
             name="url"
             dash="---"
             formatstring="${formatstring:1}"
          ;;
 
-         %u*)
+         %[uU]*)
             name="url"
             dash="---"
          ;;
@@ -478,68 +495,38 @@ nodeline_printf_header()
 
          \\n)
             case "${mode}" in
-               *output_column*|*output_raw*|*output_cmd*)
+               *output_raw*|*output_cmd*)
                   name=""
                   dash=""
                ;;
 
                *)
-               name="
+                  name="
 "
-               dash="
+                  dash="
 "
                ;;
             esac
          ;;
 
          *)
-            # extra chars are only used in default mode
-            # otherwise ignored
-            case "${mode}" in
-               *output_column*|*output_raw*|*output_cmd*)
-               ;;
-
-               *)
-                  h_line="${h_line}${formatstring:0:1}"
-                  s_line="${s_line}${formatstring:0:1}"
-               ;;
-            esac
+            h_line="${h_line}${formatstring:0:1}"
+            s_line="${s_line}${formatstring:0:1}"
             formatstring="${formatstring:1}"
             continue
          ;;
       esac
 
-      if [ -z "${sep}" ]
-      then
-         h_line="${h_line}${name}"
-         s_line="${s_line}${dash}"
-      else
-         h_line="`concat "${h_line}" "${name}" "${sep}"`"
-         s_line="`concat "${s_line}" "${dash}" "${sep}"`"
-      fi
+      h_line="${h_line}${name}"
+      s_line="${s_line}${dash}"
 
       formatstring="${formatstring:2}"
    done
 
+   printf "%s" "${h_line}"
    case "${mode}" in
-      *output_column*|*output_raw*|*output_cmd*)
-         echo "${h_line}"
-
-         case "${mode}" in
-            *output_separator*)
-               echo "${s_line}"
-            ;;
-         esac
-      ;;
-
-      *)
-         printf "%s" "${h_line}"
-
-         case "${mode}" in
-            *output_separator*)
-               printf "%s" "${s_line}"
-            ;;
-         esac
+      *output_separator*)
+         printf "%s" "${s_line}"
       ;;
    esac
 }
@@ -581,7 +568,7 @@ nodeline_printf()
    local line
    local cmd_line
 
-   cmd_line="${MULLE_EXECUTABLE_NAME} -N add"
+   cmd_line="${MULLE_USAGE_NAME} -N add"
 
    local guess
 
@@ -694,6 +681,26 @@ nodeline_printf()
             value="${_url}"
          ;;
 
+         %U!*)
+            switch="--url"
+            if [ -z "${_url}" ]
+            then
+               value="${_address}"
+            else
+               value="`eval echo "${_url}"`"
+            fi
+            formatstring="${formatstring:1}"
+         ;;
+
+         %U*)
+            switch="--url"
+            if [ -z "${_url}" ]
+            then
+               value="${_address}"
+            else
+               value="${_url}"
+            fi
+         ;;
 
          %_*)
             switch=""
@@ -711,10 +718,8 @@ nodeline_printf()
          ;;
 
          *)
-            # extra chars are only used in default mode
-            # otherwise ignored
             case "${mode}" in
-               *output_column*|*output_raw*|*output_cmd*)
+               *output_cmd*)
                ;;
 
                *)
@@ -734,22 +739,10 @@ nodeline_printf()
             then
                value=" "
             fi
-            line="`concat "${line}" "${value}" "${sep}" `"
-         ;;
-
-         *output_raw*)
-            if [ -z "${line}" ]
-            then
-               line="${value}"
-            else
-               line="${line}${sep}${value}"
-            fi
-         ;;
-
-         *)
-            line="${line}${value}"
          ;;
       esac
+
+      line="${line}${value}"
 
       if [ ! -z "${switch}" -a ! -z "${value}" ]
       then
@@ -762,7 +755,7 @@ nodeline_printf()
          echo "${cmd_line}" "'${_address}'"
       ;;
 
-      *output_column*|*output_raw*)
+      *output_raw*)
          printf "%s" "${line}" | sed 's/;$//g'
       ;;
 

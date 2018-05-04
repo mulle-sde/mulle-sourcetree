@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.8.1"
+MULLE_EXECUTABLE_VERSION="0.8.2"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -205,7 +205,7 @@ _set_mulle_virtual_root_export()
 
    case "${MULLE_VIRTUAL_ROOT}" in
       "")
-         fail "To run mulle-sourcetree outside of mulle-env, pass the -e flag"
+         fail "To run ${MULLE_EXECUTABLE_NAME} outside of mulle-env, pass the -e flag"
       ;;
 
       */)

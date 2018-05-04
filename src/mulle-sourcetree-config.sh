@@ -38,6 +38,8 @@ MULLE_SOURCETREE_COMMANDS_SH="included"
 
 sourcetree_add_usage()
 {
+   [ $# -ne 0 ] && log_error "$1"
+
     cat <<EOF >&2
 Usage:
    ${MULLE_EXECUTABLE_NAME} add [options] <address|url>
@@ -70,6 +72,8 @@ EOF
 
 sourcetree_remove_usage()
 {
+   [ $# -ne 0 ] && log_error "$1"
+
     cat <<EOF >&2
 Usage:
    ${MULLE_EXECUTABLE_NAME} remove <address>
@@ -84,6 +88,8 @@ EOF
 
 sourcetree_nameguess_usage()
 {
+   [ $# -ne 0 ] && log_error "$1"
+
     cat <<EOF >&2
 Usage:
    ${MULLE_EXECUTABLE_NAME} nameguess <url>
@@ -96,6 +102,8 @@ EOF
 
 sourcetree_typeguess_usage()
 {
+   [ $# -ne 0 ] && log_error "$1"
+
     cat <<EOF >&2
 Usage:
    ${MULLE_EXECUTABLE_NAME} typeguess <url>
@@ -108,6 +116,8 @@ EOF
 
 sourcetree_info_usage()
 {
+   [ $# -ne 0 ] && log_error "$1"
+
     cat <<EOF >&2
 Usage:
    ${MULLE_EXECUTABLE_NAME} info
@@ -124,6 +134,8 @@ EOF
 
 sourcetree_list_usage()
 {
+   [ $# -ne 0 ] && log_error "$1"
+
     cat <<EOF >&2
 Usage:
    ${MULLE_EXECUTABLE_NAME} list [options]
@@ -147,6 +159,8 @@ EOF
 
 sourcetree_mark_usage()
 {
+   [ $# -ne 0 ] && log_error "$1"
+
    cat <<EOF >&2
 Usage:
    ${MULLE_EXECUTABLE_NAME} mark [options] <node> <mark>
@@ -191,6 +205,8 @@ EOF
 
 sourcetree_unmark_usage()
 {
+   [ $# -ne 0 ] && log_error "$1"
+
    cat <<EOF >&2
 Usage:
    ${MULLE_EXECUTABLE_NAME} unmark [options] <node> <mark>
@@ -222,7 +238,9 @@ EOF
 
 sourcetree_move_usage()
 {
-    cat <<EOF >&2
+   [ $# -ne 0 ] && log_error "$1"
+
+   cat <<EOF >&2
 Usage:
    ${MULLE_EXECUTABLE_NAME} move <address> <top|bottom|up|down>
 
@@ -236,7 +254,9 @@ EOF
 
 sourcetree_set_usage()
 {
-    cat <<EOF >&2
+   [ $# -ne 0 ] && log_error "$1"
+
+   cat <<EOF >&2
 Usage:
    ${MULLE_EXECUTABLE_NAME} set [options] <address> [key [value]]*
 
@@ -262,7 +282,9 @@ EOF
 
 sourcetree_get_usage()
 {
-    cat <<EOF >&2
+   [ $# -ne 0 ] && log_error "$1"
+
+   cat <<EOF >&2
 Usage:
    ${MULLE_EXECUTABLE_NAME} get <address> [key]
 
@@ -705,9 +727,13 @@ sourcetree_remove_node_by_url()
 
    local url="$1"
 
+   [ -z "${url}" ] && fail "url is empty"
+
+   url="`_matching_nodeline_url "${url}"`"
+
    local oldnodeline
 
-   if ! cfg_get_nodeline_by_url "${SOURCETREE_START}" "${url}" > /dev/null
+   if [ ! -z "${url}" ]
    then
       log_warning "A node with URL \"${url}\" does not exist"
       return 2  # also return non 0 , but lets's not be dramatic about it
@@ -755,6 +781,28 @@ _unfailing_get_nodeline()
    then
       fail "A node \"${address}\" does not exist (${MULLE_VIRTUAL_ROOT}${SOURCETREE_START})"
    fi
+}
+
+
+_matching_nodeline_url()
+{
+   local url="$1"
+
+   [ -z "${url}" ] && fail "url is empty"
+
+   if cfg_get_nodeline_by_url "${SOURCETREE_START}" "${url}" > /dev/null
+   then
+      echo "${url}"
+      return 0
+   fi
+
+   if nodeline="`cfg_get_nodeline_by_evaled_url "${SOURCETREE_START}" "${url}"`"
+   then
+      nodeline_get_url "${nodeline}"
+      return 0
+   fi
+
+   return 1
 }
 
 
@@ -875,7 +923,12 @@ sourcetree_set_node_by_url()
 {
    log_entry "sourcetree_set_node_by_url" "$@"
 
-   local address="$1"; shift
+   local url
+
+   url="`_matching_nodeline_url "$1"`"
+   url="${url:-$1}"
+
+   shift
 
    local oldnodeline
 
@@ -931,7 +984,13 @@ sourcetree_get_node()
 
    local address="$1"; shift
 
-   nodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
+   local nodeline
+
+   if ! nodeline="`cfg_get_nodeline "${SOURCETREE_START}" "${address}"`"
+   then
+      log_warning "Node \"${address}\" does not exist"
+      return 1
+   fi
 
    _sourcetree_get_node "${nodeline}" "$@"
 }
@@ -941,9 +1000,20 @@ sourcetree_get_node_by_url()
 {
    log_entry "sourcetree_get_node_by_url" "$@"
 
-   local url="$1"; shift
+   local url
 
-   nodeline="`_unfailing_get_nodeline_by_url "${url}"`" || exit 1
+   url="`_matching_nodeline_url "$1"`"
+   url="${url:-$1}"
+
+   shift
+
+   local nodeline
+
+   if ! nodeline="`cfg_get_nodeline "${SOURCETREE_START}" "${url}"`"
+   then
+      log_warning "Node with URL \"${1}\" does not exist"
+      return 1
+   fi
 
    _sourcetree_get_node "${nodeline}" "$@"
 }
@@ -1018,7 +1088,6 @@ _sourcetree_remove_mark_known_present()
 }
 
 
-
 _sourcetree_mark_node()
 {
    log_entry "_sourcetree_mark_node" "$@"
@@ -1087,9 +1156,12 @@ sourcetree_mark_node_by_url()
 {
    log_entry "sourcetree_mark_node_by_url" "$@"
 
-   local url="$1"; shift
+   local url
 
-   [ -z "${url}" ] && fail "url is empty"
+   url="`_matching_nodeline_url "$1"`"
+   url="${url:-$1}"
+
+   shift
 
    local oldnodeline
 
@@ -1134,8 +1206,10 @@ sourcetree_unmark_node_by_url()
    local url="$1"
    local mark="$2"
 
-   [ -z "${url}" ] && fail "url is empty"
    [ -z "${mark}" ] && fail "mark is empty"
+
+   url="`_matching_nodeline_url "${url}"`"
+   url="${url:-$1}"
 
    case "${mark}" in
       no-*)
@@ -1614,7 +1688,6 @@ sourcetree_list_main()
 sourcetree_commands_initialize()
 {
    log_entry "sourcetree_commands_initialize"
-
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then

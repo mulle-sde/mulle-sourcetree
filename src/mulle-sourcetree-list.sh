@@ -156,7 +156,6 @@ _sourcetree_nodeline_remove_marks()
    local nodeline="$1"
    local nomarks="$2"
 
-
    local _branch
    local _address
    local _fetchoptions
@@ -254,7 +253,7 @@ _list_nodes()
    then
       if [ -z "${IS_PRINTING}" ]
       then
-         log_info "There is no sourcetree here (${PWD})"
+         log_verbose "There is no sourcetree here (${PWD})"
       fi
       return
    fi
@@ -267,7 +266,7 @@ _list_nodes()
 
    case "${mode}" in
       *output_column*)
-         _sourcetree_contents "$@" | exekutor column -t -s '|'
+         _sourcetree_contents "$@" | exekutor column -t -s ';'
          return $?
       ;;
    esac
@@ -421,7 +420,7 @@ sourcetree_list_main()
          ;;
 
          -m|--marks)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_list_usage "missing argument to \"$1\""
             shift
 
             # allow to concatenate multiple flags
@@ -429,19 +428,18 @@ sourcetree_list_main()
          ;;
 
          -n|--nodetypes)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_list_usage "missing argument to \"$1\""
             shift
 
             OPTION_NODETYPES="`comma_concat "${OPTION_NODETYPES}" "$1" `"
          ;;
 
          --format)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_list_usage "missing argument to \"$1\""
             shift
 
             OPTION_FORMAT="$1"
          ;;
-
 
          --output-fmt|--output-format*)
             OPTION_OUTPUT_FORMAT="FMT"
@@ -523,15 +521,14 @@ sourcetree_list_main()
          ;;
 
          --no-output-marks)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_list_usage "missing argument to \"$1\""
             shift
 
             OPTION_NO_OUTPUT_MARKS="$1"
          ;;
 
          -*)
-            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown ${COMMAND} option $1"
-            sourcetree_list_usage
+            sourcetree_list_usage "Unknown option \"$1\""
          ;;
 
          *)

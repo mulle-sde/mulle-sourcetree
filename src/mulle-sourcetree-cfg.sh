@@ -233,12 +233,25 @@ cfg_get_nodeline_by_url()
 {
    log_entry "cfg_get_nodeline_by_url" "$@"
 
-   local address="$2"
+   local url="$2"
 
    local nodelines
 
    nodelines="`cfg_read "$1"`"
-   nodeline_find "${nodelines}" "${address}"
+   nodeline_find_by_url "${nodelines}" "${url}"
+}
+
+
+cfg_get_nodeline_by_evaled_url()
+{
+   log_entry "cfg_get_nodeline_by_evaled_url" "$@"
+
+   local url="$2"
+
+   local nodelines
+
+   nodelines="`cfg_read "$1"`"
+   nodeline_find_by_evaled_url "${nodelines}" "${url}"
 }
 
 
