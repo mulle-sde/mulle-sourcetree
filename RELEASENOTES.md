@@ -1,3 +1,7 @@
+### 0.8.3
+
+* rename install.sh to install, fix trace bug
+
 ### 0.8.2
 
 * CMakeLists.txt CMakePackage.txt LICENSE Makefile README.md RELEASENOTES.md TODO.md benchmark bin build install.sh movies mulle-column mulle-project mulle-sourcetree mulle-sourcetree-overview.dot mulle-sourcetree-overview.png mulle-sourcetree.sublime-project mulle-sourcetree.sublime-workspace pic.png research src test tmp.62MuALC5 tmp.8TihBMhs tmp.8meNZ6Gb tmp.EaPl8Kw5 tmp.FJzuDhTS tmp.JBcS0N48 tmp.LX05Aq2p tmp.LfE1PWHv tmp.Me6QNGhI tmp.TNU1AnKf tmp.dxYEPghb tmp.gHlgWdiP tmp.mz667t1s tmp.qbWLdiJX tmp.rXe64Rrl tmp.ruRELjzu tmp.tqRbdouz tmp.ueLGLOck tmp.ytNCkWea simplified CMakeLists.txt, simplify printf stuff

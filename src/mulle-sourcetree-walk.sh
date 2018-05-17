@@ -255,7 +255,7 @@ __call_callback()
 
    if [ "${OPTION_PASS_TECHNICAL_FLAGS}" = "YES" ]
    then
-      technical_flags="${MULLE_TECHNICAL_OPTIONS}" # from bashfunctions
+      technical_flags="${MULLE_TECHNICAL_FLAGS}" # from bashfunctions
    fi
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
