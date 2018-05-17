@@ -1,3 +1,7 @@
+### 0.8.4
+
+* fix dox and install
+
 ### 0.8.3
 
 * rename install.sh to install, fix trace bug

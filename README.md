@@ -38,11 +38,21 @@ Executable                      | Description
 
 ## Install
 
+Install the pre-requisite [mulle-fetch](https://github.com/mulle-nat/mulle-bashfunctions)
+and it's pre-requisites.
 
-OS    | Command
-------|------------------------------------
-macos | `brew install mulle-kybernetik/software/mulle-sourcetree`
-other | ./install.sh  (Requires: [mulle-fetch](https://github.com/mulle-nat/mulle-sourcetree))
+Install into `/usr` with sudo:
+
+```
+curl -L 'https://github.com/mulle-sde/mulle-fetch/archive/latest.tar.gz' \
+ | tar xfz - && cd 'mulle-fetch-latest' && sudo ./install /usr
+```
+
+### Packages
+
+OS          | Command
+------------|------------------------------------
+macos       | `brew install mulle-kybernetik/software/mulle-fetch`
 
 
 ## Sourcetree Nodes
