@@ -212,7 +212,7 @@ _get_fs_status()
 
    # rewrite
    case "${destination}" in
-      ".")
+      "."|"/")
          datasource="${SOURCETREE_START}"
       ;;
 

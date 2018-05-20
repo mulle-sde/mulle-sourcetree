@@ -68,7 +68,7 @@ __concat_config_absolute_filename()
    local _address="$2"
 
    case "${config}" in
-      /|/*/)
+      "/"|/*/)
       ;;
 
       *)

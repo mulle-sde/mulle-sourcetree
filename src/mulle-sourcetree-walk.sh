@@ -478,7 +478,11 @@ _visit_node()
    esac
 
    case "${datasource}" in
-      /|/*/)
+      "//")
+         internal_fail "datasource \"${datasource}\" not well formed"
+      ;;
+
+      "/"|/*/)
       ;;
 
       *)

@@ -1,3 +1,7 @@
+### 0.8.5
+
+* remove filename from status output
+
 ### 0.8.4
 
 * fix dox and install

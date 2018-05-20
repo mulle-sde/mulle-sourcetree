@@ -170,7 +170,7 @@ emit_status()
    local mode="$5"
    local filename="$6"
 
-   local output_address
+   local output_adress
 
    output_adress="`filepath_concat "${datasource}" "${address}" `"
 
@@ -192,11 +192,22 @@ emit_status()
          fi
       else
          datasource="${filename}"
+
       fi
    fi
 
+   if string_has_prefix "${output_adress}" "${MULLE_SOURCETREE_SHARE_DIR}"
+   then
+      output_adress="`string_remove_prefix "${output_adress}" "${MULLE_SOURCETREE_SHARE_DIR}"`"
+      output_adress="\${MULLE_SOURCETREE_SHARE_DIR}${output_adress}"
+   fi
+
    case "${datasource}" in
-      /*/)
+      "//")
+         internal_fail "malformed datasource"
+      ;;
+
+      "/"|/*/)
       ;;
 
       /*)
@@ -270,7 +281,7 @@ emit_status()
             then
                return 0
             fi
-            exekutor echo "${output_adress};no-require;${fs};${configexists};${dbexists};${filename}"
+            exekutor echo "${output_adress};no-require;${fs};${configexists};${dbexists}" #;${filename}"
          else
             if [ -z "${_url}" ]
             then
@@ -279,7 +290,7 @@ emit_status()
                then
                   exit 2   # indicate brokenness
                fi
-               exekutor echo "${output_adress};update;${fs};${configexists};${dbexists};${filename}"
+               exekutor echo "${output_adress};update;${fs};${configexists};${dbexists}" #;${filename}"
                return 0
             fi
 
@@ -288,7 +299,7 @@ emit_status()
             then
                exit 1
             fi
-            exekutor echo "${output_adress};update;${fs};${configexists};${dbexists};${filename}"
+            exekutor echo "${output_adress};update;${fs};${configexists};${dbexists}" #;${filename}"
          fi
          return
       else
@@ -313,7 +324,7 @@ emit_status()
          then
             exit 1
          fi
-         exekutor echo "${output_adress};update;${fs};${configexists};${dbexists};${filename}"
+         exekutor echo "${output_adress};update;${fs};${configexists};${dbexists}" #;${filename}"
          return 0
       fi
 
@@ -339,7 +350,7 @@ emit_status()
                   return 0
                fi
 
-               exekutor echo "${output_adress};ok;${fs};${configexists};${dbexists};${filename}"
+               exekutor echo "${output_adress};ok;${fs};${configexists};${dbexists}" #;${filename}"
                return
             fi
 
@@ -366,13 +377,13 @@ emit_status()
                      exit 2  # only time we exit with 2 on IS_UPTODATE
                   fi
 
-                  exekutor echo "${output_adress};incomplete;${fs};${configexists};${dbexists};${filename}"
+                  exekutor echo "${output_adress};incomplete;${fs};${configexists};${dbexists}" #;${filename}"
                   return 0
                fi
 
                if ! sourcetree_is_uptodate "${datasource}"
                then
-                  log_fluff "\"${filename}\" database is stale ($PWD)"
+                  log_fluff "Database \"${datasource}\" is stale ($PWD)"
 
                   status="update"
                fi
@@ -385,7 +396,7 @@ emit_status()
    then
       return 0
    fi
-   exekutor echo "${output_adress};${status};${fs};${configexists};${dbexists};${filename}"
+   exekutor echo "${output_adress};${status};${fs};${configexists};${dbexists}" # ;${filename}"
 }
 
 
@@ -450,11 +461,11 @@ sourcetree_status()
 
    case "${mode}" in
       *header*)
-         header="Node;Status;Filesystem;Config;Database;Filename"
+         header="Node;Status;Filesystem;Config;Database" # ;Filename"
 
          case "${mode}" in
             *separator*)
-               header="`add_line "${header}" "-------;------;----------;------;--------;--------"`"
+               header="`add_line "${header}" "-------;------;----------;------;--------"`" # ;--------"`"
             ;;
          esac
          output="`add_line "${header}" "${output}"`"
