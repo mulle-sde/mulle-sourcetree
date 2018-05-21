@@ -1173,6 +1173,10 @@ _db_set_default_mode()
          SOURCETREE_MODE="recurse"
       ;;
 
+      no-share)
+         SOURCETREE_MODE="recurse"
+      ;;
+
       *)
          internal_fail "unknown dbtype \"${dbtype}\""
       ;;

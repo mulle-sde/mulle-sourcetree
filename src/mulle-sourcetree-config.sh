@@ -132,31 +132,6 @@ EOF
 }
 
 
-sourcetree_list_usage()
-{
-   [ $# -ne 0 ] && log_error "$1"
-
-    cat <<EOF >&2
-Usage:
-   ${MULLE_EXECUTABLE_NAME} list [options]
-
-   List nodes in the sourcetree.
-
-   This command only affects the local sourcetree.
-
-Options:
-   --no-output-header     : suppress header in raw and default lists
-   --no-output-separator  : suppress separator line if header is printed
-   --output-banner        : print a banner with config information
-   --output-cmd           : output as ${MULLE_EXECUTABLE_NAME} command line
-   --output-eval          : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
-   --output-full          : show url and various fetch options
-   --output-raw           : output as CSV (semicolon separated values)
-EOF
-  exit 1
-}
-
-
 sourcetree_mark_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -169,7 +144,7 @@ Usage:
    are actually stored in the node. All positive marks are implicit.
 
    Examine the nodes marks with
-       \`${MULLE_EXECUTABLE_NAME} -N list\`.
+       \`${MULLE_EXECUTABLE_NAME} -N ls\`.
 
    This command only affects the local sourcetree.
 
@@ -1326,7 +1301,7 @@ sourcetree_common_main()
             OPTION_OUTPUT_COLOR="YES"
          ;;
 
-         --no-output-color)
+         --no-output-color|--output-no-color)
             OPTION_OUTPUT_COLOR="NO"
          ;;
 
@@ -1334,7 +1309,7 @@ sourcetree_common_main()
             OPTION_OUTPUT_HEADER="YES"
          ;;
 
-         --no-output-header)
+         --no-output-header|--output-no-header)
             OPTION_OUTPUT_HEADER="NO"
          ;;
 
@@ -1342,7 +1317,7 @@ sourcetree_common_main()
             OPTION_OUTPUT_SEPARATOR="YES"
          ;;
 
-         --no-output-separator)
+         --no-output-separator|--output-no-separator)
             OPTION_OUTPUT_SEPARATOR="NO"
          ;;
 
@@ -1387,7 +1362,7 @@ sourcetree_common_main()
             OPTION_OUTPUT_FULL="YES"
          ;;
 
-         --no-output-full)
+         --no-output-full|--output-no-full)
             OPTION_OUTPUT_FULL="NO"
          ;;
 
@@ -1395,7 +1370,7 @@ sourcetree_common_main()
             OPTION_OUTPUT_UUID="YES"
          ;;
 
-         --no-output-uuid)
+         --no-output-uuid|--output-no-uuid)
             OPTION_OUTPUT_UUID="NO"
          ;;
 
@@ -1403,7 +1378,7 @@ sourcetree_common_main()
             OPTION_OUTPUT_BANNER="YES"
          ;;
 
-         --no-output-banner)
+         --no-output-banner|--output-no-banner)
             OPTION_OUTPUT_BANNER="NO"
          ;;
 
@@ -1411,7 +1386,7 @@ sourcetree_common_main()
             OPTION_OUTPUT_EVAL="YES"
          ;;
 
-         --no-output-eval)
+         --no-output-eval|--output-no-eval)
             OPTION_OUTPUT_EVAL="NO"
          ;;
 
@@ -1564,7 +1539,7 @@ sourcetree_common_main()
          sourcetree_${COMMAND}_node${suffix} "${address}" "${mark}"
       ;;
 
-      list|info)
+      info)
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree_${COMMAND}_node
@@ -1668,16 +1643,6 @@ sourcetree_info_main()
 
    USAGE="sourcetree_info_usage"
    COMMAND="info"
-   sourcetree_common_main "$@"
-}
-
-
-sourcetree_list_main()
-{
-   log_entry "sourcetree_list_main" "$@"
-
-   USAGE="sourcetree_list_usage"
-   COMMAND="list"
    sourcetree_common_main "$@"
 }
 

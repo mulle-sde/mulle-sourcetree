@@ -34,6 +34,8 @@ MULLE_SOURCETREE_LIST_SH="included"
 
 sourcetree_list_usage()
 {
+   [ "$#" -ne 0 ] && log_error "$*"
+
     cat <<EOF >&2
 Usage:
    ${MULLE_USAGE_NAME} list [options]
@@ -46,13 +48,13 @@ Options:
    --nodetypes <value>      : node types to list (default: ALL)
    --marks <value>          : specify marks to match (e.g. build)
    --format <format>        : supply a custom format (abfimntu_)
-   --no-output-header       : suppress header in raw and default lists
-   --no-output-marks <list> : suppress output of certain marks (comma sep)
-   --no-output-separator    : suppress separator line if header is printed
    --output-banner          : print a banner with config information
    --output-cmd             : output as ${MULLE_EXECUTABLE_NAME} command line
    --output-eval            : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
    --output-full            : show url and various fetch options
+   --output-no-header       : suppress header in raw and default lists
+   --output-no-marks <list> : suppress output of certain marks (comma sep)
+   --output-no-separator    : suppress separator line if header is printed
    --output-raw             : output as CSV (semicolon separated values)
 EOF
   exit 1
@@ -100,6 +102,10 @@ _sourcetree_augment_mode_with_output_options()
 
    local mode="$1"
 
+   if [ "${OPTION_OUTPUT_URL}" != "NO" ]
+   then
+      mode="`concat "${mode}" "output_url"`"
+   fi
    if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
    then
       mode="`concat "${mode}" "output_full"`"
@@ -317,7 +323,7 @@ list_nodes()
 
    arguments=
 
-   if [ -z "${formatstring}" ]
+   if [ ! -z "${formatstring}" ]
    then
       arguments="`concat "${arguments}" "--format" `"
       arguments="`concat "${arguments}" "${formatstring}" `"
@@ -390,7 +396,7 @@ list_nodes()
 
 sourcetree_list_main()
 {
-   log_entry "sourcetree_list_main" "$@"
+   log_entry "sourcetree_list_main (1)" "$@"
 
    local ROOT_DIR
 
@@ -406,6 +412,7 @@ sourcetree_list_main()
    local OPTION_OUTPUT_SEPARATOR="DEFAULT"
    local OPTION_OUTPUT_COLUMN="DEFAULT"
    local OPTION_OUTPUT_UUID="DEFAULT"
+   local OPTION_OUTPUT_URL="DEFAULT"
    local OPTION_UNSAFE="NO"
 
    local OPTION_NODETYPES
@@ -420,7 +427,7 @@ sourcetree_list_main()
          ;;
 
          -m|--marks)
-            [ $# -eq 1 ] && sourcetree_list_usage "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
             shift
 
             # allow to concatenate multiple flags
@@ -428,14 +435,14 @@ sourcetree_list_main()
          ;;
 
          -n|--nodetypes)
-            [ $# -eq 1 ] && sourcetree_list_usage "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
             shift
 
             OPTION_NODETYPES="`comma_concat "${OPTION_NODETYPES}" "$1" `"
          ;;
 
          --format)
-            [ $# -eq 1 ] && sourcetree_list_usage "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
             shift
 
             OPTION_FORMAT="$1"
@@ -457,7 +464,7 @@ sourcetree_list_main()
             OPTION_OUTPUT_COLOR="YES"
          ;;
 
-         --no-output-color)
+         --no-output-color|--output-no-color)
             OPTION_OUTPUT_COLOR="NO"
          ;;
 
@@ -465,7 +472,7 @@ sourcetree_list_main()
             OPTION_OUTPUT_COLUMN="YES"
          ;;
 
-         --no-output-column)
+         --no-output-column|--output-no-column)
             OPTION_OUTPUT_COLUMN="NO"
          ;;
 
@@ -473,7 +480,7 @@ sourcetree_list_main()
             OPTION_OUTPUT_HEADER="YES"
          ;;
 
-         --no-output-header)
+         --no-output-header|--output-no-header)
             OPTION_OUTPUT_HEADER="NO"
          ;;
 
@@ -481,7 +488,7 @@ sourcetree_list_main()
             OPTION_OUTPUT_SEPARATOR="YES"
          ;;
 
-         --no-output-separator)
+         --no-output-separator|--output-no-separator)
             OPTION_OUTPUT_SEPARATOR="NO"
          ;;
 
@@ -492,15 +499,23 @@ sourcetree_list_main()
             OPTION_OUTPUT_FULL="YES"
          ;;
 
-         --no-output-full)
+         --no-output-full|--output-no-full)
             OPTION_OUTPUT_FULL="NO"
+         ;;
+
+         --output-url)
+            OPTION_OUTPUT_URL="YES"
+         ;;
+
+         --no-output-url|--output-no-url)
+            OPTION_OUTPUT_URL="NO"
          ;;
 
          --output-uuid)
             OPTION_OUTPUT_UUID="YES"
          ;;
 
-         --no-output-uuid)
+         --no-output-uuid|--output-no-uuid)
             OPTION_OUTPUT_UUID="NO"
          ;;
 
@@ -508,7 +523,7 @@ sourcetree_list_main()
             OPTION_OUTPUT_BANNER="YES"
          ;;
 
-         --no-output-banner)
+         --no-output-banner|--output-no-banner)
             OPTION_OUTPUT_BANNER="NO"
          ;;
 
@@ -516,12 +531,12 @@ sourcetree_list_main()
             OPTION_OUTPUT_EVAL="YES"
          ;;
 
-         --no-output-eval)
+         --no-output-eval|--output-no-eval)
             OPTION_OUTPUT_EVAL="NO"
          ;;
 
-         --no-output-marks)
-            [ $# -eq 1 ] && sourcetree_list_usage "missing argument to \"$1\""
+         --no-output-marks|--output-no-marks)
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
             shift
 
             OPTION_NO_OUTPUT_MARKS="$1"
@@ -547,7 +562,7 @@ sourcetree_list_main()
    local mark
    local mode
 
-   [ -z "${SOURCETREE_CONFIG_FILE}" ] && fail "config file empty name"
+   [ -z "${SOURCETREE_CONFIG_FILE}" ] && fail "Config filename is empty"
 
    [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && sourcetree_list_usage
 

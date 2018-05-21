@@ -356,9 +356,17 @@ __set_sep_and_formatstring()
       ;;
    esac
 
+   # this could be much better
+
    if [ -z "${formatstring}" ]
    then
-      formatstring="%a${sep}%n${sep}%m${sep}%i${sep}%u"
+      formatstring="%a${sep}%n${sep}%m${sep}%i"
+      case "${mode}" in
+         *output_url*)
+            formatstring="${formatstring}${sep}%u"
+         ;;
+      esac
+
       case "${mode}" in
          *output_full*)
             formatstring="${formatstring}${sep}%b${sep}%t${sep}%f"
@@ -372,6 +380,8 @@ __set_sep_and_formatstring()
       esac
       formatstring="${formatstring}\\n"
    fi
+
+   log_debug "Format: ${formatstring}"
 }
 
 nodeline_printf_header()

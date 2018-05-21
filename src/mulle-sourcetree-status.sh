@@ -396,6 +396,11 @@ emit_status()
    then
       return 0
    fi
+
+   if [ "${fs}" = "symlink" ]
+   then
+      status="ok"
+   fi
    exekutor echo "${output_adress};${status};${fs};${configexists};${dbexists}" # ;${filename}"
 }
 

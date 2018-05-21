@@ -1,3 +1,9 @@
+## 0.9.0
+
+* Allow output-no- as well as no-output- for list options
+* Fix problem with share inside no-share
+
+
 ### 0.8.5
 
 * remove filename from status output

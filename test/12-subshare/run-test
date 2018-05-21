@@ -1,0 +1,117 @@
+#! /usr/bin/env bash
+
+[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
+
+
+run_mulle_sourcetree()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+}
+
+
+_setup_demo_repo_b()
+{
+   local reporoot="$1"
+
+   exekutor git init
+
+   redirect_exekutor VERSION echo "b:1.0.0"
+   exekutor git add VERSION
+   exekutor git commit -m "b: initial version"
+}
+
+
+setup_demo_repos()
+{
+   (
+      set -e
+      mkdir_if_missing "$1/b" &&
+      exekutor cd "$1/b" && _setup_demo_repo_b "$1"
+      set +e
+   ) || exit 1
+}
+
+
+run_test_1()
+{
+   set -e
+   cd "${project}" &&
+   (
+      mkdir a &&
+      cd a &&
+      run_mulle_sourcetree -e add --nodetype git "file://${repos}/b"
+   ) &&
+   run_mulle_sourcetree -e add --nodetype local --marks no-share "a"
+   set +e
+
+   (
+      MULLE_SOURCETREE_SHARE_DIR="${MULLE_VIRTUAL_ROOT}/shared_global"
+      export MULLE_SOURCETREE_SHARE_DIR
+
+      run_mulle_sourcetree --share update
+
+      [ -d "a" ]   || fail "Missing a"
+      [ -d "a/b" ] && fail "Wrong a/b"
+      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/b" ] || fail "Missing shared ${MULLE_SOURCETREE_SHARE_DIR}/b"
+   ) || exit 1
+}
+
+
+main()
+{
+   MULLE_SOURCETREE_FLAGS="$@"
+
+   _options_mini_main "$@"
+
+   local directory
+
+   directory="`make_tmp_directory`" || exit 1
+
+   local project
+
+   project="${directory}/project"
+   repos="${directory}/repositories"
+
+   mkdir_if_missing "${project}"
+
+   MULLE_VIRTUAL_ROOT="`physicalpath "${project}"`"
+   export MULLE_VIRTUAL_ROOT
+
+   setup_demo_repos "${repos}"
+
+   (
+      rmdir_safer "${project}" &&
+      mkdir_if_missing "${project}" &&
+      run_test_1
+   ) || exit 1
+   log_verbose "----- #1 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   rmdir_safer "${directory}"
+}
+
+
+init()
+{
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
+
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
+   MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
+
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh"   || exit 1
+}
+
+
+init "$@"
+main "$@"
+

@@ -1391,11 +1391,11 @@ a directory"
       return
    fi
 
-   if ! nodemarks_contain "${_marks}" "share"
-   then
-      style="no-share"
-   fi
-
+#   if ! nodemarks_contain "${_marks}" "share"
+#   then
+#      style="no-share"
+#   fi
+#
    sourcetree_update "${style}" "${newconfig}" "${newdatabase}"
 }
 
@@ -1633,7 +1633,7 @@ sourcetree_update()
 #            that has a config file (repeat)
 # share:     the trick for "share" is, that we use a joined database
 #            for nodes marked share and again (local) databases for those
-#            marked no-share like in recurse. This is stored in root.
+#            marked no-share like in recurse. The shares are stored in root.
 #
 sourcetree_update_start()
 {
