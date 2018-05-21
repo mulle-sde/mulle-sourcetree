@@ -1,3 +1,7 @@
+### 0.9.1
+
+* rename install to installer, because of name conflict
+
 ## 0.9.0
 
 * Allow output-no- as well as no-output- for list options

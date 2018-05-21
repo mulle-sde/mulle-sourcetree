@@ -1,14 +1,21 @@
-SCRIPTS=install.sh \
-mulle-sourcetree \
-mulle-bootstrap-to-sourcetree \
+SCRIPTS=installer \
+src/mulle-sourcetree-bash-completion.sh \
+src/mulle-sourcetree-buildorder.sh \
+src/mulle-sourcetree-cfg.sh \
+src/mulle-sourcetree-clean.sh \
 src/mulle-sourcetree-config.sh \
 src/mulle-sourcetree-db.sh \
 src/mulle-sourcetree-dotdump.sh \
+src/mulle-sourcetree-fix.sh \
+src/mulle-sourcetree-list.sh \
 src/mulle-sourcetree-node.sh \
 src/mulle-sourcetree-nodeline.sh \
+src/mulle-sourcetree-nodemarks.sh \
+src/mulle-sourcetree-reset.sh \
+src/mulle-sourcetree-status.sh \
 src/mulle-sourcetree-update.sh \
-src/mulle-sourcetree-walk.sh 
-	
+src/mulle-sourcetree-walk.sh
+
 CHECKSTAMPS=$(SCRIPTS:.sh=.chk)
 
 #
@@ -30,8 +37,8 @@ mulle-sourcetree.chk:	mulle-sourcetree
 	- shellcheck $(SHELLFLAGS) $<
 	(shellcheck -f json $(SHELLFLAGS) $< | jq '.[].level' | grep -w error > /dev/null ) && exit 1 || touch $@
 
-install:
-	@ ./install.sh
+installer:
+	@ ./installer
 
 clean:
 	@- rm src/*.chk
