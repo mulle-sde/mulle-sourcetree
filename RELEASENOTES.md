@@ -1,3 +1,7 @@
+### 0.9.3
+
+* fix homebrew install ruby script
+
 ### 0.9.2
 
 * rename option --marks to --output-marks for buildorder
