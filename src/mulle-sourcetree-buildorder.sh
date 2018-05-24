@@ -56,7 +56,7 @@ Usage:
       done
 
 Options:
-   --marks  : output marks of sourcetree node
+   --output-marks  : output marks of sourcetree node
 EOF
   exit 1
 }
@@ -95,11 +95,11 @@ sourcetree_buildorder_main()
             sourcetree_buildorder_usage
          ;;
 
-         --marks)
+         --output-marks)
             OPTION_MARKS="YES"
          ;;
 
-         --no-marks)
+         --output-no-marks|--no-output-marks)
             OPTION_MARKS="NO"
          ;;
 

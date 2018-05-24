@@ -1,3 +1,7 @@
+### 0.9.2
+
+* rename option --marks to --output-marks for buildorder
+
 ### 0.9.1
 
 * rename install to installer, because of name conflict
