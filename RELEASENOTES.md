@@ -1,3 +1,7 @@
+### 0.9.5
+
+* need bsdmainutils on debian for column
+
 ### 0.9.4
 
 * fix package dependencies more

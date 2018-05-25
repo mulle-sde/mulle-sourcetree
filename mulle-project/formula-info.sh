@@ -10,4 +10,8 @@ LANGUAGE="bash"                # c,cpp, objc, bash ...
 DEPENDENCIES='${TOOLS_TAP}mulle-fetch
 '
 
-DEBIAN_DEPENDENCIES="mulle-fetch"
+#
+# bsdmainutils are for "column", if this hurts make column output
+# in mulle-sourcetree optional
+#
+DEBIAN_DEPENDENCIES="mulle-fetch, bsdmainutils"
