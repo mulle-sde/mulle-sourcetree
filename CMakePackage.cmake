@@ -1,3 +1,8 @@
+##
+## THESE SETTINGS ARE IGNORED WHEN USING mulle-project.
+## SEE mulle-project/formula-info.sh
+##
+
 #
 # CPack and project specific stuff
 #
@@ -17,6 +22,7 @@ set( CPACK_STRIP_FILES false)
 # CPackDeb doesn't produce 100% proper debian file unfortunately
 #
 set( CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/mulle-nat/${PROJECT_NAME}")
+
 # not strictly required
 #set( CPACK_DEBIAN_PACKAGE_DEPENDS "mulle-fetch")
 
