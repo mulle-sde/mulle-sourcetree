@@ -33,26 +33,12 @@ It is not meant to manage individual source files.
 Executable                      | Description
 --------------------------------|--------------------------------
 `mulle-sourcetree`              | Maintain sources and dependencies
-`mulle-bootstrap-to-sourcetree` | Migration tool for mulle-bootstrap projects
 
 
 ## Install
 
-Install the pre-requisite [mulle-fetch](https://github.com/mulle-nat/mulle-bashfunctions)
-and it's pre-requisites.
-
-Install into `/usr` with sudo:
-
-```
-curl -L 'https://github.com/mulle-sde/mulle-fetch/archive/latest.tar.gz' \
- | tar xfz - && cd 'mulle-fetch-latest' && sudo ./install /usr
-```
-
-### Packages
-
-OS          | Command
-------------|------------------------------------
-macos       | `brew install mulle-kybernetik/software/mulle-fetch`
+See [mulle-sde-developer](//github.com/mulle-sde/mulle-sde-developer) how
+to install mulle-sde.
 
 
 ## Sourcetree Nodes
