@@ -1,3 +1,7 @@
+### 0.9.6
+
+* improved brew formula defintion
+
 ### 0.9.5
 
 * need bsdmainutils on debian for column

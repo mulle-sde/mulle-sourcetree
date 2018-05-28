@@ -7,8 +7,7 @@ DESC="🌲 Project composition and maintenance with build support"
 LANGUAGE="bash"                # c,cpp, objc, bash ...
 # NAME="${PROJECT}"        # formula filename without .rb extension
 
-DEPENDENCIES='${TOOLS_TAP}mulle-fetch
-'
+DEPENDENCIES='${MULLE_SDE_TAP}mulle-fetch'
 
 #
 # bsdmainutils are for "column", if this hurts make column output
