@@ -224,7 +224,7 @@ nodemarks_sort()
 
    IFS="
 "
-   for i in `tr ',' '\n' <<< "${marks}" | sort -u`
+   for i in `tr ',' '\n' <<< "${marks}" | LC_ALL=C sort -u`
    do
       result="`comma_concat "${result}" "${i}"`"
    done

@@ -543,7 +543,7 @@ in the sourcetree"
    local nodeline
    local appended
 
-   log_info "Adding node ${C_MAGENTA}${C_BOLD}${_address}"
+   log_info "Adding ${C_MAGENTA}${C_BOLD}${_address}"
 
    contents="`egrep -s -v '^#' "${SOURCETREE_CONFIG_FILE}"`"
    nodeline="`node_to_nodeline`"

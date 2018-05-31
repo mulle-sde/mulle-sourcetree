@@ -1554,7 +1554,7 @@ sourcetree_update()
          # I don't see how this would be any problem. Yet let's sort
          # stuff anyway by name, for reproducability.
          #
-         nodelines="`db_fetch_all_nodelines "${database}" | sort`"
+         nodelines="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`"
          recursive_update_with_nodelines "${nodelines}" \
                                          "${style}" \
                                          "${config}" \
@@ -1580,7 +1580,7 @@ sourcetree_update()
       #
       while :
       do
-         nodelines="`db_fetch_all_nodelines "${database}" | sort`"
+         nodelines="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`"
          nodelines="`fgrep -v -x -f "${memofile}" <<< "${nodelines}"`"
          if [ -z "${nodelines}" ]
          then
