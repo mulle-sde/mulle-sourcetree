@@ -155,7 +155,7 @@ node_fetch_operation()
 
    [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
 
-   log_info "Looking for local source of ${C_RESET_BOLD}${evaledurl}${C_INFO}"
+   log_verbose "Looking for local source of ${C_RESET_BOLD}${evaledurl}${C_INFO}"
 
    local localurl
    local localnodetype
@@ -179,8 +179,9 @@ node_fetch_operation()
       log_fluff "No local URL found"
    fi
 
-   log_info "Fetching ${C_MAGENTA}${C_BOLD}${address}${C_INFO} from \
-${C_RESET_BOLD}${evaledurl}${C_INFO}"
+   log_info "Fetching ${C_MAGENTA}${C_BOLD}${address#${MULLE_SOURCETREE_SHARE_DIR}/}${C_INFO} from \
+${C_RESET_BOLD}${evaledurl}${C_INFO}."
+
    eval_exekutor ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} \
                                              "${opname}" --scm "'${nodetype}'" \
                                                          --tag "'${evaledtag}'" \
@@ -246,6 +247,10 @@ node_augment()
          then
             log_verbose "Node of nodetype \"${_nodetype}\" gained marks \"no-delete,no-update,require\""
          fi
+      ;;
+
+      "symlink")
+         mode="unsafe"
       ;;
    esac
 

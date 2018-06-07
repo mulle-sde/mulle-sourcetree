@@ -1158,7 +1158,7 @@ _db_set_default_mode()
       then
          dbtype="share"       # the default
       else
-         log_verbose "Database: ${C_RESET_BOLD}`filepath_concat "${PWD}" "${rootdir}"`${C_INFO} ${C_MAGENTA}${C_BOLD}${actualdbtype}${C_INFO}"
+         log_verbose "Database: ${C_RESET_BOLD}`simplified_absolutepath "${rootdir}"`${C_INFO} ${C_MAGENTA}${C_BOLD}${actualdbtype}${C_INFO}"
       fi
    fi
 

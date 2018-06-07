@@ -404,6 +404,8 @@ cfg_search_for_configfile()
       ;;
    esac
 
+   [ -z "${SOURCETREE_START}" ] && internal_fail "SOURCETREE_START not set"
+
    log_debug "Searching for configfile from \"${physdirectory}\" to \"${physceiling}\""
 
    (
@@ -448,6 +450,10 @@ cfg_determine_working_directory()
    local parent
    local found
    local defer
+
+   [ ! -z "${preference}" ] || internal_fail "empty preference"
+   [ ! -z "${deferflag}" ]  || internal_fail "empty deferflag"
+   [ ! -z "${physpwd}" ]    || internal_fail "empty phypwd"
 
    if [ -z "${MULLE_PATH_SH}" ]
    then
@@ -541,6 +547,17 @@ cfg_determine_working_directory()
          return 0
       ;;
 
+      VIRTUAL)
+         directory="`cfg_search_for_configfile "/"`"
+         if [ $? -ne 0 ]
+         then
+            log_debug "No config found in MULLE_VIRTUAL_ROOT ($MULLE_VIRTUAL_ROOT}"
+            return 1
+         fi
+         echo "${directory}"
+         return 0
+      ;;
+
       *)
          internal_fail "unknown defer type \"${defer}\""
       ;;
@@ -560,7 +577,7 @@ cfg_defer_if_needed()
    local directory
    local physpwd
 
-   physpwd="`pwd -P`"
+   physpwd="${MULLE_EXECUTABLE_PHYSICAL_PWD}"
    if directory="`cfg_determine_working_directory "${preference}" "${defer}" "${physpwd}"`"
    then
       if [ "${directory}" != "${physpwd}" ]

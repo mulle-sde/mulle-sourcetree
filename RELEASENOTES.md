@@ -1,3 +1,7 @@
+### 0.9.10
+
+* simplified code a little, improved add command semantics
+
 ### 0.9.9
 
 * use `LC_ALL=C` for sort

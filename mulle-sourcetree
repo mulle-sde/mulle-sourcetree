@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.9.9"
+MULLE_EXECUTABLE_VERSION="0.9.10"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -146,17 +146,15 @@ _set_sourcetree_global()
 {
    log_entry "_set_sourcetree_global" "$@"
 
+   local physicalpwd="$1"
+
    #
    # SOURCETREE_START is /, if we are in MULLE_VIRTUAL_ROOT
    # otherwise calculate the relative path and append /
    #
-
-   local physicalpwd
-
-   physicalpwd="`pwd -P`"
    if [ "${MULLE_VIRTUAL_ROOT}" != "${physicalpwd}" ]
    then
-      SOURCETREE_START="`string_remove_prefix "${physicalpwd}" "${MULLE_VIRTUAL_ROOT}"`"
+      SOURCETREE_START="${physicalpwd#${MULLE_VIRTUAL_ROOT}}"
       if [ "${SOURCETREE_START}" = "${physicalpwd}" ]
       then
          fail "\"${physicalpwd}\" lies outside of MULLE_VIRTUAL_ROOT (${MULLE_VIRTUAL_ROOT}). \
@@ -164,8 +162,6 @@ Use -e if this is desired."
       fi
    fi
    SOURCETREE_START="${SOURCETREE_START}/"
-   log_debug "SOURCETREE_START=${SOURCETREE_START}"
-
 
    #
    # our db is specific to a host
@@ -189,8 +185,11 @@ Use -e if this is desired."
 # The MULLE_VIRTUAL_ROOT is the "ceiling" we won't escape.
 # The database and config root is based on this.
 # But the actual database "root", that we are working on
-# is PWD relative to MULLE_VIRTUAL_ROOT. E.g.
-# MULLE_VIRTUAL_ROOT=/root PWD=/root/a.
+# is PWD relative to MULLE_VIRTUAL_ROOT.
+#
+# Ex.
+# MULLE_VIRTUAL_ROOT=/root
+# PWD=/root/a.
 #
 # The SOURCETREE_START is /a/
 #
@@ -200,7 +199,7 @@ _set_mulle_virtual_root_export()
 
    if [ "${FLAG_OUTSIDE_ENV}" = "YES" ]
    then
-      MULLE_VIRTUAL_ROOT="${PWD}"
+      MULLE_VIRTUAL_ROOT="${MULLE_EXECUTABLE_PHYSICAL_PWD}"
    fi
 
    case "${MULLE_VIRTUAL_ROOT}" in
@@ -225,8 +224,6 @@ _set_mulle_virtual_root_export()
 
    MULLE_VIRTUAL_ROOT="${physicalroot}"
    export MULLE_VIRTUAL_ROOT
-
-   log_debug "MULLE_VIRTUAL_ROOT=${MULLE_VIRTUAL_ROOT}"
 }
 
 
@@ -259,32 +256,40 @@ __check_sane_share_dir()
 
    #
    # check that and absolute MULLE_SOURCETREE_SHARE_DIR does not go outside
-   # MULLE_VIRTUAL_ROOT
-   #
+   # MULLE_VIRTUAL_ROOT.
+   # MEMO: I thinks this is actually a cool feature.
+
    case "${MULLE_SOURCETREE_SHARE_DIR}" in
-      *..*)
+      *".."*)
         fail "MULLE_SOURCETREE_SHARE_DIR contains .."
       ;;
 
       /*)
-         local relative
-
-         relative="`symlink_relpath "${MULLE_SOURCETREE_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT}" `"
-         case "${relative}" in
-            *..*)
-               log_warning "MULLE_SOURCETREE_SHARE_DIR \
-(${MULLE_SOURCETREE_SHARE_DIR}) lies outside of MULLE_VIRTUAL_ROOT \
-($MULLE_VIRTUAL_ROOT)."
-               log_fluff "Hint: MULLE_SOURCETREE_SHARE_DIR must not contain symlinks."
-            ;;
-         esac
+#          local relative
+#
+#          relative="`symlink_relpath "${MULLE_SOURCETREE_SHARE_DIR}" "${MULLE_VIRTUAL_ROOT}" `"
+#          case "${relative}" in
+#             *..*)
+#                case "${MULLE_SHELL_MODE}" in
+#                   SUBSHELL*)
+#                   ;;
+#
+#                   *)
+#                      log_warning "MULLE_SOURCETREE_SHARE_DIR \
+# (${MULLE_SOURCETREE_SHARE_DIR}) lies outside of MULLE_VIRTUAL_ROOT \
+# ($MULLE_VIRTUAL_ROOT)."
+#                      log_fluff "Hint: MULLE_SOURCETREE_SHARE_DIR must not contain symlinks."
+#                   ;;
+#                esac
+#             ;;
+#          esac
       ;;
 
       "")
          internal_fail "MULLE_SOURCETREE_SHARE_DIR (${MULLE_SOURCETREE_SHARE_DIR}) is empty"
       ;;
 
-      */)
+      *"/")
          internal_fail "MULLE_SOURCETREE_SHARE_DIR (${MULLE_SOURCETREE_SHARE_DIR}) ends with /"
       ;;
 
@@ -293,7 +298,6 @@ __check_sane_share_dir()
       ;;
    esac
 
-   log_debug "MULLE_SOURCETREE_SHARE_DIR=${MULLE_SOURCETREE_SHARE_DIR}"
 }
 
 
@@ -306,7 +310,7 @@ _set_share_dir()
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT must be defined by now"
    [ -z "${SOURCETREE_START}" ]   && internal_fail "SOURCETREE_START must be defined by now"
 
-   if [ -z "${usersharedir}" ]
+   if [ -z "${usershare_dir}" ]
    then
       #
       # try to recover old user choice for shared directory
@@ -325,7 +329,7 @@ _set_share_dir()
          fi
       fi
    else
-      MULLE_SOURCETREE_SHARE_DIR="${usersharedir}"
+      MULLE_SOURCETREE_SHARE_DIR="${usershare_dir}"
    fi
 
    if [ "${MULLE_SOURCETREE_SHARE_DIR}" = "." ]
@@ -338,7 +342,7 @@ _set_share_dir()
          MULLE_SOURCETREE_SHARE_DIR="${MULLE_VIRTUAL_ROOT}"
       ;;
 
-      /*)
+      "/"*)
          # MULLE_SOURCETREE_SHARE_DIR="${MULLE_SOURCETREE_SHARE_DIR}"
       ;;
 
@@ -440,6 +444,10 @@ main()
             MULLE_FLAG_DEFER="NONE"
          ;;
 
+         -V|--virtual-root)                # stay in PWD
+            MULLE_FLAG_DEFER="VIRTUAL"
+         ;;
+
          -r|--recurse|--recursive)
             FLAG_SOURCETREE_MODE="recurse"
          ;;
@@ -490,29 +498,40 @@ main()
    # shellcheck source=mulle-sourcetree-cfg.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh"      || exit 1
 
+   local MULLE_EXECUTABLE_PHYSICAL_PWD
+
+   MULLE_EXECUTABLE_PHYSICAL_PWD="`pwd -P`"
+
    _set_mulle_virtual_root_export
 
    local SOURCETREE_START
 
-   _set_sourcetree_global
+   if [ "${MULLE_FLAG_DEFER}" = "VIRTUAL" ]
+   then
+      [ -z "${MULLE_VIRTUAL_ROOT}" ] && fail "MULLE_VIRTUAL_ROOT not set"
+
+      cd "${MULLE_VIRTUAL_ROOT}"
+
+      _set_sourcetree_global "${MULLE_EXECUTABLE_PHYSICAL_PWD}"
+   else
+      _set_sourcetree_global "${MULLE_EXECUTABLE_PHYSICAL_PWD}"
+
+      cfg_defer_if_needed "NEAREST" "${MULLE_FLAG_DEFER}" || exit 1
+   fi
+
 
    _set_share_dir "${OPTION_SHARE_DIR}"
 
-   local cmd
+      # why is this after _set_sourcetree_global ?
 
    cmd="${1}"
    [ $# -eq 0 ] || shift
 
+   MULLE_FETCH="${MULLE_FETCH:-`command -v "mulle-fetch"`}"
    if [ -z "${MULLE_FETCH}" ]
    then
-      MULLE_FETCH="mulle-fetch"
+      fail "mulle-fetch not in PATH"
    fi
-
-   #
-   #
-   #
-   cfg_defer_if_needed "NEAREST" "${MULLE_FLAG_DEFER}" || exit 1
-
 
    #
    # dont' check if resetting
@@ -532,6 +551,21 @@ main()
    local SOURCETREE_MODE
 
    _db_set_default_mode "${SOURCETREE_START}" "${FLAG_SOURCETREE_MODE}" || exit 1
+
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = "YES" ]
+   then
+      log_trace2 "MULLE_EXECUTABLE_PHYSICAL_PWD=${MULLE_EXECUTABLE_PHYSICAL_PWD}"
+      log_trace2 "MULLE_SOURCETREE_DIR=${MULLE_SOURCETREE_DIR}"
+      log_trace2 "MULLE_SOURCETREE_ETC_DIR=${MULLE_SOURCETREE_ETC_DIR}"
+      log_trace2 "MULLE_SOURCETREE_SHARE_DIR=${MULLE_SOURCETREE_SHARE_DIR}"
+      log_trace2 "MULLE_VIRTUAL_ROOT=${MULLE_VIRTUAL_ROOT}"
+      log_trace2 "PWD=${PWD}"
+      log_trace2 "SOURCETREE_CONFIG_FILE=${SOURCETREE_CONFIG_FILE}"
+      log_trace2 "SOURCETREE_DB_NAME=${SOURCETREE_DB_NAME}"
+      log_trace2 "SOURCETREE_FIX_FILE=${SOURCETREE_FIX_FILE}"
+      log_trace2 "SOURCETREE_MODE=${SOURCETREE_MODE}"
+      log_trace2 "SOURCETREE_START=${SOURCETREE_START}"
+   fi
 
    case "${cmd}" in
       add)
@@ -628,6 +662,7 @@ main()
       ;;
 
       sourcetree-dir)
+         # we should be there now
          if [ -d "${MULLE_SOURCETREE_DIR}" ]
          then
             pwd -P

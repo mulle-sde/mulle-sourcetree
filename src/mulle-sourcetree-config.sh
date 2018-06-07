@@ -45,7 +45,7 @@ Usage:
    ${MULLE_EXECUTABLE_NAME} add [options] <address|url>
 
    Add a node to the sourcetree. Generally you specify the url for
-   external repositories and archives and the address for an exisiting
+   external repositories and archives and the address for an existing
    subdirectory.
 
    Nodes with an url will be fetched and possibly unpacked on the next update.
@@ -297,19 +297,22 @@ _sourcetree_typeguess_node()
 
    _nodetype="${nodetype}"
 
+   local guesssource
+
+   guesssource="${input}"
+
    #
-   # try to figure out _nodetype. At this point adre
+   # try to figure out _nodetype. At this point adress is empty
    #
    if [ -z "${_nodetype}" -a ! -z "${url}" ]
    then
       _nodetype="`node_guess_nodetype "${url}"`"
-      log_fluff "Guessed \"${_nodetype}\" from \"${url}\""
+      guesssource="${url}"
    fi
 
    if [ -z "${_nodetype}" -a ! -z "${input}" ]
    then
       _nodetype="`node_guess_nodetype "${input}"`"
-      log_fluff "Guessed \"${_nodetype}\" from \"${input}\""
    fi
 
    if [ -z "${_nodetype}" ]
@@ -317,6 +320,10 @@ _sourcetree_typeguess_node()
       case "${input}" in
          *:*|~*|/*)
             fail "Please specify --nodetype"
+         ;;
+
+         ../*)
+            _nodetype="symlink"
          ;;
 
          *)
@@ -328,6 +335,8 @@ _sourcetree_typeguess_node()
          ;;
       esac
    fi
+
+   log_fluff "Guessed nodetype \"${_nodetype}\" from \"${guesssource}\""
 }
 
 
@@ -352,29 +361,47 @@ _sourcetree_nameguess_node()
 
    #
    # try to figure out if input is an _url
-   # trivially, it is the _address if _url is empty
+   # trivially, it is the _address if _url is empty and _address is set
    #
    if [ -z "${_url}" ]
    then
+      if [ ! -z "${_address}" ]
+      then
+         _url="${input}"
+         log_fluff "Guessed URL \"${_url}\" from \"${input}\""
+         return
+      fi
+
       case "${input}" in
          *:*)
             _url="${input}"
+            log_fluff "Guessed URL \"${_url}\" from \"${input}\""
             _address="`node_guess_address "${_url}" "${_nodetype}"`"
+            log_fluff "Guessed Address \"${_address}\" from \"${_url}\""
          ;;
 
          /*|~*)
             case "${_nodetype}" in
                local)
                   _address="`symlink_relpath "${input}" "${PWD}"`"
+                  log_fluff "Guessed Address \"${_address}\" from \"${_nodetype}\""
                ;;
 
                *)
                   _url="${input}"
+                  log_fluff "Guessed URL \"${_url}\" from \"${input}\""
                   _address="`node_guess_address "${_url}" "${_nodetype}"`"
+                  log_fluff "Guessed Address \"${_address}\" from \"${_url}\""
                ;;
             esac
          ;;
+
+         *)
+            log_fluff "Guessed nothing from \"${input}\""
+         ;;
       esac
+   else
+      log_fluff "Guessed URL \"${_url}\" from \"${url}\""
    fi
 }
 
@@ -478,8 +505,16 @@ sourcetree_add_node()
 
    local input="$1"
 
-   local _address
-   local _url
+   # input could be url or address
+
+   local _address="${OPTION_ADDRESS}"
+   local _url="${OPTION_URL}"
+
+   if [ ! -z "${OPTION_ADDRESS}" -a ! -z "${OPTION_URL}" ]
+   then
+      fail "Specifying --address and --url together conflicts with the main argument"
+   fi
+
    local _nodetype
 
    _sourcetree_nameguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
@@ -543,14 +578,13 @@ in the sourcetree"
    local nodeline
    local appended
 
-   log_info "Adding ${C_MAGENTA}${C_BOLD}${_address}"
-
    contents="`egrep -s -v '^#' "${SOURCETREE_CONFIG_FILE}"`"
    nodeline="`node_to_nodeline`"
    appended="`add_line "${contents}" "${nodeline}"`"
 
    cfg_write "${SOURCETREE_START}" "${appended}"
 
+   log_info "Added ${C_MAGENTA}${C_BOLD}${_address}"
 }
 
 

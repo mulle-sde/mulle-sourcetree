@@ -66,15 +66,22 @@ print_buildorder_line()
 {
    local line="$1"
 
-   if [ ! -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
-   then
-      case "${line}" in
-         ${MULLE_SOURCETREE_SHARE_DIR}/*)
-            echo '${MULLE_SOURCETREE_SHARE_DIR}'"${line#${MULLE_SOURCETREE_SHARE_DIR}}"
-            return 0
-         ;;
-      esac
-   fi
+   case ",${MULLE_MARKS}," in
+      *,no-share,*)
+      ;;
+
+      *)
+         if [ ! -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
+         then
+            case "${line}" in
+               ${MULLE_SOURCETREE_SHARE_DIR}/*)
+                  echo '${MULLE_SOURCETREE_SHARE_DIR}'"${line#${MULLE_SOURCETREE_SHARE_DIR}}"
+                  return 0
+               ;;
+            esac
+         fi
+      ;;
+   esac
 
    echo "${line#${MULLE_VIRTUAL_ROOT}/}"
 }

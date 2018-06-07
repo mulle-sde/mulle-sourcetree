@@ -1387,7 +1387,8 @@ a directory"
       fi
 
       # isn't this a fail ?
-      internal_fail "\"${filename}\" does not exist, so database \"${database}\" is corrupt"
+      internal_fail "\"${filename}\" does not exist, so database \"${database}\" \
+is corrupt. Correct with \`mulle-sourcetree reset\`"
       return
    fi
 

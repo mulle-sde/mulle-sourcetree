@@ -49,35 +49,35 @@ test_bad_paths()
 {
    if run_mulle_sourcetree add --nodetype git --url "${repos}/a" "/tmp/foo"
    then
-      internal_fail "internal_failed to complain about absolute path"
+      internal_fail "a: failed to complain about absolute path"
    fi
    [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "a: .mulle-sourcetree/etc/config should not exist"
    [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "a: .mulle-sourcetree/var/db should not exist"
 
    if run_mulle_sourcetree add --nodetype git --url "${repos}/a" "../foo"
    then
-      internal_fail "internal_failed to complain about escape path"
+      internal_fail "b: failed to complain about escape path"
    fi
    [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "b: .mulle-sourcetree/etc/config should not exist"
    [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "b: .mulle-sourcetree/var/db should not exist"
 
    if run_mulle_sourcetree add --nodetype git --url "${repos}/a" "a/../.."
    then
-      internal_fail "internal_failed to complain about escape path"
+      internal_fail "c: failed to complain about escape path"
    fi
    [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "c: .mulle-sourcetree/etc/config should not exist"
    [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "c: .mulle-sourcetree/var/db should not exist"
 
    if run_mulle_sourcetree add --nodetype git --url "${repos}/a" "~foo"
    then
-      internal_fail "internal_failed to complain about absolute path"
+      internal_fail "d: failed to complain about absolute path"
    fi
    [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "d: .mulle-sourcetree/etc/config should not exist"
    [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "d: .mulle-sourcetree/var/db should not exist"
 
    if run_mulle_sourcetree add --nodetype git --url "${repos}/a" "~/foo"
    then
-      internal_fail "internal_failed to complain about absolute path"
+      internal_fail "e: failed to complain about absolute path"
    fi
    [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "e: .mulle-sourcetree/etc/config should not exist"
    [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "e: .mulle-sourcetree/var/db should not exist"
@@ -90,7 +90,7 @@ test_simple_add_remove()
 {
    if ! run_mulle_sourcetree add --nodetype git --branch release --url "${repos}/a" "foo"
    then
-      internal_fail "failed unexpectedly"
+      internal_fail "a: failed unexpectedly"
    fi
    [ -f ".mulle-sourcetree/etc/config" ] || internal_fail "a: .mulle-sourcetree/etc/config should exist now"
    [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "a: .mulle-sourcetree/var/db should not exist"
@@ -98,14 +98,14 @@ test_simple_add_remove()
    # same _url should not work
    if run_mulle_sourcetree add --nodetype git --url "${repos}/a" "foo"
    then
-      internal_fail "succeeded unexpectedly"
+      internal_fail "b: succeeded unexpectedly"
    fi
    [ -f ".mulle-sourcetree/etc/config" ] || internal_fail "b: .mulle-sourcetree/etc/config should exist now"
    [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "b: .mulle-sourcetree/var/db should not exist"
 
    if ! run_mulle_sourcetree remove "foo"
    then
-      internal_fail "failed unexpectedly"
+      internal_fail "c: failed unexpectedly"
    fi
    [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "c: .mulle-sourcetree/etc/config should not exist anymore"
    [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "c: .mulle-sourcetree/var/db should not exist"
@@ -122,7 +122,7 @@ test_update1()
 
    if ! run_mulle_sourcetree add --nodetype git --branch release --url "${repos}/a" "foo"
    then
-      internal_fail "add failed unexpectedly"
+      internal_fail "a: add failed unexpectedly"
    fi
 
    [ -e ".mulle-sourcetree/etc/config" ] || internal_fail "b: .mulle-sourcetree should now exist"
@@ -131,7 +131,7 @@ test_update1()
 
    if ! run_mulle_sourcetree --recursive update
    then
-      internal_fail "update failed unexpectedly ($PWD)"
+      internal_fail "b: update failed unexpectedly ($PWD)"
    fi
 
    [ -e ".mulle-sourcetree/etc/config" ] || internal_fail "c: .mulle-sourcetree/etc/config should exist"
@@ -140,7 +140,7 @@ test_update1()
 
    if ! run_mulle_sourcetree remove "foo"
    then
-      internal_fail "remove failed unexpectedly"
+      internal_fail "c: remove failed unexpectedly"
    fi
 
    [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "d: .mulle-sourcetree/etc/config should not exist anymore"
@@ -149,7 +149,7 @@ test_update1()
 
    if ! run_mulle_sourcetree --recursive update
    then
-      internal_fail "update failed unexpectedly"
+      internal_fail "d: update failed unexpectedly"
    fi
 
    [ -e ".mulle-sourcetree/etc/config" ]    && internal_fail "e: .mulle-sourcetree/etc/config should not exist anymore"
@@ -173,7 +173,7 @@ test_update2()
 
    if ! run_mulle_sourcetree add --nodetype git --branch release --url "${repos}/a" "foo"
    then
-      internal_fail "add failed unexpectedly"
+      internal_fail "a: add failed unexpectedly"
    fi
 
    [ -e ".mulle-sourcetree/etc/config" ] || internal_fail "b: .mulle-sourcetree should now exist"
@@ -182,7 +182,7 @@ test_update2()
 
    if ! run_mulle_sourcetree --recursive update
    then
-      internal_fail "update failed unexpectedly"
+      internal_fail "b: update failed unexpectedly"
    fi
 
    [ -e ".mulle-sourcetree/etc/config" ] || internal_fail "c: .mulle-sourcetree/etc/config should exist"
@@ -191,7 +191,7 @@ test_update2()
 
    if ! run_mulle_sourcetree set --address "bar" foo
    then
-      internal_fail "set failed unexpectedly"
+      internal_fail "c: set failed unexpectedly"
    fi
 
    [ -e ".mulle-sourcetree/etc/config" ] || internal_fail "d: .mulle-sourcetree/etc/config should exist"
@@ -201,7 +201,7 @@ test_update2()
 
    if ! run_mulle_sourcetree --recursive update
    then
-      internal_fail "update failed unexpectedly"
+      internal_fail "d: update failed unexpectedly"
    fi
 
    [ -e ".mulle-sourcetree/etc/config" ] || internal_fail "e: .mulle-sourcetree/etc/config should exist"
