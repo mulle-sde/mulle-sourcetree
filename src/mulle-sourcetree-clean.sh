@@ -48,10 +48,25 @@ walk_clean()
 {
    log_entry "${C_RESET}walk_clean${C_DEBUG}" "${MULLE_FILENAME}" "${MULLE_MARKS}"
 
+   case "${MULLE_NODETYPE}" in
+      none)
+         log_fluff "\"${MULLE_FILENAME}\" with nodetype none is ignored"
+         return
+      ;;
+   esac
+
    local filename
    local marks
 
    filename="`db_fetch_filename_for_uuid "${MULLE_DATASOURCE}" "${MULLE_UUID}" `"
+
+   if [ -z "${filename}" ]
+   then
+      # database has nothing for it
+      log_fluff "\"${MULLE_FILENAME}\" has no known update in \"${MULLE_DATASOURCE}\", so not cleaning it"
+      return
+   fi
+
    marks="${MULLE_MARKS}"
 
    #
@@ -59,22 +74,21 @@ walk_clean()
    #
    if ! nodemarks_contain "${marks}" "delete"
    then
-      log_verbose "${C_RESET_BOLD}${filename}${C_VERBOSE} is protected from delete"
+      log_fluff "\"${filename}\" is protected from delete"
       NO_DELETES="`add_line "${NO_DELETES}" "${filename}" `"
       return
    fi
 
-   # could move stuff to graveyard, but we don't
    if [ -e "${filename}" ]
    then
-      if [ ! -L "${filename}" ]
+      if [ -L "${filename}" ]
       then
          log_fluff "Symlink \"${filename}\" marked for delete."
          DELETE_FILES="`add_line "${DELETE_FILES}" "${filename}" `"
       else
          if [ -d "${filename}" ]
          then
-            log_fluff "Dictionary \"${filename}\" marked for delete."
+            log_fluff "Directory \"${filename}\" marked for delete."
             DELETE_DIRECTORIES="`add_line "${DELETE_DIRECTORIES}" "${filename}" `"
          else
             log_fluff "File (or syml) \"${filename}\" marked for delete."
@@ -155,7 +169,7 @@ sourcetree_clean_main()
    log_entry "sourcetree_clean_main" "$@"
 
    local OPTION_MARKS="ANY"
-   local OPTION_PERMISSIONS="" # empty!
+   local OPTION_PERMISSIONS=""
    local OPTION_NODETYPES="ALL"
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_IS_UPTODATE="NO"
@@ -173,21 +187,21 @@ sourcetree_clean_main()
          # more common flags
          #
          -m|--marks)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_MARKS="$1"
          ;;
 
          -n|--nodetypes)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_NODETYPES="$1"
          ;;
 
          -p|--permissions)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_PERMISSIONS="$1"
@@ -221,10 +235,20 @@ sourcetree_clean_main()
       mode="`concat "${mode}" "pre-order"`"
    fi
 
+   local rval
+
    sourcetree_clean "${OPTION_NODETYPES}" \
                     "${OPTION_PERMISSIONS}" \
                     "${OPTION_MARKS}" \
                     "${mode}"
+   rval=$?
+
+   if [ "${rval}" -eq 0 ]
+   then
+      rmdir_if_empty "${MULLE_SOURCETREE_SHARE_DIR}"
+   fi
+
+   return $rval
 }
 
 

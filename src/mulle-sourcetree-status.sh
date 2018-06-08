@@ -182,7 +182,7 @@ emit_status()
       directory="."
       filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${SOURCETREE_START}" `"
    else
-      filename="`__walk_get_filename`"
+      filename="`__walk_get_db_filename`"
       if ! string_has_prefix "${filename}" "${MULLE_SOURCETREE_SHARE_DIR}"
       then
          datasource="`string_remove_prefix "${filename}" "${MULLE_VIRTUAL_ROOT}"`"
@@ -192,7 +192,6 @@ emit_status()
          fi
       else
          datasource="${filename}"
-
       fi
    fi
 
@@ -412,7 +411,7 @@ walk_status()
    local filename
    local name
 
-   filename="`__walk_get_filename`"
+   filename="`__walk_get_db_filename`"
 
    emit_status "${MULLE_ADDRESS}" \
                "${MULLE_VIRTUAL_ADDRESS}" \
@@ -528,7 +527,7 @@ sourcetree_status_main()
 
    local OPTION_MARKS="ANY"
    local OPTION_PERMISSIONS="" # empty!
-   local OPTION_NODETYPES="ALL"
+   local OPTION_NODETYPES=""
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_IS_UPTODATE="NO"
    local OPTION_OUTPUT_HEADER="DEFAULT"
@@ -577,21 +576,21 @@ sourcetree_status_main()
          # more common flags
          #
          -m|--marks)
-            [ $# -eq 1 ] && sourcetree_status_usage "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_status_usage "Missing argument to \"$1\""
             shift
 
             OPTION_MARKS="$1"
          ;;
 
          -n|--nodetypes)
-            [ $# -eq 1 ] && sourcetree_status_usage "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_status_usage "Missing argument to \"$1\""
             shift
 
             OPTION_NODETYPES="$1"
          ;;
 
          -p|--permissions)
-            [ $# -eq 1 ] && sourcetree_status_usage "missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_status_usage "Missing argument to \"$1\""
             shift
 
             OPTION_PERMISSIONS="$1"

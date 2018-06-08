@@ -239,13 +239,14 @@ node_augment()
 
          before="${_marks}"
 
-         _marks="`nodemarks_remove "${_marks}" "delete"`"
-         _marks="`nodemarks_remove "${_marks}" "update"`"
-         _marks="`nodemarks_add "${_marks}" "require"`"
+         after="`nodemarks_remove "${before}" "share"`"
+         after="`nodemarks_remove "${after}" "delete"`"
+         after="`nodemarks_remove "${after}" "update"`"
+         after="`nodemarks_add "${after}" "require"`"
 
-         if [ "${before}" != "${_marks}" ]
+         if [ "${before}" != "${after}" ]
          then
-            log_verbose "Node of nodetype \"${_nodetype}\" gained marks \"no-delete,no-update,require\""
+            fail "Node of nodetype \"${_nodetype}\" requires marks \"no-delete,no-update,no-share,require\""
          fi
       ;;
 
@@ -304,17 +305,17 @@ node_to_nodeline()
    log_entry "node_to_nodeline" "$@"
 
    case "${_url}" in
-      *\;*)
+      *";"*)
          fail "_url \"${_url}\" contains semicolon"
       ;;
    esac
 
    case "${_address}" in
-      .*)
+      "."*)
          fail "Address \"${_address}\" starts with a dot"
       ;;
 
-      *\;*)
+      *";"*)
          fail "Address \"${_address}\" contains semicolon"
       ;;
 
@@ -324,22 +325,22 @@ node_to_nodeline()
    esac
 
    case "${_branch}" in
-      *\;*)
+      *";"*)
          fail "Branch \"${_branch}\" contains semicolon"
       ;;
    esac
 
    case "${_tag}" in
-      *\;*)
+      *";"*)
          fail "Tag \"${_tag}\" contains semicolon"
       ;;
    esac
 
    case "${_nodetype}" in
-      *\;*)
+      *";"*)
          fail "Nodetype \"${_nodetype}\" contains semicolon"
       ;;
-      *\,*)
+      *","*)
          fail "Nodetype \"${_nodetype}\" contains comma"
       ;;
       "")
@@ -348,7 +349,7 @@ node_to_nodeline()
    esac
 
    case "${_uuid}" in
-      *\;*)
+      *";"*)
          fail "UUID \"${_uuid}\" contains semicolon"
       ;;
       "")
@@ -357,21 +358,21 @@ node_to_nodeline()
    esac
 
    case "${_marks}" in
-      *\;*)
+      *";"*)
          fail "Marks \"${_marks}\" contain semicolon"
       ;;
 
-      ,*|*,,*|*,)
+      ","*|*",,"*|*",")
          fail "Marks \"${_marks}\" are ugly, remove excess commata"
       ;;
    esac
 
    case "${_fetchoptions}" in
-      *\;*)
+      *";"*)
          fail "Fetchoptions \"${_fetchoptions}\" contains semicolon"
       ;;
 
-      ,*|*,,*|*,)
+      ","*|*",,"*|*",")
          fail "Fetchoptions \"${_fetchoptions}\" are ugly, remove excess commata"
       ;;
    esac
@@ -407,35 +408,33 @@ nodetypes_contain()
 {
    log_entry "nodetypes_contain" "$@"
 
-   local nodetypes="$1"
-   local nodetype="$2"
+}
 
-   case ",${nodetypes}," in
-      *,${nodetype},*)
+
+nodetype_filter()
+{
+   log_entry "nodetype_filter" "$@"
+
+   local nodetype="$1"
+   local filter="$2"
+
+   [ -z "${nodetype}" ] && internal_fail "empty nodetype"
+
+   [ -z "${filter}" ] && return 0
+
+   case ",${filter}," in
+      *,no-${nodetype},*)
+         return 1
+      ;;
+   esac
+
+   case ",${filter}," in
+      *,ALL,*|*,${nodetype},*)
          return 0
       ;;
    esac
 
    return 1
-}
-
-
-nodetype_filter_with_allowable_nodetypes()
-{
-   log_entry "nodetypes_filter_with_allowable_nodetypes" "$@"
-
-   local nodetype="$1"
-   local allowednodetypes="$2"
-
-   [ -z "${nodetype}" ] && internal_fail "empty nodetype"
-
-   if [ "${allowednodetypes}" = "ALL" ]
-   then
-      log_fluff "ALL matches all"
-      return 0
-   fi
-
-   nodetypes_contain "${allowednodetypes}" "${nodetype}"
 }
 
 
@@ -452,7 +451,7 @@ nodemarks_filter_with_qualifier()
 
    if [ "${qualifier}" = "ANY" ]
    then
-      log_fluff "ANY matches all"
+      log_debug "ANY matches all"
       return 0
    fi
 
@@ -463,7 +462,7 @@ nodemarks_filter_with_qualifier()
 
    all="${qualifier%%;*}"
    case "${qualifier}" in
-      *\;*)
+      *"\;"*)
          qualifier="${qualifier#*;}"
       ;;
 
@@ -474,7 +473,7 @@ nodemarks_filter_with_qualifier()
 
    one="${qualifier%%;*}"
    case "${qualifier}" in
-      *\;*)
+      *"\;"*)
          qualifier="${qualifier#*;}"
       ;;
 
@@ -485,7 +484,7 @@ nodemarks_filter_with_qualifier()
 
    none="${qualifier%%;*}"
    case "${qualifier}" in
-      *\;*)
+      *"\;"*)
          qualifier="${qualifier#*;}"
       ;;
 
@@ -496,7 +495,7 @@ nodemarks_filter_with_qualifier()
 
    override="${qualifier%%;*}"
    case "${qualifier}" in
-      *\;*)
+      *"\;"*)
          qualifier="${qualifier#*;}"
       ;;
 
@@ -561,3 +560,4 @@ nodemarks_filter_with_qualifier()
       IFS="${DEFAULT_IFS}"; set +o noglob
    fi
 }
+

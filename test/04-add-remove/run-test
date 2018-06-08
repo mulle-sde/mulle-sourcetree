@@ -50,22 +50,22 @@ main()
       internal_fail "config should not exist"
    fi
 
-   if ! run_mulle_sourcetree -N add "a"
+   if ! run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "a"
    then
       internal_fail "add internal_failed unexpectedly"
    fi
 
-   if run_mulle_sourcetree -N add "a"
+   if run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "a"
    then
       internal_fail "duplicate add succeeded unexpectedly"
    fi
 
-   if run_mulle_sourcetree -N add "."
+   if run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "."
    then
       internal_fail "add \".\" succeeded unexpectedly"
    fi
 
-   if run_mulle_sourcetree -N add -s local "/"
+   if run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" -s local "/"
    then
       internal_fail "/ add succeeded unexpectedly"
    fi
@@ -75,7 +75,7 @@ main()
       internal_fail "config should exist now"
    fi
 
-   if ! run_mulle_sourcetree -N add "b"
+   if ! run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "b"
    then
       internal_fail "add of b internal_failed unexpectedly"
    fi

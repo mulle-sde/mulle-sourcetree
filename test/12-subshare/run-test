@@ -45,7 +45,7 @@ run_test_1()
       cd a &&
       run_mulle_sourcetree -e add --nodetype git "file://${repos}/b"
    ) &&
-   run_mulle_sourcetree -e add --nodetype local --marks no-share "a"
+   run_mulle_sourcetree -e add --nodetype local --marks "no-delete,no-update,no-share" "a"
    set +e
 
    (

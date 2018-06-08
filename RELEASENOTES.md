@@ -1,3 +1,9 @@
+## 0.10.0
+
+* improved symlink handling in the walker a lot, which has positive implications through out mulle-sourcetree
+* local nodes are not silently augmented with required marks, but instead an error is thrown
+
+
 ### 0.9.10
 
 * simplified code a little, improved add command semantics

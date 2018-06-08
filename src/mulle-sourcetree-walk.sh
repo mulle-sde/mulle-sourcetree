@@ -76,31 +76,26 @@ walk_filter_permissions()
 {
    log_entry "walk_filter_permissions" "$@"
 
-   local address="$1"
+   local filename="$1"
    local permissions="$2"
 
-   [ -z "${address}" ] && internal_fail "empty address"
+   [ -z "${filename}" ] && internal_fail "empty filename"
 
-   if [ -z "${permissions}" ]
+   if [ ! -e "${filename}" ]
    then
-      return
-   fi
-
-   if [ ! -e "${address}" ]
-   then
-      log_fluff "${address} does not exist (yet)"
+      log_fluff "${filename} does not exist (yet)"
       case "${permissions}" in
          *fail-noexist*)
-            fail "Missing \"${address}\" is not yet fetched."
+            fail "Missing \"${filename}\" is not yet fetched."
          ;;
 
          *warn-noexist*)
-            log_verbose "Repository expected in \"${address}\" is not yet fetched"
+            log_verbose "Repository expected in \"${filename}\" is not yet fetched"
             return 0
          ;;
 
          *skip-noexist*)
-            log_fluff "Repository expected in \"${address}\" is not yet fetched, skipped"
+            log_fluff "Repository expected in \"${filename}\" is not yet fetched, skipped"
             return 1
          ;;
 
@@ -110,30 +105,38 @@ walk_filter_permissions()
       esac
    fi
 
-   if [ ! -L "${address}" ]
+   #
+   # this check is not good enough for shared stuff
+   #
+   if [ ! -L "${filename}" ]
    then
       return 0
    fi
 
-   log_fluff "${address} is a symlink"
+   log_fluff "${filename} is a symlink"
 
    case "${permissions}" in
       *fail-symlink*)
-         fail "Missing \"${address}\" is a symlink."
+         fail "Missing \"${filename}\" is a symlink."
       ;;
 
       *warn-symlink*)
-         log_verbose "\"${address}\" is a symlink."
-         return 0
+         log_verbose "\"${filename}\" is a symlink."
+         return 2
       ;;
 
       *skip-symlink*)
-         log_fluff "\"${address}\" is a symlink, skipped"
+         log_fluff "\"${filename}\" is a symlink, skipped"
          return 1
+      ;;
+
+      *descend-symlink*)
+         log_fluff "\"${filename}\" is a symlink, will be descended into"
+         return 0
       ;;
    esac
 
-   return 0
+   return 2
 }
 
 
@@ -141,7 +144,7 @@ walk_filter_nodetypes()
 {
    log_entry "walk_filter_nodetypes" "$@"
 
-   nodetype_filter_with_allowable_nodetypes "$@"
+   nodetype_filter "$@"
 }
 
 
@@ -180,20 +183,21 @@ __docd_postamble()
 
 #
 # convenience for callbacks in shared configuration
+# TODO: is this still needed for statzs ? isn't this the same as _filename
+# now ?
 #
-__walk_get_filename()
+__walk_get_db_filename()
 {
-   log_entry "__walk_get_filename" "$@"
-
-   local database
-
-   database="${MULLE_DATASOURCE}"
+   log_entry "__walk_get_db_filename" "$@"
 
    if ! nodemarks_contain "${MULLE_MARKS}" "fs"
    then
       return
    fi
 
+   local database
+
+   database="${MULLE_DATASOURCE}"
    if nodemarks_contain "${MULLE_MARKS}" "share" && \
       [ "${SOURCETREE_MODE}" = "share" -a ! -z "${MULLE_URL}" ]
    then
@@ -495,9 +499,9 @@ _visit_node()
    #
    if [ "${VISIT_TWICE}" != "YES" ]
    then
-      case "${VISITED}:" in
+      case ":${VISITED}:" in
          *\:${_filename}\:*)
-            log_fluff "A node for \"${_filename}\" has already been visited"
+            log_fluff "A node \"${_filename}\" has already been visited"
             return 0  # error condition too hard
          ;;
       esac
@@ -537,14 +541,12 @@ _visit_filter_nodeline()
    log_entry "_visit_filter_nodeline" "$@"
 
    local nodeline="$1"; shift
-
    local datasource="$1"; shift
    local virtual="$1"; shift
-
-   local filternodetypes="$1"
-   local filterpermissions="$2"
-   local filtermarks="$3"
-   local mode="$4"
+   local filternodetypes="$1" ; shift
+   local filterpermissions="$1"; shift
+   local filtermarks="$1"; shift
+   local mode="$1"; shift
 
    # rest are arguments
 
@@ -583,13 +585,6 @@ _visit_filter_nodeline()
       return 0
    fi
 
-   if ! walk_filter_permissions "${_address}" "${filterpermissions}"
-   then
-      log_fluff "Node \"${_address}\": \"${_address}\" doesn't jive with permissions \"${filterpermissions}\""
-      return 0
-   fi
-
-   log_debug "Node \"${_address}\" passed the filters"
 
    #
    # if we are walking in shared mode, then we fold the _address
@@ -603,7 +598,13 @@ _visit_filter_nodeline()
       *share*)
          if nodemarks_contain "${_marks}" "share"
          then
-            _visit_share_node "${datasource}" "${virtual}" "$@"
+            _visit_share_node "${datasource}" \
+                              "${virtual}" \
+                              "${filternodetypes}" \
+                              "${filterpermissions}" \
+                              "${filtermarks}" \
+                              "${mode}" \
+                              "$@"
             return $?
          fi
 
@@ -643,6 +644,18 @@ _visit_filter_nodeline()
       ;;
    esac
 
+   walk_filter_permissions "${_filename}" "${filterpermissions}"
+   case $? in
+      2)
+         mode="${mode} flat"  # don't recurse into symlinks unless asked to
+      ;;
+
+      1)
+         log_fluff "Node \"${_address}\" with filename \"${_filename}\" doesn't jive with permissions \"${filterpermissions}\""
+         return 0
+      ;;
+   esac
+
    local next_datasource
 
    next_datasource="${datasource}${_destination}/"
@@ -651,6 +664,10 @@ _visit_filter_nodeline()
                "${virtual}" \
                "${next_datasource}" \
                "${next_virtual}" \
+               "${filternodetypes}" \
+               "${filterpermissions}" \
+               "${filtermarks}" \
+               "${mode}" \
                "$@"
 }
 
@@ -661,13 +678,15 @@ _visit_share_node()
 
    local datasource="$1"; shift
    local virtual="$1"; shift
-
-   local mode="$4"
+   local filternodetypes="$1"; shift
+   local filterpermissions="$1"; shift
+   local filtermarks="$1"; shift
+   local mode="$1" ; shift
 
 #   [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ] && internal_fail "MULLE_SOURCETREE_SHARE_DIR is empty"
 
    #
-   # So the node is shared so, virtual changes
+   # So the node is shared, so virtual changes
    # The datasource may diverge though..
    #
    local _destination
@@ -692,6 +711,18 @@ _visit_share_node()
       ;;
    esac
 
+   walk_filter_permissions "${_filename}" "${filterpermissions}"
+   case $? in
+      2)
+         mode="${mode} flat"  # don't recurse into symlinks unless asked to
+      ;;
+
+      1)
+         log_fluff "Node \"${_address}\" with filename \"${_filename}\" doesn't jive with permissions \"${filterpermissions}\""
+         return 0
+      ;;
+   esac
+
    #
    # hacky hack. If shareddir exists visit that.
    # Otherwise optimistically look for it where it would be in
@@ -706,7 +737,7 @@ _visit_share_node()
       local va
       local vaf
 
-      # must be fast cant use concat
+      # must be fast can't use concat
       case "${virtual}" in
          "")
             va="${_address}"
@@ -744,6 +775,10 @@ _visit_share_node()
                "${MULLE_SOURCETREE_SHARE_DIR}" \
                "${next_datasource}" \
                "${next_virtual}" \
+               "${filternodetypes}" \
+               "${filterpermissions}" \
+               "${filtermarks}" \
+               "${mode}" \
                "$@"
 }
 
@@ -775,7 +810,7 @@ _walk_nodelines()
       return
    fi
 
-    set -o noglob ; IFS="
+   set -o noglob ; IFS="
 "
    for nodeline in ${nodelines}
    do
@@ -900,6 +935,13 @@ _walk_db_uuids()
    local datasource="$1"; shift
    local virtual="$1"; shift
 
+   local rval
+
+   if cfg_exists "${datasource}" && ! db_is_ready "${datasource}"
+   then
+      fail "The sourcetree at \"${datasource}\" is not updated fully yet, can not proceed"
+   fi
+
    nodelines="`db_fetch_all_nodelines "${datasource}"`"
    _walk_nodelines "${nodelines}" "${datasource}" "${virtual}" "$@"
 }
@@ -1021,7 +1063,6 @@ sourcetree_walk_internal()
 }
 
 
-
 sourcetree_walk_main()
 {
    log_entry "sourcetree_walk_main" "$@"
@@ -1034,7 +1075,7 @@ sourcetree_walk_main()
    local OPTION_EXTERNAL_CALL="YES"
    local OPTION_LENIENT="NO"
    local OPTION_MARKS="ANY"
-   local OPTION_NODETYPES="ALL"
+   local OPTION_NODETYPES=""
    local OPTION_PERMISSIONS="" # empty!
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_EVAL_EXEKUTOR="YES"
@@ -1103,21 +1144,21 @@ sourcetree_walk_main()
          # filter flags
          #
          -m|--marks)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_MARKS="$1"
          ;;
 
          -n|--nodetypes)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_NODETYPES="$1"
          ;;
 
          -p|--permissions)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_PERMISSIONS="$1"

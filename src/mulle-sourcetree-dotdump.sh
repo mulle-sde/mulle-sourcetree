@@ -691,7 +691,7 @@ sourcetree_dotdump_main()
 
    local OPTION_MARKS="ANY"
    local OPTION_PERMISSIONS="" # empty!
-   local OPTION_NODETYPES="ALL"
+   local OPTION_NODETYPES=""
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_OUTPUT_HTML="NO"
    local OPTION_OUTPUT_EVAL="NO"
@@ -739,21 +739,21 @@ sourcetree_dotdump_main()
          # more common flags
          #
          -m|--marks)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_MARKS="$1"
          ;;
 
          -n|--nodetypes)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_NODETYPES="$1"
          ;;
 
          -p|--permissions)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_PERMISSIONS="$1"

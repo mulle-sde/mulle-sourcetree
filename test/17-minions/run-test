@@ -66,7 +66,7 @@ run_test()
    fi
 
    # node is expected to be local and no-delete
-   if ! run_mulle_sourcetree add b
+   if ! run_mulle_sourcetree add --marks "no-delete,no-update,no-share" b
    then
       internal_fail "add failed unexpectedly"
    fi
@@ -76,7 +76,7 @@ run_test()
       internal_fail "minion b is not local"
    fi
 
-   if [ "`mulle-sourcetree get b marks`" != "no-delete,no-update" ]
+   if [ "`mulle-sourcetree get b marks`" != "no-delete,no-share,no-update" ]
    then
       internal_fail "minion b is not no-delete"
    fi

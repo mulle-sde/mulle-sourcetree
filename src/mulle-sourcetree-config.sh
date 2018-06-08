@@ -537,8 +537,8 @@ sourcetree_add_node()
    then
       if ! [ -e "${_address}" ]
       then
-         case "${_marks}" in
-            no-fs|no-fs,*|*,no-fs,*|*,no-fs)
+         case ",${_marks}," in
+            *,no-fs,*)
             ;;
 
             *)
@@ -1432,56 +1432,56 @@ sourcetree_common_main()
          ;;
 
          -a|--address)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_ADDRESS="$1"
          ;;
 
          -b|--branch)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_BRANCH="$1"
          ;;
 
          -f|--fetchoptions)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_FETCHOPTIONS="$1"
          ;;
 
          -m|--marks)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_MARKS="$1"
          ;;
 
          -n|--nodetype|-s|--scm)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_NODETYPE="$1"
          ;;
 
          -t|--tag)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_TAG="$1"
          ;;
 
          -u|--url)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_URL="$1"
          ;;
 
          -U|--userinfo)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_USERINFO="$1"

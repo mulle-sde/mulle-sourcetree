@@ -100,7 +100,7 @@ emit_mulle_fetch_eval_options()
       ;;
 
       "DEFAULT")
-         if [ "${MULLE_SYMLINK}" = "YES" ]
+         if [ "${MULLE_SYMLINK}" = "YES" -o "${MULLE_SOURCETREE_SYMLINK}" = "YES" ]
          then
             options="`concat "${options}" "--symlink-returns-2"`"
          fi
@@ -1762,21 +1762,21 @@ sourcetree_update_main()
          ;;
 
          --cache-dir)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_FETCH_CACHE_DIR="$1"
          ;;
 
          --mirror-dir)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_FETCH_MIRROR_DIR="$1"
          ;;
 
          -l|--search-path|--local-search-path|--locals-search-path)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_FETCH_SEARCH_PATH="$1"
@@ -1787,7 +1787,7 @@ sourcetree_update_main()
          # update options
          #
          --override-branch)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_OVERRIDE_BRANCH="$1"

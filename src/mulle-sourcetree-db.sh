@@ -381,7 +381,7 @@ db_bury()
       mkdir_if_missing "${graveyard}"
    fi
 
-   log_info "Burying ${C_MAGENTA}${C_BOLD}${filename}${C_INFO} in grave \"${gravepath}\""
+   log_info "Burying ${C_MAGENTA}${C_BOLD}${filename#${MULLE_VIRTUAL_ROOT}/}${C_INFO} in grave \"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
    exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}" >&2
 }
 
@@ -1191,6 +1191,31 @@ _db_set_default_mode()
          log_verbose "Shared directory: ${C_RESET_BOLD}${MULLE_SOURCETREE_SHARE_DIR}${C_INFO}"
       fi
    fi
+}
+
+
+db_get_node_filename()
+{
+   local address="$1"
+   local nodetype="$2"
+   local marks="$3"
+
+   # in share mode, modify address by prepending MULLE_SOURCETREE_SHARE_DIR
+   # to basename
+   if [ "${SOURCETREE_MODE}" = "share" ]
+   then
+      case ",${marks}," in
+         *,no-share,*)
+         ;;
+
+         *)
+            echo "${MULLE_SOURCETREE_SHARE_DIR}/${address##*/}"
+            return
+         ;;
+      esac
+   fi
+
+   echo "${filename}"
 }
 
 

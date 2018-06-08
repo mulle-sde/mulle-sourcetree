@@ -226,9 +226,9 @@ _sourcetree_contents()
 
       __nodeline_get_address_nodetype_marks "${nodeline}"
 
-      if ! nodetype_filter_with_allowable_nodetypes "${_nodetype}" "${filternodetypes}"
+      if ! nodetype_filter "${_nodetype}" "${filternodetypes}"
       then
-         log_fluff "Node \"${nodeline}\": \"${_nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
+         log_fluff "Node \"${nodeline}\": \"${_nodetype}\" doesn't jive with nodetypes filter \"${filternodetypes}\""
          continue
       fi
 
@@ -585,7 +585,7 @@ sourcetree_list_main()
 
    mode="`_sourcetree_augment_mode_with_output_options`"
 
-   list_nodes "${mode}" "${OPTION_NODETYPES:-ALL}" "${OPTION_MARKS}" "${OPTION_FORMAT}"
+   list_nodes "${mode}" "${OPTION_NODETYPES}" "${OPTION_MARKS}" "${OPTION_FORMAT}"
 }
 
 

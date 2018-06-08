@@ -255,7 +255,7 @@ walk_fix()
    then
       if [ -d "${filename}" ]
       then
-         log_fluff "Dictionary \"${filename}\" exists."
+         log_fluff "Destination \"${filename}\" exists."
          _fixup_dir_exists "${datasource}" "${filename}" "${address}"
       else
          log_warning "${filename} is a file, not sure what to do"
@@ -291,7 +291,7 @@ sourcetree_fix_main()
 
    local OPTION_MARKS="ANY"
    local OPTION_PERMISSIONS="" # empty!
-   local OPTION_NODETYPES="ALL"
+   local OPTION_NODETYPES=""
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_IS_UPTODATE="NO"
    local OPTION_OUTPUT_HEADER="DEFAULT"
@@ -308,21 +308,21 @@ sourcetree_fix_main()
          # more common flags
          #
          -m|--marks)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_MARKS="$1"
          ;;
 
          -n|--nodetypes)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_NODETYPES="$1"
          ;;
 
          -p|--permissions)
-            [ $# -eq 1 ] && fail "missing argument to \"$1\""
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_PERMISSIONS="$1"
@@ -360,6 +360,8 @@ sourcetree_fix_main()
    then
       mode="`concat "${mode}" "pre-order"`"
    fi
+
+   log_info "Run sourcetree fix"
 
    sourcetree_fix "${OPTION_NODETYPES}" \
                   "${OPTION_PERMISSIONS}" \

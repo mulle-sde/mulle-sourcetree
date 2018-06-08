@@ -1,0 +1,355 @@
+#! /usr/bin/env bash
+
+[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
+
+
+run_mulle_sourcetree()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+}
+
+#
+# repository has no .mulle-sourcetree in 1.0.0
+# repository has a .mulle-sourcetree in 2.0.0
+# repository has no .mulle-sourcetree in 3.0.0
+#
+_setup_demo_repo_a()
+{
+   local reporoot="$1"
+
+   exekutor git init
+
+   redirect_exekutor VERSION echo "1.0.0"
+   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/b"
+   exekutor git add VERSION .mulle-sourcetree
+   exekutor git commit -m "a: initial version"
+}
+
+_setup_demo_repo_b()
+{
+   local reporoot="$1"
+
+   exekutor git init
+
+   redirect_exekutor VERSION echo "1.1.0"
+   exekutor git add VERSION
+   exekutor git commit -m "b: initial version"
+}
+
+
+_setup_demo_repo_c()
+{
+   local reporoot="$1"
+
+   exekutor git init
+
+   redirect_exekutor VERSION echo "1.2.0"
+   exekutor git add VERSION
+   exekutor git commit -m "c: initial version"
+}
+
+
+
+_change_demo_repo_a()
+{
+   local reporoot="$1"
+
+   run_mulle_sourcetree -e mark "b" "no-share"
+   exekutor git commit -m "a: no-share version" .mulle-sourcetree
+}
+
+
+change_demo_repo_set_b_to_noshare()
+{
+   (
+      exekutor cd "$1/a" && _change_demo_repo_a "$1"
+   ) || exit 1
+}
+
+setup_demo_repos()
+{
+   (
+      set -e
+      mkdir_if_missing "$1/a" &&
+      exekutor cd "$1/a" && _setup_demo_repo_a "$1"
+      mkdir_if_missing "$1/b" &&
+      exekutor cd "$1/b" && _setup_demo_repo_b "$1"
+      mkdir_if_missing "$1/c" &&
+      exekutor cd "$1/c" && _setup_demo_repo_c "$1"
+      set +e
+   ) || exit 1
+}
+
+
+
+# no update no clean
+run_test1()
+{
+   if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   if ! run_mulle_sourcetree add --nodetype git --marks no-share "file://${repos}/c"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   if MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree clean
+   then
+      fail "clean succeeded unexpectedly"
+   fi
+}
+
+
+run_test2()
+{
+   if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   if ! run_mulle_sourcetree add --nodetype git --marks no-share "file://${repos}/c"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
+   then
+      fail "update failed unexpectedly"
+   fi
+
+   [ -d "shared/a" ] || fail "shared/a should exist"
+   [ -d "shared/b" ] || fail "shared/b should exist"
+   [ -d "c" ]        || fail "c should exist"
+
+   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree clean
+   then
+      fail "clean failed unexpectedly"
+   fi
+
+   [ ! -d "shared/a" ] || fail "shared/a should not exist"
+   [ ! -d "shared/b" ] || fail "shared/b should not exist"
+   [ ! -d "c" ]        || fail "shared/c should not exist"
+   [ ! -d "shared" ]   || log_warning "shared could have been removed"
+}
+
+
+#
+# create symlinks, only the symlink should vanish
+#
+run_test3()
+{
+   if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   if ! run_mulle_sourcetree add --nodetype symlink --marks no-share "${repos}/c"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   export MULLE_FETCH_SEARCH_PATH="${repos}"
+   export MULLE_SOURCETREE_SYMLINK="YES"
+
+   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
+   then
+      fail "update failed unexpectedly"
+   fi
+
+   [ -L "shared/a" ]      || fail "shared/a should exist as a symlink"
+   [ ! -e "shared/b" ]    || fail "shared/b should not exist"
+   [ ! -e "shared/a/b" ]  || fail "shared/a/b should not exist"
+   [ -L "c" ]             || fail "c should exist as a symlink"
+
+   run_mulle_sourcetree status
+
+   ls -lR  ${project}
+
+   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree -vvv clean
+   then
+      fail "clean failed unexpectedly"
+   fi
+
+   run_mulle_sourcetree status
+
+   ls -lR  ${project}
+
+   [ ! -e "shared/a" ] || fail "shared/a should not exist"
+   [ -d "${repos}/a" ] || fail "${repos}/a should still exist"
+   [ ! -e "c" ]        || fail "c should not exist"
+   [ -d "${repos}/c" ] || fail "${repos}/c should still exist"
+
+   [ ! -d "shared" ]   || log_warning "shared could have been removed"
+}
+
+
+#
+# same as above but b is nested inside a, and a is no-delete
+#
+run_test4()
+{
+   if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   if ! run_mulle_sourcetree add --nodetype git --marks no-share "file://${repos}/c"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
+   then
+      fail "update failed unexpectedly"
+   fi
+
+   [ -d "shared/a" ]   || fail "shared/a should exist"
+   [ -d "shared/a/b" ] || fail "shared/a/b should exist"
+   [ -d "c" ]          || fail "shared/c should exist"
+
+   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree clean
+   then
+      fail "clean failed unexpectedly"
+   fi
+
+   [ ! -d "shared/a" ] || fail "shared/a should not exist"
+   [ ! -d "c" ]        || fail "shared/c should not exist"
+   [ ! -d "shared" ]   || log_warning "shared could have been removed"
+}
+
+
+# now mark a to no-delete, embedded a/b should vanish
+run_test5()
+{
+   if ! run_mulle_sourcetree add --nodetype git --marks no-delete "file://${repos}/a"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   if ! run_mulle_sourcetree add --nodetype git --marks no-share "file://${repos}/c"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
+   then
+      fail "update failed unexpectedly"
+   fi
+
+   [ -d "shared/a" ]   || fail "shared/a should exist"
+   [ -d "shared/a/b" ] || fail "shared/a/b should exist"
+   [ -d "c" ]          || fail "shared/c should exist"
+
+   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree clean
+   then
+      fail "clean failed unexpectedly"
+   fi
+
+   [ -d "shared/a" ]     || fail "shared/a should exist"
+   [ ! -d "shared/a/b" ] || fail "shared/a/b should exist"
+   [ ! -d "c" ]          || fail "shared/c should not exist"
+}
+
+
+
+
+
+main()
+{
+   MULLE_SOURCETREE_FLAGS="$@"
+
+   _options_mini_main "$@"
+
+   local directory
+
+   directory="`make_tmp_directory`" || exit 1
+
+   local project
+
+   project="${directory}/project"
+   repos="${directory}/repositories"
+
+   mkdir_if_missing "${project}"
+
+   MULLE_VIRTUAL_ROOT="`physicalpath "${project}"`"
+   export MULLE_VIRTUAL_ROOT
+
+   setup_demo_repos "${repos}"
+
+   (
+      rmdir_safer "${project}" &&
+      mkdir_if_missing "${project}" &&
+      cd "${project}" &&
+      run_test1
+   ) || exit 1
+   log_verbose "----- #1 PASSED -----"
+
+   (
+      rmdir_safer "${project}" &&
+      mkdir_if_missing "${project}" &&
+      cd "${project}" &&
+      run_test2
+   ) || exit 1
+   log_verbose "----- #2 PASSED -----"
+
+   #
+   #
+   #
+   change_demo_repo_set_b_to_noshare "${repos}"
+
+   (
+      rmdir_safer "${project}" &&
+      mkdir_if_missing "${project}" &&
+      cd "${project}" &&
+      run_test3
+   ) || exit 1
+   log_verbose "----- #3 PASSED -----"
+
+
+   (
+      rmdir_safer "${project}" &&
+      mkdir_if_missing "${project}" &&
+      cd "${project}" &&
+      run_test4
+   ) || exit 1
+   log_verbose "----- #4 PASSED -----"
+
+   (
+      rmdir_safer "${project}" &&
+      mkdir_if_missing "${project}" &&
+      cd "${project}" &&
+      run_test4
+   ) || exit 1
+   log_verbose "----- #5 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+
+   rmdir_safer "${directory}"
+}
+
+
+init()
+{
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
+
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
+   MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
+
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh"   || exit 1
+}
+
+
+init "$@"
+main "$@"
+
