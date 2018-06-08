@@ -609,7 +609,7 @@ _visit_filter_nodeline()
          fi
 
          # if marked share, change mode now
-         mode="$(sed -e 's/share/recurse/' <<< "${mode}")"
+         # mode="$(sed -e 's/share/recurse/' <<< "${mode}")"
       ;;
    esac
 

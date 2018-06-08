@@ -1,3 +1,7 @@
+### 0.10.1
+
+* fix subprojects dependencies not being properly shared
+
 ## 0.10.0
 
 * improved symlink handling in the walker a lot, which has positive implications through out mulle-sourcetree
