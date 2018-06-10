@@ -52,10 +52,39 @@ Usage:
 
    MULLE_DESTINATION  MULLE_MODE  MULLE_DATABASE  MULLE_PROJECTDIR  MULLE_ROOT_DIR.
 
+   There is a little qualifier language available to query the marks of a node.
+EOF
+   if [ "${MULLE_FLAG_LOG_VERBOSE}" = "YES" ]
+   then
+         cat <<EOF >&2
+   The syntax is:
+      <expr>  : <sexpr> AND <expr>
+              | <sexpr> OR <expr>
+              | <sexpr>
+              ;
+
+      <sexpr> : (<expr>)
+              | NOT <sexpr>
+              | MATCHES <pattern>
+              ;
+
+      <pattern> | <mark> '*'
+                | <mark>
+                ;
+
+      <mark>    | only-[a-z-]*
+                | not-[a-z-]*
+                ;
+   AND/OR have the same precedence.
+EOF
+   fi
+         cat <<EOF >&2
+
 Options:
    -n <value>       : node types to walk (default: ALL)
    -p <value>       : specify permissions (missing)
-   -m <value>       : specify marks to match (e.g. build)
+   -m <value>       : marks to match (e.g. build)
+   -q <value>       : qualifier for marks to match (e.g. MATCHES build)
    --cd             : change directory to node's working directory
    --lenient        : allow shell command to error
    --pre-order      : walk tree in pre-order  (Root, Left, Right)
@@ -181,152 +210,6 @@ __docd_postamble()
 }
 
 
-#
-# convenience for callbacks in shared configuration
-# TODO: is this still needed for statzs ? isn't this the same as _filename
-# now ?
-#
-__walk_get_db_filename()
-{
-   log_entry "__walk_get_db_filename" "$@"
-
-   if ! nodemarks_contain "${MULLE_MARKS}" "fs"
-   then
-      return
-   fi
-
-   local database
-
-   database="${MULLE_DATASOURCE}"
-   if nodemarks_contain "${MULLE_MARKS}" "share" && \
-      [ "${SOURCETREE_MODE}" = "share" -a ! -z "${MULLE_URL}" ]
-   then
-      database="/"
-      if db_is_ready "${database}"
-      then
-         local uuid
-
-         uuid="`db_fetch_uuid_for_url "${database}" "${MULLE_URL}" `"
-         if [ ! -z "${uuid}" ]
-         then
-            db_fetch_filename_for_uuid "${database}" "${uuid}"
-            return
-         fi
-         # ok could be an edit
-      fi
-
-      local name
-
-      name="`basename -- "${MULLE_ADDRESS}"`"
-      filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${name}"
-      return
-   fi
-
-   if db_is_ready "${database}"
-   then
-      db_fetch_filename_for_uuid "${database}" "${MULLE_UUID}"
-   else
-      echo "${MULLE_FILENAME}"
-   fi
-}
-
-
-#
-# "cheat" and read global _ values defined in _visit_node and friends
-# w/o passing them explicitly
-#
-__call_callback()
-{
-   log_entry "__call_callback" "$@"
-
-   local datasource="$1"; shift
-   local virtual="$1"; shift
-   local mode="$1"; shift
-   local callback="$1"; shift
-
-   [ -z "${callback}" ]  && internal_fail "callback is empty"
-
-   local evaluator
-
-   if [ "${OPTION_EVAL_EXEKUTOR}" = "YES" ]
-   then
-      evaluator="_eval_exekutor"
-   else
-      evaluator="eval"
-   fi
-
-   local technical_flags
-
-   if [ "${OPTION_PASS_TECHNICAL_FLAGS}" = "YES" ]
-   then
-      technical_flags="${MULLE_TECHNICAL_FLAGS}" # from bashfunctions
-   fi
-
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
-   then
-      log_trace2 "MULLE_ADDRESS:         \"${_address}\""
-      log_trace2 "MULLE_BRANCH:          \"${_branch}\""
-      log_trace2 "MULLE_DATASOURCE:      \"${datasource}\""
-      log_trace2 "MULLE_DESTINATION:     \"${_destination}\""
-      log_trace2 "MULLE_FETCHOPTIONS:    \"${_fetchoptions}\""
-      log_trace2 "MULLE_FILENAME:        \"${_filename}\""
-      log_trace2 "MULLE_MARKS:           \"${_marks}\""
-      log_trace2 "MULLE_MODE:            \"${mode}\""
-      log_trace2 "MULLE_NODE:            \"${_nodeline}\""
-      log_trace2 "MULLE_NODETYPE:        \"${_nodetype}\""
-      log_trace2 "MULLE_TAG:             \"${_tag}\""
-      log_trace2 "MULLE_URL:             \"${_url}\""
-      log_trace2 "MULLE_USERINFO:        \"${_userinfo}\""
-      log_trace2 "MULLE_UUID:            \"${_uuid}\""
-      log_trace2 "MULLE_VIRTUAL:         \"${virtual}\""
-      log_trace2 "MULLE_VIRTUAL_ADDRESS: \"${_virtual_address}\""
-   fi
-
-   #
-   # MULLE_NODE the current nodelines from config or database, unchanged
-   #
-   # MULLE_ADDRESS-MULLE_UUID as defined in nodeline, unchanged
-   #
-   # MULLE_DATASOURCE  : config or database "handle" where nodelines was read
-   # MULLE_DESTINATION : either "_address" or in shared case basename of "_address"
-   # MULLE_VIRTUAL     : either ${MULLE_SOURECTREE_SHARE_DIR} or ${MULLE_PROJECTDIR}
-   #
-   #
-   MULLE_NODE="${_nodeline}" \
-   MULLE_ADDRESS="${_address}" \
-   MULLE_BRANCH="${_branch}" \
-   MULLE_FETCHOPTIONS="${_fetchoptions}" \
-   MULLE_MARKS="${_marks}" \
-   MULLE_NODETYPE="${_nodetype}" \
-   MULLE_URL="${_url}" \
-   MULLE_USERINFO="${_userinfo}" \
-   MULLE_TAG="${_tag}" \
-   MULLE_UUID="${_uuid}" \
-   MULLE_DATASOURCE="${datasource}" \
-   MULLE_DESTINATION="${_destination}" \
-   MULLE_FILENAME="${_filename}" \
-   MULLE_MODE="${mode}" \
-   MULLE_VIRTUAL="${virtual}" \
-   MULLE_VIRTUAL_ADDRESS="${_virtual_address}" \
-      "${evaluator}" "'${callback}'" "${technical_flags}" "$@"
-
-   rval="$?"
-   if [ "${rval}" -eq 0 ]
-   then
-      return 0
-   fi
-
-   case "${mode}" in
-      *lenient*)
-         log_warning "Command '${callback}' failed for node \"${_address}\""
-         return 0
-      ;;
-   esac
-
-   fail "Command '${callback}' failed for node \"${_address}\""
-
-   return "$rval"
-}
 
 
 #
@@ -338,7 +221,7 @@ __call_callback()
 # virtual
 # filternodetypes
 # filterpermissions
-# filtermarks
+# marksqualifier
 # mode
 # callback
 # ...
@@ -395,7 +278,7 @@ _visit_callback()
 # virtual
 # filternodetypes
 # filterpermissions
-# filtermarks
+# marksqualifier
 # mode
 # callback
 # ...
@@ -411,7 +294,7 @@ _visit_recurse()
 
    local filternodetypes="$1"; shift
    local filterpermissions="$1"; shift
-   local filtermarks="$1"; shift
+   local marksqualifier="$1"; shift
    local mode="$1" ; shift
 
 
@@ -437,7 +320,7 @@ _visit_recurse()
                         "${next_virtual}" \
                         "${filternodetypes}" \
                         "${filterpermissions}" \
-                        "${filtermarks}" \
+                        "${marksqualifier}" \
                         "${mode}" \
                         "$@"
       ;;
@@ -447,7 +330,7 @@ _visit_recurse()
                             "${next_virtual}" \
                             "${filternodetypes}" \
                             "${filterpermissions}" \
-                            "${filtermarks}" \
+                            "${marksqualifier}" \
                             "${mode}" \
                             "$@"
       ;;
@@ -462,7 +345,7 @@ _visit_recurse()
 # next_virtual
 # filternodetypes
 # filterpermissions
-# filtermarks
+# marksqualifier
 # mode
 # callback
 # ...
@@ -531,7 +414,7 @@ _visit_node()
 # virtual             // same but relative to project and possibly remapped
 # filternodetypes
 # filterpermissions
-# filtermarks
+# marksqualifier
 # mode
 # callback
 # ...
@@ -545,7 +428,7 @@ _visit_filter_nodeline()
    local virtual="$1"; shift
    local filternodetypes="$1" ; shift
    local filterpermissions="$1"; shift
-   local filtermarks="$1"; shift
+   local marksqualifier="$1"; shift
    local mode="$1"; shift
 
    # rest are arguments
@@ -573,9 +456,9 @@ _visit_filter_nodeline()
 
    _nodeline="${nodeline}"
 
-   if ! walk_filter_marks "${_marks}" "${filtermarks}"
+   if ! walk_filter_marks "${_marks}" "${marksqualifier}"
    then
-      log_fluff "Node \"${_address}\": \"${_marks}\" doesn't jive with marks \"${filtermarks}\""
+      log_fluff "Node \"${_address}\": \"${_marks}\" doesn't jive with marks \"${marksqualifier}\""
       return 0
    fi
 
@@ -602,7 +485,7 @@ _visit_filter_nodeline()
                               "${virtual}" \
                               "${filternodetypes}" \
                               "${filterpermissions}" \
-                              "${filtermarks}" \
+                              "${marksqualifier}" \
                               "${mode}" \
                               "$@"
             return $?
@@ -666,7 +549,7 @@ _visit_filter_nodeline()
                "${next_virtual}" \
                "${filternodetypes}" \
                "${filterpermissions}" \
-               "${filtermarks}" \
+               "${marksqualifier}" \
                "${mode}" \
                "$@"
 }
@@ -680,7 +563,7 @@ _visit_share_node()
    local virtual="$1"; shift
    local filternodetypes="$1"; shift
    local filterpermissions="$1"; shift
-   local filtermarks="$1"; shift
+   local marksqualifier="$1"; shift
    local mode="$1" ; shift
 
 #   [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ] && internal_fail "MULLE_SOURCETREE_SHARE_DIR is empty"
@@ -777,7 +660,7 @@ _visit_share_node()
                "${next_virtual}" \
                "${filternodetypes}" \
                "${filterpermissions}" \
-               "${filtermarks}" \
+               "${marksqualifier}" \
                "${mode}" \
                "$@"
 }
@@ -882,7 +765,7 @@ _print_walk_info()
 # virtual
 # filternodetypes
 # filterpermissions
-# filtermarks
+# marksqualifier
 # mode
 # callback
 # ...
@@ -921,7 +804,7 @@ walk_config_uuids()
 # virtual
 # filternodetypes
 # filterpermissions
-# filtermarks
+# marksqualifier
 # mode
 # callback
 # ...
@@ -987,9 +870,9 @@ sourcetree_walk()
 {
    log_entry "sourcetree_walk" "$@"
 
-   local filternodetypes="${1:-ALL}"; shift
+   local filternodetypes="${1}"; shift
    local filterpermissions="${1}"; shift
-   local filtermarks="${1:-ANY}"; shift
+   local marksqualifier="${1}"; shift
    local mode="${1}" ; shift
    local callback="${1}"; shift
 
@@ -1024,7 +907,7 @@ sourcetree_walk()
       *walkdb*)
          walk_db_uuids "${filternodetypes}" \
                        "${filterpermissions}" \
-                       "${filtermarks}" \
+                       "${marksqualifier}" \
                        "${mode}" \
                        "${callback}" \
                        "$@"
@@ -1033,7 +916,7 @@ sourcetree_walk()
       *)
          walk_config_uuids "${filternodetypes}" \
                            "${filterpermissions}" \
-                           "${filtermarks}" \
+                           "${marksqualifier}" \
                            "${mode}" \
                            "${callback}" \
                            "$@"
@@ -1063,6 +946,28 @@ sourcetree_walk_internal()
 }
 
 
+# evil global variable stuff
+_sourcetree_convert_marks_to_qualifier()
+{
+   if [ ! -z "${OPTION_MARKS}" ]
+   then
+      if [ ! -z "${OPTION_MARKS_QUALIFIER}" ]
+      then
+         fail "You can not specify --marks and --qualifier at the same time"
+      fi
+
+      local mark
+
+      IFS=","; set -o noglob
+      for mark in ${OPTION_MARKS}
+      do
+         OPTION_MARKS_QUALIFIER="`concat "${OPTION_MARKS_QUALIFIER}" "MATCHES ${mark}" " AND "`"
+      done
+      IFS="${DEFAULT_IFS}"; set +o noglob
+   fi
+}
+
+
 sourcetree_walk_main()
 {
    log_entry "sourcetree_walk_main" "$@"
@@ -1074,7 +979,8 @@ sourcetree_walk_main()
    local OPTION_TRAVERSE_STYLE="PREORDER"
    local OPTION_EXTERNAL_CALL="YES"
    local OPTION_LENIENT="NO"
-   local OPTION_MARKS="ANY"
+   local OPTION_MARKS=""
+   local OPTION_MARKS_QUALIFIER=""
    local OPTION_NODETYPES=""
    local OPTION_PERMISSIONS="" # empty!
    local OPTION_WALK_DB="DEFAULT"
@@ -1147,7 +1053,14 @@ sourcetree_walk_main()
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
-            OPTION_MARKS="$1"
+            OPTION_MARKS="`comma_concat "${OPTION_MARKS}" "$1" `"
+         ;;
+
+         -q|--qualifier|--marks-qualifier)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            OPTION_MARKS_QUALIFIER="$1"
          ;;
 
          -n|--nodetypes)
@@ -1219,9 +1132,12 @@ sourcetree_walk_main()
       mode="`concat "${mode}" "callroot"`"
    fi
 
+   # convert marks into a qualifier with globals
+   _sourcetree_convert_marks_to_qualifier
+
    sourcetree_walk "${OPTION_NODETYPES}" \
                    "${OPTION_PERMISSIONS}" \
-                   "${OPTION_MARKS}" \
+                   "${OPTION_MARKS_QUALIFIER}" \
                    "${mode}" \
                    "${callback}" \
                    "$@"
@@ -1260,6 +1176,11 @@ sourcetree_walk_initialize()
    then
       # shellcheck source=mulle-sourcetree-nodeline.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
+   fi
+   if [ -z "${MULLE_SOURCETREE_CALLBACK_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-callback.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-callback.sh" || exit 1
    fi
 }
 

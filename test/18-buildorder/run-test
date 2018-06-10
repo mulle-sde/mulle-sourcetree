@@ -95,10 +95,13 @@ MULLE_VIRTUAL_ROOT="${project}"
    fi
 
    local result
+#   local expected="`physicalpath "${project}"`/a/b;
+#`physicalpath "${project}"`/a;no-delete"
+
    local expected="`physicalpath "${project}"`/a/b;
 `physicalpath "${project}"`/a;no-delete"
 
-   result="`run_mulle_sourcetree buildorder --no-print-env --output-marks`"
+   result="`run_mulle_sourcetree buildorder --output-absolute --no-print-env --output-marks`"
    if [ "${expected}" != "${result}" ]
    then
       fail "missed expectation:
@@ -118,9 +121,9 @@ ${result}
    fi
 
    # should be the same
-   result="`run_mulle_sourcetree buildorder --no-print-env --output-marks`"
-   expected="`physicalpath "${project}"`/a/b;
-`physicalpath "${project}"`/a;no-delete,no-os-fantasy"
+   result="`run_mulle_sourcetree buildorder --output-relative --no-print-env --output-marks`"
+   expected="a/b;
+a;no-delete,no-os-fantasy"
    if [ "${expected}" != "${result}" ]
    then
       fail "missed expectation:
@@ -144,7 +147,7 @@ ${result}
    #
    local expected=""
 
-   result="`run_mulle_sourcetree buildorder --no-print-env --output-marks`"
+   result="`run_mulle_sourcetree buildorder --output-relative --no-print-env --output-marks`"
    if [ "${expected}" != "${result}" ]
    then
       fail "missed expectation:

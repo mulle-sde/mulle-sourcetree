@@ -1,3 +1,9 @@
+## 0.11.0
+
+* add --qualifier option to filter marks more cleverly, you can still use --marks though in limited cases
+* add --callback option to buildorder
+
+
 ### 0.10.1
 
 * fix subprojects dependencies not being properly shared

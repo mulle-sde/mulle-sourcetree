@@ -40,13 +40,15 @@ sourcetree_list_usage()
 Usage:
    ${MULLE_USAGE_NAME} list [options]
 
-   List nodes in the sourcetree.
+   List nodes in the sourcetree. You can restrict the nodes listed by
+   nodetype and marks. The output can be formatted in printf like fashion.
 
    This command only reads config files.
 
 Options:
    --nodetypes <value>      : node types to list (default: ALL)
    --marks <value>          : specify marks to match (e.g. build)
+   --qualifier <value>      : specify marks qualifier
    --format <format>        : supply a custom format (abfimntu_)
    --output-banner          : print a banner with config information
    --output-cmd             : output as ${MULLE_EXECUTABLE_NAME} command line
@@ -168,6 +170,7 @@ _sourcetree_nodeline_remove_marks()
    local _nodetype
    local _marks
    local _tag
+   local _raw_userinfo
    local _url
    local _uuid
    local _userinfo
@@ -199,7 +202,7 @@ _sourcetree_contents()
 
    local mode="$1"
    local filternodetypes="$2"
-   local filtermarks="$3"
+   local marksqualifier="$3"
    local formatstring="$4"
 
    local nodeline
@@ -232,9 +235,9 @@ _sourcetree_contents()
          continue
       fi
 
-      if ! nodemarks_filter_with_qualifier "${_marks}" "${filtermarks}"
+      if ! nodemarks_filter_with_qualifier "${_marks}" "${marksqualifier}"
       then
-         log_fluff "Node \"${nodeline}\": \"${_marks}\" doesn't jive with marks \"${filtermarks}\""
+         log_fluff "Node \"${nodeline}\": \"${_marks}\" doesn't jive with marks \"${marksqualifier}\""
          continue
       fi
 
@@ -394,6 +397,28 @@ list_nodes()
 }
 
 
+# evil global variable stuff
+_sourcetree_list_convert_marks_to_qualifier()
+{
+   if [ ! -z "${OPTION_MARKS}" ]
+   then
+      if [ ! -z "${OPTION_MARKS_QUALIFIER}" ]
+      then
+         fail "You can not specify --marks and --qualifier at the same time"
+      fi
+
+      local mark
+
+      IFS=","; set -o noglob
+      for mark in ${OPTION_MARKS}
+      do
+         OPTION_MARKS_QUALIFIER="`concat "${OPTION_MARKS_QUALIFIER}" "MATCHES ${mark}" " AND "`"
+      done
+      IFS="${DEFAULT_IFS}"; set +o noglob
+   fi
+}
+
+
 sourcetree_list_main()
 {
    log_entry "sourcetree_list_main (1)" "$@"
@@ -417,6 +442,7 @@ sourcetree_list_main()
 
    local OPTION_NODETYPES
    local OPTION_MARKS
+   local OPTION_MARKS_QUALIFIER
    local OPTION_FORMAT
 
    while [ $# -ne 0 ]
@@ -432,6 +458,14 @@ sourcetree_list_main()
 
             # allow to concatenate multiple flags
             OPTION_MARKS="`comma_concat "${OPTION_MARKS}" "$1" `"
+         ;;
+
+         -q|--qualifier)
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            shift
+
+            # allow to concatenate multiple flags
+            OPTION_MARKS_QUALIFIER="$1"
          ;;
 
          -n|--nodetypes)
@@ -585,14 +619,24 @@ sourcetree_list_main()
 
    mode="`_sourcetree_augment_mode_with_output_options`"
 
-   list_nodes "${mode}" "${OPTION_NODETYPES}" "${OPTION_MARKS}" "${OPTION_FORMAT}"
-}
+   _sourcetree_list_convert_marks_to_qualifier  ## UGLY
 
+   list_nodes "${mode}" "${OPTION_NODETYPES}" "${OPTION_MARKS_QUALIFIER}" "${OPTION_FORMAT}"
+}
 
 
 sourcetree_list_initialize()
 {
    log_entry "sourcetree_list_initialize"
+
+
+   if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
+   then
+      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
+
+      # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+   fi
 
    if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
    then
@@ -618,14 +662,6 @@ sourcetree_list_initialize()
    then
       # shellcheck source=mulle-sourcetree-cfg.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
-   then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
-
-      # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
    fi
 }
 

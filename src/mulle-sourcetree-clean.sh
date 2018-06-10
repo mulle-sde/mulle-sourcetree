@@ -224,7 +224,7 @@ sourcetree_clean_main()
 
    if ! cfg_exists "${SOURCETREE_START}"
    then
-      log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
+      log_verbose "There is no ${SOURCETREE_CONFIG_FILE} here"
    fi
 
    local mode

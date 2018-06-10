@@ -40,13 +40,12 @@ sourcetree_buildorder_usage()
 Usage:
    ${MULLE_USAGE_NAME} buildorder [options]
 
-   Print all sourcetree addresses according to the following rules:
+   Print all sourcetree addresses according to the following rules with
+   precedence give in that order:
 
    * ignore nodes marked as "no-build"
-   * ignore nodes marked as "no-require", whose are missing
-   * ignore nodes marked as "no-os-${MULLE_UNAME}" (platform dependent of course)
-   * include nodes marked as "only-os-${MULLE_UNAME}, regardless of the previous
-     rules
+   * ignore nodes marked as "no-os-${MULLE_UNAME}"
+   * ignore nodes marked with "only-os-<platform>" except "only-os-${MULLE_UNAME}"
 
    In a make based project, this can be used to build everything like this:
 
@@ -56,7 +55,8 @@ Usage:
       done
 
 Options:
-   --output-marks  : output marks of sourcetree node
+   --output-marks            : output marks of sourcetree node
+   --callback <f>            : a callback function to modiy the output
 EOF
   exit 1
 }
@@ -64,26 +64,41 @@ EOF
 
 print_buildorder_line()
 {
-   local line="$1"
+   log_entry "print_buildorder_line" "$@"
 
-   case ",${MULLE_MARKS}," in
-      *,no-share,*)
-      ;;
+   #
+   # if we are in root, we want to add no-memo marks to the output, but
+   # only for subprojects
+   #
+   if [ ! -z "${OPTION_CALLBACK}" ]
+   then
+      "${OPTION_CALLBACK}" "${line}"
+   fi
 
-      *)
-         if [ ! -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
-         then
-            case "${line}" in
-               ${MULLE_SOURCETREE_SHARE_DIR}/*)
-                  echo '${MULLE_SOURCETREE_SHARE_DIR}'"${line#${MULLE_SOURCETREE_SHARE_DIR}}"
-                  return 0
-               ;;
-            esac
-         fi
-      ;;
-   esac
+   if [ "${OPTION_PRINT_ENV}" = "YES" -a ! -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
+   then
+      case ",${MULLE_MARKS}," in
+         *,no-share,*)
+         ;;
 
-   echo "${line#${MULLE_VIRTUAL_ROOT}/}"
+         *)
+            MULLE_FILENAME='${MULLE_SOURCETREE_SHARE_DIR}'"${MULLE_FILENAME#${MULLE_SOURCETREE_SHARE_DIR}}"
+         ;;
+      esac
+   fi
+
+   if [ "${OPTION_ABSOLUTE}" = "NO" ]
+   then
+      MULLE_FILENAME="${MULLE_FILENAME#${MULLE_VIRTUAL_ROOT}/}"
+   fi
+
+   if [ "${OPTION_MARKS}" = "YES" ]
+   then
+      echo "${MULLE_FILENAME};${MULLE_MARKS}"
+      return
+   fi
+
+   echo "${MULLE_FILENAME}"
 }
 
 
@@ -94,6 +109,8 @@ sourcetree_buildorder_main()
 
    local OPTION_MARKS="NO"
    local OPTION_PRINT_ENV="YES"
+   local OPTION_CALLBACK
+   local OPTION_ABSOLUTE="NO"
 
    while [ $# -ne 0 ]
    do
@@ -106,12 +123,44 @@ sourcetree_buildorder_main()
             OPTION_MARKS="YES"
          ;;
 
+         --output-absolute)
+            OPTION_ABSOLUTE="YES"
+         ;;
+
+         --output-relative)
+            OPTION_ABSOLUTE="NO"
+         ;;
+
          --output-no-marks|--no-output-marks)
             OPTION_MARKS="NO"
          ;;
 
+         --callback)
+            [ $# -eq 1 ] && sourcetree_buildorder_usage "Missing argument to \"$1\""
+            shift
+
+            local input
+            local callbackscript
+            local randomstring
+
+            #
+            # remove possible cruft before function name
+            #
+            input="`egrep -v '^#' <<< "$1" | sed -e '/^ *$/d' `"
+            randomstring="`uuidgen | cut -c'1-6'`"
+
+            callbackscript="_cb_${randomstring}_${input#function}"
+            OPTION_CALLBACK="`echo ${callbackscript%%(*}`"
+            eval "function ${callbackscript}" || fail "Callback \"${input}\" could not be parsed"
+         ;;
+
          --no-print-env)
             OPTION_PRINT_ENV="NO"
+         ;;
+
+         --print-qualifier)
+            echo "${SOURCETREE_BUILDORDER_QUALIFIER}"
+            exit 0
          ;;
 
          -*)
@@ -128,25 +177,12 @@ sourcetree_buildorder_main()
 
    [ "$#" -eq 0 ] || sourcetree_buildorder_usage "Superflous arguments \"$*\""
 
-   local echocmd
-   local formatstr
 
-   echocmd="echo"
-   formatstr='"${MULLE_FILENAME}"'
-
-   if [ "${OPTION_PRINT_ENV}" = "YES" ]
-   then
-      echocmd="print_buildorder_line"
-   fi
-
-   if [ "${OPTION_MARKS}" = "YES" ]
-   then
-      formatstr='"${MULLE_FILENAME};${MULLE_MARKS}"'
-   fi
-
-   sourcetree_walk "" "" "build,os-${MULLE_UNAME};;;only-os-${MULLE_UNAME}" \
+   sourcetree_walk "" \
+                   "descend-symlink" \
+                   "${SOURCETREE_BUILDORDER_QUALIFIER}" \
                    "${SOURCETREE_MODE} --in-order" \
-                   "${echocmd}" "${formatstr}"
+                   "print_buildorder_line"
 }
 
 
@@ -159,6 +195,12 @@ sourcetree_buildorder_initialize()
       # shellcheck source=mulle-sourcetree-walk.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
    fi
+
+   SOURCETREE_BUILDORDER_QUALIFIER="\
+MATCHES build \
+AND NOT MATCHES no-os-${MULLE_UNAME} \
+AND (NOT MATCHES only-os-* OR \
+MATCHES only-os-${MULLE_UNAME})"
 }
 
 

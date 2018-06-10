@@ -9,12 +9,14 @@ run_test_1()
 
    nodeline="address;nodetype;marks;uuid;url;branch;tag;fetchoptions;userinfo"
 
+   local name
+
    local _branch
    local _address
    local _fetchoptions
-   local name
    local _nodetype
    local _marks
+   local _raw_userinfo
    local _tag
    local _url
    local _userinfo
@@ -43,12 +45,14 @@ run_test_1()
 
 run_test_2()
 {
+   local name
+
    local _branch
    local _address
    local _fetchoptions
-   local name
    local _nodetype
    local _marks
+   local _raw_userinfo
    local _tag
    local _url
    local _userinfo

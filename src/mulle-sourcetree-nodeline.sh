@@ -110,6 +110,7 @@ nodeline_get_evaled_url()
 #   local _fetchoptions
 #   local _nodetype
 #   local _marks
+#   local _raw_userinfo
 #   local _tag
 #   local _url
 #   local _uuid
@@ -154,15 +155,16 @@ nodeline_parse()
    IFS=";" \
       read -r _address _nodetype _marks _uuid \
               _url _branch _tag _fetchoptions \
-              _userinfo  <<< "${nodeline}"
+              _raw_userinfo  <<< "${nodeline}"
 
    [ -z "${_address}" ]   && internal_fail "_address is empty"
    [ -z "${_nodetype}" ]  && internal_fail "_nodetype is empty"
    [ -z "${_uuid}" ]      && internal_fail "_uuid is empty"
 
-   case "${_userinfo}" in
+   _userinfo="${_raw_userinfo}"
+   case "${_raw_userinfo}" in
       base64:*)
-         _userinfo="`base64 --decode <<< "${_userinfo:7}"`"
+         _userinfo="`base64 --decode <<< "${_raw_userinfo:7}"`"
          if [ "$?" -ne 0 ]
          then
             internal_fail "userinfo could not be base64 decoded."
@@ -559,6 +561,7 @@ nodeline_printf()
    local _url
    local _userinfo
    local _uuid
+   local _raw_userinfo
 
    nodeline_parse "${nodeline}"
 
@@ -644,13 +647,20 @@ nodeline_printf()
                   fail "malformed formatstring \"${formatstring:1}\". Need ={<title>,<dashes>,<key>}"
                fi
                value="`assoc_array_get "${_userinfo}" "${key}" `"
-
                # skip over format string
                formatstring="`sed 's/^%i={[^}]*}//' <<< "${formatstring}" `"
                formatstring="%i${formatstring}"
             else
                switch="--userinfo"
-               value="${_userinfo}"
+               case "${mode}" in
+                  *output_cmd*)
+                     value="${_raw_userinfo}"
+                  ;;
+
+                  *)
+                     value="`tr '\012' ',' <<< "${_userinfo}" | sed -e 's/,$//g' `"
+                  ;;
+               esac
             fi
          ;;
 

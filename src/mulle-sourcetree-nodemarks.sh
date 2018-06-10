@@ -38,18 +38,18 @@ _nodemarks_key_check()
 
    case "${1}" in
       "")
-         internal_fail "Empty key"
+         fail "Empty node mark"
       ;;
 
       *[^a-z-_0-9]*)
-         internal_fail "Nodemarks key \"$1\" contains invalid characters"
+         fail "Node mark \"$1\" contains invalid characters"
       ;;
 
       no-*|only-*)
       ;;
 
       *)
-         internal_fail "Nodemarks key \"$1\" must start with \"no-\" or \"only-\""
+         fail "Node mark \"$1\" must start with \"no-\" or \"only-\""
       ;;
    esac
 }
@@ -122,12 +122,12 @@ nodemarks_add()
    local key="$2"
 
    case "${key}" in
-      no-*)
+      "no-"*)
          marks="`_nodemarks_remove "${marks}" "only-${key:3}"`"
          _nodemarks_add "${marks}" "${key}"
       ;;
 
-      only-*)
+      "only-"*)
          marks="`_nodemarks_remove "${marks}" "no-${key:5}"`"
          _nodemarks_add "${marks}" "${key}"
       ;;
@@ -146,7 +146,7 @@ nodemarks_remove()
    local key="$2"
 
    case "${key}" in
-      no-*|only-*)
+      "no-"*|"only-"*)
          _nodemarks_remove "${marks}" "${key}"
       ;;
 
@@ -167,7 +167,7 @@ _nodemarks_contain()
 
    # this is a bit faster than IFS=, parsing but not much
    case ",${marks}," in
-      *,${key},*)
+      *",${key},"*)
          return 0
       ;;
    esac
@@ -182,12 +182,54 @@ nodemarks_contain()
    local key="$2"
 
    case "${key}" in
-      no-*|only-*)
+      "no-"*|"only-"*)
          _nodemarks_contain "${marks}" "${key}"
       ;;
 
       *)
          ! _nodemarks_contain "${marks}" "no-${key}"
+      ;;
+   esac
+}
+
+
+
+# match can use wildcard *
+nodemarks_match()
+{
+   local marks="$1"
+   local pattern="$2"
+
+   local cmd
+   local rval
+
+   case "${pattern}" in
+      "no-"*"*"*|"only-"*"*"*|"no-"*"["*"]"*|"only-"*"["*"]"*)
+         cmd="u"
+         if shopt -q extglob
+         then
+            cmd="s"
+         fi
+
+         rval=1
+         pattern="`LC_ALL=C sed -e 's/\*/*([^,])/g' <<< "${pattern}"`"
+
+         shopt -s extglob
+         case ",${marks}," in
+            *","${pattern}","*)
+               rval=0
+            ;;
+         esac
+         shopt -${cmd} extglob
+         return $rval
+      ;;
+
+      "no-"*|"only-"*)
+         _nodemarks_contain "${marks}" "${pattern}"
+      ;;
+
+      *)
+         ! _nodemarks_contain "${marks}" "no-${pattern}"
       ;;
    esac
 }
@@ -232,3 +274,169 @@ nodemarks_sort()
 
    echo "${result}"
 }
+
+
+#
+# A small parser
+#
+_nodemarks_filter_iexpr()
+{
+   log_entry "_nodemarks_filter_iexpr" "${marks}" "${_s}" "${expr}"
+
+   local marks="$1"
+   local qualifier="$2"
+   local expr=$3
+
+   _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
+   case "${_s}" in
+      AND*)
+         _s="${_s:3}"
+         _nodemarks_filter_expr "${marks}" "${qualifier}"
+         if [ $? -eq 1  ]
+         then
+            return 1
+         fi
+         return $expr
+      ;;
+
+      OR*)
+         _s="${_s:2}"
+         _nodemarks_filter_expr "${marks}" "${qualifier}"
+         if [ $? -eq 0  ]
+         then
+            return 0
+         fi
+         return $expr
+      ;;
+
+      ")")
+         if [ "${expr}" = "" ]
+         then
+            fail "Missing expression after marks qualifier \"${qualifier}\""
+         fi
+         return $expr
+      ;;
+
+      "")
+         if [ "${expr}" = "" ]
+         then
+            fail "Missing expression after marks qualifier \"${qualifier}\""
+         fi
+         return $expr
+      ;;
+   esac
+
+   fail "Unexpected expression at ${_s} of marks qualifier \"${qualifier}\""
+}
+
+
+_nodemarks_filter_sexpr()
+{
+   log_entry "_nodemarks_filter_sexpr" "${marks}" "${_s}"
+
+   local marks="$1"
+   local qualifier="$2"
+
+   local expr
+   local key
+
+   local memo
+
+   memo="${_s}"
+
+   _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
+   case "${_s}" in
+      "("*)
+         _s="${_s:1}"
+         _nodemarks_filter_expr "${marks}" "${qualifier}"
+         expr=$?
+
+         _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
+         if [ "${_closer}" != "YES" ]
+         then
+            if [ "${_s:0:1}" != ")" ]
+            then
+               fail "Closing ) missing at \"${_s}\" of marks qualifier \"${qualifier}\""
+            fi
+            _s="${_s:1}"
+         fi
+         return $expr
+      ;;
+
+      NOT*)
+         _s="${_s:3}"
+         _nodemarks_filter_sexpr "${marks}" "${qualifier}"
+         if [ $? -eq 0  ]
+         then
+            return 1
+         fi
+         return 0
+      ;;
+
+      MATCHES*)
+         _s="${_s:7}"
+         _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
+         key="${_s%%[ )]*}"
+         _s="${_s#"${key}"}"
+         log_entry nodemarks_match "${marks}" "${key}"
+         nodemarks_match "${marks}" "${key}"
+         return $?
+      ;;
+
+      "")
+         fail "Missing expression after marks qualifier \"${qualifier}\""
+      ;;
+   esac
+
+   fail "Unknown command at \"${_s}\" of marks qualifier \"${qualifier}\""
+}
+
+
+
+_nodemarks_filter_expr()
+{
+   log_entry "_nodemarks_filter_expr" "${marks}" "${_s}"
+
+   local marks="$1"
+   local qualifier="$2"
+
+   local expr
+
+   _nodemarks_filter_sexpr "${marks}" "${qualifier}"
+   expr=$?
+
+   while :
+   do
+      _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
+      case "${_s}" in
+         ")"*|"")
+            break
+         ;;
+      esac
+      _nodemarks_filter_iexpr "${marks}" "${qualifier}" "${expr}"
+      expr=$?
+   done
+   return $expr
+}
+
+
+nodemarks_filter_with_qualifier()
+{
+   log_entry "nodemarks_filter_with_qualifier" "$@"
+
+   local marks="$1"
+   local qualifier="$2"
+
+   if [ -z "${qualifier}" -o "${qualifier}" = "ANY" ]
+   then
+      log_debug "ANY matches all"
+      return 0
+   fi
+
+   local _s
+
+   _s="${qualifier}"
+
+   _nodemarks_filter_expr "${marks}" "${qualifier}"
+}
+

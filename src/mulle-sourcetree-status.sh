@@ -517,7 +517,7 @@ sourcetree_dbstatus_main()
       return 2
    fi
 
-   log_info "Is uptodate"
+   log_info "Is up-to-date"
 }
 
 

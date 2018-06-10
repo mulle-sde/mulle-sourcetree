@@ -841,6 +841,7 @@ _sourcetree_set_node()
    local _fetchoptions
    local _marks
    local _nodetype
+   local _raw_userinfo
    local _tag
    local _url
    local _uuid
@@ -1111,6 +1112,7 @@ _sourcetree_mark_node()
    local _fetchoptions
    local _marks
    local _nodetype
+   local _raw_userinfo
    local _tag
    local _url
    local _userinfo

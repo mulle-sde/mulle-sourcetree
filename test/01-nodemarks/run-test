@@ -159,6 +159,17 @@ main()
 
    log_verbose "----- #16 PASSED -----"
 
+   _marks="no-b,no-c,no-a,only-d"
+
+   nodemarks_match "${_marks}" "no-b"       || internal_fail "Did not match no-b ($_marks)"
+   nodemarks_match "${_marks}" "no-x"       && internal_fail "Did match no-x ($_marks)"
+   nodemarks_match "${_marks}" "no-[ab]"    || internal_fail "Did not match no-[ab] ($_marks)"
+   nodemarks_match "${_marks}" "no-*"       || internal_fail "Did not match no-* ($_marks)"
+   nodemarks_match "${_marks}" "only-*"     || internal_fail "Did not match only-* ($_marks)"
+   nodemarks_match "${_marks}" "only-c"     && internal_fail "Did match only-c ($_marks)"
+
+   log_verbose "----- #17 PASSED -----"
+
    log_info "----- ALL PASSED -----"
 }
 

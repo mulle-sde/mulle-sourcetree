@@ -618,6 +618,7 @@ As node is marked \"no-delete\" just remember it."
    local _fetchoptions
    local _marks
    local _nodetype
+   local _raw_userinfo
    local _tag
    local _url
    local _userinfo
@@ -923,6 +924,7 @@ _update_perform_actions()
    local _fetchoptions
    local _marks
    local _nodetype
+   local _raw_userinfo
    local _tag
    local _url
    local _userinfo
@@ -1324,6 +1326,7 @@ recursive_update_with_nodeline()
    local _fetchoptions
    local _marks
    local _nodetype
+   local _raw_userinfo
    local _tag
    local _url
    local _userinfo

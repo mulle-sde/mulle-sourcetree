@@ -381,7 +381,7 @@ db_bury()
       mkdir_if_missing "${graveyard}"
    fi
 
-   log_info "Burying ${C_MAGENTA}${C_BOLD}${filename#${MULLE_VIRTUAL_ROOT}/}${C_INFO} in grave \"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
+   log_info "Burying ${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
    exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}" >&2
 }
 
@@ -1460,6 +1460,7 @@ db_safe_bury_dbentry()
    local _fetchoptions
    local _nodetype
    local _marks
+   local _raw_userinfo
    local _tag
    local _url
    local _userinfo

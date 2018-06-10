@@ -379,9 +379,18 @@ node_to_nodeline()
 
    if [ ! -z "${_userinfo}" ]
    then
-      if egrep -q '[^-A-Za-z0-9%&/()=|+_.,$# ]' <<< "${_userinfo}"
+      if [ `wc -l <<< "${_userinfo}"` -gt 1 ] ||
+         egrep -q '[^-A-Za-z0-9%&/()=|+_.,$# ]' <<< "${_userinfo}"
       then
-         _userinfo="base64:`base64 -b 0 <<< "${_userinfo}"`"
+         case "${MULLE_UNAME}" in
+            linux)
+               _userinfo="base64:`base64 -w 0 <<< "${_userinfo}"`"
+            ;;
+
+            *)
+               _userinfo="base64:`base64 -b 0 <<< "${_userinfo}"`"
+            ;;
+         esac
       fi
    fi
 
@@ -435,129 +444,5 @@ nodetype_filter()
    esac
 
    return 1
-}
-
-
-#
-# you can pass a qualifier of the form <all>;<one>;<none>;<override>
-# inside all,one,none,override there are comma separated marks
-#
-nodemarks_filter_with_qualifier()
-{
-   log_entry "nodemarks_filter_with_qualifier" "$@"
-
-   local marks="$1"
-   local qualifier="$2"
-
-   if [ "${qualifier}" = "ANY" ]
-   then
-      log_debug "ANY matches all"
-      return 0
-   fi
-
-   local all
-   local one
-   local none
-   local override
-
-   all="${qualifier%%;*}"
-   case "${qualifier}" in
-      *"\;"*)
-         qualifier="${qualifier#*;}"
-      ;;
-
-      *)
-         qualifier=""
-      ;;
-   esac
-
-   one="${qualifier%%;*}"
-   case "${qualifier}" in
-      *"\;"*)
-         qualifier="${qualifier#*;}"
-      ;;
-
-      *)
-         qualifier=""
-      ;;
-   esac
-
-   none="${qualifier%%;*}"
-   case "${qualifier}" in
-      *"\;"*)
-         qualifier="${qualifier#*;}"
-      ;;
-
-      *)
-         qualifier=""
-      ;;
-   esac
-
-   override="${qualifier%%;*}"
-   case "${qualifier}" in
-      *"\;"*)
-         qualifier="${qualifier#*;}"
-      ;;
-
-      *)
-         qualifier=""
-      ;;
-   esac
-
-   local i
-
-   if [ ! -z "${override}" ]
-   then
-      set -o noglob ; IFS=","
-      for i in ${override}
-      do
-         IFS="${DEFAULT_IFS}"; set +o noglob
-         if nodemarks_contain "${marks}" "${i}"
-         then
-            log_fluff "Pass: override mark \"$i\" found"
-            return 0
-         fi
-      done
-      IFS="${DEFAULT_IFS}"; set +o noglob
-   fi
-
-   if [ ! -z "${all}" ]
-   then
-      set -o noglob ; IFS=","
-      for i in ${all}
-      do
-         IFS="${DEFAULT_IFS}"; set +o noglob
-         if ! nodemarks_contain "${marks}" "${i}"
-         then
-            log_fluff "Blocked: required mark \"$i\" not found"
-            return 1
-         fi
-      done
-      IFS="${DEFAULT_IFS}"; set +o noglob
-   fi
-
-   if [ ! -z "${one}" ]
-   then
-      if ! nodemarks_intersect "${marks}" "${one}"
-      then
-         log_fluff "Blocked: mark \"$i\" not present"
-         return 1
-      fi
-   fi
-
-   if [ ! -z "${none}" ]
-   then
-      set -o noglob ; IFS=","
-      for i in ${none}
-      do
-         IFS="${DEFAULT_IFS}"; set +o noglob
-         if nodemarks_contain "${marks}" "${i}"
-         then
-            log_fluff "Blocked: mark \"$i\" inhibits"
-            return 1
-         fi
-      done
-      IFS="${DEFAULT_IFS}"; set +o noglob
-   fi
 }
 

@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.10.1"
+MULLE_EXECUTABLE_VERSION="0.11.0"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -63,6 +63,7 @@ print_commands()
    HIDDEN_COMMANDS="\
    dbstatus       : query state of database
    dotdump        : create a picture of the sourcetree or the database
+   filter         : test a filter with user supplied marks
    fix            : support to track user modifications in the filesystem
    get            : get a node's properties from the sourcetree
    nameguess      : guess name of repository from URL
@@ -601,6 +602,18 @@ main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dotdump.sh"
 
          sourcetree_dotdump_main "$@"
+      ;;
+
+      filter)
+         # shellcheck source=src/mulle-sourcetree-fix.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"
+
+         if nodemarks_filter_with_qualifier "$@"
+         then
+            echo "YES"
+         else
+            echo "NO"
+         fi
       ;;
 
       fix)
