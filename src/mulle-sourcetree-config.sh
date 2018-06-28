@@ -363,46 +363,51 @@ _sourcetree_nameguess_node()
    # try to figure out if input is an _url
    # trivially, it is the _address if _url is empty and _address is set
    #
-   if [ -z "${_url}" ]
+   if [ ! -z "${_url}" ]
    then
-      if [ ! -z "${_address}" ]
-      then
+      log_fluff "Guessed URL \"${_url}\" from \"${url}\""
+      return
+   fi
+
+   if [ ! -z "${_address}" ]
+   then
+      _url="${input}"
+      log_fluff "Guessed URL \"${_url}\" from \"${input}\""
+      return
+   fi
+
+   case "${input}" in
+      *:*)
          _url="${input}"
          log_fluff "Guessed URL \"${_url}\" from \"${input}\""
-         return
-      fi
+         _address="`node_guess_address "${_url}" "${_nodetype}"`"
+         log_fluff "Guessed address \"${_address}\" from \"${_url}\""
+      ;;
 
-      case "${input}" in
-         *:*)
-            _url="${input}"
-            log_fluff "Guessed URL \"${_url}\" from \"${input}\""
-            _address="`node_guess_address "${_url}" "${_nodetype}"`"
-            log_fluff "Guessed Address \"${_address}\" from \"${_url}\""
-         ;;
+      /*|~*)
+         case "${_nodetype}" in
+            local)
+               _address="`symlink_relpath "${input}" "${PWD}"`"
+               log_fluff "Guessed Address \"${_address}\" from \"${_nodetype}\" and \"${input}\""
+            ;;
 
-         /*|~*)
-            case "${_nodetype}" in
-               local)
-                  _address="`symlink_relpath "${input}" "${PWD}"`"
-                  log_fluff "Guessed Address \"${_address}\" from \"${_nodetype}\""
-               ;;
+            *)
+               _url="${input}"
+               log_fluff "Guessed URL \"${_url}\" from \"${input}\""
+               _address="`node_guess_address "${_url}" "${_nodetype}"`"
+               log_fluff "Guessed address \"${_address}\" from \"${_url}\""
+            ;;
+         esac
+      ;;
 
-               *)
-                  _url="${input}"
-                  log_fluff "Guessed URL \"${_url}\" from \"${input}\""
-                  _address="`node_guess_address "${_url}" "${_nodetype}"`"
-                  log_fluff "Guessed Address \"${_address}\" from \"${_url}\""
-               ;;
-            esac
-         ;;
-
-         *)
-            log_fluff "Guessed nothing from \"${input}\""
-         ;;
-      esac
-   else
-      log_fluff "Guessed URL \"${_url}\" from \"${url}\""
-   fi
+      *)
+         _url="${input}"
+         log_fluff "Guessed URL \"${_url}\" from \"${input}\""
+         _address="${input%/*}"
+         _address="`extensionless_basename "${_address}"`"
+         log_fluff "Guessed address \"${_address}\" from \"${input}\""
+      ;;
+   esac
 }
 
 

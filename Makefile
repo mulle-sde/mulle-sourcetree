@@ -1,4 +1,5 @@
 SCRIPTS=installer \
+src/mulle-sourcetree-action.sh \
 src/mulle-sourcetree-bash-completion.sh \
 src/mulle-sourcetree-buildorder.sh \
 src/mulle-sourcetree-callback.sh \

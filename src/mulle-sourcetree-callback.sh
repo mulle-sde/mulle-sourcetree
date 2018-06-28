@@ -67,7 +67,7 @@ __walk_get_db_filename()
 
       local name
 
-      name="`basename -- "${MULLE_ADDRESS}"`"
+      name="`fast_basename "${MULLE_ADDRESS}"`"
       filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${name}"
       return
    fi

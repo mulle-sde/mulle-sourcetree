@@ -47,18 +47,16 @@ run_test()
 {
    local uuidgen
 
-   SOURCETREE_UPDATE_CACHE=whatever
-
    _uuid="`uuidgen`"
    (
-      update_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release" "flat" "/" "/"
+      do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
    [ -f "ringo/starr/VERSION" ] || fail "ringo/starr/VERSION not there ($PWD)"
    log_verbose "----- #1 PASSED -----"
 
    (
-      update_with_nodeline "ringo/star;git;;${_uuid};${repos}/a;release" "flat" "/" "/"
+      do_actions_with_nodeline "ringo/star;git;;${_uuid};${repos}/a;release" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
    [ -f "ringo/starr/VERSION" ] && fail "ringo/starr/VERSION not gone ($PWD)"
@@ -66,14 +64,14 @@ run_test()
    log_verbose "----- #2 PASSED -----"
 
    (
-      update_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;unknown" "flat" "/" "/"
+      do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;unknown" "flat" "/" "/"
    ) && fail "worked unexpectedly"
 
    [ -f "ringo/star/VERSION" ]    && fail "_branch unknown should have wiped ringo/star/VERSION"
    log_verbose "----- #3 PASSED -----"
 
    (
-      update_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release;2.0.0" "flat" "/" "/"
+      do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release;2.0.0" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
    [ `cat ringo/starr/VERSION` = 2.0.0 ] || fail "Wrong checkout"
@@ -81,7 +79,7 @@ run_test()
    log_verbose "----- #4 PASSED -----"
 
    (
-      update_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release;1.0.0" "flat" "/" "/"
+      do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release;1.0.0" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
    [ `cat ringo/starr/VERSION` = 1.0.0 ] || fail "Wrong checkout"
@@ -139,9 +137,10 @@ init()
 
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh"      || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh"   || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-action.sh"   || exit 1
 }
 
 

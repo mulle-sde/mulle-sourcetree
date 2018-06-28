@@ -155,7 +155,7 @@ node_fetch_operation()
 
    [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
 
-   log_verbose "Looking for local source of ${C_RESET_BOLD}${evaledurl}${C_INFO}"
+   log_verbose "Looking for local copy of ${C_RESET_BOLD}${evaledurl}${C_INFO}"
 
    local localurl
    local localnodetype

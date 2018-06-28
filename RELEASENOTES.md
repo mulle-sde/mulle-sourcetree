@@ -1,3 +1,8 @@
+## 0.12.0
+
+* rewrote update, to enable sharing of symlinked repositories
+
+
 ## 0.11.0
 
 * add --qualifier option to filter marks more cleverly, you can still use --marks though in limited cases
