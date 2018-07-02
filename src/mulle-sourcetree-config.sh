@@ -588,6 +588,7 @@ in the sourcetree"
    appended="`add_line "${contents}" "${nodeline}"`"
 
    cfg_write "${SOURCETREE_START}" "${appended}"
+   cfg_touch_parents "${SOURCETREE_START}"
 
    log_info "Added ${C_MAGENTA}${C_BOLD}${_address}"
 }
@@ -713,6 +714,7 @@ sourcetree_move_node()
    fi
 
    cfg_write "${SOURCETREE_START}" "${moved}"
+   cfg_touch_parents "${SOURCETREE_START}"
 }
 
 
@@ -732,6 +734,7 @@ sourcetree_remove_node()
 
    cfg_remove_nodeline "${SOURCETREE_START}" "${address}"
    cfg_file_remove_if_empty "${SOURCETREE_START}"
+   cfg_touch_parents "${SOURCETREE_START}"
 }
 
 
@@ -755,6 +758,7 @@ sourcetree_remove_node_by_url()
 
    cfg_remove_nodeline_by_url "${SOURCETREE_START}" "${url}"
    cfg_file_remove_if_empty "${SOURCETREE_START}"
+   cfg_touch_parents "${SOURCETREE_START}"
 }
 
 
@@ -773,6 +777,7 @@ sourcetree_change_nodeline()
    fi
 
    cfg_change_nodeline "${SOURCETREE_START}" "${oldnodeline}" "${newnodeline}"
+   cfg_touch_parents "${SOURCETREE_START}"
 
    local verifynodelines
    local verifynodeline

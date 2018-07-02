@@ -1,3 +1,7 @@
+### 0.12.1
+
+* touch parent configs when config changed
+
 ## 0.12.0
 
 * rewrote update, to enable sharing of symlinked repositories

@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.12.0"
+MULLE_EXECUTABLE_VERSION="0.12.1"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -73,6 +73,7 @@ print_commands()
    sourcetree-dir : print path to project (if a sourcetree exists)
    remove         : remove a node from the sourcetree
    reset          : clear the database, to force an update
+   touch          : mark sourcetree as dirty
    typeguess      : guess type of repository from URL
    uname          : ${MULLE_USAGE_NAME}'s simplified uname(1)
    unmark         : remove marks from a node in the sourcetree
@@ -372,7 +373,7 @@ main()
    local MULLE_FLAG_LOG_MERGE="NO"
    local MULLE_TRACE_POSTPONE="NO"
 
-   local MULLE_FLAG_DEFER="DEFAULT"
+   local MULLE_FLAG_DEFER=""
    local FLAG_OUTSIDE_ENV="NO"
 
    local FLAG_SOURCETREE_MODE=
@@ -437,11 +438,11 @@ main()
             MULLE_FLAG_DEFER="NEAREST"    # this or next best
          ;;
 
-         -P|--defer-parent)            # one above us
+         -P|--defer-parent)               # one above us
             MULLE_FLAG_DEFER="PARENT"
          ;;
 
-         -N|--no-defer)                # stay in PWD
+         -N|--no-defer)                   # stay in PWD
             MULLE_FLAG_DEFER="NONE"
          ;;
 
@@ -517,7 +518,14 @@ main()
    else
       _set_sourcetree_global "${MULLE_EXECUTABLE_PHYSICAL_PWD}"
 
-      cfg_defer_if_needed "NEAREST" "${MULLE_FLAG_DEFER}" || exit 1
+      if ! cfg_defer_if_needed "${MULLE_FLAG_DEFER:-NEAREST}"
+      then
+         # could be an add, so can't really quit here
+         if [ "${MULLE_FLAG_DEFER}" = "PARENT" ]
+         then
+            exit 1
+         fi
+      fi
    fi
 
 
@@ -708,6 +716,13 @@ main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-status.sh"
 
          sourcetree_status_main "$@"
+      ;;
+
+      touch)
+         if [ -f "${MULLE_SOURCETREE_ETC_DIR}/config}" ]
+         then
+            exekutor touch "${MULLE_SOURCETREE_ETC_DIR}/config"
+         fi
       ;;
 
       typeguess)

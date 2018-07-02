@@ -122,7 +122,7 @@ __cfg_common_rootdir()
       ;;
 
       *)
-         internal_fail "configfile \"$1\" must start with '/'"
+         internal_fail "Config \"$1\" must start with '/'"
       ;;
    esac
 }
@@ -365,22 +365,9 @@ cfg_search_for_configfile()
    log_entry "cfg_search_for_configfile" "$@"
 
    local physdirectory="$1"
+   local ceiling="$2"
 
    [ -z "${physdirectory}" ] && internal_fail "empty directory"
-
-   local ceiling
-
-   #
-   # make sure that the ceiling is thre
-   # and we walk with symlinks removed, so that we hit the ceiling
-   # Also make sure we only walk physical paths
-   #
-   if [ ! -z "${MULLE_VIRTUAL_ROOT}" ] && [ -d "${MULLE_VIRTUAL_ROOT}" ]
-   then
-      ceiling="${MULLE_VIRTUAL_ROOT}"
-   else
-      ceiling="${SOURCETREE_START}"
-   fi
 
    local physceiling
 
@@ -388,6 +375,11 @@ cfg_search_for_configfile()
    [ -z "${physceiling}" ] && fail "SOURCETREE_START/MULLE_VIRTUAL_ROOT does not exist (${ceiling})"
 
    # check that physdirectory is inside physceiling
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = "YES" ]
+   then
+      log_trace2 "physceiling  : ${physceiling}"
+      log_trace2 "physdirectory: ${physdirectory}"
+   fi
 
    case "${physdirectory}" in
       ${physceiling})
@@ -399,18 +391,19 @@ cfg_search_for_configfile()
       ;;
 
       *)
-         log_debug "Start is now outside of the ceiling"
-         return 1
+         if [ "${ceiling}" != "/" ]
+         then
+            log_debug "Start is outside of the ceiling"
+            return 1
+         fi
       ;;
    esac
 
-   [ -z "${SOURCETREE_START}" ] && internal_fail "SOURCETREE_START not set"
-
-   log_debug "Searching for configfile from \"${physdirectory}\" to \"${physceiling}\""
+   log_debug "Searching for configfile \"${SOURCETREE_CONFIG_FILE}\" from \"${physdirectory}\" to \"${physceiling}\""
 
    (
       cd "${physdirectory}" &&
-      while ! cfg_exists "${SOURCETREE_START}"
+      while ! [ -f "${SOURCETREE_CONFIG_FILE}" ]
       do
          # since we do physical paths, PWD is ok here
          if [ "${PWD}" = "${physceiling}" ]
@@ -442,17 +435,10 @@ cfg_determine_working_directory()
 {
    log_entry "cfg_determine_working_directory" "$@"
 
-   local preference="$1"
-   local deferflag="$2"
-   local physpwd="$3"
+   local defer="$1"
+   local physpwd="$2"
 
-   local directory
-   local parent
-   local found
-   local defer
-
-   [ ! -z "${preference}" ] || internal_fail "empty preference"
-   [ ! -z "${deferflag}" ]  || internal_fail "empty deferflag"
+   [ ! -z "${defer}" ]      || internal_fail "empty defer"
    [ ! -z "${physpwd}" ]    || internal_fail "empty phypwd"
 
    if [ -z "${MULLE_PATH_SH}" ]
@@ -465,11 +451,23 @@ cfg_determine_working_directory()
       fail "need mulle-sourcetree-db.sh for this to work"
    fi
 
-   defer="${deferflag}"
-   if [ "${defer}" = "DEFAULT" ]
+   local ceiling
+
+   #
+   # make sure that the ceiling is thre
+   # and we walk with symlinks removed, so that we hit the ceiling
+   # Also make sure we only walk physical paths
+   #
+   if [ ! -z "${MULLE_VIRTUAL_ROOT}" ] && [ -d "${MULLE_VIRTUAL_ROOT}" ]
    then
-      defer="${preference}"
+      ceiling="${MULLE_VIRTUAL_ROOT}"
+   else
+      ceiling="${SOURCETREE_START}"
    fi
+
+   local directory
+   local parent
+   local found
 
    case "${defer}" in
       NONE)
@@ -484,17 +482,17 @@ cfg_determine_working_directory()
       ;;
 
       NEAREST)
-         if ! cfg_search_for_configfile "${physpwd}"
+         if ! cfg_search_for_configfile "${physpwd}" "${ceiling}"
          then
-            log_debug "No config found or db found"
+            log_debug "No nearest config found or db found"
             return 1
          fi
          return 0
       ;;
 
-      # not sure when this is useful
+      # not sure when this is useful, only give parent if exists
       PARENT)
-         directory="`cfg_search_for_configfile "${physpwd}"`"
+         directory="`cfg_search_for_configfile "${physpwd}" "/"`"
          if [ $? -ne 0 ]
          then
             log_debug "No config found or db found"
@@ -503,24 +501,25 @@ cfg_determine_working_directory()
 
          if [ "${directory}" != "${physpwd}" ]
          then
+            log_debug "Immediate parent found"
             echo "${directory}"
             return 0
          fi
 
          parent="`fast_dirname "${directory}"`"
-         directory="`cfg_search_for_configfile "${parent}"`"
+         cfg_search_for_configfile "${parent}" "/"
          if [ $? -eq 0 ]
          then
-            echo "${directory}"
+            log_debug "Actual parent found"
             return 0
          fi
 
-         log_debug "No parent found"
+         log_verbose "No parent found"
          return 1
       ;;
 
       ROOT)
-         directory="`cfg_search_for_configfile "${physpwd}"`"
+         directory="`cfg_search_for_configfile "${physpwd}" "${ceiling}"`"
          if [ $? -ne 0 ]
          then
             log_debug "No config found"
@@ -536,7 +535,7 @@ cfg_determine_working_directory()
                break
             fi
 
-            directory="`cfg_search_for_configfile "${parent}"`"
+            directory="`cfg_search_for_configfile "${parent}" "${ceiling}" `"
             if [ $? -ne 0 ]
             then
                break
@@ -548,7 +547,7 @@ cfg_determine_working_directory()
       ;;
 
       VIRTUAL)
-         directory="`cfg_search_for_configfile "/"`"
+         directory="`cfg_search_for_configfile "/" "${ceiling}" `"
          if [ $? -ne 0 ]
          then
             log_debug "No config found in MULLE_VIRTUAL_ROOT ($MULLE_VIRTUAL_ROOT}"
@@ -567,24 +566,54 @@ cfg_determine_working_directory()
 }
 
 
+cfg_get_parent()
+{
+   local start="$1"
+
+   start="${start:-${MULLE_EXECUTABLE_PHYSICAL_PWD}}"
+   cfg_determine_working_directory "PARENT" "${start}"
+}
+
+
+cfg_touch_parents()
+{
+   log_entry "cfg_touch_parents" "$@"
+
+   local rootdir
+
+   __cfg_common_rootdir "$@"
+
+   local parent
+
+   while parent="`cfg_get_parent "${rootdir}" `"
+   do
+      [ "${parent}" = "${rootdir}" ] && internal_fail "${parent} endless loop"
+
+      exekutor touch "${parent}/${SOURCETREE_CONFIG_FILE}"
+      rootdir="${parent}"
+   done
+}
+
+
 cfg_defer_if_needed()
 {
    log_entry "cfg_defer_if_needed" "$@"
 
-   local preference="$1"
-   local defer="$2"
+   local defer="$1"
 
    local directory
    local physpwd
 
    physpwd="${MULLE_EXECUTABLE_PHYSICAL_PWD}"
-   if directory="`cfg_determine_working_directory "${preference}" "${defer}" "${physpwd}"`"
+   if directory="`cfg_determine_working_directory "${defer}" "${physpwd}"`"
    then
       if [ "${directory}" != "${physpwd}" ]
       then
          log_info "Using \"${directory}\" as sourcetree root"
          exekutor cd "${directory}"
       fi
+   else
+      return 1
    fi
 }
 
