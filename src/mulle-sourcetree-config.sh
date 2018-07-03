@@ -1047,6 +1047,7 @@ no-fs
 no-header
 no-include
 no-link
+no-public
 no-recurse
 no-require
 no-set

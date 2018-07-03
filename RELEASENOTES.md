@@ -1,3 +1,7 @@
+### 0.12.2
+
+* make no-public known
+
 ### 0.12.1
 
 * touch parent configs when config changed
