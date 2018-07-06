@@ -1,3 +1,8 @@
+## 0.13.0
+
+* add knownmarks command, renamed --extended-marks to --extended-mark
+
+
 ### 0.12.2
 
 * make no-public known

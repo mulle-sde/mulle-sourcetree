@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.12.2"
+MULLE_EXECUTABLE_VERSION="0.13.0"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -68,6 +68,7 @@ print_commands()
    get            : get a node's properties from the sourcetree
    nameguess      : guess name of repository from URL
    libexec-dir    : print path to ${MULLE_USAGE_NAME} libexec
+   knownmarks     : list known marks
    mark           : add or remove a mark from a node in the sourcetree
    move           : move a node within the sourcetree
    sourcetree-dir : print path to project (if a sourcetree exists)
@@ -645,6 +646,13 @@ main()
          sourcetree_info_main "$@"
       ;;
 
+      knownmarks)
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+
+         sourcetree_knownmarks_main "$@"
+      ;;
+
       libexec-dir|library-path)
          echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
       ;;
@@ -807,8 +815,6 @@ _init()
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"             || exit 1
    # shellcheck source=../mulle-bashfunctions/src/mulle-file.sh
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"             || exit 1
-
-
 
    local _libexec_dir
 

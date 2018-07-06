@@ -86,6 +86,22 @@ EOF
 }
 
 
+sourcetree_knownmarks_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} knownmarks
+
+   List the marks known by ${MULLE_EXECUTABLE_NAME}. 
+
+   Note: You can specify other marks though.
+EOF
+  exit 1
+}
+
+
 sourcetree_nameguess_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -144,12 +160,12 @@ Usage:
    are actually stored in the node. All positive marks are implicit.
 
    Examine the nodes marks with
-       \`${MULLE_EXECUTABLE_NAME} -N ls\`.
+       \`${MULLE_EXECUTABLE_NAME} -N list\`.
 
    This command only affects the local sourcetree.
 
 Options:
-   --extended-marks : allow the use of non-predefined marks
+   --extended-mark : allow the use of non-predefined marks
 
 Marks:
    [no-]build     : the node contains a buildable project (used by buildorder)
@@ -192,7 +208,7 @@ Usage:
    This command only affects the local sourcetree.
 
 Options:
-   --extended-marks : allow the use of non-predefined marks
+   --extended-mark : allow the use of non-predefined marks
 
 Marks:
    no-build
@@ -1046,14 +1062,14 @@ no-delete
 no-fs
 no-header
 no-include
+no-import
 no-link
 no-public
 no-recurse
 no-require
 no-set
 no-share
-no-update
-"
+no-update"
 
 _sourcetree_add_mark_known_absent()
 {
@@ -1063,11 +1079,11 @@ _sourcetree_add_mark_known_absent()
 
    _assert_sane_mark "${mark}"
 
-   if [ "${OPTION_EXTENDED_MARKS}" != "YES" ]
+   if [ "${OPTION_EXTENDED_MARK}" != "YES" ]
    then
       if ! fgrep -x -q "${mark}" <<< "${KNOWN_MARKS}"
       then
-         fail "mark \"${mark}\" is unknown. If this is not a type use --extended-marks"
+         fail "mark \"${mark}\" is unknown. If this is not a type use --extended-mark"
       fi
    fi
 
@@ -1091,11 +1107,11 @@ _sourcetree_remove_mark_known_present()
 
    _assert_sane_mark "${mark}"
 
-   if [ "${OPTION_EXTENDED_MARKS}" != "YES" ]
+   if [ "${OPTION_EXTENDED_MARK}" != "YES" ]
    then
       if ! fgrep -x -q "${mark}" <<< "${KNOWN_MARKS}"
       then
-         fail "mark \"${mark}\" is unknown. If this is not a typo use --extended-marks"
+         fail "mark \"${mark}\" is unknown. If this is not a typo use --extended-mark"
       fi
    fi
 
@@ -1314,7 +1330,7 @@ sourcetree_common_main()
    local OPTION_OUTPUT_HEADER="DEFAULT"
    local OPTION_OUTPUT_SEPARATOR="DEFAULT"
    local OPTION_GUESS_NODETYPE="DEFAULT"
-   local OPTION_EXTENDED_MARKS="DEFAULT"
+   local OPTION_EXTENDED_MARK="DEFAULT"
    local OPTION_OUTPUT_BANNER="DEFAULT"
    local OPTION_GUESS_DSTFILE="DEFAULT_IFS"
    local OPTION_UNSAFE="NO"
@@ -1394,12 +1410,12 @@ sourcetree_common_main()
          #
          # marks
          #
-         -e|--extended-marks)
-            OPTION_EXTENDED_MARKS="YES"
+         -e|--extended-mark)
+            OPTION_EXTENDED_MARK="YES"
          ;;
 
-         --no-extended-marks)
-            OPTION_EXTENDED_MARKS="NO"
+         --no-extended-mark)
+            OPTION_EXTENDED_MARK="NO"
          ;;
 
          #
@@ -1573,6 +1589,10 @@ sourcetree_common_main()
          sourcetree_${COMMAND}_node${suffix} "${address}" "$@"
       ;;
 
+      knownmarks)
+         echo "${KNOWN_MARKS}"
+      ;;
+
       mark|unmark)
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          address="$1"
@@ -1634,6 +1654,14 @@ sourcetree_set_main()
    sourcetree_common_main "$@"
 }
 
+sourcetree_knownmarks_main()
+{
+   log_entry "sourcetree_knownmarks_main" "$@"
+
+   USAGE="sourcetree_knownmarks_usage"
+   COMMAND="knownmarks"
+   sourcetree_common_main "$@"
+}
 
 sourcetree_mark_main()
 {
