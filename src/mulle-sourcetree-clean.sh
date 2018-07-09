@@ -222,9 +222,32 @@ sourcetree_clean_main()
 
    [ "$#" -eq 0 ] || sourcetree_clean_usage
 
+   if [ -z "${MULLE_PATH_SH}" ]
+   then
+      # shellcheck source=mulle-path.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"      || return 1
+   fi
+   if [ -z "${MULLE_FILE_SH}" ]
+   then
+      # shellcheck source=mulle-file.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"      || return 1
+   fi
+
+   if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-walk.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
+   fi
+
    if ! cfg_exists "${SOURCETREE_START}"
    then
       log_verbose "There is no ${SOURCETREE_CONFIG_FILE} here"
+   fi
+
+   if ! db_exists "${SOURCETREE_START}"
+   then
+      log_verbose "Already clean"
+      return 0
    fi
 
    local mode
@@ -251,37 +274,3 @@ sourcetree_clean_main()
    return $rval
 }
 
-
-sourcetree_clean_initialize()
-{
-   log_entry "sourcetree_clean_initialize"
-
-   if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
-   then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
-
-      # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-   fi
-   if [ -z "${MULLE_PATH_SH}" ]
-   then
-      # shellcheck source=mulle-path.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"      || return 1
-   fi
-   if [ -z "${MULLE_FILE_SH}" ]
-   then
-      # shellcheck source=mulle-file.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"      || return 1
-   fi
-
-   if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-walk.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
-   fi
-}
-
-
-sourcetree_clean_initialize
-
-:

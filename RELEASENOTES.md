@@ -1,3 +1,7 @@
+### 0.13.1
+
+* fix update flag and erroneous error message when cleaning
+
 ## 0.13.0
 
 * add knownmarks command, renamed --extended-marks to --extended-mark

@@ -99,10 +99,7 @@ run_test1()
       fail "add failed unexpectedly"
    fi
 
-   if MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree clean
-   then
-      fail "clean succeeded unexpectedly"
-   fi
+   MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree clean
 }
 
 

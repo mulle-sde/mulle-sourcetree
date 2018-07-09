@@ -881,6 +881,19 @@ ${MULLE_SOURCETREE_SHARE_DIR}"
 }
 
 
+db_exists()
+{
+   log_entry "db_exists" "$@"
+
+   local database
+   local databasedir
+
+   __db_common_databasedir "$@"
+
+   [ -d "${databasedir}" ]
+}
+
+
 db_is_ready()
 {
    log_entry "db_is_ready" "$@"
@@ -985,8 +998,6 @@ db_is_updating()
 db_set_update()
 {
    log_entry "db_set_update" "$@"
-
-   [ $# -eq 0 ] || internal_fail "api error"
 
    local database
    local databasedir

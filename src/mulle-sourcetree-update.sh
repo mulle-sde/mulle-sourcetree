@@ -536,6 +536,7 @@ _sourcetree_update_share()
    log_verbose "Doing a \"${style}\" update for \"${config}\"."
 
    db_set_dbtype "${database}" "${style}"
+   db_set_update "${database}"
    db_set_shareddir "${database}" "${MULLE_SOURCETREE_SHARE_DIR}"
 
    db_zombify_nodes "${database}"
@@ -657,6 +658,7 @@ _sourcetree_update_recurse()
    log_verbose "Doing a \"${style}\" update for \"${config}\"."
 
    db_set_dbtype "${database}" "${style}"
+   db_set_update "${database}"
    db_clear_shareddir "${database}"
 
    db_zombify_nodes "${database}"
@@ -722,6 +724,7 @@ _sourcetree_update_flat()
    log_verbose "Doing a \"${style}\" update for \"${config}\"."
 
    db_set_dbtype "${database}" "${style}"
+   db_set_update "${database}"
    db_clear_shareddir "${database}"
 
    db_zombify_nodes "${database}"
@@ -731,7 +734,6 @@ _sourcetree_update_flat()
    db_bury_zombies "${database}"
 
    db_clear_update "${database}"
-
    db_set_ready "${database}"
 }
 

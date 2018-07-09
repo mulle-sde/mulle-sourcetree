@@ -29,10 +29,10 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
+[ "${TRACE}" = "YES" -o "${MULLE_SOURCETREE_TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.13.0"
+MULLE_EXECUTABLE_VERSION="0.13.1"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -358,7 +358,7 @@ _set_share_dir()
 
 main()
 {
-   local MULLE_FLAG_MAGNUM_FORCE="NONE"
+   local MULLE_FLAG_MAGNUM_FORCE="NO"
    local MULLE_FLAG_IGNORE_GRAVEYARD="NO"
 
    # technical flags
@@ -409,7 +409,7 @@ main()
          ;;
 
          -f|--force)
-            MULLE_FLAG_MAGNUM_FORCE="BOTH"
+            MULLE_FLAG_MAGNUM_FORCE="YES"
          ;;
 
          -h*|--help|help)
