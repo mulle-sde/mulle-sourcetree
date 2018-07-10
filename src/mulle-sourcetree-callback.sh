@@ -166,9 +166,9 @@ __call_callback()
       return 0
    fi
 
-   case "${mode}" in
-      *lenient*)
-         log_warning "Command '${callback}' failed for node \"${_address}\""
+   case ",${mode}," in
+      *,lenient,*)
+         log_warning "Command \"${callback}\" failed for node \"${_address}\""
          return 0
       ;;
    esac

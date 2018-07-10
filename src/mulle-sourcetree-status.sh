@@ -122,8 +122,8 @@ sourcetree_is_db_compatible()
    local dbtype
 
    dbtype="`db_get_dbtype "${database}"`"
-   case "${mode}" in
-      *flat*)
+   case ",${mode}," in
+      *,flat,*)
          case "${dbtype}" in
             flat|recurse)
                return 0
@@ -133,7 +133,7 @@ sourcetree_is_db_compatible()
          return 1
       ;;
 
-      *recurse*)
+      *,recurse,*)
          case "${dbtype}" in
             recurse)
                return 0
@@ -143,7 +143,7 @@ sourcetree_is_db_compatible()
          return 1
       ;;
 
-      *share*)
+      *,share,*)
          case "${dbtype}" in
             share)
                return 0
@@ -329,8 +329,8 @@ emit_status()
 
       status="ok"
 
-      case "${mode}" in
-         *flat*)
+      case ",${mode}," in
+         *,flat,*)
          ;;
 
          *)
@@ -463,12 +463,12 @@ sourcetree_status()
 
    local header
 
-   case "${mode}" in
-      *header*)
+   case ",${mode}," in
+      *,header,*)
          header="Node;Status;Filesystem;Config;Database" # ;Filename"
 
-         case "${mode}" in
-            *separator*)
+         case ",${mode}," in
+            *,separator,*)
                header="`add_line "${header}" "-------;------;----------;------;--------"`" # ;--------"`"
             ;;
          esac
@@ -476,8 +476,8 @@ sourcetree_status()
       ;;
    esac
 
-   case "${mode}" in
-      *formatted*)
+   case ",${mode}," in
+      *,formatted,*)
          echo "${output}" | column -t -s';'
       ;;
 
@@ -630,18 +630,18 @@ sourcetree_status_main()
    mode="${SOURCETREE_MODE}"
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
-      mode="`concat "${mode}" "pre-order"`"
+      mode="`comma_concat "${mode}" "pre-order"`"
    fi
    if [ "${OPTION_OUTPUT_RAW}" != "YES" ]
    then
-      mode="`concat "${mode}" "output-formatted"`"
+      mode="`comma_concat "${mode}" "output-formatted"`"
    fi
    if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
    then
-      mode="`concat "${mode}" "output-header"`"
+      mode="`comma_concat "${mode}" "output-header"`"
       if [ "${OPTION_OUTPUT_SEPARATOR}" != "NO" ]
       then
-         mode="`concat "${mode}" "output-separator"`"
+         mode="`comma_concat "${mode}" "output-separator"`"
       fi
    fi
 

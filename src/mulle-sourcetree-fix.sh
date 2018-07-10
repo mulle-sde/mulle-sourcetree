@@ -358,7 +358,7 @@ sourcetree_fix_main()
    mode="${SOURCETREE_MODE}"
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
-      mode="`concat "${mode}" "pre-order"`"
+      mode="`comma_concat "${mode}" "pre-order"`"
    fi
 
    log_info "Run sourcetree fix"

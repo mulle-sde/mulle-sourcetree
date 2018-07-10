@@ -66,6 +66,7 @@ print_buildorder_line()
 {
    log_entry "print_buildorder_line" "$@"
 
+
    #
    # if we are in root, we want to add no-memo marks to the output, but
    # only for subprojects
@@ -75,16 +76,18 @@ print_buildorder_line()
       "${OPTION_CALLBACK}" "${line}"
    fi
 
-   if [ "${OPTION_PRINT_ENV}" = "YES" -a ! -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
+   if [ "${SOURCETREE_MODE}" = "share" -a \
+        "${OPTION_PRINT_ENV}" = "YES" -a \
+        ! -z "${MULLE_SOURCETREE_SHARE_DIR}" -a \
+        "${MULLE_SOURCETREE_SHARE_DIR}" != "${MULLE_VIRTUAL_ROOT}" ]
    then
-      case ",${MULLE_MARKS}," in
-         *,no-share,*)
-         ;;
+      local reduce
 
-         *)
-            MULLE_FILENAME='${MULLE_SOURCETREE_SHARE_DIR}'"${MULLE_FILENAME#${MULLE_SOURCETREE_SHARE_DIR}}"
-         ;;
-      esac
+      reduce="${MULLE_FILENAME#${MULLE_SOURCETREE_SHARE_DIR}}"
+      if [ "${reduce}" != "${MULLE_FILENAME}" ]
+      then
+         MULLE_FILENAME='${MULLE_SOURCETREE_SHARE_DIR}'"${reduce}"
+      fi
    fi
 
    if [ "${OPTION_ABSOLUTE}" = "NO" ]
@@ -181,7 +184,7 @@ sourcetree_buildorder_main()
    sourcetree_walk "" \
                    "descend-symlink" \
                    "${SOURCETREE_BUILDORDER_QUALIFIER}" \
-                   "${SOURCETREE_MODE} --in-order" \
+                   "${SOURCETREE_MODE},in-order" \
                    "print_buildorder_line"
 }
 

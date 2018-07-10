@@ -94,7 +94,7 @@ sourcetree_knownmarks_usage()
 Usage:
    ${MULLE_EXECUTABLE_NAME} knownmarks
 
-   List the marks known by ${MULLE_EXECUTABLE_NAME}. 
+   List the marks known by ${MULLE_EXECUTABLE_NAME}.
 
    Note: You can specify other marks though.
 EOF
@@ -581,7 +581,7 @@ sourcetree_add_node()
 
    if [ "${OPTION_UNSAFE}" = "YES" ]
    then
-      mode="`concat "${mode}" "unsafe"`"
+      mode="`comma_concat "${mode}" "unsafe"`"
    fi
    node_augment "${mode}"
 

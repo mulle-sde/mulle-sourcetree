@@ -255,8 +255,8 @@ node_augment()
       ;;
    esac
 
-   case "${mode}" in
-      *unsafe*)
+   case ",${mode}," in
+      *,unsafe,*)
       ;;
 
       *)

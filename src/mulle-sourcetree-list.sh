@@ -106,32 +106,32 @@ _sourcetree_augment_mode_with_output_options()
 
    if [ "${OPTION_OUTPUT_URL}" != "NO" ]
    then
-      mode="`concat "${mode}" "output_url"`"
+      mode="`comma_concat "${mode}" "output_url"`"
    fi
    if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
    then
-      mode="`concat "${mode}" "output_full"`"
+      mode="`comma_concat "${mode}" "output_full"`"
    fi
    if [ "${OPTION_OUTPUT_EVAL}" = "YES" ]
    then
-      mode="`concat "${mode}" "output_eval"`"
+      mode="`comma_concat "${mode}" "output_eval"`"
    fi
    if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
    then
-      mode="`concat "${mode}" "output_uuid"`"
+      mode="`comma_concat "${mode}" "output_uuid"`"
    fi
 
    case "${OPTION_OUTPUT_FORMAT}" in
       "RAW")
-         mode="`concat "${mode}" "output_raw"`"
+         mode="`comma_concat "${mode}" "output_raw"`"
          if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
          then
-            mode="`concat "${mode}" "output_header"`"
+            mode="`comma_concat "${mode}" "output_header"`"
          fi
       ;;
 
       "CMD")
-         mode="`concat "${mode}" "output_cmd"`"
+         mode="`comma_concat "${mode}" "output_cmd"`"
       ;;
 
       *)
@@ -139,16 +139,16 @@ _sourcetree_augment_mode_with_output_options()
 
          if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
          then
-            mode="`concat "${mode}" "output_header"`"
+            mode="`comma_concat "${mode}" "output_header"`"
             if [ "${OPTION_OUTPUT_SEPARATOR}" != "NO" ]
             then
-               mode="`concat "${mode}" "output_separator"`"
+               mode="`comma_concat "${mode}" "output_separator"`"
             fi
          fi
 
          if [ "${OPTION_OUTPUT_COLUMN}" != "NO" ]
          then
-            mode="`concat "${mode}" "output_column"`"
+            mode="`comma_concat "${mode}" "output_column"`"
          fi
       ;;
    esac
@@ -273,8 +273,8 @@ _list_nodes()
       _sourcetree_banner
    fi
 
-   case "${mode}" in
-      *output_column*)
+   case ",${mode}," in
+      *,output_column,*)
          _sourcetree_contents "$@" | exekutor column -t -s ';'
       ;;
 

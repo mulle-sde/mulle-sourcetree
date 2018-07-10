@@ -348,8 +348,8 @@ __set_sep_and_formatstring()
 {
    local mode="$1"
 
-   case "${mode}" in
-      *output_column*)
+   case ",${mode}," in
+      *,output_column,*)
          sep="; "
       ;;
 
@@ -363,20 +363,20 @@ __set_sep_and_formatstring()
    if [ -z "${formatstring}" ]
    then
       formatstring="%a${sep}%n${sep}%m${sep}%i"
-      case "${mode}" in
-         *output_url*)
+      case ",${mode}," in
+         *,output_url,*)
             formatstring="${formatstring}${sep}%u"
          ;;
       esac
 
-      case "${mode}" in
-         *output_full*)
+      case ",${mode}," in
+         *,output_full,*)
             formatstring="${formatstring}${sep}%b${sep}%t${sep}%f"
          ;;
       esac
 
-      case "${mode}" in
-         *output_uuid*)
+      case ",${mode}," in
+         *,output_uuid,*)
             formatstring="${formatstring}${sep}%_"
          ;;
       esac
@@ -393,8 +393,8 @@ nodeline_printf_header()
    local mode="$1"
    local formatstring="$2"
 
-   case "${mode}" in
-      *output_header*)
+   case ",${mode}," in
+      *,output_header,*)
       ;;
 
       *)
@@ -506,8 +506,8 @@ nodeline_printf_header()
          ;;
 
          \\n)
-            case "${mode}" in
-               *output_raw*|*output_cmd*)
+            case ",${mode}," in
+               *,output_raw,*|*,output_cmd,*)
                   name=""
                   dash=""
                ;;
@@ -536,8 +536,8 @@ nodeline_printf_header()
    done
 
    printf "%s" "${h_line}"
-   case "${mode}" in
-      *output_separator*)
+   case ",${mode}," in
+      *,output_separator,*)
          printf "%s" "${s_line}"
       ;;
    esac
@@ -565,8 +565,8 @@ nodeline_printf()
 
    nodeline_parse "${nodeline}"
 
-   case "${mode}" in
-      *output_eval*)
+   case ",${mode}," in
+      *,output_eval,*)
          _url="`eval echo "${_url}"`"
          _branch="`eval echo "${_branch}"`"
          _tag="`eval echo "${_tag}"`"
@@ -588,8 +588,8 @@ nodeline_printf()
    guess=
    case "${formatstring}" in
       *%m*)
-         case "${mode}" in
-            *output_cmd*)
+         case ",${mode}," in
+            *,output_cmd,*)
                if [ ! -z "${_url}" ]
                then
                   guess="`node_guess_nodetype "${_url}"`"
@@ -652,8 +652,8 @@ nodeline_printf()
                formatstring="%i${formatstring}"
             else
                switch="--userinfo"
-               case "${mode}" in
-                  *output_cmd*)
+               case ",${mode}," in
+                  *,output_cmd,*)
                      value="${_raw_userinfo}"
                   ;;
 
@@ -738,8 +738,8 @@ nodeline_printf()
          ;;
 
          *)
-            case "${mode}" in
-               *output_cmd*)
+            case ",${mode}," in
+               *,output_cmd,*)
                ;;
 
                *)
@@ -753,8 +753,8 @@ nodeline_printf()
 
       formatstring="${formatstring:2}"
 
-      case "${mode}" in
-         *output_column*)
+      case ",${mode}," in
+         *,output_column,*)
             if [ -z "${value}" ]
             then
                value=" "
@@ -770,12 +770,12 @@ nodeline_printf()
       fi
    done
 
-   case "${mode}" in
-      *output_cmd*)
+   case ",${mode}," in
+      *,output_cmd,*)
          echo "${cmd_line}" "'${_address}'"
       ;;
 
-      *output_raw*)
+      *,output_raw,*)
          printf "%s" "${line}" | sed 's/;$//g'
       ;;
 

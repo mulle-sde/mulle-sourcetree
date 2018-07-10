@@ -639,8 +639,8 @@ sourcetree_dotdump_body()
    log_debug "[*] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
    log_debug "[*] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
 
-   case "${mode}" in
-      *walkdb*)
+   case ",${mode}," in
+      *,walkdb,*)
          walk_db_uuids "${filternodetypes}" \
                        "${filterpermissions}" \
                        "${filtermarks}" \
@@ -779,7 +779,7 @@ sourcetree_dotdump_main()
    mode="${SOURCETREE_MODE}"
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
-      mode="`concat "${mode}" "in-order"`"
+      mode="`comma_concat "${mode}" "in-order"`"
    fi
 
    if [ "${OPTION_WALK_DB}" = "YES" ]
@@ -789,7 +789,7 @@ sourcetree_dotdump_main()
          log_info "There is no ${SOURCETREE_DB_NAME} here"
       fi
 
-      mode="`concat "${mode}" "walkdb"`"
+      mode="`comma_concat "${mode}" "walkdb"`"
    else
       if ! cfg_exists "${SOURCETREE_START}"
       then

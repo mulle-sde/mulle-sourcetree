@@ -246,8 +246,8 @@ _visit_callback()
       return
    fi
 
-   case "${mode}" in
-      *docd*)
+   case ",${mode}," in
+      *,docd,*)
          local old
          local directory
 
@@ -298,8 +298,8 @@ _visit_recurse()
    local mode="$1" ; shift
 
 
-   case "${mode}" in
-      *flat*)
+   case ",${mode}," in
+      *,flat,*)
          log_debug "Non-recursive walk doesn't recurse on \"${_address}\""
          return 0
       ;;
@@ -314,8 +314,8 @@ _visit_recurse()
    #
    # Preserve state and globals vars, so dont subshell
    #
-   case "${mode}" in
-      *walkdb*)
+   case ",${mode}," in
+      *,walkdb,*)
          _walk_db_uuids "${next_datasource}" \
                         "${next_virtual}" \
                         "${filternodetypes}" \
@@ -391,17 +391,17 @@ _visit_node()
       VISITED="${VISITED}:${_filename}"
    fi
 
-   case "${mode}" in
-      *flat*)
+   case ",${mode}," in
+      *,flat,*)
          _visit_callback "$@"
       ;;
 
-      *in-order*)
+      *,in-order,*)
          _visit_recurse "$@"
          _visit_callback "$@"
       ;;
 
-      *pre-order*)
+      *,pre-order,*)
          _visit_callback "$@"
          _visit_recurse "$@"
       ;;
@@ -473,12 +473,12 @@ _visit_filter_nodeline()
    # if we are walking in shared mode, then we fold the _address
    # into the shared directory.
    #
-   case "${mode}" in
-      *no-share*)
+   case ",${mode}," in
+      *,no-share,*)
          internal_fail "shouldn't exist anymore"
       ;;
 
-      *share*)
+      *,share,*)
          if nodemarks_contain "${_marks}" "share"
          then
             _visit_share_node "${datasource}" \
@@ -597,7 +597,7 @@ _visit_share_node()
    walk_filter_permissions "${_filename}" "${filterpermissions}"
    case $? in
       2)
-         mode="${mode} flat"  # don't recurse into symlinks unless asked to
+         mode="`comma_concat "${mode}" "flat" `"  # don't recurse into symlinks unless asked to
       ;;
 
       1)
@@ -730,16 +730,16 @@ _print_walk_info()
       return 1
    fi
 
-   case "${mode}" in
-      *flat*)
+   case ",${mode}," in
+      *,flat,*)
          log_verbose "Flat walk \"${datasource:-.}\""
       ;;
 
-      *in-order*)
+      *,in-order,*)
          log_debug "Recursive depth-first walk \"${datasource:-.}\""
       ;;
 
-      *pre-order*)
+      *,pre-order,*)
          log_debug "Recursive pre-order walk \"${datasource:-.}\""
       ;;
 
@@ -813,17 +813,23 @@ _walk_db_uuids()
 {
    log_entry "_walk_db_uuids" "$@"
 
-   local nodelines
-
    local datasource="$1"; shift
    local virtual="$1"; shift
+   local mode="$4"
 
-   local rval
+   case ",${mode}," in
+      *,no-dbcheck,*)
+      ;;
 
-   if cfg_exists "${datasource}" && ! db_is_ready "${datasource}"
-   then
-      fail "The sourcetree at \"${datasource}\" is not updated fully yet, can not proceed"
-   fi
+      *)
+         if cfg_exists "${datasource}" && ! db_is_ready "${datasource}"
+         then
+            fail "The sourcetree at \"${datasource}\" is not updated fully yet, can not proceed"
+         fi
+      ;;
+   esac
+
+   local nodelines
 
    nodelines="`db_fetch_all_nodelines "${datasource}"`"
    _walk_nodelines "${nodelines}" "${datasource}" "${virtual}" "$@"
@@ -884,27 +890,27 @@ sourcetree_walk()
    #
    # make pre-order default if no order set for share or recurse
    #
-   case "${mode}" in
-      flat|*-order*)
+   case ",${mode}," in
+      ,flat,|*-order,*)
       ;;
 
       *)
-         mode="`concat "${mode}" "pre-order"`"
+         mode="`comma_concat "${mode}" "pre-order"`"
       ;;
    esac
 
-   case "${mode}" in
-      *callroot*)
-         case "${mode}" in
-            *pre-order*)
+   case ",${mode}," in
+      *,callroot,*)
+         case ",${mode}," in
+            *,pre-order,*)
                _visit_root_callback "${mode}" "${callback}" "$@"
             ;;
          esac
       ;;
    esac
 
-   case "${mode}" in
-      *walkdb*)
+   case ",${mode}," in
+      *,walkdb,*)
          walk_db_uuids "${filternodetypes}" \
                        "${filterpermissions}" \
                        "${marksqualifier}" \
@@ -923,10 +929,10 @@ sourcetree_walk()
       ;;
    esac
 
-   case "${mode}" in
-      *callroot*)
-         case "${mode}" in
-            *pre-order*)
+   case ",${mode}," in
+      *,callroot,*)
+         case ",${mode}," in
+            *,pre-order,*)
             ;;
 
             *)
@@ -1103,33 +1109,33 @@ sourcetree_walk_main()
 
    case "${OPTION_TRAVERSE_STYLE}" in
       "INORDER")
-         mode="`concat "${mode}" "in-order"`"
+         mode="`comma_concat "${mode}" "in-order"`"
       ;;
 
       *)
-         mode="`concat "${mode}" "pre-order"`"
+         mode="`comma_concat "${mode}" "pre-order"`"
       ;;
    esac
 
    if [ "${OPTION_LENIENT}" = "YES" ]
    then
-      mode="`concat "${mode}" "lenient"`"
+      mode="`comma_concat "${mode}" "lenient"`"
    fi
    if [ "${OPTION_CD}" = "YES" ]
    then
-      mode="`concat "${mode}" "docd"`"
+      mode="`comma_concat "${mode}" "docd"`"
    fi
    if [ "${OPTION_EXTERNAL_CALL}" = "YES" ]
    then
-      mode="`concat "${mode}" "external"`"
+      mode="`comma_concat "${mode}" "external"`"
    fi
    if [ "${OPTION_WALK_DB}" = "YES" ]
    then
-      mode="`concat "${mode}" "walkdb"`"
+      mode="`comma_concat "${mode}" "walkdb"`"
    fi
    if [ "${OPTION_CALLBACK_ROOT}" = "YES" ]
    then
-      mode="`concat "${mode}" "callroot"`"
+      mode="`comma_concat "${mode}" "callroot"`"
    fi
 
    # convert marks into a qualifier with globals

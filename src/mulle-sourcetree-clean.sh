@@ -135,7 +135,7 @@ sourcetree_clean()
    walk_db_uuids "${filternodetypes}" \
                  "${filterpermissions}" \
                  "${filtermarks}" \
-                 "${mode}" \
+                 "${mode},no-dbcheck" \
                  "walk_clean"
 
    local filename
@@ -255,7 +255,7 @@ sourcetree_clean_main()
    mode="${SOURCETREE_MODE}"
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
-      mode="`concat "${mode}" "pre-order"`"
+      mode="`comma_concat "${mode}" "pre-order"`"
    fi
 
    local rval

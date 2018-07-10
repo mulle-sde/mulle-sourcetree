@@ -116,7 +116,7 @@ sourcetree_reset_main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
       fi
 
-      sourcetree_walk_internal "${SOURCETREE_MODE},walkdb" \
+      sourcetree_walk_internal "${SOURCETREE_MODE},walkdb,no-dbcheck" \
             walk_reset
    fi
 
