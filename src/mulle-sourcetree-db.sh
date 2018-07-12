@@ -372,7 +372,7 @@ db_bury()
       local otheruuid
       local othergravepath
 
-      otheruuid="`node_genuuid`"
+      otheruuid="`node_uuidgen`"
       othergravepath="${graveyard}/${otheruuid}"
 
       log_fluff "Moving old grave with same uuid \"${gravepath}\" to \"${othergravepath}\""

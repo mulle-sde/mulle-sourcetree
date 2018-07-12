@@ -1053,6 +1053,12 @@ do_actions_with_nodeline()
       return
    fi
 
+   if ! nodemarks_contain "${_marks}" "fetch-${MULLE_UNAME}"
+   then
+      log_fluff "\"${_address}\" is marked as no-fs-${MULLE_UNAME}, so there is nothing to update"
+      return
+   fi
+
    #
    # the _address is what is relative to the current config (configfile)
    # the filename is an absolute path

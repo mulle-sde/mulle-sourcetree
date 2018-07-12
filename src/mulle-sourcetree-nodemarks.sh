@@ -158,6 +158,9 @@ nodemarks_remove()
 }
 
 
+#
+# check for existance of a no-key or an only-key
+#
 _nodemarks_contain()
 {
    local marks="$1"
@@ -176,6 +179,20 @@ _nodemarks_contain()
 }
 
 
+#
+# The "clever" existance check:
+#
+# Input      | Matches
+#            | absent   | no-<key> | only-<key>
+# -----------|----------|----------|-----------
+# <key>      | YES      | NO       | YES
+# no-<key>   | NO       | YES      | NO
+# only-<key> | NO       | NO       | YES
+#
+# Note: The only-<key> needs to be queried explicitly for existance
+#       It will not deny a no-<key>.In fact there must not be a
+#       no-<key> present if there is a only-<key>
+#
 nodemarks_contain()
 {
    local marks="$1"
