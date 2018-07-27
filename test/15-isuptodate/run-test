@@ -18,8 +18,8 @@ _setup_demo_archive_a()
    local archives="$1"
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree -e add "file:///${archives}/b.tar.gz"
-   run_mulle_sourcetree -e add --url "file:///${archives}/d.tar.gz" "c/d"
+   run_mulle_sourcetree -e add "file://${archives}/b.tar.gz"
+   run_mulle_sourcetree -e add --url "file://${archives}/d.tar.gz" "c/d"
 
    ( cd .. ; tar cfz "${archives}/a.tar.gz" a)
 }
@@ -30,7 +30,7 @@ _setup_demo_archive_b()
    local archives="$1"
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree -e add "file:///${archives}/d.tar.gz"
+   run_mulle_sourcetree -e add "file://${archives}/d.tar.gz"
 
    ( cd .. ; tar cfz "${archives}/b.tar.gz" b)
 }

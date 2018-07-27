@@ -24,7 +24,7 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/b"
+   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/b"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: initial version"
 }
@@ -159,14 +159,19 @@ run_test3()
       fail "update failed unexpectedly"
    fi
 
-   [ -L "shared/a" ]      || fail "shared/a should exist as a symlink"
-   [ ! -e "shared/b" ]    || fail "shared/b should not exist"
-   [ ! -e "shared/a/b" ]  || fail "shared/a/b should not exist"
-   [ -L "c" ]             || fail "c should exist as a symlink"
+   case "${MULLE_UNAME}" in
+      mingw*)
+      ;;
+
+      *)
+         [ -L "shared/a" ]      || fail "shared/a should exist as a symlink"
+         [ ! -e "shared/b" ]    || fail "shared/b should not exist"
+         [ ! -e "shared/a/b" ]  || fail "shared/a/b should not exist"
+         [ -L "c" ]             || fail "c should exist as a symlink"
+      ;;
+   esac
 
    run_mulle_sourcetree status
-
-   ls -lR  ${project}
 
    if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree -vvv clean
    then

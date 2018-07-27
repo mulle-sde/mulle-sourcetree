@@ -44,7 +44,7 @@ expect_content()
 
    local diffs
 
-   diffs="`diff "${output}" "${expect}"`"
+   diffs="`diff -b "${output}" "${expect}"`"
    if [ $? -ne 0 ]
    then
       log_error "Unexpected output generated"
@@ -85,8 +85,8 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/b" || exit 1
-   run_mulle_sourcetree -e add --nodetype git --url "file:///${reporoot}/d" "c/d" || exit 1
+   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/b" || exit 1
+   run_mulle_sourcetree -e add --nodetype git --url "file://${reporoot}/d" "c/d" || exit 1
    run_mulle_sourcetree -e list
 
    exekutor git add VERSION .mulle-sourcetree
@@ -103,7 +103,7 @@ _setup_demo_repo_b()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/d" || exit 1
+   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/d" || exit 1
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "b: initial version"
 }

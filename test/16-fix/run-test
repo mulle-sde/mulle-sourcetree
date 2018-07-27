@@ -24,8 +24,8 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/b"
-   run_mulle_sourcetree -e add --nodetype git --url "file:///${reporoot}/d" "c/d"
+   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/b"
+   run_mulle_sourcetree -e add --nodetype git --url "file://${reporoot}/d" "c/d"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "a: initial version"
 }
@@ -37,7 +37,7 @@ _setup_demo_repo_b()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree -e add --nodetype git "file:///${reporoot}/d"
+   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/d"
    exekutor git add VERSION .mulle-sourcetree
    exekutor git commit -m "b: initial version"
 }
