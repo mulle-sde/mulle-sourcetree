@@ -1,3 +1,7 @@
+### 0.14.2
+
+* fix for mingw
+
 ### 0.14.1
 
 * fix a bug when burying zombies experimentally add fetch-`<uname>` mark
