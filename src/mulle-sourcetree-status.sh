@@ -254,10 +254,10 @@ emit_status()
       fi
 
       #
-      # Dstfile    | Url | Marks     | Output
-      # -----------|-----|-----------|------------------
-      # not exists | no  | -         | missing
-      # not exists | yes | require   | update
+      # Dstfile    | Url | Marks      | Output
+      # -----------|-----|------------|------------------
+      # not exists | no  | -          | missing
+      # not exists | yes | require    | update
       # not exists | yes | no-require | no-require
       #
 

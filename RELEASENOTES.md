@@ -1,3 +1,7 @@
+### 0.14.3
+
+* recognize some no-os- variant marks
+
 ### 0.14.2
 
 * fix for mingw

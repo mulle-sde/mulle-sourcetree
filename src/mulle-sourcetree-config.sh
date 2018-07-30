@@ -1064,12 +1064,17 @@ no-header
 no-include
 no-import
 no-link
+no-os-mingw
+no-os-darwin
+no-os-freebsd
+no-os-linux
 no-public
 no-recurse
 no-require
 no-set
 no-share
 no-update"
+
 
 _sourcetree_add_mark_known_absent()
 {
