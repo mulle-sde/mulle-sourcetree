@@ -385,7 +385,7 @@ _sourcetree_nameguess_node()
       return
    fi
 
-   if [ ! -z "${_address}" ]
+   if [ ! -z "${_address}" -o "${_nodetype}" = "local" ]
    then
       _url="${input}"
       log_fluff "Guessed URL \"${_url}\" from \"${input}\""

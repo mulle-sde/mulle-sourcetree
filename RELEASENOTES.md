@@ -1,3 +1,7 @@
+### 0.14.4
+
+* fix local address getting mangled
+
 ### 0.14.3
 
 * recognize some no-os- variant marks

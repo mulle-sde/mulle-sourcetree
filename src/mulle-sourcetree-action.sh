@@ -844,7 +844,7 @@ __update_perform_item()
             *)
                if ! nodemarks_contain "${_marks}" "require"
                then
-                  log_info "${C_MAGENTA}${C_BOLD}${_uuid}${C_INFO} is not required."
+                  log_info "${C_MAGENTA}${C_BOLD}${filename}${C_INFO} is not required."
 
                   db_add_missing "${database}" "${_uuid}" "${nodeline}"
                   skip="YES"
