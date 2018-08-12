@@ -36,6 +36,16 @@ MULLE_SOURCETREE_COMMANDS_SH="included"
 # All commands in here are not recursive!
 #
 
+SOURCETREE_COMMON_OPTIONS="\
+   --branch <value>       : branch to use instead of the default (git)
+   --address <dir>        : address of the node in the project
+   --fetchoptions <value> : options for mulle-fetch --options
+   --marks <value>        : sourcetree marks of the node like no-require
+   --tag <value>          : tag to checkout for git
+   --nodetype <value>     : the node type
+   --url <url>            : url of the node
+   --userinfo <value>     : userinfo for node"
+
 sourcetree_add_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -57,16 +67,13 @@ Usage:
    This command only affects the local sourcetree.
 
 Options:
-   --branch <value>       : branch to use instead of the default
-   --nodetype <value>     : the node type (default: local)
-   --fetchoptions <value> : options for mulle-fetch --options
-   --if-missing           : a duplicate node is not an error, do nothing
-   --marks <value>        : key-value sourcetree marks (e.g. no-build)
-   --tag <value>          : tag to checkout
-   --url <value>          : url to fetch the node from
-   --userinfo <value>     : userinfo for node
 EOF
-  exit 1
+   (
+      echo "${SOURCETREE_COMMON_OPTIONS}"
+      echo "   --if-missing           : a duplicate node is not an error, do nothing"
+   ) | sort >&2
+   echo >&2
+   exit 1
 }
 
 
@@ -258,15 +265,9 @@ Usage:
    This command only affects the local sourcetree.
 
 Options:
-   --branch <value>       : branch to use instead of the default (git)
-   --address <dir>        : address of the node in the project
-   --fetchoptions <value> : options for mulle-fetch --options
-   --marks <value>        : key-value sourcetree marks (e.g. build=yes)
-   --tag <value>          : tag to checkout for git
-   --nodetype <value>     : the node type
-   --url <url>            : url of the node
-   --userinfo <value>     : userinfo for node
 EOF
+  echo "${SOURCETREE_COMMON_OPTIONS}" >&2
+
   exit 1
 }
 
@@ -282,15 +283,15 @@ Usage:
    Prints the node values for a node with the given key.
 
 Keys:
-   address      :
-   branch       :
-   fetchoptions :
-   marks        :
-   nodetype     :
-   tag          :
-   uuid         :
-   url          :
-   userinfo     :
+   address      : the address of the node
+   branch       : the (git) branch of the node
+   fetchoptions : options passed to mulle-fetcg
+   marks        : marks of the node
+   nodetype     : type of the node
+   tag          : the (git) tag of the node
+   uuid         : the uuid of the node
+   url          : the url of the node
+   userinfo     : the userinfo of the node
 
    This command only affects the local sourcetree.
 EOF

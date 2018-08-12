@@ -1,3 +1,7 @@
+### 0.14.5
+
+* improve usage info a bit
+
 ### 0.14.4
 
 * fix local address getting mangled
