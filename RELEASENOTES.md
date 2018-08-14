@@ -1,3 +1,7 @@
+### 0.14.6
+
+* add no-cmakeadd no-cmakeloader to known flags
+
 ### 0.14.5
 
 * improve usage info a bit

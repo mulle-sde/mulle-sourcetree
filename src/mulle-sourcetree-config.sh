@@ -1058,6 +1058,8 @@ sourcetree_get_node_by_url()
 KNOWN_MARKS="\
 no-all-load
 no-build
+no-cmakeadd
+no-cmakeloader
 no-defer
 no-delete
 no-fs
