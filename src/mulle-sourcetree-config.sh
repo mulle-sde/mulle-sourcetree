@@ -1095,8 +1095,11 @@ _sourcetree_add_mark_known_absent()
       fi
    fi
 
-   _marks="`nodemarks_add "${_marks}" "${mark}" `"
-   _marks="`nodemarks_sort "${_marks}"`"
+   local RVAL
+
+   r_nodemarks_add "${_marks}" "${mark}"
+   r_nodemarks_sort "${RVAL}"
+   _marks="${RVAL}"
 
    local newnodeline
 
@@ -1123,8 +1126,11 @@ _sourcetree_remove_mark_known_present()
       fi
    fi
 
-   _marks="`nodemarks_remove "${_marks}" "${mark}" `"
-   _marks="`nodemarks_sort "${_marks}"`"
+   local RVAL
+
+   r_nodemarks_remove "${_marks}" "${mark}"
+   r_nodemarks_sort "${RVAL}"
+   _marks="${RVAL}"
 
    local newnodeline
 

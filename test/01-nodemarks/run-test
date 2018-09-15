@@ -145,15 +145,21 @@ main()
 
    log_verbose "----- #14 PASSED -----"
 
+   local RVAL
+
    _marks="no-c,no-a,no-b"
-   other="`nodemarks_sort "${_marks}"`"
+   r_nodemarks_sort "${_marks}"
+   other="${RVAL}"
 
    [ "${other}" = "no-a,no-b,no-c" ] || internal_fail "did not sort \"${other}\""
 
    log_verbose "----- #15 PASSED -----"
 
+   local RVAL
+
    _marks="no-b,no-c,no-a"
-   other="`nodemarks_sort "${_marks}"`"
+   r_nodemarks_sort "${_marks}"
+   other="${RVAL}"
 
    [ "${other}" = "no-a,no-b,no-c" ] || internal_fail "did not sort \"${other}\""
 

@@ -225,6 +225,7 @@ nodeline_remove()
    IFS="${DEFAULT_IFS}"; set +o noglob
 }
 
+
 _nodeline_find()
 {
    log_entry "nodeline_find" "$@"

@@ -597,7 +597,10 @@ _visit_share_node()
    walk_filter_permissions "${_filename}" "${filterpermissions}"
    case $? in
       2)
-         mode="`comma_concat "${mode}" "flat" `"  # don't recurse into symlinks unless asked to
+         local RVAL
+
+         r_comma_concat "${mode}" "flat"  # don't recurse into symlinks unless asked to
+         mode="${RVAL}"
       ;;
 
       1)
@@ -780,7 +783,7 @@ _walk_config_uuids()
 
    local nodelines
 
-   nodelines="`cfg_read "${datasource}"`"
+   nodelines="`cfg_read "${datasource}" `"
    _walk_nodelines "${nodelines}" "${datasource}" "${virtual}" "$@"
 }
 
@@ -831,7 +834,7 @@ _walk_db_uuids()
 
    local nodelines
 
-   nodelines="`db_fetch_all_nodelines "${datasource}"`"
+   nodelines="`db_fetch_all_nodelines "${datasource}" `"
    _walk_nodelines "${nodelines}" "${datasource}" "${virtual}" "$@"
 }
 
@@ -895,7 +898,10 @@ sourcetree_walk()
       ;;
 
       *)
-         mode="`comma_concat "${mode}" "pre-order"`"
+         local RVAL
+
+         r_comma_concat "${mode}" "pre-order"
+         mode="${RVAL}"
       ;;
    esac
 
@@ -967,7 +973,10 @@ _sourcetree_convert_marks_to_qualifier()
       IFS=","; set -o noglob
       for mark in ${OPTION_MARKS}
       do
-         OPTION_MARKS_QUALIFIER="`concat "${OPTION_MARKS_QUALIFIER}" "MATCHES ${mark}" " AND "`"
+         local RVAL
+
+         r_concat "${OPTION_MARKS_QUALIFIER}" "MATCHES ${mark}" " AND "
+         OPTION_MARKS_QUALIFIER="${RVAL}"
       done
       IFS="${DEFAULT_IFS}"; set +o noglob
    fi
@@ -992,6 +1001,7 @@ sourcetree_walk_main()
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_EVAL_EXEKUTOR="YES"
    local OPTION_PASS_TECHNICAL_FLAGS="NO"
+   local RVAL
 
    while [ $# -ne 0 ]
    do
@@ -1059,7 +1069,8 @@ sourcetree_walk_main()
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
-            OPTION_MARKS="`comma_concat "${OPTION_MARKS}" "$1" `"
+            r_comma_concat "${OPTION_MARKS}" "$1"
+            OPTION_MARKS="${RVAL}"
          ;;
 
          -q|--qualifier|--marks-qualifier)
@@ -1109,33 +1120,40 @@ sourcetree_walk_main()
 
    case "${OPTION_TRAVERSE_STYLE}" in
       "INORDER")
-         mode="`comma_concat "${mode}" "in-order"`"
+         r_comma_concat "${mode}" "in-order"
+         mode="${RVAL}"
       ;;
 
       *)
-         mode="`comma_concat "${mode}" "pre-order"`"
+         r_comma_concat "${mode}" "pre-order"
+         mode="${RVAL}"
       ;;
    esac
 
    if [ "${OPTION_LENIENT}" = "YES" ]
    then
-      mode="`comma_concat "${mode}" "lenient"`"
+      r_comma_concat "${mode}" "lenient"
+      mode="${RVAL}"
    fi
    if [ "${OPTION_CD}" = "YES" ]
    then
-      mode="`comma_concat "${mode}" "docd"`"
+      r_comma_concat "${mode}" "docd"
+      mode="${RVAL}"
    fi
    if [ "${OPTION_EXTERNAL_CALL}" = "YES" ]
    then
-      mode="`comma_concat "${mode}" "external"`"
+      r_comma_concat "${mode}" "external"
+      mode="${RVAL}"
    fi
    if [ "${OPTION_WALK_DB}" = "YES" ]
    then
-      mode="`comma_concat "${mode}" "walkdb"`"
+      r_comma_concat "${mode}" "walkdb"
+      mode="${RVAL}"
    fi
    if [ "${OPTION_CALLBACK_ROOT}" = "YES" ]
    then
-      mode="`comma_concat "${mode}" "callroot"`"
+      r_comma_concat "${mode}" "callroot"
+      mode="${RVAL}"
    fi
 
    # convert marks into a qualifier with globals

@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" -o "${MULLE_SOURCETREE_TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.14.6"
+MULLE_EXECUTABLE_VERSION="0.15.0"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -311,7 +311,7 @@ _set_share_dir()
    local usershare_dir="$1"
 
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT must be defined by now"
-   [ -z "${SOURCETREE_START}" ]   && internal_fail "SOURCETREE_START must be defined by now"
+   [ -z "${SOURCETREE_START}" ] && internal_fail "SOURCETREE_START must be defined by now"
 
    if [ -z "${usershare_dir}" ]
    then
@@ -529,28 +529,34 @@ main()
       fi
    fi
 
-
-   _set_share_dir "${OPTION_SHARE_DIR}"
-
-      # why is this after _set_sourcetree_global ?
+   # why is this after _set_sourcetree_global ?
 
    cmd="${1}"
    [ $# -eq 0 ] || shift
 
-   MULLE_FETCH="${MULLE_FETCH:-`command -v "mulle-fetch"`}"
-   if [ -z "${MULLE_FETCH}" ]
+   _set_share_dir "${OPTION_SHARE_DIR}"
+
+   #
+   # dbstatus should be fast and doesn't need share
+   #
+   if [ "${cmd}" = "dbstatus" ]
    then
-      fail "mulle-fetch not in PATH"
+      # shellcheck source=src/mulle-sourcetree-clean.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dbstatus.sh"
+
+      sourcetree_dbstatus_main "$@"
+      return $?
    fi
 
    #
    # dont' check if resetting
+   #
    # for status it's debatable, but I don't like it
    # for buildorder, we want to be fast so we don't check and dont get
    # default mode
    #
    case "${cmd}" in
-      reset|buildorder)
+      reset|buildorder|dbstatus)
       ;;
 
       *)
@@ -597,13 +603,6 @@ main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-clean.sh"
 
          sourcetree_clean_main "$@"
-      ;;
-
-      dbstatus)
-         # shellcheck source=src/mulle-sourcetree-clean.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-status.sh"
-
-         sourcetree_dbstatus_main "$@"
       ;;
 
       dotdump)

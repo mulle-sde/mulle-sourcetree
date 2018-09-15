@@ -171,8 +171,10 @@ emit_status()
    local filename="$6"
 
    local output_adress
+   local RVAL
 
-   output_adress="`filepath_concat "${datasource}" "${address}" `"
+   r_filepath_concat "${datasource}" "${address}"
+   output_adress="${RVAL}"
 
    # emit root
    if [ -z "${directory}" ]
@@ -180,12 +182,13 @@ emit_status()
       datasource="${SOURCETREE_START}"
       output_adress="`filepath_concat "${SOURCETREE_START}" "${address}" `"
       directory="."
-      filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${SOURCETREE_START}" `"
+      r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${SOURCETREE_START}"
+      filename="${RVAL}"
    else
       filename="`__walk_get_db_filename`"
       if ! string_has_prefix "${filename}" "${MULLE_SOURCETREE_SHARE_DIR}"
       then
-         datasource="`string_remove_prefix "${filename}" "${MULLE_VIRTUAL_ROOT}"`"
+         datasource="${filename#${MULLE_VIRTUAL_ROOT}}"
          if [ -z "${datasource}" ]
          then
             datasource="${MULLE_VIRTUAL_ADDRESS}"
@@ -197,7 +200,7 @@ emit_status()
 
    if string_has_prefix "${output_adress}" "${MULLE_SOURCETREE_SHARE_DIR}"
    then
-      output_adress="`string_remove_prefix "${output_adress}" "${MULLE_SOURCETREE_SHARE_DIR}"`"
+      output_adress="${output_adress#${MULLE_SOURCETREE_SHARE_DIR}}"
       output_adress="\${MULLE_SOURCETREE_SHARE_DIR}${output_adress}"
    fi
 
@@ -459,7 +462,10 @@ sourcetree_status()
    #
    output2="$(sort -u <<< "${output2}")"
 
-   output="`add_line "${output}" "${output2}"`"
+   local RVAL
+
+   r_add_line "${output}" "${output2}"
+   output="${RVAL}"
 
    local header
 
@@ -469,10 +475,12 @@ sourcetree_status()
 
          case ",${mode}," in
             *,separator,*)
-               header="`add_line "${header}" "-------;------;----------;------;--------"`" # ;--------"`"
+               r_add_line "${header}" "-------;------;----------;------;--------" # ;--------"
+               header="${RVAL}"
             ;;
          esac
-         output="`add_line "${header}" "${output}"`"
+         add_line "${header}" "${output}"
+         output="${RVAL}"
       ;;
    esac
 
@@ -485,39 +493,6 @@ sourcetree_status()
          echo "${output}"
       ;;
    esac
-}
-
-
-sourcetree_dbstatus_main()
-{
-   log_entry "sourcetree_dbstatus_main" "$@"
-
-   [ "$#" -eq 0 ] || sourcetree_dbstatus_usage
-
-   if ! cfg_exists "${SOURCETREE_START}"
-   then
-      log_warning "There is no ${SOURCETREE_CONFIG_FILE} here"
-      return 1
-   fi
-
-   local configfile
-
-   __cfg_common_configfile "${SOURCETREE_START}"
-
-   local database
-   local databasedir
-   __db_common_databasedir "/"
-
-   dbdonefile="${databasedir}/.db_done"
-
-   if [ "${configfile}" -nt "${dbdonefile}" ] || \
-      ! db_is_ready "${SOURCETREE_START}"
-   then
-      log_info "Needs update"
-      return 2
-   fi
-
-   log_info "Is up-to-date"
 }
 
 
@@ -627,21 +602,27 @@ sourcetree_status_main()
       log_fluff "Update has not run yet (mode=${SOURCETREE_MODE})"
    fi
 
+   local RVAL
+
    mode="${SOURCETREE_MODE}"
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
-      mode="`comma_concat "${mode}" "pre-order"`"
+      r_comma_concat "${mode}" "pre-order"
+      mode="${RVAL}"
    fi
    if [ "${OPTION_OUTPUT_RAW}" != "YES" ]
    then
-      mode="`comma_concat "${mode}" "output-formatted"`"
+      r_comma_concat "${mode}" "output-formatted"
+      mode="${RVAL}"
    fi
    if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
    then
-      mode="`comma_concat "${mode}" "output-header"`"
+      r_comma_concat "${mode}" "output-header"
+      mode="${RVAL}"
       if [ "${OPTION_OUTPUT_SEPARATOR}" != "NO" ]
       then
-         mode="`comma_concat "${mode}" "output-separator"`"
+         r_comma_concat "${mode}" "output-separator"
+         mode="${RVAL}"
       fi
    fi
 

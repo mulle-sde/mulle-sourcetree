@@ -86,8 +86,12 @@ _get_config_recurseinfo()
    local config="$1"
    local address="$2"
 
-   _config="`filepath_concat "${config}" "${address}"`"
-   _filename="`filepath_concat  "${MULLE_VIRTUAL_ROOT}" "${_config}" `"
+   local RVAL
+
+   r_filepath_concat "${config}" "${address}"
+   _config="${RVAL}"
+   r_filepath_concat  "${MULLE_VIRTUAL_ROOT}" "${_config}"
+   _filename="${RVAL}"
 
    _config="${_config}/"
    _database="${_config}"
@@ -268,8 +272,9 @@ _recurse_db_nodelines()
    local database="$2"
 
    local nodelines
+   local RVAL
 
-   nodelines="`db_fetch_all_nodelines "${database}"`"
+   nodelines="`db_fetch_all_nodelines "${database}" `"
 
    log_fluff "Continuing with a \"${style}\" update \"${nodelines}\" of db \"${database:-ROOT}\" ($PWD)"
 
@@ -293,7 +298,8 @@ _recurse_db_nodelines()
          then
             continue
          fi
-         VISITED="`add_line "${VISITED}" "${nodeline}"`"
+         r_add_line "${VISITED}" "${nodeline}"
+         VISITED="${RVAL}"
       fi
 
       _recurse_db_nodeline "${nodeline}" "${style}" "${config}" "${database}"
@@ -316,9 +322,10 @@ _recurse_config_nodelines()
    local config="$1"
    local database="$2"
 
+   local RVAL
    local nodelines
 
-   nodelines="`cfg_read "${config}"`"
+   nodelines="`cfg_read "${config}" `"
 
    log_fluff "Continuing with a \"${style}\" update \"${nodelines}\" of config \"${config:-ROOT}\" ($PWD)"
 
@@ -342,7 +349,8 @@ _recurse_config_nodelines()
          then
             continue
          fi
-         VISITED="`add_line "${VISITED}" "${nodeline}"`"
+         r_add_line "${VISITED}" "${nodeline}"
+         VISITED="${RVAL}"
       fi
 
       _recurse_config_nodeline "${nodeline}" "${style}" "${config}" "${database}"
@@ -414,13 +422,16 @@ _sourcetree_update_only_share()
    local database="$2"
 
    local style
+   local RVAL
 
    style="only_share"
 
    if ! fgrep -q -s -x "${config}" <<< "${UPDATED}"
    then
       log_debug "Add \"${config}\" to UPDATED"
-      UPDATED="`add_line "${UPDATED}" "${config}"`"
+
+      r_add_line "${UPDATED}" "${config}"
+      UPDATED="${RVAL}"
    fi
 
    #
@@ -429,7 +440,7 @@ _sourcetree_update_only_share()
    #
    local nodelines
 
-   if ! nodelines="`cfg_read "${config}"`"
+   if ! nodelines="`cfg_read "${config}" `"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       return 2
@@ -455,7 +466,9 @@ _sourcetree_update_only_share()
          then
             continue
          fi
-         VISITED="`add_line "${VISITED}" "${nodeline}"`"
+
+         r_add_line "${VISITED}" "${nodeline}"
+         VISITED="${RVAL}"
       fi
 
       _update_nodeline_only_share "${nodeline}" "${config}" "${database}"
@@ -508,13 +521,15 @@ _sourcetree_update_share()
    local database="$2"
 
    local style
+   local RVAL
 
    style="share"
 
    if ! fgrep -q -s -x "${config}" <<< "${UPDATED}"
    then
       log_debug "Add \"${config}\" to UPDATED"
-      UPDATED="`add_line "${UPDATED}" "${config}"`"
+      r_add_line "${UPDATED}" "${config}"
+      UPDATED="${RVAL}"
    fi
 
    #
@@ -523,7 +538,7 @@ _sourcetree_update_share()
    #
    local nodelines
 
-   if ! nodelines="`cfg_read "${config}"`"
+   if ! nodelines="`cfg_read "${config}" `"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! db_dir_exists "${database}"
@@ -645,7 +660,7 @@ _sourcetree_update_recurse()
    #
    local nodelines
 
-   if ! nodelines="`cfg_read "${config}"`"
+   if ! nodelines="`cfg_read "${config}" `"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! db_dir_exists "${database}"
@@ -711,7 +726,7 @@ _sourcetree_update_flat()
    #
    local nodelines
 
-   if ! nodelines="`cfg_read "${config}"`"
+   if ! nodelines="`cfg_read "${config}" `"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! db_dir_exists "${database}"

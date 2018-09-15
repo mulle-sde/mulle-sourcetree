@@ -1,3 +1,8 @@
+## 0.15.0
+
+* use `r_` functions of mulle-bashfunctions 1.8.0
+
+
 ### 0.14.6
 
 * add no-cmakeadd no-cmakeloader to known flags

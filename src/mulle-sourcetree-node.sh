@@ -155,29 +155,37 @@ node_fetch_operation()
 
    [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
 
-   log_verbose "Looking for local copy of ${C_RESET_BOLD}${evaledurl}${C_INFO}"
+   case "${nodetype}" in
+      file)
+         # does not implement local search
+      ;;
 
-   local localurl
-   local localnodetype
+      *)
+         log_verbose "Looking for local copy of ${C_RESET_BOLD}${evaledurl}${C_INFO}"
 
-   localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} "search-local" --scm "'${nodetype}'" \
-                                                            --tag "'${evaledtag}'" \
-                                                            --branch "'${evaledbranch}'" \
-                                                            --options "'${evaledfetchoptions}'" \
-                                                            --url "'${evaledurl}'" \
-                                                            "'${address}'" )"
-   if [ ! -z "${localurl}" ]
-   then
-      evaledurl="${localurl}"
-      log_verbose "Local URL found \"${localurl}\""
-      localnodetype="`node_guess_nodetype "${localurl}"`"
-      if [ ! -z "${localnodetype}" ]
-      then
-         nodetype="${localnodetype}"
-      fi
-   else
-      log_fluff "No local URL found"
-   fi
+         local localurl
+         local localnodetype
+
+         localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} "search-local" --scm "'${nodetype}'" \
+                                                                  --tag "'${evaledtag}'" \
+                                                                  --branch "'${evaledbranch}'" \
+                                                                  --options "'${evaledfetchoptions}'" \
+                                                                  --url "'${evaledurl}'" \
+                                                                  "'${address}'" )"
+         if [ ! -z "${localurl}" ]
+         then
+            evaledurl="${localurl}"
+            log_verbose "Local URL found \"${localurl}\""
+            localnodetype="`node_guess_nodetype "${localurl}"`"
+            if [ ! -z "${localnodetype}" ]
+            then
+               nodetype="${localnodetype}"
+            fi
+         else
+            log_fluff "No local URL found"
+         fi
+      ;;
+   esac
 
    log_info "Fetching ${C_MAGENTA}${C_BOLD}${address#${MULLE_SOURCETREE_SHARE_DIR}/}${C_INFO} from \
 ${C_RESET_BOLD}${evaledurl}${C_INFO}."
@@ -239,10 +247,14 @@ node_augment()
 
          before="${_marks}"
 
-         after="`nodemarks_remove "${before}" "share"`"
-         after="`nodemarks_remove "${after}" "delete"`"
-         after="`nodemarks_remove "${after}" "update"`"
-         after="`nodemarks_add "${after}" "require"`"
+         r_nodemarks_remove "${before}" "share"
+         after="${RVAL}"
+         r_nodemarks_remove "${after}" "delete"
+         after="${RVAL}"
+         r_nodemarks_remove "${after}" "update"
+         after="${RVAL}"
+         r_nodemarks_add "${after}" "require"
+         after="${RVAL}"
 
          if [ "${before}" != "${after}" ]
          then
@@ -277,7 +289,10 @@ node_augment()
       log_trace2 "USERINFO:     \"${_userinfo}\""
    fi
 
-   _marks="`nodemarks_sort "${_marks}"`"
+   local rval
+
+   r_nodemarks_sort "${_marks}"
+   _marks="${RVAL}"
 
    # this is done  during auto already
    # case "${_address}" in
@@ -410,13 +425,6 @@ node_to_nodeline()
    echo "${_address};${_nodetype};${_marks};${_uuid};\
 ${_url};${_branch};${_tag};${_fetchoptions};\
 ${_userinfo}"
-}
-
-
-nodetypes_contain()
-{
-   log_entry "nodetypes_contain" "$@"
-
 }
 
 

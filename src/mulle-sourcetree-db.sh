@@ -397,10 +397,13 @@ __db_parse_dbentry()
       return 1
    fi
 
-   nodeline="`_db_nodeline <<< "${dbentry}"`"
-   owner="`_db_owner <<< "${dbentry}"`"
-   filename="`_db_filename <<< "${dbentry}"`"
-   evaledurl="`_db_evaledurl <<< "${dbentry}"`"
+   while read nodeline
+   do
+      read owner
+      read filename
+      read evaledurl
+      break
+   done <<< "${dbentry}"
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = "YES" ]
    then
@@ -572,7 +575,8 @@ db_fetch_uuid_for_address()
    then
       local pattern
 
-      pattern="`escaped_grep_pattern "${address}"`"
+      r_escaped_grep_pattern "${address}"
+      pattern="${RVAL}"
       egrep -s "^${pattern};" "${databasedir}"/* | cut -s '-d;' -f 4
    fi
 }

@@ -58,7 +58,7 @@ _nodemarks_key_check()
 #
 # node marking
 #
-_nodemarks_add()
+_r_nodemarks_add()
 {
    local marks="$1"
    local key="$2"
@@ -74,17 +74,17 @@ _nodemarks_add()
       IFS="${DEFAULT_IFS}" ; set +o noglob
       if [ "$i" = "${key}" ]
       then
-         echo "${marks}"   # already set
+         RVAL="${marks}"   # already set
          return
       fi
    done
    IFS="${DEFAULT_IFS}" ; set +o noglob
 
-   comma_concat "${marks}" "${key}"
+   r_comma_concat "${marks}" "${key}"
 }
 
 
-_nodemarks_remove()
+_r_nodemarks_remove()
 {
    local marks="$1"
    local key="$2"
@@ -101,12 +101,13 @@ _nodemarks_remove()
 
       if [ "${i}" != "${key}" ]
       then
-         result="`comma_concat "${result}" "${i}"`"
+         r_comma_concat "${result}" "${i}"
+         result="${RVAL}"
       fi
    done
    IFS="${DEFAULT_IFS}" ; set +o noglob
 
-   echo "${result}"
+   RVAL="${result}"
 }
 
 
@@ -116,47 +117,66 @@ _nodemarks_remove()
 # If you add a no- mark or only- mark. That's OK
 # Otherwise you are actually removing a no- or only- mark!
 #
-nodemarks_add()
+r_nodemarks_add()
 {
    local marks="$1"
    local key="$2"
 
    case "${key}" in
       "no-"*)
-         marks="`_nodemarks_remove "${marks}" "only-${key:3}"`"
-         _nodemarks_add "${marks}" "${key}"
+         _r_nodemarks_remove "${marks}" "only-${key:3}"
+         _r_nodemarks_add "${RVAL}" "${key}"
       ;;
 
       "only-"*)
-         marks="`_nodemarks_remove "${marks}" "no-${key:5}"`"
-         _nodemarks_add "${marks}" "${key}"
+         _r_nodemarks_remove "${marks}" "no-${key:5}"
+         _r_nodemarks_add "${RVAL}" "${key}"
       ;;
 
       *)
-         marks="`_nodemarks_remove "${marks}" "no-${key}"`"
-         _nodemarks_remove "${marks}" "only-${key}"
+         _r_nodemarks_remove "${marks}" "no-${key}"
+         _r_nodemarks_remove "${RVAL}" "only-${key}"
       ;;
    esac
 }
 
 
-nodemarks_remove()
+r_nodemarks_remove()
 {
    local marks="$1"
    local key="$2"
 
    case "${key}" in
       "no-"*|"only-"*)
-         _nodemarks_remove "${marks}" "${key}"
+         _r_nodemarks_remove "${marks}" "${key}"
       ;;
 
       *)
-         marks="`_nodemarks_remove "${marks}" "only-${key}"`"
-         _nodemarks_add "${marks}" "no-${key}"
+         _r_nodemarks_remove "${marks}" "only-${key}"
+         _r_nodemarks_add "${RVAL}" "no-${key}"
       ;;
    esac
 }
 
+
+nodemarks_add()
+{
+   local RVAL
+
+   r_nodemarks_add "$@"
+
+   [ ! -z "${RVAL}" ] && echo "${RVAL}"
+}
+
+
+nodemarks_remove()
+{
+   local RVAL
+
+   r_nodemarks_remove "$@"
+
+   [ ! -z "${RVAL}" ] && echo "${RVAL}"
+}
 
 #
 # check for existance of a no-key or an only-key
@@ -274,7 +294,7 @@ nodemarks_intersect()
 }
 
 
-nodemarks_sort()
+r_nodemarks_sort()
 {
    local marks="$1"
 
@@ -285,11 +305,12 @@ nodemarks_sort()
 "
    for i in `tr ',' '\n' <<< "${marks}" | LC_ALL=C sort -u`
    do
-      result="`comma_concat "${result}" "${i}"`"
+      r_comma_concat "${result}" "${i}"
+      result="${RVAL}"
    done
    IFS="${DEFAULT_IFS}"
 
-   echo "${result}"
+   RVAL="${result}"
 }
 
 

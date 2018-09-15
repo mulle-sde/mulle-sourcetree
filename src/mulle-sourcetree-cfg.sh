@@ -37,8 +37,8 @@ MULLE_SOURCETREE_CFG_SH="included"
 #
 __cfg_common_configfile()
 {
-   [ -z "${SOURCETREE_CONFIG_FILE}" ]     && internal_fail "SOURCETREE_CONFIG_FILE is not set"
-   [ -z "${MULLE_VIRTUAL_ROOT}" ]         && internal_fail "MULLE_VIRTUAL_ROOT is not set"
+   [ -z "${SOURCETREE_CONFIG_FILE}" ] && internal_fail "SOURCETREE_CONFIG_FILE is not set"
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
    case "${MULLE_SOURCETREE_SHARE_DIR}" in
       /*)
@@ -281,9 +281,12 @@ cfg_remove_nodeline()
    local address="$2"
 
    local escaped
+   local RVAL
 
    log_debug "Removing \"${address}\" from  \"${configfile}\""
-   escaped="`escaped_sed_pattern "${address}"`"
+   r_escaped_sed_pattern "${address}"
+   escaped="${RVAL}"
+
    # linux don't like space after -i
    if ! inplace_sed -e "/^${escaped};/d" "${configfile}"
    then
@@ -303,9 +306,13 @@ cfg_remove_nodeline_by_url()
    local url="$2"
 
    local escaped
+   local RVAL
 
    log_debug "Removing \"${url}\" from \"${configfile}\""
-   escaped="`escaped_sed_pattern "${url}"`"
+
+   r_escaped_sed_pattern "${url}"
+   escaped="${RVAL}"
+
    # linux don't like space after -i
    if ! inplace_sed -e "/^[^;]*;[^;]*[^;]*[^;]*${escaped};/d" "${configfile}"
    then
@@ -342,9 +349,12 @@ cfg_change_nodeline()
 
    local oldescaped
    local newescaped
+   local RVAL
 
-   oldescaped="`escaped_sed_pattern "${oldnodeline}"`"
-   newescaped="`escaped_sed_pattern "${newnodeline}"`"
+   r_escaped_sed_pattern "${oldnodeline}"
+   oldescaped="${RVAL}"
+   r_escaped_sed_pattern "${newnodeline}"
+   newescaped="${RVAL}"
 
    log_debug "Editing \"${SOURCETREE_CONFIG_FILE}\""
 
@@ -384,7 +394,7 @@ cfg_search_for_configfile()
    case "${physdirectory}" in
       ${physceiling})
          echo "${physdirectory}"  # common cheap equality
-         return
+         return 1
       ;;
 
       ${physceiling}/*)
@@ -399,7 +409,8 @@ cfg_search_for_configfile()
       ;;
    esac
 
-   log_debug "Searching for configfile \"${SOURCETREE_CONFIG_FILE}\" from \"${physdirectory}\" to \"${physceiling}\""
+   log_debug "Searching for configfile \"${SOURCETREE_CONFIG_FILE}\" \
+from \"${physdirectory}\" to \"${physceiling}\""
 
    (
       cd "${physdirectory}" &&
