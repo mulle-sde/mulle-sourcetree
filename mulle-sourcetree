@@ -32,7 +32,7 @@
 [ "${TRACE}" = "YES" -o "${MULLE_SOURCETREE_TRACE}" = "YES" ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.15.0"
+MULLE_EXECUTABLE_VERSION="0.15.1"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -141,6 +141,12 @@ EOF
 Options are command specific. Use mulle-sourcetree <command> -h for help.
 EOF
 
+
+   cat <<EOF
+Environment:
+   MULLE_SOURCETREE_SHARE_DIR : place to store shared dependencies
+   MULLE_SOURCETREE_SYMLINK   : allow symlinks to be used
+EOF
    exit 1
 }
 

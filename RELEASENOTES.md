@@ -1,3 +1,7 @@
+### 0.15.1
+
+* document two environment variables
+
 ## 0.15.0
 
 * use `r_` functions of mulle-bashfunctions 1.8.0
