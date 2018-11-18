@@ -41,15 +41,15 @@ _nodemarks_key_check()
          fail "Empty node mark"
       ;;
 
-      *[^a-z-_0-9]*)
+      *[^a-z-_0-9.]*)
          fail "Node mark \"$1\" contains invalid characters"
       ;;
 
-      no-*|only-*)
+      no-*|only-*|version-*)
       ;;
 
       *)
-         fail "Node mark \"$1\" must start with \"no-\" or \"only-\""
+         fail "Node mark \"$1\" must start with \"version-\" \"no-\" or \"only-\""
       ;;
    esac
 }
@@ -82,6 +82,36 @@ _r_nodemarks_add()
 
    r_comma_concat "${marks}" "${key}"
 }
+
+#
+# node marking
+#
+_r_nodemarks_find_prefix()
+{
+   local marks="$1"
+   local prefix="$2"
+
+   _nodemarks_key_check "${prefix}"
+
+   local i
+
+   set -o noglob ; IFS=","
+   for i in ${marks}
+   do
+      IFS="${DEFAULT_IFS}" ; set +o noglob
+      case "${i}" in
+         "${prefix}"*)
+            RVAL="$i"
+            return
+         ;;
+      esac
+   done
+   IFS="${DEFAULT_IFS}" ; set +o noglob
+
+   RVAL=""
+   return 1
+}
+
 
 
 _r_nodemarks_remove()
@@ -133,6 +163,16 @@ r_nodemarks_add()
          _r_nodemarks_add "${RVAL}" "${key}"
       ;;
 
+      "version-"*)
+         # remove old version with same same prefix
+         if _r_nodemarks_find_prefix "${marks}" "${key%-*}"
+         then
+            _r_nodemarks_remove "${marks}" "${RVAL}"
+            marks="${RVAL}"
+         fi
+         _r_nodemarks_add "${RVAL}" "${key}"
+      ;;
+
       *)
          _r_nodemarks_remove "${marks}" "no-${key}"
          _r_nodemarks_remove "${RVAL}" "only-${key}"
@@ -147,7 +187,7 @@ r_nodemarks_remove()
    local key="$2"
 
    case "${key}" in
-      "no-"*|"only-"*)
+      "no-"*|"only-"*|"version-"*)
          _r_nodemarks_remove "${marks}" "${key}"
       ;;
 
@@ -166,6 +206,8 @@ nodemarks_add()
    r_nodemarks_add "$@"
 
    [ ! -z "${RVAL}" ] && echo "${RVAL}"
+
+   :
 }
 
 
@@ -176,6 +218,8 @@ nodemarks_remove()
    r_nodemarks_remove "$@"
 
    [ ! -z "${RVAL}" ] && echo "${RVAL}"
+
+   :
 }
 
 #
@@ -200,18 +244,93 @@ _nodemarks_contain()
 
 
 #
+# check for version of
+#
+# like "version-darwin-min-0.12.0"
+# like "version-darwin-max-0.16.0"
+#
+nodemarks_version_match()
+{
+   local marks="$1"
+   local key="$2"
+   local operator="$3"
+   local value="$4"
+
+   _nodemarks_key_check "${key}"
+
+   local result
+   local i
+   local markvalue
+   local RVAL
+
+   set -o noglob ; IFS=","
+   for i in ${marks}
+   do
+      IFS="${DEFAULT_IFS}" ; set +o noglob
+
+      case "$i" in
+         "${key}"-*)
+            markvalue="${i##*-}"
+            r_version_distance "${value}" "${markvalue}"
+            case "${operator}" in
+               ""|"="|"==")
+                  [ "$RVAL" -eq 0 ]
+                  return $?
+               ;;
+
+               "<>"|"!=")
+                  [ "$RVAL" -ne 0 ]
+                  return $?
+               ;;
+
+               ">")
+                  [ "$RVAL" -gt 0 ]
+                  return $?
+               ;;
+
+               "<")
+                  [ "$RVAL" -lt 0 ]
+                  return $?
+               ;;
+
+               "<=")
+                  [ "$RVAL" -le 0 ]
+                  return $?
+               ;;
+
+               ">=")
+                  [ "$RVAL" -ge 0 ]
+                  return $?
+               ;;
+
+               *)
+                  internal_fail "unknown operator \"${operator}\""
+               ;;
+            esac
+      esac
+   done
+   IFS="${DEFAULT_IFS}" ; set +o noglob
+
+   return 0
+}
+
+
+
+#
 # The "clever" existance check:
 #
-# Input      | Matches
-#            | absent   | no-<key> | only-<key>
-# -----------|----------|----------|-----------
-# <key>      | YES      | NO       | YES
-# no-<key>   | NO       | YES      | NO
-# only-<key> | NO       | NO       | YES
+# Input         | Matches
+#               | absent   | no-<key> | only-<key>
+# --------------|----------|----------|-----------
+# <key>         | YES      | NO       | YES
+# no-<key>      | NO       | YES      | NO
+# only-<key>    | NO       | NO       | YES
 #
 # Note: The only-<key> needs to be queried explicitly for existance
 #       It will not deny a no-<key>.In fact there must not be a
 #       no-<key> present if there is a only-<key>
+#
+# The version keys are ignored
 #
 nodemarks_contain()
 {
@@ -219,7 +338,7 @@ nodemarks_contain()
    local key="$2"
 
    case "${key}" in
-      "no-"*|"only-"*)
+      "no-"*|"only-"*|"version-"*)
          _nodemarks_contain "${marks}" "${key}"
       ;;
 
@@ -241,7 +360,7 @@ nodemarks_match()
    local rval
 
    case "${pattern}" in
-      "no-"*"*"*|"only-"*"*"*|"no-"*"["*"]"*|"only-"*"["*"]"*)
+      "no-"*"*"*|"no-"*"["*"]"*|"only-"*"*"*|"only-"*"["*"]"*|"version-"*"*"*|"version-"*"["*"]"*)
          cmd="u"
          if shopt -q extglob
          then
@@ -261,7 +380,7 @@ nodemarks_match()
          return $rval
       ;;
 
-      "no-"*|"only-"*)
+      "no-"*|"only-"*|"version-"*)
          _nodemarks_contain "${marks}" "${pattern}"
       ;;
 
@@ -270,6 +389,7 @@ nodemarks_match()
       ;;
    esac
 }
+
 
 
 nodemarks_intersect()
@@ -377,6 +497,8 @@ _nodemarks_filter_sexpr()
 
    local expr
    local key
+   local operator
+   local value
 
    local memo
 
@@ -390,7 +512,7 @@ _nodemarks_filter_sexpr()
          expr=$?
 
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
-         if [ "${_closer}" != "YES" ]
+         if [ "${_closer}" != 'YES' ]
          then
             if [ "${_s:0:1}" != ")" ]
             then
@@ -421,6 +543,29 @@ _nodemarks_filter_sexpr()
          return $?
       ;;
 
+      VERSION*)
+         _s="${_s:7}"
+         _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
+         key="${_s%%[ )]*}"
+         [ -z "${key}" ] && fail "Missing version key after VERSION"
+         _s="${_s#"${key}"}"
+
+         _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
+         operator="${_s%%[ )]*}"
+         [ -z "${operator}" ] && fail "Missing operator after version key"
+         _s="${_s#"${operator}"}"
+
+
+         _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
+         value="${_s%%[ )]*}"
+         [ -z "${value}" ] && fail "Missing version value after operator"
+         _s="${_s#"${value}"}"
+
+         log_entry nodemarks_version_match "${marks}" "${key}"
+         nodemarks_version_match "${marks}" "${key}" "${operator}" "${value}"
+         return $?
+      ;;
+
       "")
          fail "Missing expression after marks qualifier \"${qualifier}\""
       ;;
@@ -428,7 +573,6 @@ _nodemarks_filter_sexpr()
 
    fail "Unknown command at \"${_s}\" of marks qualifier \"${qualifier}\""
 }
-
 
 
 _nodemarks_filter_expr()

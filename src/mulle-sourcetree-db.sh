@@ -405,7 +405,7 @@ __db_parse_dbentry()
       break
    done <<< "${dbentry}"
 
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = "YES" ]
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
       log_trace2 "\
 nodeline  : ${nodeline}
@@ -607,7 +607,7 @@ db_fetch_uuid_for_evaledurl()
       cd "${databasedir}"
       IFS="
 "
-      for candidate in `fgrep -l -x -s "${evaledurl}" *`
+      for candidate in `fgrep -l -x -s "${searchurl}" *`
       do
          IFS="${DEFAULT_IFS}"
 
@@ -620,8 +620,6 @@ db_fetch_uuid_for_evaledurl()
       done
       exit 1
    )
-
-   return 1
 }
 
 
@@ -1560,10 +1558,12 @@ db_state_description()
       local state
       state="`db_get_dbtype "${database}"`"
 
-      dbstate="`comma_concat "${dbstate}" "${state}"`"
+      r_comma_concat "${dbstate}" "${state}"
+      dbstate="${RVAL}"
       if db_has_graveyard "${database}"
       then
-         dbstate="`comma_concat "${dbstate}" "graveyard"`"
+         r_comma_concat "${dbstate}" "graveyard"
+         dbstate="${RVAL}"
       fi
    fi
 
@@ -1629,18 +1629,28 @@ db_update_determine_share_filename()
    otheruuid="`db_fetch_uuid_for_evaledurl "/" "${evaledurl}"`"
    if [ ! -z "${otheruuid}" ]
    then
+      log_debug "uuid     : ${uuid}"
+      log_debug "otheruuid: ${otheruuid}"
+
       if [ "${otheruuid}" = "${uuid}" ]
       then
-         [ "${database}" != "/" ] && internal_fail "unexpected not root ($database)"
+         if [ "${database}" != "/" ]
+         then
+            r_fast_basename "${database}"
+            fail "\"${address}\" is not in root but in ($database).
+${C_INFO}This probably means that \"${address}\" is used in two project
+but shares the same UUIDs in the mulle-sourcetree configuration.
 
+Remedial action:${C_RESET_BOLD}
+   cd \"${MULLE_SOURCETREE_SHARE_DIR}/${RVAL}\"
+   mulle-sourcetree -e -N reuuid
+   mulle-sourcetree -e -N reset"
          # ok
+         fi
       else
-         log_debug "uuid     : ${uuid}"
-         log_debug "otheruuid: ${otheruuid}"
-
-         [ "${database}" = "/" ] &&
-            internal_fail "Unexpected root database for \"${address}\". \
-But uuids differ \"${uuid}\" vs \"${otheruuid}\""
+#         [ "${database}" = "/" ] &&
+#            internal_fail "Unexpected root database for \"${address}\". \
+#But uuids differ \"${uuid}\" vs \"${otheruuid}\""
 
          log_fluff "The \"${url}\" is already used in root. So skip it."
          return 2

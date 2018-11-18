@@ -159,9 +159,9 @@ sourcetree_is_db_compatible()
 #
 # we are arriving here in prefixed mode
 #
-emit_status()
+r_emit_status()
 {
-   log_entry "emit_status" "$@"
+   log_entry "r_emit_status" "$@"
 
    local address="$1"
    local directory="$2"
@@ -171,7 +171,6 @@ emit_status()
    local filename="$6"
 
    local output_adress
-   local RVAL
 
    r_filepath_concat "${datasource}" "${address}"
    output_adress="${RVAL}"
@@ -230,17 +229,20 @@ emit_status()
    local dbexists
    local status
 
-   configexists="NO"
-   dbexists="NO"
+   configexists='NO'
+   dbexists='NO'
    fs="library"
    status="unknown"
 
-   log_debug "address:    ${address}"
-   log_debug "directory:  ${directory}"
-   log_debug "datasource: ${datasource}"
-   log_debug "marks:      ${marks}"
-   log_debug "mode:       ${mode}"
-   log_debug "filename:   ${filename}"
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
+   then
+      log_trace2 "address:    ${address}"
+      log_trace2 "directory:  ${directory}"
+      log_trace2 "datasource: ${datasource}"
+      log_trace2 "marks:      ${marks}"
+      log_trace2 "mode:       ${mode}"
+      log_trace2 "filename:   ${filename}"
+   fi
 
    if nodemarks_contain "${marks}" "fs"
    then
@@ -248,20 +250,20 @@ emit_status()
 
       if [ -e "${filename}/${SOURCETREE_CONFIG_FILE}" ]
       then
-         configexists="YES"
+         configexists='YES'
       fi
 
       if [ -d "${filename}/${SOURCETREE_DB_NAME}" ]
       then
-         dbexists="YES"
+         dbexists='YES'
       fi
 
       #
       # Dstfile    | Url | Marks      | Output
       # -----------|-----|------------|------------------
       # not exists | no  | -          | missing
-      # not exists | yes | require    | update
-      # not exists | yes | no-require | no-require
+      # not exists | yes | require    | unhappy
+      # not exists | yes | no-require | optional
       #
 
       if [ ! -e "${filename}" ]
@@ -279,29 +281,32 @@ emit_status()
             # never there. Fix: (always need a require node)
             #
             log_fluff "\"${filename}\" does not exist but it isn't required ($PWD)"
-            if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+            if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
             then
                return 0
             fi
-            exekutor echo "${output_adress};no-require;${fs};${configexists};${dbexists}" #;${filename}"
+            RVAL="${output_adress};optional;${fs};${configexists};${dbexists}" #;${filename}"
          else
             if [ -z "${_url}" ]
             then
-               log_fluff "\"${filename}\" does not exist and and is required ($PWD), but _url is empty"
-               if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+               log_fluff "\"${filename}\" does not exist and and is required \
+($PWD), but _url is empty"
+               if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
                then
+                  log_fluff "exit with 2"
                   exit 2   # indicate brokenness
                fi
-               exekutor echo "${output_adress};update;${fs};${configexists};${dbexists}" #;${filename}"
+               RVAL="${output_adress};absent;${fs};${configexists};${dbexists}" #;${filename}"
                return 0
             fi
 
             log_fluff "\"${filename}\" does not exist and is required ($PWD)"
-            if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+            if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
             then
+               log_fluff "exit with 1"
                exit 1
             fi
-            exekutor echo "${output_adress};update;${fs};${configexists};${dbexists}" #;${filename}"
+            RVAL="${output_adress};absent;${fs};${configexists};${dbexists}" #;${filename}"
          fi
          return
       else
@@ -317,16 +322,18 @@ emit_status()
          fi
       fi
 
-      if [ "${dbexists}" = "YES" ] && \
+      if [ "${dbexists}" = 'YES' ] && \
          ! sourcetree_is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
       then
-         log_fluff "Database \"${datasource}\" is not compatible with \"${SOURCETREE_MODE}\" ($PWD)"
+         log_fluff "Database \"${datasource}\" is not compatible with \
+\"${SOURCETREE_MODE}\" ($PWD)"
 
-         if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+         if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
          then
+            log_fluff "exit with 1"
             exit 1
          fi
-         exekutor echo "${output_adress};update;${fs};${configexists};${dbexists}" #;${filename}"
+         RVAL="${output_adress};outdated;${fs};${configexists};${dbexists}" #;${filename}"
          return 0
       fi
 
@@ -337,22 +344,22 @@ emit_status()
          ;;
 
          *)
-
             #
             # Config     | Database | Config > DB | Output
             # -----------|----------|-------------|----------
             # not exists | *        | *           | ok
             #
-            if [ "${configexists}" = "NO" ]
+            if [ "${configexists}" = 'NO' ]
             then
-               log_fluff "\"${directory}\" does not have a ${SOURCETREE_CONFIG_FILE} ($PWD)"
+               log_fluff "\"${directory}\" does not have a \
+${SOURCETREE_CONFIG_FILE} ($PWD)"
 
-               if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+               if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
                then
                   return 0
                fi
 
-               exekutor echo "${output_adress};ok;${fs};${configexists};${dbexists}" #;${filename}"
+               RVAL="${output_adress};ok;${fs};${configexists};${dbexists}" #;${filename}"
                return
             fi
 
@@ -360,7 +367,7 @@ emit_status()
             # Config  | Database   | Config > DB | Output
             # --------|------------|-------------|----------
             # exists  | not exists | *           | update
-            # exists  | updating   | *           | incomplete
+            # exists  | updating   | *           | updating
             # exists  | exists     | -           | ok
             # exists  | exists     | +           | update
             #
@@ -368,33 +375,40 @@ emit_status()
             if ! db_is_ready "${datasource}"
             then
                log_fluff "Database \"${datasource}\" is not ready"
-               status="update"
+               status="unready"
             else
                if db_is_updating "${datasource}"
                then
                   log_fluff "\"${filename}\" is marked as updating ($PWD)"
 
-                  if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+                  if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
                   then
+                     log_fluff "exit with 2"
                      exit 2  # only time we exit with 2 on IS_UPTODATE
                   fi
 
-                  exekutor echo "${output_adress};incomplete;${fs};${configexists};${dbexists}" #;${filename}"
+                  RVAL="${output_adress};updating;${fs};\
+${configexists};${dbexists}" #;${filename}"
                   return 0
                fi
 
                if ! sourcetree_is_uptodate "${datasource}"
                then
-                  log_fluff "Database \"${datasource}\" is stale ($PWD)"
+                  if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
+                  then
+                     log_fluff "exit with 1"
+                     exit 1
+                  fi
 
-                  status="update"
+                  log_fluff "Database \"${datasource}\" is stale ($PWD)"
+                  status="stale"
                fi
             fi
          ;;
       esac
    fi
 
-   if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+   if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
    then
       return 0
    fi
@@ -403,7 +417,8 @@ emit_status()
    then
       status="ok"
    fi
-   exekutor echo "${output_adress};${status};${fs};${configexists};${dbexists}" # ;${filename}"
+
+   RVAL="${output_adress};${status};${fs};${configexists};${dbexists}" # ;${filename}"
 }
 
 
@@ -413,15 +428,20 @@ walk_status()
 
    local filename
    local name
+   local RVAL
+   local rval
 
    filename="`__walk_get_db_filename`"
 
-   emit_status "${MULLE_ADDRESS}" \
-               "${MULLE_VIRTUAL_ADDRESS}" \
-               "${MULLE_DATASOURCE}" \
-               "${MULLE_MARKS}" \
-               "${MULLE_MODE}" \
-               "${filename}"
+   r_emit_status "${MULLE_ADDRESS}" \
+                 "${MULLE_VIRTUAL_ADDRESS}" \
+                 "${MULLE_DATASOURCE}" \
+                 "${MULLE_MARKS}" \
+                 "${MULLE_MODE}" \
+                 "${filename}"
+   rval=$?
+   [ ! -z "${RVAL}" ] && echo "${RVAL}"
+   return $rval
 }
 
 
@@ -429,16 +449,18 @@ sourcetree_status()
 {
    log_entry "sourcetree_status" "$@"
 
-   local filternodetypes="$1"
-   local filterpermissions="$2"
-   local filtermarks="$3"
-   local mode="$4"
+   local filternodetypes="$1"; shift
+   local filterpermissions="$1"; shift
+   local filtermarks="$1"; shift
+   local mode="$1"; shift
 
    local output
    local output2
    local rval
+   local RVAL
 
-   output="`emit_status`"
+   r_emit_status
+   output="${RVAL}"
    output2="`walk_config_uuids "${filternodetypes}" \
                                "${filterpermissions}" \
                                "${filtermarks}" \
@@ -446,14 +468,14 @@ sourcetree_status()
                                "walk_status" \
                                "$@"`"
    rval="$?"
-   if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+   if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
    then
       return $rval
    fi
 
    if [ $rval -ne 0 ]
    then
-      fail "Walk errored out (%rval)"
+      fail "Walk errored out ($rval)"
    fi
 
    #
@@ -470,22 +492,23 @@ sourcetree_status()
    local header
 
    case ",${mode}," in
-      *,header,*)
+      *,output-header,*)
          header="Node;Status;Filesystem;Config;Database" # ;Filename"
 
          case ",${mode}," in
-            *,separator,*)
-               r_add_line "${header}" "-------;------;----------;------;--------" # ;--------"
+            *,output-separator,*)
+               r_add_line "${header}" \
+                          "-------;------;----------;------;--------" # ;--------"
                header="${RVAL}"
             ;;
          esac
-         add_line "${header}" "${output}"
+         r_add_line "${header}" "${output}"
          output="${RVAL}"
       ;;
    esac
 
    case ",${mode}," in
-      *,formatted,*)
+      *,output-formatted,*)
          echo "${output}" | column -t -s';'
       ;;
 
@@ -501,12 +524,12 @@ sourcetree_status_main()
    log_entry "sourcetree_status_main" "$@"
 
    local OPTION_MARKS="ANY"
-   local OPTION_PERMISSIONS="" # empty!
+   local OPTION_PERMISSIONS="descend-symlink"
    local OPTION_NODETYPES=""
    local OPTION_WALK_DB="DEFAULT"
-   local OPTION_IS_UPTODATE="NO"
+   local OPTION_IS_UPTODATE='NO'
    local OPTION_OUTPUT_HEADER="DEFAULT"
-   local OPTION_OUTPUT_RAW="DEFAULT"
+   local OPTION_OUTPUT_FORMAT="FMT"
 
    while [ $# -ne 0 ]
    do
@@ -516,35 +539,35 @@ sourcetree_status_main()
          ;;
 
          --all)
-            VISIT_TWICE="YES"
+            VISIT_TWICE='YES'
          ;;
 
          --output-header)
-            OPTION_OUTPUT_HEADER="YES"
+            OPTION_OUTPUT_HEADER='YES'
          ;;
 
-         --no-output-header)
-            OPTION_OUTPUT_HEADER="NO"
+         --no-output-header|--output-no-header)
+            OPTION_OUTPUT_HEADER='NO'
          ;;
 
          --output-raw)
-            OPTION_OUTPUT_RAW="YES"
+            OPTION_OUTPUT_FORMAT='RAW'
          ;;
 
-         --no-output-raw)
-            OPTION_OUTPUT_RAW="NO"
+         --no-output-raw|--output-no-raw)
+            OPTION_OUTPUT_FORMAT='FMT'
          ;;
 
          --output-separator)
-            OPTION_OUTPUT_SEPERATOR="YES"
+            OPTION_OUTPUT_SEPERATOR='YES'
          ;;
 
-         --no-output-separator)
-            OPTION_OUTPUT_SEPERATOR="NO"
+         --no-output-separator|--output-no-separator)
+            OPTION_OUTPUT_SEPERATOR='NO'
          ;;
 
          --is-uptodate)
-            OPTION_IS_UPTODATE="YES"
+            OPTION_IS_UPTODATE='YES'
          ;;
 
          #
@@ -593,7 +616,7 @@ sourcetree_status_main()
 
    if ! db_is_ready "${SOURCETREE_START}"
    then
-      if [ "${OPTION_IS_UPTODATE}" = "YES" ]
+      if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
       then
          log_fluff "db is not marked as ready"
          exit 1
@@ -610,16 +633,16 @@ sourcetree_status_main()
       r_comma_concat "${mode}" "pre-order"
       mode="${RVAL}"
    fi
-   if [ "${OPTION_OUTPUT_RAW}" != "YES" ]
+   if [ "${OPTION_OUTPUT_FORMATTED}" = 'FMT' ]
    then
       r_comma_concat "${mode}" "output-formatted"
       mode="${RVAL}"
    fi
-   if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
+   if [ "${OPTION_OUTPUT_HEADER}" != 'NO' ]
    then
       r_comma_concat "${mode}" "output-header"
       mode="${RVAL}"
-      if [ "${OPTION_OUTPUT_SEPARATOR}" != "NO" ]
+      if [ "${OPTION_OUTPUT_SEPARATOR}" != 'NO' ]
       then
          r_comma_concat "${mode}" "output-separator"
          mode="${RVAL}"
@@ -639,7 +662,8 @@ sourcetree_status_initialize()
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
+      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] &&
+         internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
 
       # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1

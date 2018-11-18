@@ -182,7 +182,7 @@ Marks:
    [no-]set       : the nodes properies can be changed
    [no-]share     : the node may be shared with subtree nodes of the same url
 EOF
-   if [ "${MULLE_FLAG_LOG_VERBOSE}" = "YES" ]
+   if [ "${MULLE_FLAG_LOG_VERBOSE}" = 'YES' ]
    then
       cat <<EOF >&2
                    the effect is, that an URL is only fetched once and stored
@@ -471,11 +471,11 @@ _assert_sane_mark()
          fail "mark is empty"
       ;;
 
-      *[^a-z-]*)
-         fail "mark \"${mark}\" may only contain lowercase letters and hyphens"
+      *[^a-z-0-9.]*)
+         fail "mark \"${mark}\" may only contain a-z 0-9 . and _"
       ;;
 
-      no-*|only-*)
+      no-*|only-*|version-*)
       ;;
 
       *)
@@ -485,9 +485,9 @@ _assert_sane_mark()
 }
 
 
-_sanitized_marks()
+r_sanitized_marks()
 {
-   log_entry "_sanitized_marks" "$@"
+   log_entry "r_sanitized_marks" "$@"
 
    local marks="$1"
 
@@ -503,18 +503,19 @@ _sanitized_marks()
             continue
          ;;
 
-         *[^a-z-]*)
-            fail "mark \"${mark}\" may only contain lowercase letters and hyphens"
+         *[^a-z-0-9.]*)
+            fail "mark \"${mark}\" may only contain a-z 0-9 . and _"
          ;;
 
-         no-*|only-*)
-            result="`comma_concat "${result}" "${mark}"`"
+         no-*|only-*|version-*)
+            r_comma_concat "${result}" "${mark}"
+            result="${RVAL}"
          ;;
       esac
    done
    IFS="${DEFAULT_IFS}"; set +o noglob
 
-   echo "${result}"
+   RVAL="${result}"
 }
 
 
@@ -553,7 +554,14 @@ sourcetree_add_node()
       _address="${input}"
    fi
 
-   _marks="`_sanitized_marks "${_marks}"`" || exit 1
+   if [ "${_nodetype}" = "local" ]
+   then
+      r_comma_concat "${_marks}" "no-delete,no-update,no-share"
+      _marks="${RVAL}"
+   fi
+
+   r_sanitized_marks "${_marks}"
+   _marks="${RVAL}" || exit 1
 
    if [ -z "${_url}" ]
    then
@@ -580,15 +588,16 @@ sourcetree_add_node()
    #
    local mode
 
-   if [ "${OPTION_UNSAFE}" = "YES" ]
+   if [ "${OPTION_UNSAFE}" = 'YES' ]
    then
-      mode="`comma_concat "${mode}" "unsafe"`"
+      r_comma_concat "${mode}" "unsafe"
+      mode="${RVAL}"
    fi
    node_augment "${mode}"
 
    if cfg_get_nodeline "${SOURCETREE_START}" "${_address}" > /dev/null
    then
-      if [ "${OPTION_IF_MISSING}" = "YES" ]
+      if [ "${OPTION_IF_MISSING}" = 'YES' ]
       then
          return 0
       fi
@@ -597,17 +606,18 @@ in the sourcetree"
    fi
 
    local contents
-   local nodeline
    local appended
+   local RVAL
 
    contents="`egrep -s -v '^#' "${SOURCETREE_CONFIG_FILE}"`"
-   nodeline="`node_to_nodeline`"
-   appended="`add_line "${contents}" "${nodeline}"`"
+   r_node_to_nodeline
+   r_add_line "${contents}" "${RVAL}"
+   appended="${RVAL}"
 
    cfg_write "${SOURCETREE_START}" "${appended}"
    cfg_touch_parents "${SOURCETREE_START}"
 
-   log_info "Added ${C_MAGENTA}${C_BOLD}${_address}"
+ log_info "Added ${C_MAGENTA}${C_BOLD}${_address}"
 }
 
 
@@ -702,7 +712,7 @@ line_mover()
 #
 sourcetree_move_node()
 {
-   log_entry "sourcetree_add_node" "$@"
+   log_entry "sourcetree_move_node" "$@"
 
    local input="$1"
    local direction="$2"
@@ -894,7 +904,8 @@ _sourcetree_set_node()
    _tag="${OPTION_TAG:-${_tag}}"
    _userinfo="${OPTION_USERINFO:-${_userinfo}}"
 
-   _marks="`_sanitized_marks "${_marks}"`" || exit 1
+   r_sanitized_marks "${_marks}"
+   _marks="${RVAL}" || exit 1
 
    local key
    local value
@@ -931,14 +942,13 @@ _sourcetree_set_node()
       cfg_has_duplicate "${SOURCETREE_START}" "${_uuid}" "${_address}"
    then
       fail "There is already a node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} \
-in the sourcetree
-"
+in the sourcetree"
    fi
 
-   local newnodeline
+   local RVAL
 
-   newnodeline="`node_to_nodeline`"
-   sourcetree_change_nodeline "${oldnodeline}" "${newnodeline}" "${_address}"
+   r_node_to_nodeline
+   sourcetree_change_nodeline "${oldnodeline}" "${RVAL}" "${_address}"
 }
 
 
@@ -1002,9 +1012,14 @@ _sourcetree_get_node()
    while [ "$#" -ne 0 ]
    do
       case "$1" in
-         branch|address|fetchoptions|marks|nodetype|tag|url|uuid|userinfo)
+         branch|address|fetchoptions|marks|nodetype|tag|url|uuid)
             exekutor eval echo \$"_${1}"
          ;;
+
+         userinfo)
+				exekutor echo "${_userinfo}"
+			;;
+
          *)
             log_error "unknown keyword \"$1\""
             sourcetree_get_usage
@@ -1059,6 +1074,7 @@ KNOWN_MARKS="\
 no-all-load
 no-build
 no-cmakeadd
+no-cmakeinherit
 no-cmakeloader
 no-defer
 no-delete
@@ -1087,7 +1103,7 @@ _sourcetree_add_mark_known_absent()
 
    _assert_sane_mark "${mark}"
 
-   if [ "${OPTION_EXTENDED_MARK}" != "YES" ]
+   if [ "${OPTION_EXTENDED_MARK}" != 'YES' ]
    then
       if ! fgrep -x -q "${mark}" <<< "${KNOWN_MARKS}"
       then
@@ -1118,7 +1134,7 @@ _sourcetree_remove_mark_known_present()
 
    _assert_sane_mark "${mark}"
 
-   if [ "${OPTION_EXTENDED_MARK}" != "YES" ]
+   if [ "${OPTION_EXTENDED_MARK}" != 'YES' ]
    then
       if ! fgrep -x -q "${mark}" <<< "${KNOWN_MARKS}"
       then
@@ -1162,7 +1178,7 @@ _sourcetree_mark_node()
    nodeline_parse "${oldnodeline}"
 
    case "${mark}" in
-      no-*|only-*)
+      no-*|only-*|version-*)
          if nodemarks_contain "${_marks}" "${mark}"
          then
             log_info "Node is already marked as \"${mark}\"."
@@ -1223,6 +1239,51 @@ sourcetree_mark_node_by_url()
 }
 
 
+_sourcetree_remove_mark_node()
+{
+   log_entry "_sourcetree_remove_mark_node" "$@"
+
+   local oldnodeline="$1"
+   local mark="$2"
+
+   [ -z "${mark}" ] && fail "mark is empty"
+
+   local _branch
+   local _address
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _raw_userinfo
+   local _tag
+   local _url
+   local _userinfo
+   local _uuid
+
+   nodeline_parse "${oldnodeline}"
+
+   if nodemarks_contain "${_marks}" "${mark}"
+   then
+      _sourcetree_remove_mark_known_present "${mark}"
+   fi
+}
+
+
+sourcetree_remove_mark_node()
+{
+   log_entry "sourcetree_remove_mark_node" "$@"
+
+   local address="$1"; shift
+
+   [ -z "${address}" ] && fail "address is empty"
+
+   local oldnodeline
+
+   oldnodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
+
+   _sourcetree_remove_mark_node "${oldnodeline}" "$@"
+}
+
+
 sourcetree_unmark_node()
 {
    log_entry "sourcetree_unmark_node" "$@"
@@ -1240,6 +1301,13 @@ sourcetree_unmark_node()
 
       only-*)
          mark="${mark:5}"
+      ;;
+
+      version-*)
+         if nodemarks_contain "${_marks}" "${mark}"
+         then
+            sourcetree_remove_mark_node "${address}" "${mark}"
+         fi
       ;;
 
       *)
@@ -1270,6 +1338,10 @@ sourcetree_unmark_node_by_url()
 
       only-*)
          mark="${mark:5}"
+      ;;
+
+      version-*)
+         mark="${mark:8}"
       ;;
 
       *)
@@ -1347,11 +1419,11 @@ sourcetree_common_main()
    local OPTION_EXTENDED_MARK="DEFAULT"
    local OPTION_OUTPUT_BANNER="DEFAULT"
    local OPTION_GUESS_DSTFILE="DEFAULT_IFS"
-   local OPTION_UNSAFE="NO"
+   local OPTION_UNSAFE='NO'
    local OPTION_OUTPUT_UUID="DEFAULT"
-   local OPTION_OUTPUT_EVAL="NO"
-   local OPTION_OUTPUT_FULL="NO"
-   local OPTION_IF_MISSING="NO"
+   local OPTION_OUTPUT_EVAL='NO'
+   local OPTION_OUTPUT_FULL='NO'
+   local OPTION_IF_MISSING='NO'
 
    local suffix
 
@@ -1375,96 +1447,96 @@ sourcetree_common_main()
          ;;
 
          --output-color)
-            OPTION_OUTPUT_COLOR="YES"
+            OPTION_OUTPUT_COLOR='YES'
          ;;
 
          --no-output-color|--output-no-color)
-            OPTION_OUTPUT_COLOR="NO"
+            OPTION_OUTPUT_COLOR='NO'
          ;;
 
          --output-header)
-            OPTION_OUTPUT_HEADER="YES"
+            OPTION_OUTPUT_HEADER='YES'
          ;;
 
          --no-output-header|--output-no-header)
-            OPTION_OUTPUT_HEADER="NO"
+            OPTION_OUTPUT_HEADER='NO'
          ;;
 
          --output-separator)
-            OPTION_OUTPUT_SEPARATOR="YES"
+            OPTION_OUTPUT_SEPARATOR='YES'
          ;;
 
          --no-output-separator|--output-no-separator)
-            OPTION_OUTPUT_SEPARATOR="NO"
+            OPTION_OUTPUT_SEPARATOR='NO'
          ;;
 
          #
          # just for add
          #
          --if-missing)
-            OPTION_IF_MISSING="YES"
+            OPTION_IF_MISSING='YES'
          ;;
 
          --guess-nodetype)
-            OPTION_GUESS_NODETYPE="YES"
+            OPTION_GUESS_NODETYPE='YES'
          ;;
 
          --no-guess-nodetype)
-            OPTION_GUESS_NODETYPE="NO"
+            OPTION_GUESS_NODETYPE='NO'
          ;;
 
          --guess-address)
-            OPTION_GUESS_DESTINATION="YES"
+            OPTION_GUESS_DESTINATION='YES'
          ;;
 
          --no-guess-address)
-            OPTION_GUESS_DESTINATION="NO"
+            OPTION_GUESS_DESTINATION='NO'
          ;;
 
          #
          # marks
          #
          -e|--extended-mark)
-            OPTION_EXTENDED_MARK="YES"
+            OPTION_EXTENDED_MARK='YES'
          ;;
 
          --no-extended-mark)
-            OPTION_EXTENDED_MARK="NO"
+            OPTION_EXTENDED_MARK='NO'
          ;;
 
          #
          #
          #
          --output-full)
-            OPTION_OUTPUT_FULL="YES"
+            OPTION_OUTPUT_FULL='YES'
          ;;
 
          --no-output-full|--output-no-full)
-            OPTION_OUTPUT_FULL="NO"
+            OPTION_OUTPUT_FULL='NO'
          ;;
 
          --output-uuid)
-            OPTION_OUTPUT_UUID="YES"
+            OPTION_OUTPUT_UUID='YES'
          ;;
 
          --no-output-uuid|--output-no-uuid)
-            OPTION_OUTPUT_UUID="NO"
+            OPTION_OUTPUT_UUID='NO'
          ;;
 
          --output-banner)
-            OPTION_OUTPUT_BANNER="YES"
+            OPTION_OUTPUT_BANNER='YES'
          ;;
 
          --no-output-banner|--output-no-banner)
-            OPTION_OUTPUT_BANNER="NO"
+            OPTION_OUTPUT_BANNER='NO'
          ;;
 
          --output-eval)
-            OPTION_OUTPUT_EVAL="YES"
+            OPTION_OUTPUT_EVAL='YES'
          ;;
 
          --no-output-eval|--output-no-eval)
-            OPTION_OUTPUT_EVAL="NO"
+            OPTION_OUTPUT_EVAL='NO'
          ;;
 
          #

@@ -98,7 +98,7 @@ __call_callback()
 
    local evaluator
 
-   if [ "${OPTION_EVAL_EXEKUTOR}" = "YES" ]
+   if [ "${OPTION_EVAL_EXEKUTOR}" = 'YES' ]
    then
       evaluator="_eval_exekutor"
    else
@@ -107,12 +107,12 @@ __call_callback()
 
    local technical_flags
 
-   if [ "${OPTION_PASS_TECHNICAL_FLAGS}" = "YES" ]
+   if [ "${OPTION_PASS_TECHNICAL_FLAGS}" = 'YES' ]
    then
       technical_flags="${MULLE_TECHNICAL_FLAGS}" # from bashfunctions
    fi
 
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
+   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
       log_trace2 "MULLE_ADDRESS:         \"${_address}\""
       log_trace2 "MULLE_BRANCH:          \"${_branch}\""
@@ -139,7 +139,7 @@ __call_callback()
    #
    # MULLE_DATASOURCE  : config or database "handle" where nodelines was read
    # MULLE_DESTINATION : either "_address" or in shared case basename of "_address"
-   # MULLE_VIRTUAL     : either ${MULLE_SOURECTREE_SHARE_DIR} or ${MULLE_PROJECTDIR}
+   # MULLE_VIRTUAL     : either ${MULLE_SOURECTREE_SHARE_DIR} or ${MULLE_VIRTUAL_ROOT}
    #
    #
    MULLE_NODE="${_nodeline}" \
@@ -158,9 +158,9 @@ __call_callback()
    MULLE_MODE="${mode}" \
    MULLE_VIRTUAL="${virtual}" \
    MULLE_VIRTUAL_ADDRESS="${_virtual_address}" \
-      "${evaluator}" "'${callback}'" "${technical_flags}" "$@"
-
+      "${evaluator}" "${callback}" "${technical_flags}" "$@"
    rval="$?"
+
    if [ "${rval}" -eq 0 ]
    then
       return 0
@@ -168,7 +168,7 @@ __call_callback()
 
    case ",${mode}," in
       *,lenient,*)
-         log_warning "Command \"${callback}\" failed for node \"${_address}\""
+         log_fluff "Command \"${callback}\" failed for node \"${_address}\""
          return 0
       ;;
    esac

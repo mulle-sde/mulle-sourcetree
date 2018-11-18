@@ -71,7 +71,8 @@ locate_sourcetree()
       then
          return 1
       fi
-      directory="`fast_dirname "${directory}"`"
+      r_fast_dirname "${directory}"
+      directory="${RVAL}"
    done
 }
 
@@ -83,14 +84,16 @@ locate_fix_file()
    local start="$1"
    local address="$2"
 
-   start="`absolutepath "${start}" `"
-   start="`physicalpath "${start}" `"
+   r_absolutepath "${start}"
+   r_physicalpath "${RVAL}"
+   start="${RVAL}"
 
    local found
    local match
    local name
 
-   name="`fast_basename "${address}" `"
+   r_fast_basename "${address}"
+   name="${RVAL}"
 
 
    IFS="
@@ -118,7 +121,8 @@ locate_fix_file()
 
       local fixname
 
-      fixname="`fast_basename "${fix}"`"
+      r_fast_basename "${fix}"
+      fixname="${RVAL}"
       if [ -z "${match}" ] && [ "${fixname}" = "${name}" ]
       then
          match="${found}"
@@ -145,14 +149,11 @@ _fixup_address_change()
    local address="$2"
    local fixfile="$3"
 
-   local fixdir
-
-   fixdir="`fast_dirname "${fixfile}"`"
-
    local fixaddress
 
-   fixaddress="`string_remove_prefix "${fixdir}" "${MULLE_VIRTUAL_ROOT}" `"
-   fixaddress="`string_remove_prefix "${fixaddress}" "${datasource}" `"
+   r_fast_dirname "${fixfile}"
+   fixaddress="${RVAL#${MULLE_VIRTUAL_ROOT}}"
+   fixaddress="${fixaddress#${datasource}}"
 
    exekutor echo "cd \"\${MULLE_VIRTUAL_ROOT}${datasource}\""
    exekutor echo "mulle-sourcetree set --address '${fixaddress}' '${address}'"
@@ -293,9 +294,9 @@ sourcetree_fix_main()
    local OPTION_PERMISSIONS="" # empty!
    local OPTION_NODETYPES=""
    local OPTION_WALK_DB="DEFAULT"
-   local OPTION_IS_UPTODATE="NO"
+   local OPTION_IS_UPTODATE='NO'
    local OPTION_OUTPUT_HEADER="DEFAULT"
-   local OPTION_OUTPUT_RAW="YES"
+   local OPTION_OUTPUT_RAW='YES'
 
    while [ $# -ne 0 ]
    do

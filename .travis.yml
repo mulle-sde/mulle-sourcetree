@@ -8,6 +8,6 @@ script:
   - sudo ( echo "deb [arch=all] http://www.mulle-kybernetik.com `lsb_release -c -s` main" > "/etc/apt/sources.list.d/mulle-nat.mulle-kybernetik.com.list" )
   - sudo apt-get update
   - sudo apt-get -y install mulle-fetch mulle-test
-  - sudo ./install.sh /tmp
+  - sudo ./bin/installer /tmp
   - mulle-test
 

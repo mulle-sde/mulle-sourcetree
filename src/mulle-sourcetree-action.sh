@@ -32,87 +32,73 @@
 MULLE_SOURCETREE_ACTION_SH="included"
 
 
-
-__concat_config_absolute_filename()
+r_mulle_fetch_eval_options()
 {
-   local config="$1"
-   local _address="$2"
+   log_entry "r_mulle_fetch_eval_options" "$@"
 
-   case "${config}" in
-      "/"|/*/)
-      ;;
-
-      *)
-         internal_fail "config \"${config}\" is malformed"
-      ;;
-   esac
-
-   case "${_address}" in
-      /*)
-         internal_fail "_address \"${config}\" is absolute"
-      ;;
-   esac
-
-   echo "${MULLE_VIRTUAL_ROOT}${config}${_address}"
-}
-
-
-emit_mulle_fetch_eval_options()
-{
    local options
 
    # this implictily sets --symlink
    case "${OPTION_FETCH_SYMLINK}" in
-      "NO")
+      'NO')
       ;;
 
-      "YES")
-         options="`concat "${options}" "--symlink-returns-2"`"
+      'YES')
+         r_concat "${options}" "--symlink-returns-2"
+         options="${RVAL}"
       ;;
 
       "DEFAULT")
-         if [ "${MULLE_SYMLINK}" = "YES" -o "${MULLE_SOURCETREE_SYMLINK}" = "YES" ]
+         if [ "${MULLE_SOURCETREE_SYMLINK}" = 'YES' ]
          then
-            options="`concat "${options}" "--symlink-returns-2"`"
+            r_concat "${options}" "--symlink-returns-2"
+            options="${RVAL}"
          fi
       ;;
    esac
 
-   if [ "${OPTION_FETCH_ABSOLUTE_SYMLINK}" = "YES" ]
+   if [ "${OPTION_FETCH_ABSOLUTE_SYMLINK}" = 'YES' ]
    then
-      options="`concat "${options}" "--absolute-symlink"`"
+      r_concat "${options}" "--absolute-symlink"
+      options="${RVAL}"
    fi
 
-   if [ "${OPTION_CHECK_USR_LOCAL_INCLUDE}" = "YES" ]
+   if [ "${OPTION_CHECK_USR_LOCAL_INCLUDE}" = 'YES' ]
    then
-      options="`concat "${options}" "--check-system-includes"`"
+      r_concat "${options}" "--check-system-includes"
+      options="${RVAL}"
    fi
 
    if [ ! -z "${OPTION_FETCH_CACHE_DIR}"  ]
    then
-      options="`concat "${options}" "--cache-dir '${OPTION_FETCH_CACHE_DIR}'"`"
+      r_concat "${options}" "--cache-dir '${OPTION_FETCH_CACHE_DIR}'"
+      options="${RVAL}"
    fi
 
    if [ ! -z "${OPTION_FETCH_MIRROR_DIR}" ]
    then
-      options="`concat "${options}" "--mirror-dir '${OPTION_FETCH_MIRROR_DIR}'"`"
+      r_concat "${options}" "--mirror-dir '${OPTION_FETCH_MIRROR_DIR}'"
+      options="${RVAL}"
    fi
 
    if [ ! -z "${OPTION_FETCH_SEARCH_PATH}" ]
    then
-      options="`concat "${options}" "--search-path '${OPTION_FETCH_SEARCH_PATH}'"`"
+      r_concat "${options}" "--search-path '${OPTION_FETCH_SEARCH_PATH}'"
+      options="${RVAL}"
    fi
 
    case "${OPTION_FETCH_REFRESH}" in
       YES)
-         options="`concat "${options}" "--refresh"`"
+         r_concat "${options}" "--refresh"
+         options="${RVAL}"
       ;;
       NO)
-         options="`concat "${options}" "--no-refresh"`"
+         r_concat "${options}" "--no-refresh"
+         options="${RVAL}"
       ;;
    esac
 
-   echo "${options}"
+   RVAL="${options}"
 }
 
 
@@ -122,6 +108,8 @@ emit_mulle_fetch_eval_options()
 ##
 _has_system_include()
 {
+   log_entry "_has_system_include" "$@"
+
    local _uuid="$1"
 
    local include_search_path="${HEADER_SEARCH_PATH}"
@@ -151,7 +139,7 @@ _has_system_include()
    local includedir
    local includefile
 
-   includedir="`echo "${_uuid}" | tr '-' '_'`"
+   includedir="${_uuid//-/_}"
    includefile="${includedir}.h"
 
    if [ "${includedir}" = "${_uuid}" ]
@@ -182,25 +170,6 @@ _has_system_include()
 }
 
 
-mkdir_parent_if_missing()
-{
-   local _address="$1"
-
-   local parent
-
-   parent="`fast_dirname "${_address}"`"
-   case "${parent}" in
-      ""|"\.")
-      ;;
-
-      *)
-         mkdir_if_missing "${parent}" || exit 1
-         echo "${parent}"
-      ;;
-   esac
-}
-
-
 _do_fetch_operation()
 {
    log_entry "_do_fetch_operation" "$@"
@@ -217,20 +186,21 @@ _do_fetch_operation()
 
    [ $# -eq 9 ] || internal_fail "fail"
 
-   if [ "${OPTION_CHECK_USR_LOCAL_INCLUDE}" = "YES" ] && _has_system_include "${_uuid}"
+   if [ "${OPTION_CHECK_USR_LOCAL_INCLUDE}" = 'YES' ] && _has_system_include "${_uuid}"
    then
       log_info "${C_MAGENTA}${C_BOLD}${_uuid}${C_INFO} is a system library, so not fetching it"
       return 1
    fi
 
-   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" != "YES" ] && [ -e "${_address}" ]
+   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" != 'YES' ] && [ -e "${_address}" ]
    then
       fail "Should have cleaned \"${_address}\" before"
    fi
 
    local parent
 
-   parent="`mkdir_parent_if_missing "${_address}"`"
+   r_mkdir_parent_if_missing "${_address}"
+   parent="${RVAL}"
 
    local options
    local rval
@@ -242,7 +212,8 @@ _do_fetch_operation()
 
    local options
 
-   options="`emit_mulle_fetch_eval_options`"
+   r_mulle_fetch_eval_options
+   options="${RVAL}"
 
    node_fetch_operation "${opname}" "${options}" \
                                     "${_url}" \
@@ -359,7 +330,8 @@ do_operation()
 
    local options
 
-   options="`emit_mulle_fetch_eval_options`"
+   r_mulle_fetch_eval_options
+   options="${RVAL}"
 
 
    node_fetch_operation "${opname}" "${options}" \
@@ -391,7 +363,7 @@ to \"${filename}\" as it is marked no-delete"
 
    log_info "Moving \"${previousfilename}\" to \"${filename}\""
 
-   mkdir_parent_if_missing "${filename}"
+   r_mkdir_parent_if_missing "${filename}"
    if ! exekutor mv ${OPTION_COPYMOVEFLAGS} "${previousfilename}" "${filename}"  >&2
    then
       fail "Move of ${C_RESET_BOLD}${previousfilename}${C_ERROR_TEXT} failed!"
@@ -472,11 +444,11 @@ chickening out"
    #
    local newexists
 
-   newexists="NO"
+   newexists='NO'
    if [ -e "${newfilename}" ]
    then
       log_fluff "\"${newfilename}\" already exists"
-      newexists="YES"
+      newexists='YES'
    else
       if [ -L "${newfilename}" ]
       then
@@ -499,7 +471,7 @@ chickening out"
    then
       log_debug "This is a new node"
 
-      if [ "${newexists}" = "YES" ]
+      if [ "${newexists}" = 'YES' ]
       then
          # hmm, but why ?
          # 1. it's some old cruft that we should clobber
@@ -576,7 +548,7 @@ As node is marked \"no-delete\" just remember it."
    then
       log_fluff "Node \"${newfilename}\" is unchanged"
 
-      if [ "${newexists}" = "YES" ]
+      if [ "${newexists}" = 'YES' ]
       then
          return
       fi
@@ -617,10 +589,10 @@ chickening out"
 
    local previousexists
 
-   previousexists="NO"
+   previousexists='NO'
    if [ -e "${previousfilename}" ]
    then
-      previousexists="YES"
+      previousexists='YES'
    fi
 
    #
@@ -634,7 +606,7 @@ chickening out"
 \"${newnodetype}\", need to fetch"
 
          # no-delete check here ?
-         if [ "${previousexists}" = "YES" ]
+         if [ "${previousexists}" = 'YES' ]
          then
             echo "remove"
          fi
@@ -646,7 +618,7 @@ chickening out"
    #
    # Nothing there ?
    #
-   if [ "${newexists}" = "NO" -a "${previousexists}" = "NO" ]
+   if [ "${newexists}" = 'NO' -a "${previousexists}" = 'NO' ]
    then
       log_fluff "Previous destination \"${previousfilename}\" and \
 current destination \"${newfilename}\" do not exist."
@@ -662,9 +634,9 @@ current destination \"${newfilename}\" do not exist."
    #
    if [ "${previousfilename}" != "${newfilename}" ]
    then
-      if [ "${newexists}" = "YES" ]
+      if [ "${newexists}" = 'YES' ]
       then
-         if [ "${previousexists}" = "YES" ]
+         if [ "${previousexists}" = 'YES' ]
          then
             log_warning "Destinations new \"${newfilename}\" and \
 old \"${previousfilename}\" exist. Doing nothing."
@@ -692,7 +664,7 @@ old \"${previousfilename}\" exist. Looks like a manual move. Doing nothing."
 
    case "${_nodetype}" in
       symlink)
-         if [ "${newexists}" = "YES" ]
+         if [ "${newexists}" = 'YES' ]
          then
             log_fluff "\"${newfilename}\" is symlink. Ignoring possible \
 differences in URL related info."
@@ -716,7 +688,12 @@ in URL related info."
    local have_set_url
    local have_upgrade
 
-   available="`node_list_operations "${_nodetype}"`" || return 1
+   if [ "${_branch}" != "${newbranch}" -o \
+        "${_tag}" != "${newtag}" -o \
+        "${_url}" != "${newurl}" ]
+   then
+      available="`node_list_operations "${_nodetype}"`" || return 1
+   fi
 
    if [ "${_branch}" != "${newbranch}" ]
    then
@@ -729,7 +706,7 @@ in URL related info."
       else
          log_fluff "Branch has changed from \"${_branch}\" to \
 \"${newbranch}\", need to fetch"
-         if [ "${previousexists}" = "YES" ]
+         if [ "${previousexists}" = 'YES' ]
          then
             echo "remove"
          fi
@@ -749,7 +726,7 @@ to checkout"
       else
          log_fluff "Tag has changed from \"${_tag}\" to \"${newtag}\", need \
 to fetch"
-         if [ "${previousexists}" = "YES" ]
+         if [ "${previousexists}" = 'YES' ]
          then
             echo "remove"
          fi
@@ -771,7 +748,7 @@ set remote _url and fetch"
       else
          log_fluff "URL has changed from \"${_url}\" to \"${newurl}\", need to \
 fetch"
-         if [ "${previousexists}" = "YES" ]
+         if [ "${previousexists}" = 'YES' ]
          then
             echo "remove"
          fi
@@ -813,8 +790,8 @@ __update_perform_item()
             update_safe_remove_node "${previousfilename}" "${_marks}" "${_uuid}" "${database}"
             fail "Failed to ${item} ${_url}"
          fi
-         contentschanged="YES"
-         remember="YES"
+         contentschanged='YES'
+         remember='YES'
       ;;
 
       "fetch")
@@ -830,7 +807,7 @@ __update_perform_item()
 
          case "$?" in
             0)
-               contentschanged="YES"
+               contentschanged='YES'
             ;;
 
             2)
@@ -838,7 +815,7 @@ __update_perform_item()
                _nodetype="symlink"
 
                # we don't really want to update that
-               contentschanged="NO"
+               contentschanged='NO'
             ;;
 
             *)
@@ -847,23 +824,23 @@ __update_perform_item()
                   log_info "${C_MAGENTA}${C_BOLD}${filename}${C_INFO} is not required."
 
                   db_add_missing "${database}" "${_uuid}" "${nodeline}"
-                  skip="YES"
+                  skip='YES'
                   return 1
                fi
 
                fail "The fetch of ${_url} failed and it is required."
             ;;
          esac
-         remember="YES"
+         remember='YES'
       ;;
 
       "remember")
-         remember="YES"
+         remember='YES'
       ;;
 
       "move")
          update_safe_move_node "${previousfilename}" "${filename}" "${_marks}"
-         remember="YES"
+         remember='YES'
       ;;
 
       "clobber")
@@ -925,9 +902,9 @@ _update_perform_actions()
 
    log_debug "${C_INFO}Actions for \"${_address}\": ${actionitems:-none}"
 
-   local contentschanged="NO"
-   local remember="NO"
-   local skip="NO"
+   local contentschanged='NO'
+   local remember='NO'
+   local skip='NO'
 
    local item
 
@@ -981,8 +958,10 @@ _memorize_nodeline_in_db()
 
    local nodeline
    local evaledurl
+   local RVAL
 
-   nodeline="`node_to_nodeline`"
+   r_node_to_nodeline
+   nodeline="${RVAL}"
    evaledurl="`eval echo "${_url}"`"
 
    _memorize_in_db "${nodeline}" "${evaledurl}" "$@"
@@ -1053,12 +1032,6 @@ do_actions_with_nodeline()
       return
    fi
 
-   if ! nodemarks_contain "${_marks}" "fetch-${MULLE_UNAME}"
-   then
-      log_fluff "\"${_address}\" is marked as no-fs-${MULLE_UNAME}, so there is nothing to update"
-      return
-   fi
-
    #
    # the _address is what is relative to the current config (configfile)
    # the filename is an absolute path
@@ -1092,13 +1065,15 @@ do_actions_with_nodeline()
 
    [ -z "${database}" ] && internal_fail "A share-only update gone wrong"
 
-   if ! nodemarks_contain "${_marks}" "update"
+   if ! nodemarks_contain "${_marks}" "update" ||
+      ! nodemarks_contain "${_marks}" "os-${MULLE_UNAME}" ||
+      ! nodemarks_contain "${_marks}" "os-${MULLE_UNAME}-update"
    then
       if [ ! -e "${filename}"  ]
       then
          if nodemarks_contain "${_marks}" "require"
          then
-            log_fluff "\"${_address}\" is marked as no-update and doesnt exist, \
+            log_fluff "\"${_address}\" is marked as no-update and doesn't exist, \
 but it is not required"
             return
          fi
@@ -1204,13 +1179,13 @@ remember        : ${remember}
 skip            : ${skip}
 nodetype        : ${nodetype}"
 
-   if [ "${skip}" = "YES" ]
+   if [ "${skip}" = 'YES' ]
    then
       log_debug "Skipping to next nodeline as indicated..."
       return 0
    fi
 
-   if [ "${remember}" = "YES" ]
+   if [ "${remember}" = 'YES' ]
    then
       if ! is_absolutepath "${filename}"
       then
@@ -1219,7 +1194,7 @@ nodetype        : ${nodetype}"
 
       _memorize_nodeline_in_db "${config}" "${database}" "${filename}"
 
-      if [ "${OPTION_FIX}" != "NO" ] && [ -d "${filename}" ]
+      if [ "${OPTION_FIX}" != 'NO' ] && [ -d "${filename}" ]
       then
          # we memorize the original config nodeline for easier comparison
          write_fix_info "${nodeline}" "${filename}"

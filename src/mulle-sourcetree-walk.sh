@@ -39,25 +39,26 @@ Usage:
    ${MULLE_USAGE_NAME} walk [options] <shell command>
 
    Walk over the nodes described by the config file and execute <shell command>
-   for each node. The working directory will be the node (if it is a directory).
+   for each node. The working directory will be the node (if it's a directory).
 
    Unprocessed node information is passed in the following environment
-   variables:
+   variables: MULLE_URL, MULLE_ADDRESS, MULLE_BRANCH, MULLE_TAG,MULLE_NODETYPE,
+   MULLE_UUID, MULLE_MARKS, MULLE_FETCHOPTIONS, MULLE_USERINFO MULLE_NODE
 
-   MULLE_URL  MULLE_ADDRESS  MULLE_BRANCH  MULLE_TAG  MULLE_NODETYPE
-   MULLE_UUID  MULLE_MARKS  MULLE_FETCHOPTIONS  MULLE_USERINFO
-   MULLE_NODE
+   Additional information is passed in: MULLE_DESTINATION, MULLE_MODE,
+   MULLE_FILENAME, MULLE_DATABASE, MULLE_ROOT_DIR.
 
-   Additional information is passed in:
+   This example finds the location of a dependency named foo:
 
-   MULLE_DESTINATION  MULLE_MODE  MULLE_DATABASE  MULLE_PROJECTDIR  MULLE_ROOT_DIR.
+      mulle-sourcetree walk --lenient '[ "${MULLE_ADDRESS}" = "foo" ] && \
+                                       echo "${MULLE_FILENAME}"'
 
    There is a little qualifier language available to query the marks of a node.
 EOF
-   if [ "${MULLE_FLAG_LOG_VERBOSE}" = "YES" ]
+   if [ "${MULLE_FLAG_LOG_VERBOSE}" = 'YES' ]
    then
-         cat <<EOF >&2
-   The syntax is:
+      cat <<EOF >&2
+   The syntax of a qualifier is:
       <expr>  : <sexpr> AND <expr>
               | <sexpr> OR <expr>
               | <sexpr>
@@ -77,8 +78,13 @@ EOF
                 ;
    AND/OR have the same precedence.
 EOF
+   else
+      cat <<EOF >&2
+   (Use -v for more info about the qualifier language)
+EOF
    fi
-         cat <<EOF >&2
+
+   cat <<EOF >&2
 
 Options:
    -n <value>       : node types to walk (default: ALL)
@@ -113,22 +119,26 @@ walk_filter_permissions()
    if [ ! -e "${filename}" ]
    then
       log_fluff "${filename} does not exist (yet)"
+
       case "${permissions}" in
          *fail-noexist*)
             fail "Missing \"${filename}\" is not yet fetched."
          ;;
 
          *warn-noexist*)
-            log_verbose "Repository expected in \"${filename}\" is not yet fetched"
+            log_verbose "Repository expected in \"${filename}\" is not yet \
+fetched"
             return 0
          ;;
 
          *skip-noexist*)
-            log_fluff "Repository expected in \"${filename}\" is not yet fetched, skipped"
+            log_fluff "Repository expected in \"${filename}\" is not yet \
+fetched, skipped"
             return 1
          ;;
 
          *)
+            log_debug "\"${filename}\" passed"
             return 0
          ;;
       esac
@@ -139,6 +149,7 @@ walk_filter_permissions()
    #
    if [ ! -L "${filename}" ]
    then
+      log_debug "\"${filename}\" passed"
       return 0
    fi
 
@@ -155,12 +166,12 @@ walk_filter_permissions()
       ;;
 
       *skip-symlink*)
-         log_fluff "\"${filename}\" is a symlink, skipped"
+         log_fluff "\"${filename}\" is a symlink, skipped."
          return 1
       ;;
 
       *descend-symlink*)
-         log_fluff "\"${filename}\" is a symlink, will be descended into"
+         log_fluff "\"${filename}\" is a symlink - it will be descended into."
          return 0
       ;;
    esac
@@ -380,7 +391,7 @@ _visit_node()
    #
    # filename comes from "environment"
    #
-   if [ "${VISIT_TWICE}" != "YES" ]
+   if [ "${VISIT_TWICE}" != 'YES' ]
    then
       case ":${VISITED}:" in
          *\:${_filename}\:*)
@@ -393,15 +404,18 @@ _visit_node()
 
    case ",${mode}," in
       *,flat,*)
+         log_debug "No recursion"
          _visit_callback "$@"
       ;;
 
       *,in-order,*)
+         log_debug "In-order recursion"
          _visit_recurse "$@"
          _visit_callback "$@"
       ;;
 
       *,pre-order,*)
+         log_debug "Pre-order recursion"
          _visit_callback "$@"
          _visit_recurse "$@"
       ;;
@@ -530,11 +544,14 @@ _visit_filter_nodeline()
    walk_filter_permissions "${_filename}" "${filterpermissions}"
    case $? in
       2)
-         mode="${mode} flat"  # don't recurse into symlinks unless asked to
+         # don't recurse into symlinks unless asked to
+         r_comma_concat "${mode}" 'flat'
+         mode="${RVAL}"
       ;;
 
       1)
-         log_fluff "Node \"${_address}\" with filename \"${_filename}\" doesn't jive with permissions \"${filterpermissions}\""
+         log_fluff "Node \"${_address}\" with filename \"${_filename}\" \
+doesn't jive with permissions \"${filterpermissions}\""
          return 0
       ;;
    esac
@@ -604,7 +621,8 @@ _visit_share_node()
       ;;
 
       1)
-         log_fluff "Node \"${_address}\" with filename \"${_filename}\" doesn't jive with permissions \"${filterpermissions}\""
+         log_fluff "Node \"${_address}\" with filename \"${_filename}\" \
+doesn't jive with permissions \"${filterpermissions}\""
          return 0
       ;;
    esac
@@ -653,7 +671,8 @@ _visit_share_node()
             ;;
          esac
       else
-         log_debug "Visit \"${next_datasource}\" as \"${_filename}\" doesn't exist yet"
+         log_debug "Visit \"${next_datasource}\" as \"${_filename}\" \
+doesn't exist yet"
       fi
    fi
 
@@ -668,6 +687,47 @@ _visit_share_node()
                "$@"
 }
 
+
+
+_print_walk_info()
+{
+   log_entry "_print_walk_info" "$@"
+
+   local datasource="$1"
+   local nodelines="$2"
+   local mode="$3"
+
+   if [ -z "${nodelines}" ]
+   then
+      if [ -z "${datasource}" ]
+      then
+         log_debug "Nothing to walk over ($PWD)"
+      else
+         log_debug "Nothing to walk over ($datasource)"
+      fi
+      return 1
+   fi
+
+   case ",${mode}," in
+      *,flat,*)
+         log_verbose "Flat walk \"${datasource:-.}\""
+      ;;
+
+      *,in-order,*)
+         log_debug "Recursive depth-first walk \"${datasource:-.}\""
+      ;;
+
+      *,pre-order,*)
+         log_debug "Recursive pre-order walk \"${datasource:-.}\""
+      ;;
+
+      *)
+         internal_fail "Mode \"${mode}\" incomplete"
+      ;;
+   esac
+
+   return 0
+}
 
 #
 # Mode        | Description
@@ -711,47 +771,6 @@ _walk_nodelines()
    done
 
    IFS="${DEFAULT_IFS}" ; set +o noglob
-}
-
-
-_print_walk_info()
-{
-   log_entry "_print_walk_info" "$@"
-
-   local datasource="$1"
-   local nodelines="$2"
-   local mode="$3"
-
-   if [ -z "${nodelines}" ]
-   then
-      if [ -z "${datasource}" ]
-      then
-         log_debug "Nothing to walk over ($PWD)"
-      else
-         log_debug "Nothing to walk over ($datasource)"
-      fi
-      return 1
-   fi
-
-   case ",${mode}," in
-      *,flat,*)
-         log_verbose "Flat walk \"${datasource:-.}\""
-      ;;
-
-      *,in-order,*)
-         log_debug "Recursive depth-first walk \"${datasource:-.}\""
-      ;;
-
-      *,pre-order,*)
-         log_debug "Recursive pre-order walk \"${datasource:-.}\""
-      ;;
-
-      *)
-         internal_fail "Mode \"${mode}\" incomplete"
-      ;;
-   esac
-
-   return 0
 }
 
 
@@ -888,7 +907,6 @@ sourcetree_walk()
    [ -z "${mode}" ] && internal_fail "mode can't be empty"
 
    MULLE_ROOT_DIR="`pwd -P`"
-   export MULLE_ROOT_DIR
 
    #
    # make pre-order default if no order set for share or recurse
@@ -992,15 +1010,15 @@ sourcetree_walk_main()
    local OPTION_CALLBACK_ROOT="DEFAULT"
    local OPTION_CD="DEFAULT"
    local OPTION_TRAVERSE_STYLE="PREORDER"
-   local OPTION_EXTERNAL_CALL="YES"
-   local OPTION_LENIENT="NO"
+   local OPTION_EXTERNAL_CALL='YES'
+   local OPTION_LENIENT='NO'
    local OPTION_MARKS=""
    local OPTION_MARKS_QUALIFIER=""
    local OPTION_NODETYPES=""
    local OPTION_PERMISSIONS="" # empty!
    local OPTION_WALK_DB="DEFAULT"
-   local OPTION_EVAL_EXEKUTOR="YES"
-   local OPTION_PASS_TECHNICAL_FLAGS="NO"
+   local OPTION_EVAL_EXEKUTOR='YES'
+   local OPTION_PASS_TECHNICAL_FLAGS='NO'
    local RVAL
 
    while [ $# -ne 0 ]
@@ -1011,31 +1029,31 @@ sourcetree_walk_main()
          ;;
 
          --callback-root)
-            OPTION_CALLBACK_ROOT="YES"
+            OPTION_CALLBACK_ROOT='YES'
          ;;
 
          -N|--no-eval-exekutor)
-            OPTION_EVAL_EXEKUTOR="NO"
+            OPTION_EVAL_EXEKUTOR='NO'
          ;;
 
          --no-callback-root)
-            OPTION_CALLBACK_ROOT="NO"
+            OPTION_CALLBACK_ROOT='NO'
          ;;
 
          --cd)
-            OPTION_CD="YES"
+            OPTION_CD='YES'
          ;;
 
          --no-cd)
-            OPTION_CD="NO"
+            OPTION_CD='NO'
          ;;
 
          --walk-db|--walk-db-dir)
-            OPTION_WALK_DB="YES"
+            OPTION_WALK_DB='YES'
          ;;
 
          --walk-config|--walk-config-file)
-            OPTION_WALK_DB="NO"
+            OPTION_WALK_DB='NO'
          ;;
 
          --in-order)
@@ -1047,19 +1065,19 @@ sourcetree_walk_main()
          ;;
 
          -l|--lenient)
-            OPTION_LENIENT="YES"
+            OPTION_LENIENT='YES'
          ;;
 
          --no-lenient)
-            OPTION_LENIENT="NO"
+            OPTION_LENIENT='NO'
          ;;
 
          --pass-flags)
-            OPTION_PASS_TECHNICAL_FLAGS="YES"
+            OPTION_PASS_TECHNICAL_FLAGS='YES'
          ;;
 
          --no-pass-flags)
-            OPTION_PASS_TECHNICAL_FLAGS="NO"
+            OPTION_PASS_TECHNICAL_FLAGS='NO'
          ;;
 
          #
@@ -1130,27 +1148,27 @@ sourcetree_walk_main()
       ;;
    esac
 
-   if [ "${OPTION_LENIENT}" = "YES" ]
+   if [ "${OPTION_LENIENT}" = 'YES' ]
    then
       r_comma_concat "${mode}" "lenient"
       mode="${RVAL}"
    fi
-   if [ "${OPTION_CD}" = "YES" ]
+   if [ "${OPTION_CD}" = 'YES' ]
    then
       r_comma_concat "${mode}" "docd"
       mode="${RVAL}"
    fi
-   if [ "${OPTION_EXTERNAL_CALL}" = "YES" ]
+   if [ "${OPTION_EXTERNAL_CALL}" = 'YES' ]
    then
       r_comma_concat "${mode}" "external"
       mode="${RVAL}"
    fi
-   if [ "${OPTION_WALK_DB}" = "YES" ]
+   if [ "${OPTION_WALK_DB}" = 'YES' ]
    then
       r_comma_concat "${mode}" "walkdb"
       mode="${RVAL}"
    fi
-   if [ "${OPTION_CALLBACK_ROOT}" = "YES" ]
+   if [ "${OPTION_CALLBACK_ROOT}" = 'YES' ]
    then
       r_comma_concat "${mode}" "callroot"
       mode="${RVAL}"

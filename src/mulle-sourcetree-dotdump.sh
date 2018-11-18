@@ -297,7 +297,7 @@ print_node()
 
    state="`_get_fs_status "${destination}" `"
 
-   if [ "${isshared}" = "NO" ]
+   if [ "${isshared}" = 'NO' ]
    then
       case "${state}" in
          ready)
@@ -428,7 +428,7 @@ walk_dotdump()
    log_debug "destination: ${destination}"
    log_debug "virtual:     ${virtual}"
 
-   if [ "${OPTION_OUTPUT_EVAL}" = "YES" ]
+   if [ "${OPTION_OUTPUT_EVAL}" = 'YES' ]
    then
       url="`eval echo "${url}"`"
       branch="`eval echo "${branch}"`"
@@ -437,8 +437,8 @@ walk_dotdump()
    fi
 
    relative=""
-   isshared="NO"
-   isglobalshared="NO"
+   isshared='NO'
+   isglobalshared='NO'
 
    #
    # replace a known path with a variable
@@ -447,13 +447,13 @@ walk_dotdump()
    then
       if string_has_prefix "${destination}" "${MULLE_SOURCETREE_SHARE_DIR}"
       then
-         isshared="YES"
+         isshared='YES'
 
          local tmp
 
          if is_absolutepath "${MULLE_SOURCETREE_SHARE_DIR}"
          then
-            isglobalshared="YES"
+            isglobalshared='YES'
             tmp="`string_remove_prefix "${destination}" "${MULLE_SOURCETREE_SHARE_DIR}" `"
             destination="`filepath_concat '${MULLE_SOURCETREE_SHARE_DIR}' "${tmp}"`"
          fi
@@ -483,7 +483,7 @@ walk_dotdump()
 
       style=""
       label=""
-      if [ "${OPTION_OUTPUT_STATE}" = "YES" ]
+      if [ "${OPTION_OUTPUT_STATE}" = 'YES' ]
       then
          if [ -L "${relative}" ]
          then
@@ -500,7 +500,7 @@ walk_dotdump()
          relidentifier=
          if [ -z "${previdentifier}" ]
          then
-            if [ "${isglobalshared}" = "NO" ]
+            if [ "${isglobalshared}" = 'NO' ]
             then
                relidentifier="${ROOT_IDENTIFIER} -> ${identifier}"
             fi
@@ -540,7 +540,7 @@ walk_dotdump()
    TOEMIT_DIRECTORIES="`fgrep -v -s -x "${identifier}" <<< "${TOEMIT_DIRECTORIES}"`"
    log_debug "[-] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
 
-   if [ "${OPTION_OUTPUT_HTML}" = "YES" ]
+   if [ "${OPTION_OUTPUT_HTML}" = 'YES' ]
    then
       html_print_node "${identifier}" \
                       "${isshared}"   \
@@ -573,10 +573,10 @@ emit_root()
 {
    log_entry "emit_root" "$@"
 
-   if [ "${OPTION_OUTPUT_HTML}" = "YES" ]
+   if [ "${OPTION_OUTPUT_HTML}" = 'YES' ]
    then
       html_print_node "${ROOT_IDENTIFIER}" \
-                      "NO" \
+                      'NO' \
                            "${url}" \
                            "${PWD}" \
                            "" \
@@ -587,7 +587,7 @@ emit_root()
                  "." \
                  "${ROOT_IDENTIFIER}" \
                  "`fast_basename "${PWD}"`" \
-                 "NO"
+                 'NO'
    fi
 }
 
@@ -613,7 +613,7 @@ emit_remaining_directories()
                  "${name}" \
                  "${identifier}"  \
                  "${name}" \
-                 "NO"
+                 'NO'
    done
    IFS="${DEFAULT_IFS}"; set +o noglob
 }
@@ -677,6 +677,14 @@ sourcetree_dotdump()
    cat <<EOF
 digraph sourcetree
 {
+EOF
+
+   if [ "${OPTION_OUTPUT_HTML}" = 'YES' ]
+   then
+      echo "   rankdir=LR;"
+   fi
+
+   cat <<EOF
    node [ shape="box"; style="filled" ]
 
 ${output}
@@ -693,9 +701,9 @@ sourcetree_dotdump_main()
    local OPTION_PERMISSIONS="" # empty!
    local OPTION_NODETYPES=""
    local OPTION_WALK_DB="DEFAULT"
-   local OPTION_OUTPUT_HTML="NO"
-   local OPTION_OUTPUT_EVAL="NO"
-   local OPTION_OUTPUT_STATE="NO"
+   local OPTION_OUTPUT_HTML='NO'
+   local OPTION_OUTPUT_EVAL='NO'
+   local OPTION_OUTPUT_STATE='NO'
 
    while [ $# -ne 0 ]
    do
@@ -705,35 +713,35 @@ sourcetree_dotdump_main()
          ;;
 
          --walk-db|--walk-db-dir)
-            OPTION_WALK_DB="YES"
+            OPTION_WALK_DB='YES'
          ;;
 
          --walk-config|--walk-config-file)
-            OPTION_WALK_DB="NO"
+            OPTION_WALK_DB='NO'
          ;;
 
          --output-eval)
-            OPTION_OUTPUT_EVAL="YES"
+            OPTION_OUTPUT_EVAL='YES'
          ;;
 
          --no-output-eval)
-            OPTION_OUTPUT_EVAL="NO"
+            OPTION_OUTPUT_EVAL='NO'
          ;;
 
          --output-state)
-            OPTION_OUTPUT_STATE="YES"
+            OPTION_OUTPUT_STATE='YES'
          ;;
 
          --no-output-state)
-            OPTION_OUTPUT_STATE="NO"
+            OPTION_OUTPUT_STATE='NO'
          ;;
 
          --output-html)
-            OPTION_OUTPUT_HTML="YES"
+            OPTION_OUTPUT_HTML='YES'
          ;;
 
          --no-output-html)
-            OPTION_OUTPUT_HTML="NO"
+            OPTION_OUTPUT_HTML='NO'
          ;;
          #
          # more common flags
@@ -779,17 +787,19 @@ sourcetree_dotdump_main()
    mode="${SOURCETREE_MODE}"
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
-      mode="`comma_concat "${mode}" "in-order"`"
+      r_comma_concat "${mode}" "in-order"
+      mode="${RVAL}"
    fi
 
-   if [ "${OPTION_WALK_DB}" = "YES" ]
+   if [ "${OPTION_WALK_DB}" = 'YES' ]
    then
-      if ! db_dir_exists
+      if ! db_dir_exists "${SOURCETREE_START}"
       then
          log_info "There is no ${SOURCETREE_DB_NAME} here"
       fi
 
-      mode="`comma_concat "${mode}" "walkdb"`"
+      r_comma_concat "${mode}" "walkdb"
+      mode="${RVAL}"
    else
       if ! cfg_exists "${SOURCETREE_START}"
       then

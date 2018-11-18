@@ -3,7 +3,7 @@
 # (c) 2015, coded by Nat!, Mulle KybernetiK
 #
 
-if [ "${MULLE_SOURCETREE_NO_COLOR}" != "YES" ]
+if [ "${MULLE_SOURCETREE_NO_COLOR}" != 'YES' ]
 then
    # Escape sequence and resets
    C_RESET="\033[0m"

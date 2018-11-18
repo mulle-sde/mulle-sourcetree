@@ -385,7 +385,7 @@ cfg_search_for_configfile()
    [ -z "${physceiling}" ] && fail "SOURCETREE_START/MULLE_VIRTUAL_ROOT does not exist (${ceiling})"
 
    # check that physdirectory is inside physceiling
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = "YES" ]
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
       log_trace2 "physceiling  : ${physceiling}"
       log_trace2 "physdirectory: ${physdirectory}"
@@ -517,7 +517,8 @@ cfg_determine_working_directory()
             return 0
          fi
 
-         parent="`fast_dirname "${directory}"`"
+         r_fast_dirname "${directory}"
+         parent="${RVAL}"
          cfg_search_for_configfile "${parent}" "/"
          if [ $? -eq 0 ]
          then
@@ -540,7 +541,8 @@ cfg_determine_working_directory()
          while :
          do
             found="${directory}"
-            parent="`fast_dirname "${directory}"`"
+            r_fast_dirname "${directory}"
+            parent="${RVAL}"
             if [ "${parent}" = "${SOURCETREE_START}" ]
             then
                break
@@ -653,3 +655,47 @@ cfg_absolute_filename()
 
    echo "${MULLE_VIRTUAL_ROOT}${config}${address}"
 }
+
+
+cfg_reuuid()
+{
+   log_entry "cfg_reuuid" "$@"
+
+   local config="$1"
+
+   local nodelines
+   local nodeline
+   local output
+
+   nodelines="`cfg_read "${config}"`" || exit 1
+
+   [ -z "${nodelines}" ] && return 0
+
+   set -o noglob ; IFS="
+"
+   for nodeline in ${nodelines}
+   do
+      IFS="${DEFAULT_IFS}"; set +o noglob
+
+      local _branch
+      local _address
+      local _fetchoptions
+      local _nodetype
+      local _marks
+      local _raw_userinfo
+      local _tag
+      local _url
+      local _uuid
+      local _userinfo
+
+      nodeline_parse "${nodeline}"
+      _uuid="`node_uuidgen`" || exit 1
+      _r_node_to_nodeline
+      r_add_line "${output}" "${RVAL}"
+      output="${RVAL}"
+   done
+   IFS="${DEFAULT_IFS}"; set +o noglob
+
+   cfg_write "${config}" "${output}"
+}
+

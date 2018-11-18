@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 
-[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
 run_mulle_sourcetree()
@@ -152,7 +152,7 @@ run_test3()
    fi
 
    export MULLE_FETCH_SEARCH_PATH="${repos}"
-   export MULLE_SOURCETREE_SYMLINK="YES"
+   export MULLE_SOURCETREE_SYMLINK='YES'
 
    if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
    then

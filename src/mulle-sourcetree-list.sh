@@ -103,52 +103,72 @@ _sourcetree_augment_mode_with_output_options()
    log_entry "_sourcetree_augment_mode_with_output_options" "$@"
 
    local mode="$1"
+   local RVAL
 
-   if [ "${OPTION_OUTPUT_URL}" != "NO" ]
+   if [ "${OPTION_OUTPUT_URL}" != 'NO' ]
    then
-      mode="`comma_concat "${mode}" "output_url"`"
+      r_comma_concat "${mode}" "output_url"
+      mode="${RVAL}"
    fi
-   if [ "${OPTION_OUTPUT_FULL}" = "YES" ]
+   if [ "${OPTION_OUTPUT_FULL}" = 'YES' ]
    then
-      mode="`comma_concat "${mode}" "output_full"`"
+      r_comma_concat "${mode}" "output_full"
+      mode="${RVAL}"
    fi
-   if [ "${OPTION_OUTPUT_EVAL}" = "YES" ]
+   if [ "${OPTION_OUTPUT_EVAL}" = 'YES' ]
    then
-      mode="`comma_concat "${mode}" "output_eval"`"
+      r_comma_concat "${mode}" "output_eval"
+      mode="${RVAL}"
    fi
-   if [ "${OPTION_OUTPUT_UUID}" = "YES" ]
+   if [ "${OPTION_OUTPUT_UUID}" = 'YES' ]
    then
-      mode="`comma_concat "${mode}" "output_uuid"`"
+      r_comma_concat "${mode}" "output_uuid"
+      mode="${RVAL}"
    fi
 
    case "${OPTION_OUTPUT_FORMAT}" in
       "RAW")
-         mode="`comma_concat "${mode}" "output_raw"`"
-         if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
+         r_comma_concat "${mode}" "output_raw"
+         mode="${RVAL}"
+         if [ "${OPTION_OUTPUT_HEADER}" != 'NO' ]
          then
-            mode="`comma_concat "${mode}" "output_header"`"
+            r_comma_concat "${mode}" "output_header"
+            mode="${RVAL}"
          fi
       ;;
 
       "CMD")
-         mode="`comma_concat "${mode}" "output_cmd"`"
+         r_comma_concat "${mode}" "output_cmd"
+         mode="${RVAL}"
+         r_comma_concat "${mode}" "output_full"
+         mode="${RVAL}"
+      ;;
+
+      "CMD2")
+         r_comma_concat "${mode}" "output_cmd2"
+         mode="${RVAL}"
+         r_comma_concat "${mode}" "output_full"
+         mode="${RVAL}"
       ;;
 
       *)
          [ -z "`command -v column`" ] && fail "Tool \"column\" is not available, use --output-raw"
 
-         if [ "${OPTION_OUTPUT_HEADER}" != "NO" ]
+         if [ "${OPTION_OUTPUT_HEADER}" != 'NO' ]
          then
-            mode="`comma_concat "${mode}" "output_header"`"
-            if [ "${OPTION_OUTPUT_SEPARATOR}" != "NO" ]
+            r_comma_concat "${mode}" "output_header"
+            mode="${RVAL}"
+            if [ "${OPTION_OUTPUT_SEPARATOR}" != 'NO' ]
             then
-               mode="`comma_concat "${mode}" "output_separator"`"
+               r_comma_concat "${mode}" "output_separator"
+               mode="${RVAL}"
             fi
          fi
 
-         if [ "${OPTION_OUTPUT_COLUMN}" != "NO" ]
+         if [ "${OPTION_OUTPUT_COLUMN}" != 'NO' ]
          then
-            mode="`comma_concat "${mode}" "output_column"`"
+            r_comma_concat "${mode}" "output_column"
+            mode="${RVAL}"
          fi
       ;;
    esac
@@ -178,6 +198,7 @@ _sourcetree_nodeline_remove_marks()
    nodeline_parse "${nodeline}"
 
    local marks
+   local RVAL
 
    marks="${_marks}"
    _marks=
@@ -187,7 +208,8 @@ _sourcetree_nodeline_remove_marks()
    do
       if ! nodemarks_contain "${nomarks}" "${mark}"
       then
-         _marks="`comma_concat "${_marks}" "${mark}" `"
+         r_comma_concat "${_marks}" "${mark}"
+         _marks="${RVAL}"
       fi
    done
    set +f; IFS="${DEFAULT_IFS}"
@@ -204,6 +226,7 @@ _sourcetree_contents()
    local filternodetypes="$2"
    local marksqualifier="$3"
    local formatstring="$4"
+   local cmdline="$5"
 
    local nodeline
    local nodelines
@@ -246,7 +269,7 @@ _sourcetree_contents()
          nodeline="`_sourcetree_nodeline_remove_marks "${nodeline}" "${OPTION_NO_OUTPUT_MARKS}" `"
       fi
 
-      nodeline_printf "${nodeline}" "${mode}" "${formatstring}"
+      nodeline_printf "${nodeline}" "${mode}" "${formatstring}" "${cmdline}"
    done
    IFS="${DEFAULT_IFS}"; set +o noglob
 }
@@ -267,7 +290,7 @@ _list_nodes()
       return
    fi
 
-   if [ "${OPTION_OUTPUT_BANNER}" = "YES" ] ||
+   if [ "${OPTION_OUTPUT_BANNER}" = 'YES' ] ||
       [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" -a "${OPTION_OUTPUT_FORMAT}" = "FMT" ]
    then
       _sourcetree_banner
@@ -285,20 +308,21 @@ _list_nodes()
 }
 
 
-emit_commandline_flag()
+r_commandline_flag()
 {
-   log_entry "emit_commandline_flag" "$@"
+   log_entry "r_commandline_flag" "$@"
 
    local value="$1"
    local flag="$2"
 
+   RVAL=""
    case "${value}" in
-      "NO")
-         echo "--no-${flag}"
+      'NO')
+         RVAL="--no-${flag}"
       ;;
 
-      "YES")
-         echo "--${flag}"
+      'YES')
+         RVAL="--${flag}"
       ;;
    esac
 }
@@ -324,62 +348,71 @@ list_nodes()
 
    local arguments
    local flag
+   local RVAL
 
    arguments=
 
    if [ ! -z "${formatstring}" ]
    then
-      arguments="`concat "${arguments}" "--format" `"
-      arguments="`concat "${arguments}" "${formatstring}" `"
+      arguments="--format ${formatstring}"
    fi
 
-   flag="`emit_commandline_flag "${OPTION_OUTPUT_BANNER}" "output-banner" `"
-   arguments="`concat "${arguments}" "${flag}" `"
+   r_commandline_flag "${OPTION_OUTPUT_BANNER}" "output-banner"
+   r_concat "${arguments}" "${RVAL}"
+   arguments="${RVAL}"
 
-   flag="`emit_commandline_flag "${OPTION_OUTPUT_EVAL}" "output-eval" `"
-   arguments="`concat "${arguments}" "${flag}" `"
+   r_commandline_flag"${OPTION_OUTPUT_EVAL}" "output-eval"
+   r_concat "${arguments}" "${RVAL}"
+   arguments="${RVAL}"
 
-   flag="`emit_commandline_flag "${OPTION_OUTPUT_UUID}" "output-uuid" `"
-   arguments="`concat "${arguments}" "${flag}" `"
+   r_commandline_flag"${OPTION_OUTPUT_UUID}" "output-uuid"
+   r_concat "${arguments}" "${RVAL}"
+   arguments="${RVAL}"
 
-   flag="`emit_commandline_flag "${OPTION_OUTPUT_FULL}" "output-full" `"
-   arguments="`concat "${arguments}" "${flag}" `"
+   r_commandline_flag"${OPTION_OUTPUT_FULL}" "output-full"
+   r_concat "${arguments}" "${RVAL}"
+   arguments="${RVAL}"
 
-   flag="`emit_commandline_flag "${OPTION_OUTPUT_SEPARATOR}" "output-separator" `"
-   arguments="`concat "${arguments}" "${flag}" `"
+   r_commandline_flag"${OPTION_OUTPUT_SEPARATOR}" "output-separator"
+   r_concat "${arguments}" "${RVAL}"
+   arguments="${RVAL}"
 
-   flag="`emit_commandline_flag "${OPTION_OUTPUT_COLOR}" "output-color" `"
-   arguments="`concat "${arguments}" "${flag}" `"
+   r_commandline_flag"${OPTION_OUTPUT_COLOR}" "output-color"
+   r_concat "${arguments}" "${RVAL}"
+   arguments="${RVAL}"
 
 
-#   if [ "${OPTION_OUTPUT_HEADER}" = "NO" ]
+#   if [ "${OPTION_OUTPUT_HEADER}" = 'NO' ]
 #   then
-#      arguments="`concat "${arguments}" "--no-output-header" `"
+#      arguments="`concat "${arguments}" "--output-no-header" `"
 #   fi
 
    case "${OPTION_OUTPUT_FORMAT}" in
       "RAW")
-         arguments="`concat "${arguments}" "--output-raw" `"
+         r_concat "${arguments}" "--output-raw"
+         arguments="${RVAL}"
          if [ -z "${OPTION_OUTPUT_HEADER}" ]
          then
-            OPTION_OUTPUT_HEADER="NO"
+            OPTION_OUTPUT_HEADER='NO'
          fi
       ;;
 
       "CMD")
-         arguments="`concat "${arguments}" "--output-cmd" `"
-         OPTION_OUTPUT_HEADER="NO"
+         r_concat "${arguments}" "--output-cmd"
+         arguments="${RVAL}"
+         OPTION_OUTPUT_HEADER='NO'
       ;;
 
       "FMT")
-         arguments="`concat "${arguments}" "--output-fmt" `"
+         r_concat "${arguments}" "--output-fmt"
+         arguments="${RVAL}"
          if [ -z "${OPTION_OUTPUT_HEADER}" ]
          then
-            if [ "${IS_PRINTING}" != "YES" ]
+            if [ "${IS_PRINTING}" != 'YES' ]
             then
-               OPTION_OUTPUT_HEADER="NO"
+               OPTION_OUTPUT_HEADER='NO'
             else
-               OPTION_OUTPUT_HEADER="YES"
+               OPTION_OUTPUT_HEADER='YES'
             fi
          fi
       ;;
@@ -388,10 +421,11 @@ list_nodes()
    #
    # some special treatment
    #
-   flag="`emit_commandline_flag "${OPTION_OUTPUT_HEADER}" "output-header" `"
-   arguments="`concat "${arguments}" "${flag}" `"
+   r_commandline_flag"${OPTION_OUTPUT_HEADER}" "output-header"
+   r_concat "${arguments}" "${RVAL}"
+   arguments="${RVAL}"
 
-   IS_PRINTING="YES"; export IS_PRINTING
+   IS_PRINTING='YES'; export IS_PRINTING
 
    sourcetree_walk_main --pre-order --cd \
          "${MULLE_EXECUTABLE}" "${MULLE_TECHNICAL_FLAGS}" --flat -e list ${arguments}
@@ -439,8 +473,8 @@ sourcetree_list_main()
    local OPTION_OUTPUT_COLUMN="DEFAULT"
    local OPTION_OUTPUT_UUID="DEFAULT"
    local OPTION_OUTPUT_URL="DEFAULT"
-   local OPTION_UNSAFE="NO"
-
+   local OPTION_UNSAFE='NO'
+   local OPTION_OUTPUT_CMDLINE="${MULLE_USAGE_NAME} -N add"
    local OPTION_NODETYPES
    local OPTION_MARKS
    local OPTION_MARKS_QUALIFIER
@@ -458,7 +492,8 @@ sourcetree_list_main()
             shift
 
             # allow to concatenate multiple flags
-            OPTION_MARKS="`comma_concat "${OPTION_MARKS}" "$1" `"
+            r_comma_concat "${OPTION_MARKS}" "$1"
+            OPTION_MARKS="${RVAL}"
          ;;
 
          -q|--qualifier)
@@ -473,7 +508,8 @@ sourcetree_list_main()
             [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
             shift
 
-            OPTION_NODETYPES="`comma_concat "${OPTION_NODETYPES}" "$1" `"
+            r_comma_concat "${OPTION_NODETYPES}" "$1"
+            OPTION_NODETYPES="${RVAL}"
          ;;
 
          --format)
@@ -491,83 +527,87 @@ sourcetree_list_main()
             OPTION_OUTPUT_FORMAT="CMD"
          ;;
 
+         --output-cmd2|--out-command2)
+            OPTION_OUTPUT_FORMAT="CMD2"
+         ;;
+
          --output-raw|--output-csv)
             OPTION_OUTPUT_FORMAT="RAW"
          ;;
 
          --output-color)
-            OPTION_OUTPUT_COLOR="YES"
+            OPTION_OUTPUT_COLOR='YES'
          ;;
 
          --no-output-color|--output-no-color)
-            OPTION_OUTPUT_COLOR="NO"
+            OPTION_OUTPUT_COLOR='NO'
          ;;
 
          --output-column)
-            OPTION_OUTPUT_COLUMN="YES"
+            OPTION_OUTPUT_COLUMN='YES'
          ;;
 
          --no-output-column|--output-no-column)
-            OPTION_OUTPUT_COLUMN="NO"
+            OPTION_OUTPUT_COLUMN='NO'
          ;;
 
          --output-header)
-            OPTION_OUTPUT_HEADER="YES"
+            OPTION_OUTPUT_HEADER='YES'
          ;;
 
          --no-output-header|--output-no-header)
-            OPTION_OUTPUT_HEADER="NO"
+            OPTION_OUTPUT_HEADER='NO'
          ;;
 
          --output-separator)
-            OPTION_OUTPUT_SEPARATOR="YES"
+            OPTION_OUTPUT_SEPARATOR='YES'
          ;;
 
          --no-output-separator|--output-no-separator)
-            OPTION_OUTPUT_SEPARATOR="NO"
+            OPTION_OUTPUT_SEPARATOR='NO'
          ;;
 
          #
          #
          #
          --output-full)
-            OPTION_OUTPUT_FULL="YES"
+            OPTION_OUTPUT_FULL='YES'
          ;;
 
          --no-output-full|--output-no-full)
-            OPTION_OUTPUT_FULL="NO"
+            OPTION_OUTPUT_FULL='NO'
          ;;
 
          --output-url)
-            OPTION_OUTPUT_URL="YES"
+            OPTION_OUTPUT_URL='YES'
          ;;
 
          --no-output-url|--output-no-url)
-            OPTION_OUTPUT_URL="NO"
+            OPTION_OUTPUT_URL='NO'
          ;;
 
          --output-uuid)
-            OPTION_OUTPUT_UUID="YES"
+            OPTION_OUTPUT_UUID='YES'
          ;;
 
          --no-output-uuid|--output-no-uuid)
-            OPTION_OUTPUT_UUID="NO"
+            OPTION_OUTPUT_UUID='NO'
          ;;
 
          --output-banner)
-            OPTION_OUTPUT_BANNER="YES"
+            OPTION_OUTPUT_BANNER='YES'
          ;;
 
          --no-output-banner|--output-no-banner)
-            OPTION_OUTPUT_BANNER="NO"
+            OPTION_OUTPUT_BANNER='NO'
          ;;
 
          --output-eval)
-            OPTION_OUTPUT_EVAL="YES"
+            OPTION_OUTPUT_EVAL='YES'
          ;;
 
          --no-output-eval|--output-no-eval)
-            OPTION_OUTPUT_EVAL="NO"
+            OPTION_OUTPUT_EVAL='NO'
          ;;
 
          --no-output-marks|--output-no-marks)
@@ -575,6 +615,13 @@ sourcetree_list_main()
             shift
 
             OPTION_NO_OUTPUT_MARKS="$1"
+         ;;
+
+         --output-cmdline)
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            shift
+
+            OPTION_OUTPUT_CMDLINE="$1"
          ;;
 
          -*)
@@ -613,7 +660,7 @@ sourcetree_list_main()
    # if mode is not flat, we use output-banner by default
    if [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" -a "${SOURCETREE_MODE}" != "flat" ]
    then
-      OPTION_OUTPUT_BANNER="YES"
+      OPTION_OUTPUT_BANNER='YES'
    fi
 
    local mode
@@ -622,7 +669,11 @@ sourcetree_list_main()
 
    _sourcetree_list_convert_marks_to_qualifier  ## UGLY
 
-   list_nodes "${mode}" "${OPTION_NODETYPES}" "${OPTION_MARKS_QUALIFIER}" "${OPTION_FORMAT}"
+   list_nodes "${mode}" \
+              "${OPTION_NODETYPES}" \
+              "${OPTION_MARKS_QUALIFIER}" \
+              "${OPTION_FORMAT}" \
+              "${OPTION_OUTPUT_CMDLINE}"
 }
 
 

@@ -29,23 +29,24 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_UPDATE_SH="included"
+MULLE_SOURCETREE_SYNC_SH="included"
 
 
-sourcetree_update_usage()
+sourcetree_sync_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} update [options]
+   ${MULLE_USAGE_NAME} sync [options]
 
-   Apply recent edits to the source tree. The configuration is read and
-   the changes applies. This will fetch, if the destination is absent.
+   Apply recent edits in the source tree to the filesystem. The configuration
+   is read and the changes applied. This will fetch repositories and archives,
+   if the destination is absent.
 
-   Use ${MULLE_EXECUTABLE_NAME} fix instead, if you want to sync the source
+   Use \`${MULLE_EXECUTABLE_NAME} fix\`, if you want to sync the source
    tree with changes you made  in the filesystem.
 
 Options:
-   -r                         : update recursively
+   -r                         : sync recursively
    --no-fix                   : do not write ${SOURCETREE_FIX_FILE} files
    --share                    : create database in shared configuration
    --override-branch <branch> : temporary override of the _branch for all nodes
@@ -186,7 +187,7 @@ _recurse_db_nodeline()
 
    _get_db_recurseinfo "${database}" "${_uuid}"
 
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = "YES" ]
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
       log_trace2 "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
       log_trace2 "config             : ${config}"
@@ -201,7 +202,7 @@ _recurse_db_nodeline()
    _check_recurse_nodeline "${_filename}"
    if _style_for_${style} $?
    then
-      _sourcetree_update_${_style} "${_config}" "${_database}"
+      _sourcetree_sync_${_style} "${_config}" "${_database}"
    fi
 }
 
@@ -240,7 +241,7 @@ _recurse_config_nodeline()
 
    _get_config_recurseinfo "${config}" "${_address}"
 
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = "YES" ]
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
       log_trace2 "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
       log_trace2 "config             : ${config}"
@@ -254,7 +255,7 @@ _recurse_config_nodeline()
 
    [ $? -ne 0 ] && return 1
 
-   _sourcetree_update_${style} "${_config}" "${_database}"
+   _sourcetree_sync_${style} "${_config}" "${_database}"
 }
 
 
@@ -383,9 +384,9 @@ _style_for_only_share()
 }
 
 
-_update_nodeline_only_share()
+_sync_nodeline_only_share()
 {
-   log_entry "_update_nodeline_only_share" "$@"
+   log_entry "_sync_nodeline_only_share" "$@"
 
    local nodeline="$1"
    local config="$2"
@@ -414,9 +415,9 @@ _update_nodeline_only_share()
 }
 
 
-_sourcetree_update_only_share()
+_sourcetree_sync_only_share()
 {
-   log_entry "_sourcetree_update_only_share" "$@"
+   log_entry "_sourcetree_sync_only_share" "$@"
 
    local config="$1"
    local database="$2"
@@ -471,7 +472,7 @@ _sourcetree_update_only_share()
          VISITED="${RVAL}"
       fi
 
-      _update_nodeline_only_share "${nodeline}" "${config}" "${database}"
+      _sync_nodeline_only_share "${nodeline}" "${config}" "${database}"
    done
    IFS="${DEFAULT_IFS}" ; set +o noglob
 
@@ -513,9 +514,9 @@ _style_for_share()
 # config     : config relative to MULLE_VIRTUAL_ROOT
 # database   : prefix relative to MULLE_VIRTUAL_ROOT
 #
-_sourcetree_update_share()
+_sourcetree_sync_share()
 {
-   log_entry "_sourcetree_update_share" "$@"
+   log_entry "_sourcetree_sync_share" "$@"
 
    local config="$1"
    local database="$2"
@@ -600,16 +601,16 @@ _sourcetree_update_share()
 }
 
 
-sourcetree_update_share()
+sourcetree_sync_share()
 {
-   log_entry "sourcetree_update_share" "$@"
+   log_entry "sourcetree_sync_share" "$@"
 
    local config="$1"
    local database="$2"
 
    local UPDATED
 
-   _sourcetree_update_share "${config}" "${database}"
+   _sourcetree_sync_share "${config}" "${database}"
 
    log_debug "UPDATED: ${UPDATED}"
 
@@ -643,9 +644,9 @@ _style_for_recurse()
 # config     : config relative to MULLE_VIRTUAL_ROOT
 # database   : prefix relative to MULLE_VIRTUAL_ROOT
 #
-_sourcetree_update_recurse()
+_sourcetree_sync_recurse()
 {
-   log_entry "_sourcetree_update_recurse" "$@"
+   log_entry "_sourcetree_sync_recurse" "$@"
 
    local config="$1"
    local database="$2"
@@ -691,14 +692,14 @@ _sourcetree_update_recurse()
 }
 
 
-sourcetree_update_recurse()
+sourcetree_sync_recurse()
 {
-   log_entry "sourcetree_update_recurse" "$@"
+   log_entry "sourcetree_sync_recurse" "$@"
 
    local config="$1"
    local database="$2"
 
-   _sourcetree_update_recurse "${config}" "${database}"
+   _sourcetree_sync_recurse "${config}" "${database}"
 }
 
 
@@ -709,9 +710,9 @@ sourcetree_update_recurse()
 # config     : config relative to MULLE_VIRTUAL_ROOT
 # database   : prefix relative to MULLE_VIRTUAL_ROOT
 #
-_sourcetree_update_flat()
+_sourcetree_sync_flat()
 {
-   log_entry "_sourcetree_update_flat" "$@"
+   log_entry "_sourcetree_sync_flat" "$@"
 
    local config="$1"
    local database="$2"
@@ -753,14 +754,14 @@ _sourcetree_update_flat()
 }
 
 
-sourcetree_update_flat()
+sourcetree_sync_flat()
 {
-   log_entry "sourcetree_update_flat" "$@"
+   log_entry "sourcetree_sync_flat" "$@"
 
    local config="$1"
    local database="$2"
 
-   _sourcetree_update_flat "${config}" "${database}"
+   _sourcetree_sync_flat "${config}" "${database}"
 }
 
 
@@ -783,9 +784,9 @@ sourcetree_update_flat()
 #            for nodes marked share and again (local) databases for those
 #            marked no-share like in recurse. The shares are stored in root.
 #
-sourcetree_update_start()
+sourcetree_sync_start()
 {
-   log_entry "sourcetree_update_start" "$@" "($PWD)"
+   log_entry "sourcetree_sync_start" "$@" "($PWD)"
 
    local style
    local startpoint
@@ -807,7 +808,7 @@ sourcetree_update_start()
    db_ensure_consistency "${SOURCETREE_START}"
    db_ensure_compatible_dbtype "${SOURCETREE_START}" "${style}"
 
-   "sourcetree_update_${style}" "${SOURCETREE_START}" "${SOURCETREE_START}"
+   "sourcetree_sync_${style}" "${SOURCETREE_START}" "${SOURCETREE_START}"
 
    case $? in
       0)
@@ -826,7 +827,7 @@ sourcetree_update_start()
 
 warn_dry_run()
 {
-   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" = "YES" ]
+   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" = 'YES' ]
    then
       log_warning "***IMPORTANT REMINDER***
 
@@ -839,9 +840,9 @@ edits have been made to the configuration.
 }
 
 
-sourcetree_update_main()
+sourcetree_sync_main()
 {
-   log_entry "sourcetree_update_main" "$@"
+   log_entry "sourcetree_sync_main" "$@"
 
    local OPTION_FIX="DEFAULT"
    local OPTION_OVERRIDE_BRANCH
@@ -858,35 +859,35 @@ sourcetree_update_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_update_usage
+            sourcetree_sync_usage
          ;;
 
          #
          # stuff passed to mulle-fetch
          #
          --cache-refresh|--refresh|--mirror-refresh)
-            OPTION_FETCH_REFRESH="YES"
+            OPTION_FETCH_REFRESH='YES'
          ;;
 
          --no-cache-refresh|--no-refresh|--no-mirror-refresh)
-            OPTION_FETCH_REFRESH="NO"
+            OPTION_FETCH_REFRESH='NO'
          ;;
 
          --symlink)
-            OPTION_FETCH_SYMLINK="YES"
+            OPTION_FETCH_SYMLINK='YES'
          ;;
 
          --no-symlink)
-            OPTION_FETCH_SYMLINK="NO"
+            OPTION_FETCH_SYMLINK='NO'
          ;;
 
          --absolute-symlink)
-            OPTION_FETCH_SYMLINK="YES"
-            OPTION_FETCH_ABSOLUTE_SYMLINK="YES"
+            OPTION_FETCH_SYMLINK='YES'
+            OPTION_FETCH_ABSOLUTE_SYMLINK='YES'
          ;;
 
          --no-absolute-symlinks)
-            OPTION_FETCH_ABSOLUTE_SYMLINK="NO"
+            OPTION_FETCH_ABSOLUTE_SYMLINK='NO'
          ;;
 
          --cache-dir)
@@ -922,11 +923,11 @@ sourcetree_update_main()
          ;;
 
          --fixup)
-            OPTION_FIX="NO"
+            OPTION_FIX='NO'
          ;;
 
          --no-fixup)
-            OPTION_FIX="YES"
+            OPTION_FIX='YES'
          ;;
 
          #
@@ -934,7 +935,7 @@ sourcetree_update_main()
          #
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown update option $1"
-            sourcetree_update_usage
+            sourcetree_sync_usage
          ;;
 
          *)
@@ -945,7 +946,7 @@ sourcetree_update_main()
       shift
    done
 
-   log_entry "sourcetree_update_initialize"
+   log_entry "sourcetree_sync_initialize"
 
    if [ -z "${MULLE_PATH_SH}" ]
    then
@@ -991,6 +992,6 @@ sourcetree_update_main()
 
    warn_dry_run
 
-   sourcetree_update_start
+   sourcetree_sync_start
 }
 

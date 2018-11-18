@@ -172,7 +172,7 @@ nodeline_parse()
       ;;
    esac
 
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
+   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
       log_trace2 "ADDRESS:      \"${_address}\""
       log_trace2 "NODETYPE:     \"${_nodetype}\""
@@ -508,7 +508,7 @@ nodeline_printf_header()
 
          \\n)
             case ",${mode}," in
-               *,output_raw,*|*,output_cmd,*)
+               *,output_raw,*|*,output_cmd,*|*,output_cmd2,*)
                   name=""
                   dash=""
                ;;
@@ -552,6 +552,7 @@ nodeline_printf()
    local nodeline=$1
    local mode="$2"
    local formatstring="$3"
+   local cmdline="$4"
 
    local _branch
    local _address
@@ -580,9 +581,11 @@ nodeline_printf()
    __set_sep_and_formatstring "${mode}"
 
    local line
-   local cmd_line
 
-   cmd_line="${MULLE_USAGE_NAME} -N add"
+   if [ -z "${cmdline}" ]
+   then
+      cmdline="${MULLE_USAGE_NAME} -N add"
+   fi
 
    local guess
 
@@ -590,7 +593,7 @@ nodeline_printf()
    case "${formatstring}" in
       *%m*)
          case ",${mode}," in
-            *,output_cmd,*)
+            *,output_cmd,*|*,output_cmd2,*)
                if [ ! -z "${_url}" ]
                then
                   guess="`node_guess_nodetype "${_url}"`"
@@ -654,12 +657,14 @@ nodeline_printf()
             else
                switch="--userinfo"
                case ",${mode}," in
-                  *,output_cmd,*)
+                  *,output_cmd,*|*,output_cmd2,*)
                      value="${_raw_userinfo}"
                   ;;
 
                   *)
-                     value="`tr '\012' ',' <<< "${_userinfo}" | sed -e 's/,$//g' `"
+                     value="`tr '\012' ':' <<< "${_userinfo}" | sed -e 's/,$//g' `"
+                     value="${value#:}"
+                     value="${value%:}"
                   ;;
                esac
             fi
@@ -740,7 +745,7 @@ nodeline_printf()
 
          *)
             case ",${mode}," in
-               *,output_cmd,*)
+               *,output_cmd,*|*,output_cmd2,*)
                ;;
 
                *)
@@ -767,13 +772,18 @@ nodeline_printf()
 
       if [ ! -z "${switch}" -a ! -z "${value}" ]
       then
-         cmd_line="`concat "${cmd_line}" "${switch} '${value}'"`"
+      	r_concat "${cmdline}" "${switch} '${value}'"
+         cmdline="${RVAL}"
       fi
    done
 
    case ",${mode}," in
       *,output_cmd,*)
-         echo "${cmd_line}" "'${_address}'"
+         echo "${cmdline}" "'${_address}'"
+      ;;
+
+      *,output_cmd2,*)
+         echo "${cmdline}" "'${_url}'"
       ;;
 
       *,output_raw,*)

@@ -60,8 +60,11 @@ node_guess_address()
       ;;
 
       *)
-         result="`${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} \
-                     nameguess -s "${nodetype}" "${evaledurl}"`"
+         result="`${MULLE_FETCH:-mulle-fetch} \
+                        ${MULLE_FETCH_FLAGS} \
+                     nameguess \
+                        -s "${nodetype}" \
+                        "${evaledurl}"`"
          log_fluff "${MULLE_FETCH:-mulle-fetch} returned \"${result}\" as \
 default address for url ($url)"
          echo "${result}"
@@ -87,7 +90,10 @@ node_guess_nodetype()
       ;;
 
       *)
-         result="`${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} typeguess "${evaledurl}"`"
+         result="`${MULLE_FETCH:-mulle-fetch} \
+                        ${MULLE_FETCH_FLAGS} \
+                     typeguess \
+                        "${evaledurl}"`"
          log_fluff "${MULLE_FETCH:-mulle-fetch} determined \"${result}\" as \
 nodetype from url ($evaledurl)"
          echo "${result}"
@@ -161,23 +167,29 @@ node_fetch_operation()
       ;;
 
       *)
-         log_verbose "Looking for local copy of ${C_RESET_BOLD}${evaledurl}${C_INFO}"
+         log_verbose "Looking for local copy of \
+${C_RESET_BOLD}${evaledurl}${C_INFO}"
 
          local localurl
          local localnodetype
 
-         localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} "search-local" --scm "'${nodetype}'" \
-                                                                  --tag "'${evaledtag}'" \
-                                                                  --branch "'${evaledbranch}'" \
-                                                                  --options "'${evaledfetchoptions}'" \
-                                                                  --url "'${evaledurl}'" \
-                                                                  "'${address}'" )"
+         localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
+                                          "${MULLE_TECHNICAL_FLAGS}" \
+                                          "${MULLE_FETCH_FLAGS}" \
+                                       "search-local" \
+                                          --scm "'${nodetype}'" \
+                                          --tag "'${evaledtag}'" \
+                                          --branch "'${evaledbranch}'" \
+                                          --options "'${evaledfetchoptions}'" \
+                                          --url "'${evaledurl}'" \
+                                          "'${address}'" )"
          if [ ! -z "${localurl}" ]
          then
             evaledurl="${localurl}"
             log_verbose "Local URL found \"${localurl}\""
+
             localnodetype="`node_guess_nodetype "${localurl}"`"
-            if [ ! -z "${localnodetype}" ]
+            if [ ! -z "${localnodetype}" -a "${localnodetype}" != "local" ]
             then
                nodetype="${localnodetype}"
             fi
@@ -187,17 +199,17 @@ node_fetch_operation()
       ;;
    esac
 
-   log_info "Fetching ${C_MAGENTA}${C_BOLD}${address#${MULLE_SOURCETREE_SHARE_DIR}/}${C_INFO} from \
-${C_RESET_BOLD}${evaledurl}${C_INFO}."
-
-   eval_exekutor ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} \
-                                             "${opname}" --scm "'${nodetype}'" \
-                                                         --tag "'${evaledtag}'" \
-                                                         --branch "'${evaledbranch}'" \
-                                                         --options "'${evaledfetchoptions}'" \
-                                                         --url "'${evaledurl}'" \
-                                                         ${options} \
-                                                         "'${address}'"
+   eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
+                       "${MULLE_TECHNICAL_FLAGS}" \
+                       "${MULLE_FETCH_FLAGS}" \
+                    "${opname}" \
+                       --scm "'${nodetype}'" \
+                       --tag "'${evaledtag}'" \
+                       --branch "'${evaledbranch}'" \
+                       --options "'${evaledfetchoptions}'" \
+                       --url "'${evaledurl}'" \
+                       ${options} \
+                       "'${address}'"
 }
 
 
@@ -207,7 +219,8 @@ node_list_operations()
 
    local nodetype="$1"
 
-   ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} -s operation -s "${nodetype}" list
+   ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} -s \
+      operation -s "${nodetype}" list
 }
 
 #
@@ -260,6 +273,9 @@ node_augment()
          then
             fail "Node of nodetype \"${_nodetype}\" requires marks \"no-delete,no-update,no-share,require\""
          fi
+
+         # local has no URL
+         _url=
       ;;
 
       "symlink")
@@ -276,7 +292,7 @@ node_augment()
       ;;
    esac
 
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
+   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
       log_trace2 "ADDRESS:      \"${_address}\""
       log_trace2 "NODETYPE:     \"${_nodetype}\""
@@ -312,12 +328,51 @@ node_augment()
 }
 
 
+_r_node_to_nodeline()
+{
+   log_entry "_r_node_to_nodeline" "$@"
+
+   if [ ! -z "${_userinfo}" ]
+   then
+      if [ `wc -l <<< "${_userinfo}"` -gt 1 ] ||
+         egrep -q '[^-A-Za-z0-9%&/()=|+_.,$# ]' <<< "${_userinfo}"
+      then
+         case "${MULLE_UNAME}" in
+            linux)
+               _userinfo="base64:`base64 -w 0 <<< "${_userinfo}"`"
+            ;;
+
+            *)
+               _userinfo="base64:`base64 -b 0 <<< "${_userinfo}"`"
+            ;;
+         esac
+      fi
+   fi
+
+   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
+   then
+      log_trace2 "ADDRESS:      \"${_address}\""
+      log_trace2 "NODETYPE:     \"${_nodetype}\""
+      log_trace2 "MARKS:        \"${_marks}\""
+      log_trace2 "UUID:         \"${_uuid}\""
+      log_trace2 "URL:          \"${_url}\""
+      log_trace2 "BRANCH:       \"${_branch}\""
+      log_trace2 "TAG:          \"${_tag}\""
+      log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
+      log_trace2 "USERINFO:     \"${_userinfo}\""
+   fi
+
+   RVAL="${_address};${_nodetype};${_marks};${_uuid};\
+${_url};${_branch};${_tag};${_fetchoptions};\
+${_userinfo}"
+}
+
 #
 # this is unformatted
 #
-node_to_nodeline()
+r_node_to_nodeline()
 {
-   log_entry "node_to_nodeline" "$@"
+   log_entry "r_node_to_nodeline" "$@"
 
    case "${_url}" in
       *";"*)
@@ -392,39 +447,18 @@ node_to_nodeline()
       ;;
    esac
 
-   if [ ! -z "${_userinfo}" ]
-   then
-      if [ `wc -l <<< "${_userinfo}"` -gt 1 ] ||
-         egrep -q '[^-A-Za-z0-9%&/()=|+_.,$# ]' <<< "${_userinfo}"
-      then
-         case "${MULLE_UNAME}" in
-            linux)
-               _userinfo="base64:`base64 -w 0 <<< "${_userinfo}"`"
-            ;;
+   _r_node_to_nodeline "$@"
+}
 
-            *)
-               _userinfo="base64:`base64 -b 0 <<< "${_userinfo}"`"
-            ;;
-         esac
-      fi
-   fi
 
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = "YES" ]
-   then
-      log_trace2 "ADDRESS:      \"${_address}\""
-      log_trace2 "NODETYPE:     \"${_nodetype}\""
-      log_trace2 "MARKS:        \"${_marks}\""
-      log_trace2 "UUID:         \"${_uuid}\""
-      log_trace2 "URL:          \"${_url}\""
-      log_trace2 "BRANCH:       \"${_branch}\""
-      log_trace2 "TAG:          \"${_tag}\""
-      log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
-      log_trace2 "USERINFO:     \"${_userinfo}\""
-   fi
+node_to_nodeline()
+{
+   log_entry "node_to_nodeline" "$@"
 
-   echo "${_address};${_nodetype};${_marks};${_uuid};\
-${_url};${_branch};${_tag};${_fetchoptions};\
-${_userinfo}"
+   local RVAL
+
+   r_node_to_nodeline "$@"
+   [ ! -z "${RVAL}" ] && echo "${RVAL}"
 }
 
 

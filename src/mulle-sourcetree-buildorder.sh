@@ -45,7 +45,8 @@ Usage:
 
    * ignore nodes marked as "no-build"
    * ignore nodes marked as "no-os-${MULLE_UNAME}"
-   * ignore nodes marked with "only-os-<platform>" except "only-os-${MULLE_UNAME}"
+   * ignore nodes marked as "no-os-${MULLE_UNAME}-build"
+   * ignore nodes marked with "only-os-<platform>" except "only-os-${MULLE_UNAME}" or "only-os-${MULLE_UNAME}-build"
 
    In a make based project, this can be used to build everything like this:
 
@@ -77,7 +78,7 @@ print_buildorder_line()
    fi
 
    if [ "${SOURCETREE_MODE}" = "share" -a \
-        "${OPTION_PRINT_ENV}" = "YES" -a \
+        "${OPTION_PRINT_ENV}" = 'YES' -a \
         ! -z "${MULLE_SOURCETREE_SHARE_DIR}" -a \
         "${MULLE_SOURCETREE_SHARE_DIR}" != "${MULLE_VIRTUAL_ROOT}" ]
    then
@@ -90,18 +91,18 @@ print_buildorder_line()
       fi
    fi
 
-   if [ "${OPTION_ABSOLUTE}" = "NO" ]
+   if [ "${OPTION_ABSOLUTE}" = 'NO' ]
    then
       MULLE_FILENAME="${MULLE_FILENAME#${MULLE_VIRTUAL_ROOT}/}"
    fi
 
-   if [ "${OPTION_MARKS}" = "YES" ]
+   if [ "${OPTION_MARKS}" = 'YES' ]
    then
-      echo "${MULLE_FILENAME};${MULLE_MARKS}"
+      rexekutor echo "${MULLE_FILENAME};${MULLE_MARKS}"
       return
    fi
 
-   echo "${MULLE_FILENAME}"
+   rexekutor echo "${MULLE_FILENAME}"
 }
 
 
@@ -110,10 +111,10 @@ sourcetree_buildorder_main()
 {
    log_entry "sourcetree_buildorder_main" "$@"
 
-   local OPTION_MARKS="NO"
-   local OPTION_PRINT_ENV="YES"
+   local OPTION_MARKS='NO'
+   local OPTION_PRINT_ENV='YES'
    local OPTION_CALLBACK
-   local OPTION_ABSOLUTE="NO"
+   local OPTION_ABSOLUTE='NO'
 
    while [ $# -ne 0 ]
    do
@@ -123,19 +124,19 @@ sourcetree_buildorder_main()
          ;;
 
          --output-marks)
-            OPTION_MARKS="YES"
+            OPTION_MARKS='YES'
          ;;
 
          --output-absolute)
-            OPTION_ABSOLUTE="YES"
+            OPTION_ABSOLUTE='YES'
          ;;
 
          --output-relative)
-            OPTION_ABSOLUTE="NO"
+            OPTION_ABSOLUTE='NO'
          ;;
 
          --output-no-marks|--no-output-marks)
-            OPTION_MARKS="NO"
+            OPTION_MARKS='NO'
          ;;
 
          --callback)
@@ -158,7 +159,7 @@ sourcetree_buildorder_main()
          ;;
 
          --no-print-env)
-            OPTION_PRINT_ENV="NO"
+            OPTION_PRINT_ENV='NO'
          ;;
 
          --print-qualifier)
@@ -199,11 +200,29 @@ sourcetree_buildorder_initialize()
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
    fi
 
+   if [ -z "${MULLE_VERSION_SH}" ]
+   then
+      # shellcheck source=../../mulle-bashfunctions/src/mulle-version.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-version.sh" || exit 1
+   fi
+
+   case "${MULLE_UNAME}" in
+      darwin)
+         MULLE_OS_VERSION="`sw_vers -productVersion`"
+      ;;
+   esac
+
    SOURCETREE_BUILDORDER_QUALIFIER="\
 MATCHES build \
 AND NOT MATCHES no-os-${MULLE_UNAME} \
-AND (NOT MATCHES only-os-* OR \
-MATCHES only-os-${MULLE_UNAME})"
+AND NOT MATCHES no-os-${MULLE_UNAME}-build \
+AND (NOT MATCHES only-os-* OR MATCHES only-os-${MULLE_UNAME} OR MATCHES only-os-${MULLE_UNAME}-build)"
+   if [ ! -z "${MULLE_OS_VERSION}" ]
+   then
+      SOURCETREE_BUILDORDER_QUALIFIER="${SOURCETREE_BUILDORDER_QUALIFIER} \
+AND VERSION version-min-${MULLE_UNAME} <= ${MULLE_OS_VERSION} \
+AND VERSION version-max-${MULLE_UNAME} >= ${MULLE_OS_VERSION}"
+   fi
 }
 
 

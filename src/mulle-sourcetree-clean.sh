@@ -112,7 +112,7 @@ sourcetree_clean()
 
    local OPTION_EVAL_EXEKUTOR
 
-   OPTION_EVAL_EXEKUTOR="NO"
+   OPTION_EVAL_EXEKUTOR='NO'
 
    #
    # because of share configuration we can have duplicates
@@ -126,7 +126,7 @@ sourcetree_clean()
    DELETE_FILES=
    DELETE_DIRECTORIES=
 
-   VISIT_TWICE="YES"  # need to pick up nodeletes
+   VISIT_TWICE='YES'  # need to pick up nodeletes
 
    #
    # We must walk the dbs, because only the dbs know where
@@ -172,9 +172,9 @@ sourcetree_clean_main()
    local OPTION_PERMISSIONS=""
    local OPTION_NODETYPES="ALL"
    local OPTION_WALK_DB="DEFAULT"
-   local OPTION_IS_UPTODATE="NO"
+   local OPTION_IS_UPTODATE='NO'
    local OPTION_OUTPUT_HEADER="DEFAULT"
-   local OPTION_OUTPUT_RAW="YES"
+   local OPTION_OUTPUT_FORMAT='RAW'
 
    while [ $# -ne 0 ]
    do
@@ -255,7 +255,8 @@ sourcetree_clean_main()
    mode="${SOURCETREE_MODE}"
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
-      mode="`comma_concat "${mode}" "pre-order"`"
+      r_comma_concat "${mode}" "pre-order"
+      mode="${RVAL}"
    fi
 
    local rval

@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-[ "${TRACE}" = "YES" -o "${MULLE_SOURCETREE_TRACE}" = "YES" ] && set -x && : "$0" "$@"
+[ "${TRACE}" = 'YES' -o "${MULLE_SOURCETREE_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
 MULLE_EXECUTABLE_VERSION="0.15.1"
@@ -53,16 +53,17 @@ print_commands()
    SHOWN_COMMANDS="\
    add            : add a node to the sourcetree
    buildorder     : emit nodes that are buildable in proper dependency order
-   clean          : remove files added by an update
-   info           : print current sourcetree
+   clean          : remove files added by a sync
    list           : list nodes in the current sourcetree
+   reuuid         : create new uuids for the sourcetree
    set            : set a node's properties in the sourcetree
    status         : query state of the tree
-   update         : update the project tree [default]"
+   sync           : synchronize the project tree with the sourcetree [default]"
 
    HIDDEN_COMMANDS="\
    dbstatus       : query state of database
    dotdump        : create a picture of the sourcetree or the database
+   info           : print current sourcetree information
    filter         : test a filter with user supplied marks
    fix            : support to track user modifications in the filesystem
    get            : get a node's properties from the sourcetree
@@ -73,7 +74,7 @@ print_commands()
    move           : move a node within the sourcetree
    sourcetree-dir : print path to project (if a sourcetree exists)
    remove         : remove a node from the sourcetree
-   reset          : clear the database, to force an update
+   reset          : clear the database, to force a sync
    touch          : mark sourcetree as dirty
    typeguess      : guess type of repository from URL
    uname          : ${MULLE_USAGE_NAME}'s simplified uname(1)
@@ -89,7 +90,7 @@ print_commands()
       echo "${DARWIN_COMMANDS}"
    fi
 
-   if [ "${show_all}" != "NO" ]
+   if [ "${show_all}" != 'NO' ]
    then
       echo "${HIDDEN_COMMANDS}"
    fi
@@ -106,7 +107,7 @@ Usage:
 
    Maintain a project sourcetree composed of multiple repositories
    and archives and other things. The sourcetree is backed by a database,
-   which is created during \`update\`.
+   which is created during \`sync\`.
 
 Flags:
 EOF
@@ -130,7 +131,7 @@ EOF
 
    print_commands "${verbose}" | sort
 
-   if [ "${verbose}" = "NO" ]
+   if [ "${verbose}" = 'NO' ]
    then
       cat <<EOF
       (use mulle-sourcetree -v help to show more commands)
@@ -206,7 +207,7 @@ _set_mulle_virtual_root_export()
 {
    log_entry "_set_mulle_virtual_root_export" "$@"
 
-   if [ "${FLAG_OUTSIDE_ENV}" = "YES" ]
+   if [ "${FLAG_OUTSIDE_ENV}" = 'YES' ]
    then
       MULLE_VIRTUAL_ROOT="${MULLE_EXECUTABLE_PHYSICAL_PWD}"
    fi
@@ -364,24 +365,24 @@ _set_share_dir()
 
 main()
 {
-   local MULLE_FLAG_MAGNUM_FORCE="NO"
-   local MULLE_FLAG_IGNORE_GRAVEYARD="NO"
+   local MULLE_FLAG_MAGNUM_FORCE='NO'
+   local MULLE_FLAG_IGNORE_GRAVEYARD='NO'
 
    # technical flags
    local MULLE_TRACE
-   local MULLE_FLAG_EXEKUTOR_DRY_RUN="NO"
-   local MULLE_FLAG_LOG_LOCAL="NO"
-   local MULLE_FLAG_LOG_DEBUG="NO"
-   local MULLE_FLAG_LOG_EXEKUTOR="NO"
-   local MULLE_FLAG_LOG_FLUFF="NO"
-   local MULLE_FLAG_LOG_SCRIPTS="NO"
-   local MULLE_FLAG_LOG_SETTINGS="NO"
-   local MULLE_FLAG_LOG_VERBOSE="NO"
-   local MULLE_FLAG_LOG_MERGE="NO"
-   local MULLE_TRACE_POSTPONE="NO"
+   local MULLE_FLAG_EXEKUTOR_DRY_RUN='NO'
+   local MULLE_FLAG_LOG_LOCAL='NO'
+   local MULLE_FLAG_LOG_DEBUG='NO'
+   local MULLE_FLAG_LOG_EXEKUTOR='NO'
+   local MULLE_FLAG_LOG_FLUFF='NO'
+   local MULLE_FLAG_LOG_SCRIPTS='NO'
+   local MULLE_FLAG_LOG_SETTINGS='NO'
+   local MULLE_FLAG_LOG_VERBOSE='NO'
+   local MULLE_FLAG_LOG_MERGE='NO'
+   local MULLE_TRACE_POSTPONE='NO'
 
    local MULLE_FLAG_DEFER=""
-   local FLAG_OUTSIDE_ENV="NO"
+   local FLAG_OUTSIDE_ENV='NO'
 
    local FLAG_SOURCETREE_MODE=
 
@@ -411,11 +412,11 @@ main()
 
       case "$1" in
          -e)
-            FLAG_OUTSIDE_ENV="YES"
+            FLAG_OUTSIDE_ENV='YES'
          ;;
 
          -f|--force)
-            MULLE_FLAG_MAGNUM_FORCE="YES"
+            MULLE_FLAG_MAGNUM_FORCE='YES'
          ;;
 
          -h*|--help|help)
@@ -423,7 +424,7 @@ main()
          ;;
 
          -ls|--list-settings)
-            MULLE_FLAG_LOG_SETTINGS="YES"
+            MULLE_FLAG_LOG_SETTINGS='YES'
          ;;
 
          --git-terminal-prompt)
@@ -574,7 +575,7 @@ main()
 
    _db_set_default_mode "${SOURCETREE_START}" "${FLAG_SOURCETREE_MODE}" || exit 1
 
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = "YES" ]
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
       log_trace2 "MULLE_EXECUTABLE_PHYSICAL_PWD=${MULLE_EXECUTABLE_PHYSICAL_PWD}"
       log_trace2 "MULLE_SOURCETREE_DIR=${MULLE_SOURCETREE_DIR}"
@@ -624,9 +625,9 @@ main()
 
          if nodemarks_filter_with_qualifier "$@"
          then
-            echo "YES"
+            echo 'YES'
          else
-            echo "NO"
+            echo 'NO'
          fi
       ;;
 
@@ -717,6 +718,13 @@ main()
          sourcetree_reset_main "$@"
       ;;
 
+      reuuid)
+         # shellcheck source=src/mulle-sourcetree-reuuid.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-reuuid.sh"
+
+         sourcetree_reuuid_main "$@"
+      ;;
+
       set)
          # shellcheck source=src/mulle-sourcetree-config.sh
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
@@ -756,11 +764,11 @@ main()
          sourcetree_unmark_main "$@"
       ;;
 
-      update)
-         # shellcheck source=src/mulle-sourcetree-update.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh"
+      sync|update)
+         # shellcheck source=src/mulle-sourcetree-sync.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-sync.sh"
 
-         sourcetree_update_main "$@"
+         sourcetree_sync_main "$@"
       ;;
 
       walk)

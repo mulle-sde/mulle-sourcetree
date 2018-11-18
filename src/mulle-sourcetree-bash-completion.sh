@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-[ "${TRACE}" = "YES" ] && set -x && : "$0" "$@"
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
 _mulle_sourcetree_complete()
@@ -54,7 +54,7 @@ mark|move|nameguess|remove|reset|set|status|typeguess|unmark|update|walk)
 
    case "$prev" in
       get|set|mark|move|unmark)
-         list="`mulle-sourcetree -s -e list --no-output-header --format "%a\\n"`"
+         list="`mulle-sourcetree -s -e list --output-no-header --format "%a\\n"`"
          COMPREPLY=( $( compgen -W "${list}" -- "$cur" ) )
          return
       ;;

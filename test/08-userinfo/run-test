@@ -1,0 +1,233 @@
+#! /usr/bin/env bash
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+
+# TODO: move this test to mulle-sde ??
+
+expect()
+{
+   local output="$1"
+   local expected="$2"
+
+   if [ "${output}" != "${expected}" ]
+   then
+      internal_fail "Did expect \"${expected}\" but got \"${output}\""
+   fi
+}
+
+
+run_mulle_sourcetree()
+{
+   log_fluff "####################################"
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   log_fluff "####################################"
+
+   exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+}
+
+
+commalist_contains()
+{
+   log_entry "commalist_contains" "$@"
+
+   local list="$1"
+   local key="$2"
+
+   local i
+
+   # is this faster than case ?
+   set -o noglob ; IFS=","
+   for i in ${list}
+   do
+      IFS="${DEFAULT_IFS}"; set +o noglob
+      if [ "${i}" = "${key}" ]
+      then
+         return 0
+      fi
+   done
+
+   IFS="${DEFAULT_IFS}"; set +o noglob
+   return 1
+}
+
+
+r_commalist_add()
+{
+   log_entry "commalist_add" "$@"
+
+   local list="$1"
+   local value="$2"
+
+   if commalist_contains "${list}" "${value}"
+   then
+      log_info "\"${value}\" already set"
+      return 0
+   fi
+   r_comma_concat "${list}" "${value}"
+}
+
+
+_sourcetree_get_userinfo_field()
+{
+   log_entry "_sourcetree_get_userinfo_field" "$@"
+
+   local address="$1"
+   local field="$2"
+
+
+   local userinfo
+
+   userinfo="`exekutor run_mulle_sourcetree ${MULLE_SOURCETREE_FLAGS}  \
+                 get "${address}" "userinfo" `" || return 1
+
+   if [ -z "${MULLE_ARRAY_SH}" ]
+   then
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || exit 1
+   fi
+
+   assoc_array_get "${userinfo}" "${field}"
+}
+
+
+_sourcetree_set_userinfo_field()
+{
+   log_entry "_sourcetree_set_userinfo_field" "$@"
+
+   local address="$1"
+   local field="$2"
+   local value="$3"
+   local append="${4:-NO}"
+
+
+   local userinfo
+
+   userinfo="`exekutor run_mulle_sourcetree ${MULLE_SOURCETREE_FLAGS}  \
+                 get "${address}" "userinfo" `" || return 1
+
+   if [ -z "${MULLE_ARRAY_SH}" ]
+   then
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || exit 1
+   fi
+
+   local list
+
+   if [ "${append}" = 'YES' ]
+   then
+      list="`assoc_array_get "${userinfo}" "${field}" `"
+      r_commalist_add "${list}" "${value}"
+      value="${RVAL}"
+   fi
+
+   userinfo="`assoc_array_set "${userinfo}" "${field}" "${value}" `"
+
+   exekutor run_mulle_sourcetree ${MULLE_SOURCETREE_FLAGS} \
+      set "${address}" "userinfo" "${userinfo}"
+}
+
+
+
+main()
+{
+   MULLE_SOURCETREE_FLAGS="$@"
+
+   _options_mini_main "$@"
+
+   set -e
+
+   local directory
+
+   directory="`make_tmp_directory`" || exit 1
+
+   MULLE_VIRTUAL_ROOT="${directory}"
+   export MULLE_VIRTUAL_ROOT
+
+   cd "${directory}"
+
+   if ! run_mulle_sourcetree -N add  "a"
+   then 
+      internal_fail "add internal_failed unexpectedly"
+   fi
+
+   _sourcetree_set_userinfo_field "a" "foo" "bar" "NO" || exit 1
+   value="`_sourcetree_get_userinfo_field "a" "foo"`"
+   if [ "${value}" != "bar" ]
+  	then
+      internal_fail "unexpected value \"${value}\""
+  	fi
+
+   _sourcetree_set_userinfo_field "a" "foo" "baz" "NO" || exit 1
+   value="`_sourcetree_get_userinfo_field "a" "foo"`"
+   if [ "${value}" != "baz" ]
+  	then
+      internal_fail "unexpected value \"${value}\""
+  	fi
+
+   log_verbose "----- #1 PASSED -----"
+
+
+   _sourcetree_set_userinfo_field "a" "foo" "bar" "YES" || exit 1
+   value="`_sourcetree_get_userinfo_field "a" "foo"`"
+   if [ "${value}" != "baz,bar" ]
+  	then
+      internal_fail "unexpected value \"${value}\""
+  	fi
+
+   _sourcetree_set_userinfo_field "a" "foo" "xxx" "YES" || exit 1
+   value="`_sourcetree_get_userinfo_field "a" "foo"`"
+   if [ "${value}" != "baz,bar,xxx" ]
+  	then
+      internal_fail "unexpected value \"${value}\""
+  	fi
+
+   run_mulle_sourcetree -N list
+
+   log_verbose "----- #2 PASSED -----"
+
+
+   _sourcetree_set_userinfo_field "a" "foobar" "bar" "YES" || exit 1
+   run_mulle_sourcetree -N list
+
+   value="`_sourcetree_get_userinfo_field "a" "foobar"`"
+   if [ "${value}" != "bar" ]
+  	then
+      internal_fail "unexpected value \"${value}\""
+  	fi
+
+   _sourcetree_set_userinfo_field "a" "foobar" "xxx" "YES" || exit 1
+   value="`_sourcetree_get_userinfo_field "a" "foobar"`"
+   if [ "${value}" != "bar,xxx" ]
+  	then
+      internal_fail "unexpected value \"${value}\""
+  	fi
+
+   value="`_sourcetree_get_userinfo_field "a" "foo"`"
+   if [ "${value}" != "baz,bar,xxx" ]
+  	then
+      internal_fail "unexpected value \"${value}\""
+  	fi
+
+   run_mulle_sourcetree -N list
+
+   log_verbose "----- #3 PASSED -----"
+
+
+   log_info "----- ALL PASSED -----"
+
+   rmdir_safer "${directory}"
+}
+
+
+init()
+{
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
+
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
+}
+
+
+init "$@"
+main "$@"
+

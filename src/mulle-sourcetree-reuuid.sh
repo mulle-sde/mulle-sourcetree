@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 #
-#   Copyright (c) 2017 Nat! - Mulle kybernetiK
+#   Copyright (c) 2018 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
 #   Redistribution and use in source and binary forms, with or without
@@ -29,52 +29,27 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_RESET_SH="included"
+MULLE_SOURCETREE_REUUID_SH="included"
 
 
-sourcetree_db_reset()
-{
-   log_entry "sourcetree_db_reset" "$@"
-
-   local database="${1:-/}"
-
-   log_verbose "Reset database \"${database}\""
-
-   db_reset "${database}"
-}
-
-
-walk_reset()
-{
-   log_entry "walk_reset" "$@"
-
-   sourcetree_db_reset "/${MULLE_VIRTUAL_ADDRESS}"
-}
-
-
-sourcetree_reset_usage()
+sourcetree_reuuid_usage()
 {
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} reset [options]
+   ${MULLE_USAGE_NAME} reuuid [options]
 
-   Throw away the local database for a fresh update. A graveyard will be kept,
-   unless you use the -g option.
+   Populate configuration with fresh UUIDs. This is necessary if you copy a
+   project. And intend to use it together with the old project.
+   You should \`reset\` the database afterwards.
 
-   You can use the -r flag, to clean recursively:
-
-      ${MULLE_USAGE_NAME} -r reset
-
-Options:
-   -g   : also remove the graveyard (where old zombies are buried)
 EOF
   exit 1
 }
 
 
-sourcetree_reset_main()
+sourcetree_reuuid_main()
 {
-   log_entry "sourcetree_reset_main" "$@"
+   log_entry "sourcetree_reuuid_main" "$@"
 
    local OPTION_REMOVE_GRAVEYARD="DEFAULT"
 
@@ -82,20 +57,12 @@ sourcetree_reset_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_reset_usage
-         ;;
-
-         -g|--remove-graveyard)
-            OPTION_REMOVE_GRAVEYARD='YES'
-         ;;
-
-         --no-remove-graveyard)
-            OPTION_REMOVE_GRAVEYARD='NO'
+            sourcetree_reuuid_usage
          ;;
 
          -*)
-            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown reset option $1"
-            sourcetree_reset_usage
+            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown reuuid option $1"
+            sourcetree_reuuid_usage
          ;;
 
          *)
@@ -106,27 +73,18 @@ sourcetree_reset_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_reset_usage
+   [ "$#" -eq 0 ] || sourcetree_reuuid_usage
 
-   if [ "${SOURCETREE_MODE}" != "flat" ]
-   then
-      if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
-      then
-         # shellcheck source=mulle-sourcetree-nodeline.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
-      fi
+   log_info "Create new UUIDs for sourcetree"
+   cfg_reuuid "/" || exit 1
 
-      sourcetree_walk_internal "${SOURCETREE_MODE},walkdb,no-dbcheck" \
-            walk_reset
-   fi
-
-   sourcetree_db_reset "/"
+   log_info "${C_VERBOSE}Don't forget to \`reset\` affected databases"
 }
 
 
-sourcetree_reset_initialize()
+sourcetree_reuuid_initialize()
 {
-   log_entry "sourcetree_reset_initialize"
+   log_entry "sourcetree_reuuid_initialize"
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
@@ -159,7 +117,7 @@ sourcetree_reset_initialize()
 }
 
 
-sourcetree_reset_initialize
+sourcetree_reuuid_initialize
 
 :
 

@@ -1,4 +1,4 @@
-SCRIPTS=installer \
+SCRIPTS=./bin/installer \
 src/mulle-sourcetree-action.sh \
 src/mulle-sourcetree-bash-completion.sh \
 src/mulle-sourcetree-buildorder.sh \
@@ -40,7 +40,7 @@ mulle-sourcetree.chk:	mulle-sourcetree
 	(shellcheck -f json $(SHELLFLAGS) $< | jq '.[].level' | grep -w error > /dev/null ) && exit 1 || touch $@
 
 installer:
-	@ ./installer
+	@ ./bin/installer
 
 clean:
 	@- rm src/*.chk
