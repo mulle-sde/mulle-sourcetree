@@ -510,7 +510,7 @@ walk_dotdump()
 
          if [ ! -z "${relidentifier}" ]
          then
-            if ! fgrep -q -s -x "${relidentifier}" <<< "${ALL_RELATIONSHIPS}"
+            if ! fgrep -q -s -x -e "${relidentifier}" <<< "${ALL_RELATIONSHIPS}"
             then
                exekutor echo "   ${relidentifier} [ style=\"${style}\", label=\"${label}\" ]"
                ALL_RELATIONSHIPS="`add_line "${ALL_RELATIONSHIPS}" "${relidentifier}"`"
@@ -520,12 +520,12 @@ walk_dotdump()
 
       log_debug "[i] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
 
-      if ! fgrep -q -s -x "${identifier}" <<< "${ALL_DIRECTORIES}"
+      if ! fgrep -q -s -x -e "${identifier}" <<< "${ALL_DIRECTORIES}"
       then
          ALL_DIRECTORIES="`add_line "${ALL_DIRECTORIES}" "${identifier}"`"
          log_debug "[+] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
 
-         if ! fgrep -q -s -x "${identifier}" <<< "${TOEMIT_DIRECTORIES}"
+         if ! fgrep -q -s -x -e "${identifier}" <<< "${TOEMIT_DIRECTORIES}"
          then
             TOEMIT_DIRECTORIES="`add_line "${TOEMIT_DIRECTORIES}" "${identifier}"`"
             log_debug "[+] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
@@ -537,7 +537,7 @@ walk_dotdump()
    IFS="${DEFAULT_IFS}"; set +o noglob
 
    identifier="\"${destination}\""
-   TOEMIT_DIRECTORIES="`fgrep -v -s -x "${identifier}" <<< "${TOEMIT_DIRECTORIES}"`"
+   TOEMIT_DIRECTORIES="`fgrep -v -s -x -e "${identifier}" <<< "${TOEMIT_DIRECTORIES}"`"
    log_debug "[-] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
 
    if [ "${OPTION_OUTPUT_HTML}" = 'YES' ]

@@ -254,8 +254,11 @@ node_augment()
       "local")
          #
          # since they are local, they can not be deleted and are always
-         # required they are also never updated
+         # required they are also never updated. So mode can be unsafe here
          #
+
+         mode="unsafe"
+
          local before
 
          before="${_marks}"
@@ -381,6 +384,10 @@ r_node_to_nodeline()
    esac
 
    case "${_address}" in
+      "/"*)
+         fail "Address \"${_address}\" must be relative"
+      ;;
+
       "."*)
          fail "Address \"${_address}\" starts with a dot"
       ;;

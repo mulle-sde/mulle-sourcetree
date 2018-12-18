@@ -90,8 +90,8 @@ run_test1()
       fail "status failed unexpectedly"
    fi
 
-   expected="/;update;directory;YES;NO
-/root/a;update;missing;NO;NO" # ;`physicalpath "${project}"`/root/a
+   expected="/;unready;directory;YES;NO
+/root/a;absent;missing;NO;NO" # ;`physicalpath "${project}"`/root/a
 
    if [ "${result}" != "${expected}" ]
    then

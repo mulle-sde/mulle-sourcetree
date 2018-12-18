@@ -179,12 +179,12 @@ r_emit_status()
    if [ -z "${directory}" ]
    then
       datasource="${SOURCETREE_START}"
-      output_adress="`filepath_concat "${SOURCETREE_START}" "${address}" `"
+      r_filepath_concat "${SOURCETREE_START}" "${address}"
+      output_adress="${RVAL}"
       directory="."
       r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${SOURCETREE_START}"
       filename="${RVAL}"
    else
-      filename="`__walk_get_db_filename`"
       if ! string_has_prefix "${filename}" "${MULLE_SOURCETREE_SHARE_DIR}"
       then
          datasource="${filename#${MULLE_VIRTUAL_ROOT}}"
@@ -459,6 +459,7 @@ sourcetree_status()
    local rval
    local RVAL
 
+   # empty parameters means local
    r_emit_status
    output="${RVAL}"
    output2="`walk_config_uuids "${filternodetypes}" \

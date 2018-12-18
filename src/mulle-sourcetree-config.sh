@@ -46,6 +46,7 @@ SOURCETREE_COMMON_OPTIONS="\
    --url <url>            : url of the node
    --userinfo <value>     : userinfo for node"
 
+
 sourcetree_add_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -572,14 +573,14 @@ sourcetree_add_node()
             ;;
 
             *)
-               log_warning "There is no directory or file named \"${_address}\""
+               log_warning "There is no directory or file named \"${_address}\" ($PWD#${MULLE_USER_PWD}/)"
             ;;
          esac
       fi
    else
-      if [ -e "${_address}" ]
+      if [ -e "${_address}" -a "${_nodetype}" != "local" ]
       then
-         log_warning "A directory or file named \"${_address}\" already exists"
+         log_warning "A directory or file named \"${_address}\" already exists ($PWD#${MULLE_USER_PWD}/)"
       fi
    fi
 
@@ -601,8 +602,8 @@ sourcetree_add_node()
       then
          return 0
       fi
-      fail "There is already a node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} \
-in the sourcetree"
+      fail "A node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} already exists \
+in the sourcetree (${PWD#${MULLE_USER_PWD}/})"
    fi
 
    local contents
@@ -942,7 +943,7 @@ _sourcetree_set_node()
       cfg_has_duplicate "${SOURCETREE_START}" "${_uuid}" "${_address}"
    then
       fail "There is already a node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} \
-in the sourcetree"
+in the sourcetree (${PWD#${MULLE_USER_PWD}/})"
    fi
 
    local RVAL
@@ -1091,8 +1092,11 @@ no-public
 no-recurse
 no-require
 no-set
+no-singlephase
+no-singlephase-link
 no-share
-no-update"
+no-update
+only-standalone"
 
 
 _sourcetree_add_mark_known_absent()
@@ -1105,7 +1109,7 @@ _sourcetree_add_mark_known_absent()
 
    if [ "${OPTION_EXTENDED_MARK}" != 'YES' ]
    then
-      if ! fgrep -x -q "${mark}" <<< "${KNOWN_MARKS}"
+      if ! fgrep -x -q -e "${mark}" <<< "${KNOWN_MARKS}"
       then
          fail "mark \"${mark}\" is unknown. If this is not a type use --extended-mark"
       fi
@@ -1136,7 +1140,7 @@ _sourcetree_remove_mark_known_present()
 
    if [ "${OPTION_EXTENDED_MARK}" != 'YES' ]
    then
-      if ! fgrep -x -q "${mark}" <<< "${KNOWN_MARKS}"
+      if ! fgrep -x -q -e "${mark}" <<< "${KNOWN_MARKS}"
       then
          fail "mark \"${mark}\" is unknown. If this is not a typo use --extended-mark"
       fi
@@ -1187,7 +1191,7 @@ _sourcetree_mark_node()
          _sourcetree_add_mark_known_absent "${mark}"
       ;;
 
-      *)
+      [a-z]*)
          if nodemarks_contain "${_marks}" "no-${mark}"
          then
             mark="no-${mark}"
@@ -1199,6 +1203,10 @@ _sourcetree_mark_node()
             mark="only-${mark}"
             _sourcetree_remove_mark_known_present "${mark}"
          fi
+      ;;
+
+      *)
+         fail "Malformed mark \"${mark}\" (only lowercase identifiers please)"
       ;;
    esac
 }

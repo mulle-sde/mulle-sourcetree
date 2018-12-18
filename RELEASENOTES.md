@@ -1,3 +1,11 @@
+## 0.16.0
+
+* keep symlinks as long as the filename doesn't change
+* performance improvements due to new mulle-bashfunction use
+* update is now called sync, to unconfuse this with mulle-sde update
+* experimental support for version checking with new VERSION filter command
+
+
 ### 0.15.1
 
 * document two environment variables

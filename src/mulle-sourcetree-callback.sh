@@ -65,10 +65,10 @@ __walk_get_db_filename()
          # ok could be an edit
       fi
 
-      local name
+      local RVAL
 
-      name="`fast_basename "${MULLE_ADDRESS}"`"
-      filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${name}"
+      r_fast_basename "${MULLE_ADDRESS}"
+      filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${RVAL}"
       return
    fi
 
@@ -161,19 +161,19 @@ __call_callback()
       "${evaluator}" "${callback}" "${technical_flags}" "$@"
    rval="$?"
 
-   if [ "${rval}" -eq 0 ]
+   if [ ${rval} -eq 0 ]
    then
       return 0
    fi
 
    case ",${mode}," in
       *,lenient,*)
-         log_fluff "Command \"${callback}\" failed for node \"${_address}\""
+         log_fluff "Command \"${callback}\" failed for node \"${_address}\" with $rval (ignored)"
          return 0
       ;;
    esac
 
-   fail "Command '${callback}' failed for node \"${_address}\""
+   fail "Command \"${callback}\" failed for node \"${_address}\" with $rval"
 
-   return "$rval"
+   return $rval
 }

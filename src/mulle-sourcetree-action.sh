@@ -1063,6 +1063,10 @@ do_actions_with_nodeline()
       filename="`cfg_absolute_filename "${config}" "${_address}"`"
    fi
 
+   r_simplified_absolutepath "${filename}"
+   filename="${RVAL}"
+   log_fluff "Filename for node \"${_address}\" is \"${filename}\""
+
    [ -z "${database}" ] && internal_fail "A share-only update gone wrong"
 
    if ! nodemarks_contain "${_marks}" "update" ||
@@ -1143,8 +1147,34 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
       previousfilename="`db_fetch_filename_for_uuid "${database}" "${_uuid}"`"
 
       [ -z "${previousfilename}" ] && internal_fail "corrupted db"
+   else
+      if [ -L "${filename}" ]
+      then
+         log_verbose "Removing old symlink \"${filename}\""
+         exekutor rm -f "${filename}" || exit 1
+      else
+         if [ -e "${filename}" ]
+         then
+            log_fluff "${filename} not there"
+         fi
+      fi
    fi
 
+
+   #
+   # For symlinks, we only care if the filename changes
+   #
+   if [ "${filename}" = "${previousfilename}" -a -L "${filename}" ]
+   then
+      log_debug "Skip update of \"${filename}\" since its a symlink."
+
+      _memorize_nodeline_in_db "${config}" "${database}" "${filename}"
+      return
+   fi
+
+   #
+   # candidate for parallelization
+   #
    local results
 
    results="`_update_perform_actions "${style}" \
@@ -1153,7 +1183,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
                                      "${previousnodeline}" \
                                      "${previousfilename}" \
                                      "${database}"`"
-   if [ "$?" -ne 0 ]
+   if [ $? -ne 0 ]
    then
       exit 1
    fi
@@ -1189,7 +1219,8 @@ nodetype        : ${nodetype}"
    then
       if ! is_absolutepath "${filename}"
       then
-         filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${filename}" `"
+         r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${filename}"
+         filename="${RVAL}"
       fi
 
       _memorize_nodeline_in_db "${config}" "${database}" "${filename}"
@@ -1203,6 +1234,7 @@ nodetype        : ${nodetype}"
       log_debug "Don't need to remember \"${nodeline}\" (should be unchanged)"
    fi
 
+   # this could be executed in parallel
    db_set_uuid_alive "${database}" "${_uuid}"
 }
 

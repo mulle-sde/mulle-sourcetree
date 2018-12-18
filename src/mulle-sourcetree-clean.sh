@@ -152,7 +152,7 @@ sourcetree_clean()
    do
       IFS="${DEFAULT_IFS}"; set +o noglob
 
-      if ! fgrep -q -x "${filename}" <<< "${NO_DELETES}"
+      if ! fgrep -q -x -e "${filename}" <<< "${NO_DELETES}"
       then
          uuid="`node_uuidgen`"
 

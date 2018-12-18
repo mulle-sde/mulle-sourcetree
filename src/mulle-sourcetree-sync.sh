@@ -295,7 +295,7 @@ _recurse_db_nodelines()
       # needed for root database only
       if [ "${database}" = "/" ]
       then
-         if fgrep -q -s -x "${nodeline}" <<< "${VISITED}"
+         if fgrep -q -s -x -e "${nodeline}" <<< "${VISITED}"
          then
             continue
          fi
@@ -327,6 +327,11 @@ _recurse_config_nodelines()
    local nodelines
 
    nodelines="`cfg_read "${config}" `"
+   if [ -z "${nodelines}" ]
+   then
+      log_fluff "No\"${style}\" update of config \"${config:-ROOT}\" as it is empty ($PWD)"
+      return
+   fi
 
    log_fluff "Continuing with a \"${style}\" update \"${nodelines}\" of config \"${config:-ROOT}\" ($PWD)"
 
@@ -346,8 +351,9 @@ _recurse_config_nodelines()
       # needed for root database only
       if [ "${database}" = "/" ]
       then
-         if fgrep -q -s -x "${nodeline}" <<< "${VISITED}"
+         if fgrep -q -s -x -e "${nodeline}" <<< "${VISITED}"
          then
+            log_fluff "\${nodeline}\" was already visited"
             continue
          fi
          r_add_line "${VISITED}" "${nodeline}"
@@ -427,7 +433,7 @@ _sourcetree_sync_only_share()
 
    style="only_share"
 
-   if ! fgrep -q -s -x "${config}" <<< "${UPDATED}"
+   if ! fgrep -q -s -x -e "${config}" <<< "${UPDATED}"
    then
       log_debug "Add \"${config}\" to UPDATED"
 
@@ -463,7 +469,7 @@ _sourcetree_sync_only_share()
       # needed for root database only
       if [ "${database}" = "/" ]
       then
-         if fgrep -q -s -x "${nodeline}" <<< "${VISITED}"
+         if fgrep -q -s -x -e "${nodeline}" <<< "${VISITED}"
          then
             continue
          fi
@@ -614,7 +620,7 @@ sourcetree_sync_share()
 
    log_debug "UPDATED: ${UPDATED}"
 
-   if ! fgrep -q -s -x "${startpoint}" <<< "${UPDATED}"
+   if ! fgrep -q -s -x -e "${startpoint}" <<< "${UPDATED}"
    then
       fail "\"${MULLE_VIRTUAL_ROOT}${startpoint}\" is not reachable from the sourcetree root (${MULLE_VIRTUAL_ROOT})"
    fi

@@ -234,11 +234,11 @@ db_memorize()
    [ -z "${uuid}" ]     && internal_fail "uuid is missing"
    [ -z "${filename}" ] && internal_fail "filename is missing"
 
-   case "${owner}" in
-      .*/)
-         internal_fail "owner starts with \".\""
-      ;;
-   esac
+#   case "${owner}" in
+#      .*/)
+#         internal_fail "owner starts with \".\""
+#      ;;
+#   esac
 
    case "${filename}" in
       /*)
@@ -354,12 +354,13 @@ db_bury()
       ;;
    esac
 
-   if [ -L "${filename}" ]
-   then
-      log_verbose "Removing old symlink \"${filename}\""
-      exekutor rm -f "${filename}" >&2
-      return
-   fi
+# do this now in action
+#   if [ -L "${filename}" ]
+#   then
+#      log_verbose "Removing old symlink \"${filename}\""
+#      exekutor rm -f "${filename}" >&2
+#      return
+#   fi
 
    if [ ! -e "${filename}" ]
    then
@@ -607,7 +608,7 @@ db_fetch_uuid_for_evaledurl()
       cd "${databasedir}"
       IFS="
 "
-      for candidate in `fgrep -l -x -s "${searchurl}" *`
+      for candidate in `fgrep -l -x -s -e "${searchurl}" *`
       do
          IFS="${DEFAULT_IFS}"
 
@@ -648,7 +649,7 @@ db_fetch_uuid_for_filename()
       cd "${databasedir}"
       IFS="
 "
-      for candidate in `fgrep -l -x -s "${searchfilename}" *`
+      for candidate in `fgrep -l -x -s -e "${searchfilename}" *`
       do
          IFS="${DEFAULT_IFS}"
 
