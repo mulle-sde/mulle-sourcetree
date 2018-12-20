@@ -1,3 +1,7 @@
+### 0.16.1
+
+* keep symlink alive if kept
+
 ## 0.16.0
 
 * keep symlinks as long as the filename doesn't change

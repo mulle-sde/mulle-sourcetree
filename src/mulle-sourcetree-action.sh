@@ -1169,6 +1169,9 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
       log_debug "Skip update of \"${filename}\" since its a symlink."
 
       _memorize_nodeline_in_db "${config}" "${database}" "${filename}"
+
+      db_set_uuid_alive "${database}" "${_uuid}"
+
       return
    fi
 
