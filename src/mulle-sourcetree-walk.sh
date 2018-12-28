@@ -39,19 +39,22 @@ Usage:
    ${MULLE_USAGE_NAME} walk [options] <shell command>
 
    Walk over the nodes described by the config file and execute <shell command>
-   for each node. The working directory will be the node (if it's a directory).
+   for each node. Unprocessed node information is passed in the following
+   environment variables: MULLE_URL, MULLE_ADDRESS, MULLE_BRANCH, MULLE_TAG,
+   MULLE_NODETYPE, MULLE_UUID, MULLE_MARKS, MULLE_FETCHOPTIONS, MULLE_USERINFO,
+   MULLE_NODE.  Additional information is passed in: MULLE_DESTINATION,
+   MULLE_MODE, MULLE_FILENAME, MULLE_DATABASE, MULLE_ROOT_DIR.
 
-   Unprocessed node information is passed in the following environment
-   variables: MULLE_URL, MULLE_ADDRESS, MULLE_BRANCH, MULLE_TAG,MULLE_NODETYPE,
-   MULLE_UUID, MULLE_MARKS, MULLE_FETCHOPTIONS, MULLE_USERINFO MULLE_NODE
+   The working directory will be the node (if it's a directory).
 
-   Additional information is passed in: MULLE_DESTINATION, MULLE_MODE,
-   MULLE_FILENAME, MULLE_DATABASE, MULLE_ROOT_DIR.
+   This example dumps the full information of each node:
+
+      mulle-sourcetree -e walk 'echo "\${MULLE_NODE}"'
 
    This example finds the location of a dependency named foo:
 
-      mulle-sourcetree walk --lenient '[ "${MULLE_ADDRESS}" = "foo" ] && \
-                                       echo "${MULLE_FILENAME}"'
+      mulle-sourcetree -e walk --lenient '[ "\${MULLE_ADDRESS}" = "foo" ] && \\
+                                          echo "\${MULLE_FILENAME}"'
 
    There is a little qualifier language available to query the marks of a node.
 EOF
@@ -153,30 +156,26 @@ fetched, skipped"
       return 0
    fi
 
-   log_fluff "${filename} is a symlink"
-
    case "${permissions}" in
       *fail-symlink*)
-         fail "Missing \"${filename}\" is a symlink."
+         fail "\"${filename}\" is a symlink."
       ;;
 
       *warn-symlink*)
-         log_verbose "\"${filename}\" is a symlink."
-         return 2
-      ;;
-
-      *skip-symlink*)
-         log_fluff "\"${filename}\" is a symlink, skipped."
-         return 1
+         log_warning "\"${filename}\" is a symlink."
+         return 2 # curious...
       ;;
 
       *descend-symlink*)
          log_fluff "\"${filename}\" is a symlink - it will be descended into."
          return 0
       ;;
-   esac
 
-   return 2
+      *skip-symlink*|*)
+         log_fluff "\"${filename}\" is a symlink, skipped."
+         return 1
+      ;;
+   esac
 }
 
 

@@ -32,7 +32,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_SOURCETREE_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.16.1"
+MULLE_EXECUTABLE_VERSION="0.16.2"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -62,6 +62,7 @@ print_commands()
 
    HIDDEN_COMMANDS="\
    dbstatus       : query state of database
+   desecrate      : remove all graveyards
    dotdump        : create a picture of the sourcetree or the database
    info           : print current sourcetree information
    filter         : test a filter with user supplied marks
@@ -610,6 +611,17 @@ main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-clean.sh"
 
          sourcetree_clean_main "$@"
+      ;;
+
+      desecrate)
+         local i
+
+         shopt -s nullglob
+         for i in ${MULLE_VIRTUAL_ROOT}/${MULLE_SOURCETREE_DIR}/var/*/graveyard
+         do
+            rmdir_safer "${i}"
+         done
+         shopt -u nullglob
       ;;
 
       dotdump)

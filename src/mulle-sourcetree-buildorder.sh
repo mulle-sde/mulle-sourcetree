@@ -67,14 +67,13 @@ print_buildorder_line()
 {
    log_entry "print_buildorder_line" "$@"
 
-
    #
    # if we are in root, we want to add no-memo marks to the output, but
    # only for subprojects
    #
    if [ ! -z "${OPTION_CALLBACK}" ]
    then
-      "${OPTION_CALLBACK}" "${line}"
+      "${OPTION_CALLBACK}" # "${line}"
    fi
 
    if [ "${SOURCETREE_MODE}" = "share" -a \

@@ -1,3 +1,7 @@
+### 0.16.2
+
+* add desecrate command
+
 ### 0.16.1
 
 * keep symlink alive if kept

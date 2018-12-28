@@ -1,6 +1,8 @@
-# mulle-sourcetree, 🌲 Project composition and maintenance with build support
+# mulle-sourcetree
 
-![Last version](https://img.shields.io/github/tag/mulle-nat/mulle-sourcetree.svg)
+🌲 Project composition and maintenance with build support
+
+![Last version](https://img.shields.io/github/tag/mulle-sde/mulle-sourcetree.svg)
 
 ... for Linux, OS X, FreeBSD, Windows
 

@@ -85,8 +85,7 @@ locate_fix_file()
    local address="$2"
 
    r_absolutepath "${start}"
-   r_physicalpath "${RVAL}"
-   start="${RVAL}"
+   start="`physicalpath "${RVAL}"`"
 
    local found
    local match
