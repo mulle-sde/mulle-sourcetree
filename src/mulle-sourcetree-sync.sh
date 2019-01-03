@@ -47,7 +47,7 @@ Usage:
 
 Options:
    -r                         : sync recursively
-   --no-fix                   : do not write ${SOURCETREE_FIX_FILE} files
+   --no-fix                   : do not write ${SOURCETREE_FIX_FILENAME} files
    --share                    : create database in shared configuration
    --override-branch <branch> : temporary override of the _branch for all nodes
 
@@ -86,8 +86,6 @@ _get_config_recurseinfo()
 
    local config="$1"
    local address="$2"
-
-   local RVAL
 
    r_filepath_concat "${config}" "${address}"
    _config="${RVAL}"
@@ -273,8 +271,6 @@ _recurse_db_nodelines()
    local database="$2"
 
    local nodelines
-   local RVAL
-
    nodelines="`db_fetch_all_nodelines "${database}" `"
 
    log_fluff "Continuing with a \"${style}\" update \"${nodelines}\" of db \"${database:-ROOT}\" ($PWD)"
@@ -323,7 +319,7 @@ _recurse_config_nodelines()
    local config="$1"
    local database="$2"
 
-   local RVAL
+
    local nodelines
 
    nodelines="`cfg_read "${config}" `"
@@ -429,8 +425,6 @@ _sourcetree_sync_only_share()
    local database="$2"
 
    local style
-   local RVAL
-
    style="only_share"
 
    if ! fgrep -q -s -x -e "${config}" <<< "${UPDATED}"
@@ -528,8 +522,6 @@ _sourcetree_sync_share()
    local database="$2"
 
    local style
-   local RVAL
-
    style="share"
 
    if ! fgrep -q -s -x "${config}" <<< "${UPDATED}"
@@ -551,7 +543,7 @@ _sourcetree_sync_share()
       if ! db_dir_exists "${database}"
       then
          log_debug "There is also no database \"${database}\" so nothing to do."
-         return 2
+         return 127
       fi
    fi
 
@@ -559,7 +551,7 @@ _sourcetree_sync_share()
 
    db_set_dbtype "${database}" "${style}"
    db_set_update "${database}"
-   db_set_shareddir "${database}" "${MULLE_SOURCETREE_SHARE_DIR}"
+   db_set_shareddir "${database}" "${MULLE_SOURCETREE_STASH_DIR}"
 
    db_zombify_nodes "${database}"
 
@@ -615,15 +607,21 @@ sourcetree_sync_share()
    local database="$2"
 
    local UPDATED
+   local rval
 
    _sourcetree_sync_share "${config}" "${database}"
+   rval=$?
 
-   log_debug "UPDATED: ${UPDATED}"
-
-   if ! fgrep -q -s -x -e "${startpoint}" <<< "${UPDATED}"
+   if [ $rval -eq 0 ]
    then
-      fail "\"${MULLE_VIRTUAL_ROOT}${startpoint}\" is not reachable from the sourcetree root (${MULLE_VIRTUAL_ROOT})"
+      log_debug "UPDATED: ${UPDATED}"
+
+      if ! fgrep -q -s -x -e "${startpoint}" <<< "${UPDATED}"
+      then
+         fail "\"${MULLE_VIRTUAL_ROOT}${startpoint}\" is not reachable from the sourcetree root (${MULLE_VIRTUAL_ROOT})"
+      fi
    fi
+   return $rval
 }
 
 
@@ -672,8 +670,8 @@ _sourcetree_sync_recurse()
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! db_dir_exists "${database}"
       then
-         log_debug "There is also no database \"${database}\" so nothing to do."
-         return 2
+         log_debug "There is also no database \"${database}\""
+         return 127
       fi
    fi
 
@@ -738,8 +736,8 @@ _sourcetree_sync_flat()
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! db_dir_exists "${database}"
       then
-         log_debug "There is also no database \"${database}\" so nothing to do"
-         return 2
+         log_debug "There is also no database \"${database}\""
+         return 127
       fi
    fi
 
@@ -814,20 +812,14 @@ sourcetree_sync_start()
    db_ensure_consistency "${SOURCETREE_START}"
    db_ensure_compatible_dbtype "${SOURCETREE_START}" "${style}"
 
+   local  rval
+
    "sourcetree_sync_${style}" "${SOURCETREE_START}" "${SOURCETREE_START}"
-
-   case $? in
-      0)
-      ;;
-
-      1)
-         return 1
-      ;;
-
-      2)
-        fail "There is no sourcetree in \"${MULLE_VIRTUAL_ROOT}${SOURCETREE_START}\""
-      ;;
-   esac
+   rval=$?
+   if [ $rval -eq 127 ]
+   then
+       fail "There is no sourcetree in \"${MULLE_VIRTUAL_ROOT}${SOURCETREE_START}\""
+   fi
 }
 
 

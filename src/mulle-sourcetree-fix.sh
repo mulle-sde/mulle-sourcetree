@@ -62,7 +62,7 @@ locate_sourcetree()
 
    while :
    do
-      if [ -d "${directory}/${MULLE_SOURCETREE_DIR}" ]
+      if [ -d "${directory}/.mulle/etc/sourcetree" ] # has no share!
       then
          echo "${directory}"
          return 0
@@ -77,9 +77,9 @@ locate_sourcetree()
 }
 
 
-locate_fix_file()
+r_locate_fix_file()
 {
-   log_entry "locate_fix_file" "$@"
+   log_entry "r_locate_fix_file" "$@"
 
    local start="$1"
    local address="$2"
@@ -94,12 +94,21 @@ locate_fix_file()
    r_fast_basename "${address}"
    name="${RVAL}"
 
+   local fixname
+
+   r_fast_basename "${SOURCETREE_FIX_FILENAME}"
+   fixname=${RVAL}
 
    IFS="
 "
-   for found in `find "${start}" -name "${SOURCETREE_FIX_FILE}" -type f -print`
+   for found in `find "${start}" -name "${fixname}" -type f -print`
    do
       IFS="${DEFAULT_IFS}"
+
+      if [ "${found}%${SOURCETREE_FIX_FILENAME}" = "${found}" ]
+      then
+         continue
+      fi
 
       #
       # fix file contains the basename of the old directory
@@ -114,7 +123,7 @@ locate_fix_file()
       if [ "${fix}" = "${address}" ]
       then
          log_debug "Found a perfect matching fix file \"${found}\""
-         echo "${found}"
+         RVAL="${found}"
          return 0
       fi
 
@@ -132,11 +141,14 @@ locate_fix_file()
 
    if [ -z "${match}" ]
    then
+      log_debug "No matching fix file found"
+      RVAL=
       return 1
    fi
 
    log_debug "Found a matching fix file \"${match}\""
-   echo "${match}"
+   RVAL="${match}"
+   return 0
 }
 
 
@@ -154,7 +166,9 @@ _fixup_address_change()
    fixaddress="${RVAL#${MULLE_VIRTUAL_ROOT}}"
    fixaddress="${fixaddress#${datasource}}"
 
-   exekutor echo "cd \"\${MULLE_VIRTUAL_ROOT}${datasource}\""
+   r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${datasource}"
+
+   exekutor echo "cd \"${RVAL#${MULLE_USER_PWD}/}\""
    exekutor echo "mulle-sourcetree set --address '${fixaddress}' '${address}'"
 }
 
@@ -166,7 +180,9 @@ _fixup_manual_removal()
    local datasource="$1"
    local address="$2"
 
-   exekutor echo "cd \"\${MULLE_VIRTUAL_ROOT}${datasource}\""
+   r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${datasource}"
+
+   exekutor echo "cd \"${RVAL#${MULLE_USER_PWD}/}\""
    exekutor echo "mulle-sourcetree remove '${address}'"
 }
 
@@ -185,15 +201,17 @@ _fixup_dir_exists()
    local nodeline
    local fix
 
-   nodeline="`rexekutor egrep -s -v '^#' "${filename}/${SOURCETREE_FIX_FILE}"`"
+   nodeline="`rexekutor egrep -s -v '^#' "${filename}/${SOURCETREE_FIX_FILENAME}"`"
    if [ -z "${nodeline}" ] # can't determine looks ok
    then
+      log_debug "There is no \"${filename}/${SOURCETREE_FIX_FILENAME}\""
       return
    fi
 
    fix="`nodeline_get_address "${nodeline}"`"
    if [ "${address}" = "${fix}" ]  # looks good
    then
+      log_debug "Fix \"${fix}\" is in the right place"
       return
    fi
 
@@ -202,10 +220,12 @@ _fixup_dir_exists()
 
    local fixfile
 
-   fixfile="`locate_fix_file "${PWD}" "${address}"`"
+   r_locate_fix_file "${PWD}" "${address}"
+   fixfile="${RVAL}"
    if [ -z "${fixfile}" ]
    then
-      fixfile="`locate_fix_file "${MULLE_VIRTUAL_ROOT}" "${address}"`"
+      r_locate_fix_file "${MULLE_VIRTUAL_ROOT}" "${address}"
+      fixfile="${RVAL}"
    fi
 
    if [ -z "${fixfile}" ]
@@ -228,7 +248,9 @@ _fixup_dir_not_found()
 
    local fixfile
 
-   fixfile="`locate_fix_file "${MULLE_VIRTUAL_ROOT}" "${address}"`"
+   r_locate_fix_file "${MULLE_VIRTUAL_ROOT}" "${address}"
+   fixfile="${RVAL}"
+
    if [ -z "${fixfile}" ]
    then
       _fixup_manual_removal "${datasource}" "${address}"
@@ -343,15 +365,22 @@ sourcetree_fix_main()
 
    [ "$#" -eq 0 ] || sourcetree_fix_usage
 
+   if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-walk.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
+   fi
+
    if ! cfg_exists "${SOURCETREE_START}"
    then
-      log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
+      log_info "There is no \"${SOURCETREE_CONFIG_FILENAME}\" here"
    fi
 
    if ! db_is_ready "${SOURCETREE_START}"
    then
       fail "The sourcetree isn't updated. Can't fix config entries"
    fi
+
 
    local mode
 
@@ -369,27 +398,3 @@ sourcetree_fix_main()
                   "${mode}"
 }
 
-
-sourcetree_fix_initialize()
-{
-   log_entry "sourcetree_fix_initialize"
-
-   if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
-   then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
-
-      # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-walk.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
-   fi
-}
-
-
-sourcetree_fix_initialize
-
-:

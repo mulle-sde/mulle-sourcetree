@@ -170,7 +170,7 @@ main()
    set -e
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_VIRTUAL_ROOT="${directory}"
+   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}"`"
    export MULLE_VIRTUAL_ROOT
 
    (

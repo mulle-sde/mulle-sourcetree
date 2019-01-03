@@ -20,8 +20,8 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/b"
-   exekutor git add VERSION .mulle-sourcetree
+   run_mulle_sourcetree add --nodetype git "file://${reporoot}/b"
+   exekutor git add VERSION .mulle
    exekutor git commit -m "a: initial version"
 }
 
@@ -53,7 +53,7 @@ setup_demo_repos()
 
 run_test()
 {
-   MULLE_VIRTUAL_ROOT="${directory}/project"
+   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}/project"`"
    export MULLE_VIRTUAL_ROOT
 
    exekutor mkdir b
@@ -86,12 +86,11 @@ run_test()
 
    log_verbose "----- #1 PASSED -----"
 
-
    #
    # this should not work, because project is not reachable from the
    # false MULLE_VIRTUAL_ROOT (directory)
    #
-   MULLE_VIRTUAL_ROOT="${directory}"
+   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}"`"
 
    if run_mulle_sourcetree ${UPDATE_FLAGS} --share update
    then
@@ -106,7 +105,7 @@ run_test()
    #
    # now with the proper root though
    #
-   MULLE_VIRTUAL_ROOT="${directory}/project"
+   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}/project"`"
 
    if ! run_mulle_sourcetree ${UPDATE_FLAGS} --share update
    then
@@ -137,7 +136,7 @@ run_test()
 
    log_verbose "----- #4 PASSED -----"
 
-   MULLE_VIRTUAL_ROOT="${directory}/project"
+   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}/project"`"
 
    #
    # should also work, will defer to root
@@ -197,7 +196,8 @@ init()
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-callback.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-sync.sh" || exit 1
 }
 
 

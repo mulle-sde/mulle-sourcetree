@@ -13,9 +13,9 @@ run_mulle_sourcetree()
 }
 
 #
-# repository has no .mulle-sourcetree in 1.0.0
-# repository has a .mulle-sourcetree in 2.0.0
-# repository has no .mulle-sourcetree in 3.0.0
+# repository has no .mulle in 1.0.0
+# repository has a .mulle in 2.0.0
+# repository has no .mulle in 3.0.0
 #
 _setup_demo_repo_a()
 {
@@ -24,9 +24,9 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/b"
-   run_mulle_sourcetree -e add --nodetype git --url "file://${reporoot}/d" "c/d"
-   exekutor git add VERSION .mulle-sourcetree
+   run_mulle_sourcetree add --nodetype git "file://${reporoot}/b"
+   run_mulle_sourcetree add --nodetype git --url "file://${reporoot}/d" "c/d"
+   exekutor git add VERSION .mulle
    exekutor git commit -m "a: initial version"
 }
 
@@ -37,8 +37,8 @@ _setup_demo_repo_b()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/d"
-   exekutor git add VERSION .mulle-sourcetree
+   run_mulle_sourcetree add --nodetype git "file://${reporoot}/d"
+   exekutor git add VERSION .mulle
    exekutor git commit -m "b: initial version"
 }
 
@@ -103,7 +103,6 @@ run_test1()
    then
       internal_fail "fix failed unexpectedly"
    fi
-   log_verbose "----- #4 PASSED -----"
 
    expected="mulle-sourcetree set url root/b"
    case "${result}" in
@@ -114,7 +113,7 @@ run_test1()
          internal_fail "got \"${result}\""
       ;;
    esac
-   log_verbose "----- #5 PASSED -----"
+   log_verbose "----- #4 PASSED -----"
 
    mkdir -p foo/x
    mv root/b foo/x/
@@ -132,7 +131,7 @@ run_test1()
          internal_fail "got \"${result}\""
       ;;
    esac
-   log_verbose "----- #6 PASSED -----"
+   log_verbose "----- #5 PASSED -----"
 
    rm -rf foo/x/
 
@@ -149,7 +148,7 @@ run_test1()
          internal_fail "got \"${result}\" ($PWD)"
       ;;
    esac
-   log_verbose "----- #7 PASSED -----"
+   log_verbose "----- #6 PASSED -----"
 }
 
 
@@ -197,10 +196,10 @@ init()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"      || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"    || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dotdump.sh" || exit 1
 }
 

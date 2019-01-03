@@ -51,36 +51,36 @@ test_bad_paths()
    then
       internal_fail "a: failed to complain about absolute path"
    fi
-   [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "a: .mulle-sourcetree/etc/config should not exist"
-   [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "a: .mulle-sourcetree/var/db should not exist"
+   [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "a: .mulle/etc/sourcetree/config should not exist"
+   [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "a: .mulle/var/sourcetree/db should not exist"
 
    if run_mulle_sourcetree add --nodetype git --url "${repos}/a" "../foo"
    then
       internal_fail "b: failed to complain about escape path"
    fi
-   [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "b: .mulle-sourcetree/etc/config should not exist"
-   [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "b: .mulle-sourcetree/var/db should not exist"
+   [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "b: .mulle/etc/sourcetree/config should not exist"
+   [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "b: .mulle/var/sourcetree/db should not exist"
 
    if run_mulle_sourcetree add --nodetype git --url "${repos}/a" "a/../.."
    then
       internal_fail "c: failed to complain about escape path"
    fi
-   [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "c: .mulle-sourcetree/etc/config should not exist"
-   [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "c: .mulle-sourcetree/var/db should not exist"
+   [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "c: .mulle/etc/sourcetree/config should not exist"
+   [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "c: .mulle/var/sourcetree/db should not exist"
 
    if run_mulle_sourcetree add --nodetype git --url "${repos}/a" "~foo"
    then
       internal_fail "d: failed to complain about absolute path"
    fi
-   [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "d: .mulle-sourcetree/etc/config should not exist"
-   [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "d: .mulle-sourcetree/var/db should not exist"
+   [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "d: .mulle/etc/sourcetree/config should not exist"
+   [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "d: .mulle/var/sourcetree/db should not exist"
 
    if run_mulle_sourcetree add --nodetype git --url "${repos}/a" "~/foo"
    then
       internal_fail "e: failed to complain about absolute path"
    fi
-   [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "e: .mulle-sourcetree/etc/config should not exist"
-   [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "e: .mulle-sourcetree/var/db should not exist"
+   [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "e: .mulle/etc/sourcetree/config should not exist"
+   [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "e: .mulle/var/sourcetree/db should not exist"
 
    :
 }
@@ -92,23 +92,23 @@ test_simple_add_remove()
    then
       internal_fail "a: failed unexpectedly"
    fi
-   [ -f ".mulle-sourcetree/etc/config" ] || internal_fail "a: .mulle-sourcetree/etc/config should exist now"
-   [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "a: .mulle-sourcetree/var/db should not exist"
+   [ -f ".mulle/etc/sourcetree/config" ] || internal_fail "a: .mulle/etc/sourcetree/config should exist now ($PWD)"
+   [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "a: .mulle/var/sourcetree/db should not exist ($PWD)"
 
    # same _url should not work
    if run_mulle_sourcetree add --nodetype git --url "${repos}/a" "foo"
    then
       internal_fail "b: succeeded unexpectedly"
    fi
-   [ -f ".mulle-sourcetree/etc/config" ] || internal_fail "b: .mulle-sourcetree/etc/config should exist now"
-   [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "b: .mulle-sourcetree/var/db should not exist"
+   [ -f ".mulle/etc/sourcetree/config" ] || internal_fail "b: .mulle/etc/sourcetree/config should exist now"
+   [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "b: .mulle/var/sourcetree/db should not exist"
 
    if ! run_mulle_sourcetree remove "foo"
    then
       internal_fail "c: failed unexpectedly"
    fi
-   [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "c: .mulle-sourcetree/etc/config should not exist anymore"
-   [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "c: .mulle-sourcetree/var/db should not exist"
+   [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "c: .mulle/etc/sourcetree/config should not exist anymore"
+   [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "c: .mulle/var/sourcetree/db should not exist"
 
    :
 }
@@ -116,8 +116,8 @@ test_simple_add_remove()
 
 test_update1()
 {
-   [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "a: .mulle-sourcetree/etc/config should not exist anymore"
-   [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "a: .mulle-sourcetree/var/db should not exist"
+   [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "a: .mulle/etc/sourcetree/config should not exist anymore"
+   [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "a: .mulle/var/sourcetree/db should not exist"
    [ -e "foo" ]                          && internal_fail "a: foo should not exist"
 
    if ! run_mulle_sourcetree add --nodetype git --branch release --url "${repos}/a" "foo"
@@ -125,8 +125,8 @@ test_update1()
       internal_fail "a: add failed unexpectedly"
    fi
 
-   [ -e ".mulle-sourcetree/etc/config" ] || internal_fail "b: .mulle-sourcetree should now exist"
-   [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "b: .mulle-sourcetree/var/db should not exist"
+   [ -e ".mulle/etc/sourcetree/config" ] || internal_fail "b: .mulle-sourcetree should now exist"
+   [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "b: .mulle/var/sourcetree/db should not exist"
    [ -e "foo" ]                          && internal_fail "b: foo should not exist"
 
    if ! run_mulle_sourcetree --recursive update
@@ -134,8 +134,8 @@ test_update1()
       internal_fail "b: update failed unexpectedly ($PWD)"
    fi
 
-   [ -e ".mulle-sourcetree/etc/config" ] || internal_fail "c: .mulle-sourcetree/etc/config should exist"
-   [ -e ".mulle-sourcetree/var/db" ]     || internal_fail "c: .mulle-sourcetree/var/db should exist"
+   [ -e ".mulle/etc/sourcetree/config" ] || internal_fail "c: .mulle/etc/sourcetree/config should exist"
+   [ -e ".mulle/var/sourcetree/db" ]     || internal_fail "c: .mulle/var/sourcetree/db should exist"
    [ -f "foo/VERSION" ]                  || internal_fail "c: foo/VERSION should exist"
 
    if ! run_mulle_sourcetree remove "foo"
@@ -143,8 +143,8 @@ test_update1()
       internal_fail "c: remove failed unexpectedly"
    fi
 
-   [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "d: .mulle-sourcetree/etc/config should not exist anymore"
-   [ -e ".mulle-sourcetree/var/db" ]     || internal_fail "d: .mulle-sourcetree/var/db should exist"
+   [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "d: .mulle/etc/sourcetree/config should not exist anymore"
+   [ -e ".mulle/var/sourcetree/db" ]     || internal_fail "d: .mulle/var/sourcetree/db should exist"
    [ -f "foo/VERSION" ]                  || internal_fail "d: foo/VERSION should exist"
 
    if ! run_mulle_sourcetree --recursive update
@@ -152,10 +152,10 @@ test_update1()
       internal_fail "d: update failed unexpectedly"
    fi
 
-   [ -e ".mulle-sourcetree/etc/config" ]    && internal_fail "e: .mulle-sourcetree/etc/config should not exist anymore"
+   [ -e ".mulle/etc/sourcetree/config" ]    && internal_fail "e: .mulle/etc/sourcetree/config should not exist anymore"
    [ -e "foo" ]                             && internal_fail "e: foo should not exist"
-   [ -e ".mulle-sourcetree/var/db" ]        || internal_fail "e: .mulle-sourcetree/var/db should exist"
-   [ -e ".mulle-sourcetree/var/graveyard" ] || internal_fail "e: .mulle-sourcetree/var/graveyard should exist"
+   [ -e ".mulle/var/sourcetree/db" ]        || internal_fail "e: .mulle/var/sourcetree/db should exist"
+   [ -e ".mulle/var/sourcetree/graveyard" ] || internal_fail "e: .mulle/var/sourcetree/graveyard should exist"
 
    :
 }
@@ -164,11 +164,11 @@ test_update1()
 test_update2()
 {
    rm -rf foo 2> /dev/null
-   rm -rf .mulle-sourcetree/var/db 2> /dev/null
-   rm -f .mulle-sourcetree 2> /dev/null
+   rm -rf .mulle/var/sourcetree/db 2> /dev/null
+   rm -f .mulle/etc/config/sourcetree 2> /dev/null
 
-   [ -e ".mulle-sourcetree/etc/config" ] && internal_fail "a: .mulle-sourcetree/etc/config should not exist anymore"
-   [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "a: .mulle-sourcetree/var/db should not exist"
+   [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "a: .mulle/etc/sourcetree/config should not exist anymore"
+   [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "a: .mulle/var/sourcetree/db should not exist"
    [ -e "foo" ]                          && internal_fail "a: foo should not exist"
 
    if ! run_mulle_sourcetree add --nodetype git --branch release --url "${repos}/a" "foo"
@@ -176,8 +176,8 @@ test_update2()
       internal_fail "a: add failed unexpectedly"
    fi
 
-   [ -e ".mulle-sourcetree/etc/config" ] || internal_fail "b: .mulle-sourcetree should now exist"
-   [ -e ".mulle-sourcetree/var/db" ]     && internal_fail "b: .mulle-sourcetree/var/db should not exist"
+   [ -e ".mulle/etc/sourcetree/config" ] || internal_fail "b: .mulle/etc/sourcetree/config should now exist"
+   [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "b: .mulle/var/sourcetree/db should not exist"
    [ -e "foo" ]                          && internal_fail "b: foo should not exist"
 
    if ! run_mulle_sourcetree --recursive update
@@ -185,8 +185,8 @@ test_update2()
       internal_fail "b: update failed unexpectedly"
    fi
 
-   [ -e ".mulle-sourcetree/etc/config" ] || internal_fail "c: .mulle-sourcetree/etc/config should exist"
-   [ -e ".mulle-sourcetree/var/db" ]     || internal_fail "c: .mulle-sourcetree/var/db should exist"
+   [ -e ".mulle/etc/sourcetree/config" ] || internal_fail "c: .mulle/etc/sourcetree/config should exist"
+   [ -e ".mulle/var/sourcetree/db" ]     || internal_fail "c: .mulle/var/sourcetree/db should exist"
    [ -f "foo/VERSION" ]                  || internal_fail "c: foo/VERSION should exist"
 
    if ! run_mulle_sourcetree set --address "bar" foo
@@ -194,8 +194,8 @@ test_update2()
       internal_fail "c: set failed unexpectedly"
    fi
 
-   [ -e ".mulle-sourcetree/etc/config" ] || internal_fail "d: .mulle-sourcetree/etc/config should exist"
-   [ -e ".mulle-sourcetree/var/db" ]     || internal_fail "d: .mulle-sourcetree/var/db should exist"
+   [ -e ".mulle/etc/sourcetree/config" ] || internal_fail "d: .mulle/etc/sourcetree/config should exist"
+   [ -e ".mulle/var/sourcetree/db" ]     || internal_fail "d: .mulle/var/sourcetree/db should exist"
    [ -f "foo/VERSION" ]                  || internal_fail "d: foo/VERSION should exist"
    [ -f "bar/VERSION" ]                  && internal_fail "d: bar/VERSION should not exist"
 
@@ -204,8 +204,8 @@ test_update2()
       internal_fail "d: update failed unexpectedly"
    fi
 
-   [ -e ".mulle-sourcetree/etc/config" ] || internal_fail "e: .mulle-sourcetree/etc/config should exist"
-   [ -e ".mulle-sourcetree/var/db" ]     || internal_fail "e: .mulle-sourcetree/var/db should exist"
+   [ -e ".mulle/etc/sourcetree/config" ] || internal_fail "e: .mulle/etc/sourcetree/config should exist"
+   [ -e ".mulle/var/sourcetree/db" ]     || internal_fail "e: .mulle/var/sourcetree/db should exist"
    [ -f "foo/VERSION" ]                  && internal_fail "e: foo/VERSION should exist"
    [ -f "bar/VERSION" ]                  || internal_fail "e: bar/VERSION should exist"
 
@@ -222,11 +222,9 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_VIRTUAL_ROOT="${directory}"
-   export MULLE_VIRTUAL_ROOT
 
-   SOURCETREE_DB_NAME=".mulle-sourcetree/var/db"
-   export SOURCETREE_DB_NAME
+   SOURCETREE_DB_FILENAME=".mulle/var/sourcetree/db"
+   export SOURCETREE_DB_FILENAME
 
    local project
    local repos
@@ -238,28 +236,28 @@ main()
 
    mkdir_if_missing "${project}"
    (
-      cd "${project}"
+      cd "${project}" &&
 
       test_bad_paths &&
       log_verbose "----- #1 PASSED -----"
    ) || exit 1
 
    (
-      cd "${project}"
+      cd "${project}" &&
 
       test_simple_add_remove &&
       log_verbose "----- #2 PASSED -----"
    ) || exit 1
 
    (
-      cd "${project}"
+      cd "${project}" &&
 
       test_update1 &&
       log_verbose "----- #3 PASSED -----"
    ) || exit 1
 
    (
-      cd "${project}"
+      cd "${project}" &&
 
       test_update2 &&
       log_verbose "----- #4 PASSED -----"
@@ -280,10 +278,11 @@ init()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-callback.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-sync.sh"     || exit 1
 }
 
 

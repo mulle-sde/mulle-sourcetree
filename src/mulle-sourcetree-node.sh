@@ -227,7 +227,7 @@ node_list_operations()
 # This function sets values of variables that should be declared
 # in the caller!
 #
-#   # node_augmentline
+#   # node_augment
 #
 #   local _branch
 #   local _address
@@ -461,8 +461,6 @@ r_node_to_nodeline()
 node_to_nodeline()
 {
    log_entry "node_to_nodeline" "$@"
-
-   local RVAL
 
    r_node_to_nodeline "$@"
    [ ! -z "${RVAL}" ] && echo "${RVAL}"

@@ -13,9 +13,9 @@ run_mulle_sourcetree()
 }
 
 #
-# repository has no .mulle-sourcetree in 1.0.0
-# repository has a .mulle-sourcetree in 2.0.0
-# repository has no .mulle-sourcetree in 3.0.0
+# repository has no .mulle in 1.0.0
+# repository has a .mulle in 2.0.0
+# repository has no .mulle in 3.0.0
 #
 _setup_demo_repo_a()
 {
@@ -24,9 +24,9 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/b"
-   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/c"
-   exekutor git add VERSION .mulle-sourcetree
+   run_mulle_sourcetree add --nodetype git "file://${reporoot}/b"
+   run_mulle_sourcetree add --nodetype git "file://${reporoot}/c"
+   exekutor git add VERSION .mulle
    exekutor git commit -m "a: initial version"
 }
 
@@ -37,8 +37,8 @@ _setup_demo_repo_b()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/c"
-   exekutor git add VERSION .mulle-sourcetree
+   run_mulle_sourcetree add --nodetype git "file://${reporoot}/c"
+   exekutor git add VERSION .mulle
    exekutor git commit -m "b: initial version"
 }
 
@@ -60,8 +60,8 @@ _change_demo_repo_a()
 {
    local reporoot="$1"
 
-   run_mulle_sourcetree -e mark "b" "no-share"
-   exekutor git commit -m "a: no-share version" .mulle-sourcetree
+   run_mulle_sourcetree mark "b" "no-share"
+   exekutor git commit -m "a: no-share version" .mulle
 }
 
 
@@ -97,14 +97,14 @@ run_test1()
    then
       fail "add failed unexpectedly"
    fi
-   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
    then
       fail "update failed unexpectedly"
    fi
 
-   [ -d "shared/a" ] || fail "shared/a should exist"
-   [ -d "shared/b" ] || fail "shared/b should exist"
-   [ -d "shared/c" ] || fail "shared/c should exist"
+   [ -d "shared/a" ] || fail "1: shared/a should exist"
+   [ -d "shared/b" ] || fail "1: shared/b should exist"
+   [ -d "shared/c" ] || fail "1: shared/c should exist"
 }
 
 
@@ -115,14 +115,14 @@ run_test2()
       fail "add failed unexpectedly"
    fi
 
-   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
    then
       fail "update failed unexpectedly"
    fi
 
-   [ -d "shared/a" ] || fail "shared/a should exist"
-   [ -d "shared/b" ] || fail "shared/b should exist"
-   [ -d "shared/c" ] || fail "shared/c should exist"
+   [ -d "shared/a" ] || fail "2: shared/a should exist"
+   [ -d "shared/b" ] || fail "2: shared/b should exist"
+   [ -d "shared/c" ] || fail "2: shared/c should exist"
 }
 
 
@@ -137,8 +137,8 @@ run_test3()
 
    run_mulle_sourcetree list
 
-   MULLE_SOURCETREE_SHARE_DIR="shared"
-   export MULLE_SOURCETREE_SHARE_DIR
+   MULLE_SOURCETREE_STASH_DIRNAME="shared"
+   export MULLE_SOURCETREE_STASH_DIRNAME
 
    if ! run_mulle_sourcetree ${flags} --share update
    then
@@ -147,25 +147,25 @@ run_test3()
 
    if [ -z ${flags} ]
    then
-      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/a" ]   || fail "${MULLE_SOURCETREE_SHARE_DIR}/a should exist"
-      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/b" ]   && fail "${MULLE_SOURCETREE_SHARE_DIR}/b should not exist"
-      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/c" ]   || fail "${MULLE_SOURCETREE_SHARE_DIR}/c should exist"
+      [ -d "${MULLE_SOURCETREE_STASH_DIRNAME}/a" ]   || fail "3: ${MULLE_SOURCETREE_STASH_DIRNAME}/a should exist"
+      [ -d "${MULLE_SOURCETREE_STASH_DIRNAME}/b" ]   && fail "3: ${MULLE_SOURCETREE_STASH_DIRNAME}/b should not exist"
+      [ -d "${MULLE_SOURCETREE_STASH_DIRNAME}/c" ]   || fail "3: ${MULLE_SOURCETREE_STASH_DIRNAME}/c should exist"
 
-      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/a/b" ] || fail "${MULLE_SOURCETREE_SHARE_DIR}/a/b should exist"
+      [ -d "${MULLE_SOURCETREE_STASH_DIRNAME}/a/b" ] || fail "3: ${MULLE_SOURCETREE_STASH_DIRNAME}/a/b should exist"
 
       # this is debatable i don't know
       # [ -d "shared/a/b/c" ] || fail "shared/a/b/c should exist"
    fi
-   MULLE_SOURCETREE_SHARE_DIR=
+   MULLE_SOURCETREE_STASH_DIRNAME=
 }
 
 
 #
-# test absolute MULLE_SOURCETREE_SHARE_DIR
+# test absolute MULLE_SOURCETREE_STASH_DIR
 #
 run_test4()
 {
-   local flags="$1"
+   local directory="$1"
 
    if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
    then
@@ -174,26 +174,23 @@ run_test4()
 
    run_mulle_sourcetree list
 
-   MULLE_SOURCETREE_SHARE_DIR="${MULLE_VIRTUAL_ROOT}/shared_global"
-   export MULLE_SOURCETREE_SHARE_DIR
+   MULLE_SOURCETREE_STASH_DIR="${directory}/shared_global"
+   export MULLE_SOURCETREE_STASH_DIR
 
-   if ! run_mulle_sourcetree ${flags} --share update
+   if ! run_mulle_sourcetree --share update
    then
       fail "update failed unexpectedly"
    fi
 
-   if [ -z ${flags} ]
-   then
-      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/a" ]   || fail "${MULLE_SOURCETREE_SHARE_DIR}/a should exist"
-      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/b" ]   && fail "${MULLE_SOURCETREE_SHARE_DIR}/b should not exist"
-      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/c" ]   || fail "${MULLE_SOURCETREE_SHARE_DIR}/c should exist"
+   [ -d "${MULLE_SOURCETREE_STASH_DIR}/a" ]   || fail "4: ${MULLE_SOURCETREE_STASH_DIR}/a should exist"
+   [ -d "${MULLE_SOURCETREE_STASH_DIR}/b" ]   && fail "4: ${MULLE_SOURCETREE_STASH_DIR}/b should not exist"
+   [ -d "${MULLE_SOURCETREE_STASH_DIR}/c" ]   || fail "4: ${MULLE_SOURCETREE_STASH_DIR}/c should exist"
 
-      [ -d "${MULLE_SOURCETREE_SHARE_DIR}/a/b" ] || fail "${MULLE_SOURCETREE_SHARE_DIR}/a/b should exist"
+   [ -d "${MULLE_SOURCETREE_STASH_DIR}/a/b" ] || fail "4: ${MULLE_SOURCETREE_STASH_DIR}/a/b should exist"
 
       # this is debatable i don't know
       # [ -d "shared/a/b/c" ] || fail "shared/a/b/c should exist"
-   fi
-   MULLE_SOURCETREE_SHARE_DIR=
+   MULLE_SOURCETREE_STASH_DIR=
 }
 
 
@@ -214,45 +211,43 @@ main()
 
    mkdir_if_missing "${project}"
 
-   MULLE_VIRTUAL_ROOT="`physicalpath "${project}"`"
-   export MULLE_VIRTUAL_ROOT
-
    setup_demo_repos "${repos}"
 
-   (
-      rmdir_safer "${project}" &&
-      mkdir_if_missing "${project}" &&
-      cd "${project}" &&
-      run_test1
-   ) || exit 1
-   log_verbose "----- #1 PASSED -----"
+#   (
+#      rmdir_safer "${project}" &&
+#      mkdir_if_missing "${project}" &&
+#      cd "${project}" &&
+#      run_test1
+#   ) || exit 1
+#   log_verbose "----- #1 PASSED -----"
+#
+#   (
+#      rmdir_safer "${project}" &&
+#      mkdir_if_missing "${project}" &&
+#      cd "${project}" &&
+#      run_test2
+#   ) || exit 1
+#   log_verbose "----- #2 PASSED -----"
+#
+#   #
+#   #
+#   #
 
-   (
-      rmdir_safer "${project}" &&
-      mkdir_if_missing "${project}" &&
-      cd "${project}" &&
-      run_test2
-   ) || exit 1
-   log_verbose "----- #2 PASSED -----"
-
-   #
-   #
-   #
    change_demo_repo_a_set_b_to_noshare "${repos}"
-
+#
+#   (
+#      rmdir_safer "${project}" &&
+#      mkdir_if_missing "${project}" &&
+#      cd "${project}" &&
+#      run_test3
+#   ) || exit 1
+#   log_verbose "----- #3 PASSED -----"
+#
    (
       rmdir_safer "${project}" &&
       mkdir_if_missing "${project}" &&
       cd "${project}" &&
-      run_test3
-   ) || exit 1
-   log_verbose "----- #3 PASSED -----"
-
-   (
-      rmdir_safer "${project}" &&
-      mkdir_if_missing "${project}" &&
-      cd "${project}" &&
-      run_test4
+      run_test4 "${directory}"
    ) || exit 1
    log_verbose "----- #4 PASSED -----"
 
@@ -274,7 +269,8 @@ init()
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh"   || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-callback.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-sync.sh"     || exit 1
 }
 
 

@@ -129,13 +129,13 @@ Mode         | Description
 #### `mulle-sourcetree add` : add nodes with
 
 ```
-$ mulle-sourcetree -e add --url https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz external/expat
+$ mulle-sourcetree add --url https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz external/expat
 ```
 
 You can specify your URL with environment variables, to make them more portable:
 
 ```
-$ mulle-sourcetree -e add --url '${ZLIB_URL:-https://github.com/madler/zlib.git}' external/zlib
+$ mulle-sourcetree add --url '${ZLIB_URL:-https://github.com/madler/zlib.git}' external/zlib
 ```
 
 
@@ -147,7 +147,7 @@ into your project:
 
 
 ```
-$ mulle-sourcetree -e update
+$ mulle-sourcetree update
 ```
 
 
@@ -156,7 +156,7 @@ $ mulle-sourcetree -e update
 See your sourcetree with **list**:
 
 ```
-$ mulle-sourcetree -e list --output-header --output-eval
+$ mulle-sourcetree list --output-header --output-eval
 address         nodetype  marks  userinfo  url
 -------         --------  -----  --------  ---
 external/expat  tar                        https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz
@@ -168,7 +168,7 @@ external/zlib   git                        https://github.com/madler/zlib.git
 Get a graphical overview with **dotdump**:
 
 ```
-$ mulle-sourcetree -e dotdump > pic.dot
+$ mulle-sourcetree dotdump > pic.dot
 open pic.dot # view it with Graphviz (http://graphviz.org/)
 ```
 
@@ -178,7 +178,7 @@ open pic.dot # view it with Graphviz (http://graphviz.org/)
 #### `mulle-sourcetree buildorder` : retrieve projects to build
 
 ```
-$ mulle-sourcetree -e buildorder
+$ mulle-sourcetree buildorder
 /private/tmp/a/external/expat
 /private/tmp/a/external/zlib
 ```

@@ -65,10 +65,8 @@ __walk_get_db_filename()
          # ok could be an edit
       fi
 
-      local RVAL
-
-      r_fast_basename "${MULLE_ADDRESS}"
-      filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${RVAL}"
+         r_fast_basename "${MULLE_ADDRESS}"
+      filepath_concat "${MULLE_SOURCETREE_STASH_DIR}" "${RVAL}"
       return
    fi
 
@@ -126,6 +124,7 @@ __call_callback()
       log_trace2 "MULLE_NODETYPE:        \"${_nodetype}\""
       log_trace2 "MULLE_TAG:             \"${_tag}\""
       log_trace2 "MULLE_URL:             \"${_url}\""
+      log_trace2 "MULLE_RAW_USERINFO:    \"${_raw_userinfo}\""
       log_trace2 "MULLE_USERINFO:        \"${_userinfo}\""
       log_trace2 "MULLE_UUID:            \"${_uuid}\""
       log_trace2 "MULLE_VIRTUAL:         \"${virtual}\""
@@ -148,6 +147,7 @@ __call_callback()
    MULLE_FETCHOPTIONS="${_fetchoptions}" \
    MULLE_MARKS="${_marks}" \
    MULLE_NODETYPE="${_nodetype}" \
+   MULLE_RAW_USERINFO="${_raw_userinfo}" \
    MULLE_URL="${_url}" \
    MULLE_USERINFO="${_userinfo}" \
    MULLE_TAG="${_tag}" \

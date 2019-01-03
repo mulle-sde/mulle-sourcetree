@@ -78,15 +78,15 @@ print_buildorder_line()
 
    if [ "${SOURCETREE_MODE}" = "share" -a \
         "${OPTION_PRINT_ENV}" = 'YES' -a \
-        ! -z "${MULLE_SOURCETREE_SHARE_DIR}" -a \
-        "${MULLE_SOURCETREE_SHARE_DIR}" != "${MULLE_VIRTUAL_ROOT}" ]
+        ! -z "${MULLE_SOURCETREE_STASH_DIR}" -a \
+        "${MULLE_SOURCETREE_STASH_DIR}" != "${MULLE_VIRTUAL_ROOT}" ]
    then
       local reduce
 
-      reduce="${MULLE_FILENAME#${MULLE_SOURCETREE_SHARE_DIR}}"
+      reduce="${MULLE_FILENAME#${MULLE_SOURCETREE_STASH_DIR}}"
       if [ "${reduce}" != "${MULLE_FILENAME}" ]
       then
-         MULLE_FILENAME='${MULLE_SOURCETREE_SHARE_DIR}'"${reduce}"
+         MULLE_FILENAME='${MULLE_SOURCETREE_STASH_DIR}'"${reduce}"
       fi
    fi
 
@@ -189,6 +189,42 @@ sourcetree_buildorder_main()
 }
 
 
+r_make_buildorder_qualifier()
+{
+   log_entry "r_make_buildorder_qualifier"
+
+   local qualifier="$1"
+
+   if [ ! -z "${qualifier}" ]
+   then
+      qualifier="${qualifier} AND "
+   fi
+
+   if [ -z "${MULLE_OS_VERSION}" ]
+   then
+      case "${MULLE_UNAME}" in
+         darwin)
+            MULLE_OS_VERSION="`sw_vers -productVersion`"
+         ;;
+      esac
+   fi
+
+   qualifier="${qualifier} \
+NOT MATCHES no-os-${MULLE_UNAME} \
+AND NOT MATCHES no-os-${MULLE_UNAME}-build \
+AND (NOT MATCHES only-os-* OR MATCHES only-os-${MULLE_UNAME} OR MATCHES only-os-${MULLE_UNAME}-build)"
+
+   if [ ! -z "${MULLE_OS_VERSION}" ]
+   then
+      qualifier="${qualifier} \
+AND VERSION version-min-${MULLE_UNAME} <= ${MULLE_OS_VERSION} \
+AND VERSION version-max-${MULLE_UNAME} >= ${MULLE_OS_VERSION}"
+   fi
+
+   RVAL="${qualifier}"
+}
+
+
 sourcetree_buildorder_initialize()
 {
    log_entry "sourcetree_buildorder_initialize"
@@ -205,23 +241,8 @@ sourcetree_buildorder_initialize()
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-version.sh" || exit 1
    fi
 
-   case "${MULLE_UNAME}" in
-      darwin)
-         MULLE_OS_VERSION="`sw_vers -productVersion`"
-      ;;
-   esac
-
-   SOURCETREE_BUILDORDER_QUALIFIER="\
-MATCHES build \
-AND NOT MATCHES no-os-${MULLE_UNAME} \
-AND NOT MATCHES no-os-${MULLE_UNAME}-build \
-AND (NOT MATCHES only-os-* OR MATCHES only-os-${MULLE_UNAME} OR MATCHES only-os-${MULLE_UNAME}-build)"
-   if [ ! -z "${MULLE_OS_VERSION}" ]
-   then
-      SOURCETREE_BUILDORDER_QUALIFIER="${SOURCETREE_BUILDORDER_QUALIFIER} \
-AND VERSION version-min-${MULLE_UNAME} <= ${MULLE_OS_VERSION} \
-AND VERSION version-max-${MULLE_UNAME} >= ${MULLE_OS_VERSION}"
-   fi
+   r_make_buildorder_qualifier "MATCHES build"
+   SOURCETREE_BUILDORDER_QUALIFIER="${RVAL}"
 }
 
 

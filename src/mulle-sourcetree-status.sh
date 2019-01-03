@@ -61,11 +61,11 @@ Usage:
    Emit status of your sourcetree.
 
 Options:
-   --all          : visit all nodes, even if they are unused due to sharing
-   --is-uptodate  : return with 0 if sourcetree does not need to run update
-   -n <value>     : node types to walk (default: ALL)
-   -p <value>     : specify permissions (missing)
-   -m <value>     : specify marks to match (e.g. build)
+   --all         : visit all nodes, even if they are unused due to sharing
+   --is-uptodate : return with 0 if sourcetree does not need to run update
+   -n <value>    : node types to walk (default: ALL)
+   -p <value>    : specify permissions (missing)
+   -m <value>    : specify marks to match (e.g. build)
 EOF
   exit 1
 }
@@ -185,7 +185,7 @@ r_emit_status()
       r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${SOURCETREE_START}"
       filename="${RVAL}"
    else
-      if ! string_has_prefix "${filename}" "${MULLE_SOURCETREE_SHARE_DIR}"
+      if ! string_has_prefix "${filename}" "${MULLE_SOURCETREE_STASH_DIR}"
       then
          datasource="${filename#${MULLE_VIRTUAL_ROOT}}"
          if [ -z "${datasource}" ]
@@ -197,10 +197,10 @@ r_emit_status()
       fi
    fi
 
-   if string_has_prefix "${output_adress}" "${MULLE_SOURCETREE_SHARE_DIR}"
+   if string_has_prefix "${output_adress}" "${MULLE_SOURCETREE_STASH_DIR}"
    then
-      output_adress="${output_adress#${MULLE_SOURCETREE_SHARE_DIR}}"
-      output_adress="\${MULLE_SOURCETREE_SHARE_DIR}${output_adress}"
+      output_adress="${output_adress#${MULLE_SOURCETREE_STASH_DIR}}"
+      output_adress="\${MULLE_SOURCETREE_STASH_DIR}${output_adress}"
    fi
 
    case "${datasource}" in
@@ -248,12 +248,12 @@ r_emit_status()
    then
       fs="missing"
 
-      if [ -e "${filename}/${SOURCETREE_CONFIG_FILE}" ]
+      if [ -e "${filename}/${SOURCETREE_CONFIG_FILENAME}" ]
       then
          configexists='YES'
       fi
 
-      if [ -d "${filename}/${SOURCETREE_DB_NAME}" ]
+      if [ -d "${filename}/${SOURCETREE_DB_FILENAME}" ]
       then
          dbexists='YES'
       fi
@@ -347,19 +347,19 @@ r_emit_status()
             #
             # Config     | Database | Config > DB | Output
             # -----------|----------|-------------|----------
-            # not exists | *        | *           | ok
+            # not exists | *        | *           | n/a
             #
             if [ "${configexists}" = 'NO' ]
             then
                log_fluff "\"${directory}\" does not have a \
-${SOURCETREE_CONFIG_FILE} ($PWD)"
+${SOURCETREE_CONFIG_FILENAME} ($PWD)"
 
                if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
                then
                   return 0
                fi
 
-               RVAL="${output_adress};ok;${fs};${configexists};${dbexists}" #;${filename}"
+               RVAL="${output_adress};n/a;${fs};${configexists};${dbexists}" #;${filename}"
                return
             fi
 
@@ -428,7 +428,7 @@ walk_status()
 
    local filename
    local name
-   local RVAL
+
    local rval
 
    filename="`__walk_get_db_filename`"
@@ -440,7 +440,19 @@ walk_status()
                  "${MULLE_MODE}" \
                  "${filename}"
    rval=$?
-   [ ! -z "${RVAL}" ] && echo "${RVAL}"
+   if [ ! -z "${RVAL}" ]
+   then
+      if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
+      then
+         if [ -e "${filename}" ]
+         then
+            RVAL="${RVAL};${filename};YES"
+         else
+            RVAL="${RVAL};${filename};NO"
+         fi
+      fi
+      echo "${RVAL}"
+   fi
    return $rval
 }
 
@@ -457,8 +469,6 @@ sourcetree_status()
    local output
    local output2
    local rval
-   local RVAL
-
    # empty parameters means local
    r_emit_status
    output="${RVAL}"
@@ -485,21 +495,27 @@ sourcetree_status()
    #
    output2="$(sort -u <<< "${output2}")"
 
-   local RVAL
-
    r_add_line "${output}" "${output2}"
    output="${RVAL}"
 
    local header
+   local seperator
 
    case ",${mode}," in
       *,output-header,*)
          header="Node;Status;Filesystem;Config;Database" # ;Filename"
-
+         if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
+         then
+            header="${header};Filename;Fetched"
+         fi
          case ",${mode}," in
             *,output-separator,*)
-               r_add_line "${header}" \
-                          "-------;------;----------;------;--------" # ;--------"
+               seperator="-------;------;----------;------;--------"
+               if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
+               then
+                  seperator="${seperator};--------;-------"
+               fi
+               r_add_line "${header}" "${seperator}"
                header="${RVAL}"
             ;;
          esac
@@ -531,6 +547,7 @@ sourcetree_status_main()
    local OPTION_IS_UPTODATE='NO'
    local OPTION_OUTPUT_HEADER="DEFAULT"
    local OPTION_OUTPUT_FORMAT="FMT"
+   local OPTION_OUTPUT_FILENAME='DEFAULT'
 
    while [ $# -ne 0 ]
    do
@@ -549,6 +566,14 @@ sourcetree_status_main()
 
          --no-output-header|--output-no-header)
             OPTION_OUTPUT_HEADER='NO'
+         ;;
+
+         --output-filename)
+            OPTION_OUTPUT_FILENAME='YES'
+         ;;
+
+         --no-output-filename)
+            OPTION_OUTPUT_FILENAME='NO'
          ;;
 
          --output-raw)
@@ -611,7 +636,7 @@ sourcetree_status_main()
 
    if ! cfg_exists "${SOURCETREE_START}"
    then
-      log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
+      log_info "There is no ${SOURCETREE_CONFIG_FILENAME} here"
       return 0
    fi
 
@@ -626,15 +651,13 @@ sourcetree_status_main()
       log_fluff "Update has not run yet (mode=${SOURCETREE_MODE})"
    fi
 
-   local RVAL
-
    mode="${SOURCETREE_MODE}"
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
       r_comma_concat "${mode}" "pre-order"
       mode="${RVAL}"
    fi
-   if [ "${OPTION_OUTPUT_FORMATTED}" = 'FMT' ]
+   if [ "${OPTION_OUTPUT_FORMAT}" = 'FMT' ]
    then
       r_comma_concat "${mode}" "output-formatted"
       mode="${RVAL}"

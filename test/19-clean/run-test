@@ -13,9 +13,9 @@ run_mulle_sourcetree()
 }
 
 #
-# repository has no .mulle-sourcetree in 1.0.0
-# repository has a .mulle-sourcetree in 2.0.0
-# repository has no .mulle-sourcetree in 3.0.0
+# repository has no .mulle in 1.0.0
+# repository has a .mulle in 2.0.0
+# repository has no .mulle in 3.0.0
 #
 _setup_demo_repo_a()
 {
@@ -24,8 +24,8 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/b"
-   exekutor git add VERSION .mulle-sourcetree
+   run_mulle_sourcetree add --nodetype git "file://${reporoot}/b"
+   exekutor git add VERSION .mulle
    exekutor git commit -m "a: initial version"
 }
 
@@ -58,8 +58,8 @@ _change_demo_repo_a()
 {
    local reporoot="$1"
 
-   run_mulle_sourcetree -e mark "b" "no-share"
-   exekutor git commit -m "a: no-share version" .mulle-sourcetree
+   run_mulle_sourcetree mark "b" "no-share"
+   exekutor git commit -m "a: no-share version" .mulle
 }
 
 
@@ -99,7 +99,7 @@ run_test1()
       fail "add failed unexpectedly"
    fi
 
-   MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree clean
+   MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
 }
 
 
@@ -115,7 +115,7 @@ run_test2()
       fail "add failed unexpectedly"
    fi
 
-   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
    then
       fail "update failed unexpectedly"
    fi
@@ -124,7 +124,7 @@ run_test2()
    [ -d "shared/b" ] || fail "shared/b should exist"
    [ -d "c" ]        || fail "c should exist"
 
-   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree clean
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
    then
       fail "clean failed unexpectedly"
    fi
@@ -154,7 +154,7 @@ run_test3()
    export MULLE_FETCH_SEARCH_PATH="${repos}"
    export MULLE_SOURCETREE_SYMLINK='YES'
 
-   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
    then
       fail "update failed unexpectedly"
    fi
@@ -173,7 +173,7 @@ run_test3()
 
    run_mulle_sourcetree status
 
-   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree -vvv clean
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree -vvv clean
    then
       fail "clean failed unexpectedly"
    fi
@@ -206,7 +206,7 @@ run_test4()
       fail "add failed unexpectedly"
    fi
 
-   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
    then
       fail "update failed unexpectedly"
    fi
@@ -215,7 +215,7 @@ run_test4()
    [ -d "shared/a/b" ] || fail "shared/a/b should exist"
    [ -d "c" ]          || fail "shared/c should exist"
 
-   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree clean
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
    then
       fail "clean failed unexpectedly"
    fi
@@ -239,7 +239,7 @@ run_test5()
       fail "add failed unexpectedly"
    fi
 
-   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree --share update
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
    then
       fail "update failed unexpectedly"
    fi
@@ -248,7 +248,7 @@ run_test5()
    [ -d "shared/a/b" ] || fail "shared/a/b should exist"
    [ -d "c" ]          || fail "shared/c should exist"
 
-   if ! MULLE_SOURCETREE_SHARE_DIR="shared" run_mulle_sourcetree clean
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
    then
       fail "clean failed unexpectedly"
    fi
@@ -278,9 +278,6 @@ main()
    repos="${directory}/repositories"
 
    mkdir_if_missing "${project}"
-
-   MULLE_VIRTUAL_ROOT="`physicalpath "${project}"`"
-   export MULLE_VIRTUAL_ROOT
 
    setup_demo_repos "${repos}"
 
@@ -348,7 +345,8 @@ init()
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh"   || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-callback.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-sync.sh"     || exit 1
 }
 
 

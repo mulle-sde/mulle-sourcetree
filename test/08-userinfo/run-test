@@ -139,13 +139,13 @@ main()
 
    directory="`make_tmp_directory`" || exit 1
 
-   MULLE_VIRTUAL_ROOT="${directory}"
+   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}"`"
    export MULLE_VIRTUAL_ROOT
 
    cd "${directory}"
 
    if ! run_mulle_sourcetree -N add  "a"
-   then 
+   then
       internal_fail "add internal_failed unexpectedly"
    fi
 

@@ -17,9 +17,9 @@ expect()
 
 run_mulle_sourcetree()
 {
-   log_fluff "####################################"
-   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
-   log_fluff "####################################"
+   log_fluff "${C_MAGENTA}${C_BOLD}####################################"
+   log_fluff "${C_MAGENTA}${C_BOLD}${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} $*"
+   log_fluff "${C_MAGENTA}${C_BOLD}####################################"
 
    exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
 }
@@ -37,7 +37,7 @@ main()
 
    directory="`make_tmp_directory`" || exit 1
 
-   MULLE_VIRTUAL_ROOT="${directory}"
+   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}"`"
    export MULLE_VIRTUAL_ROOT
 
    mkdir_if_missing "${directory}/a"
@@ -45,7 +45,7 @@ main()
 
    cd "${directory}"
 
-   if [ -f ".mulle-sourcetree/config" ]
+   if [ -f ".mulle/etc/sourcetree/config" ]
    then
       internal_fail "config should not exist"
    fi
@@ -70,7 +70,7 @@ main()
       internal_fail "/ add succeeded unexpectedly"
    fi
 
-   if ! [ -f ".mulle-sourcetree/etc/config" ]
+   if ! [ -f ".mulle/etc/sourcetree/config" ]
    then
       internal_fail "config should exist now"
    fi
@@ -95,7 +95,7 @@ main()
       internal_fail "remove \".\" succeeded unexpectedly"
    fi
 
-   if [ ! -f ".mulle-sourcetree/etc/config" ]
+   if [ ! -f ".mulle/etc/sourcetree/config" ]
    then
       internal_fail "config should still exist now"
    fi
@@ -105,7 +105,7 @@ main()
       internal_fail "remove \"a\" internal_failed unexpectedly"
    fi
 
-   if [ -f ".mulle-sourcetree/etc/config" ]
+   if [ -f ".mulle/etc/sourcetree/config" ]
    then
       internal_fail "config should not exist now"
    fi

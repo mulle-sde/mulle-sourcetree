@@ -1,3 +1,10 @@
+## 0.17.0
+
+* use .mulle instead of .mulle-sourcetree
+* do not require -e anymore
+* enable output of filename in status
+
+
 ### 0.16.2
 
 * add desecrate command

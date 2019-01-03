@@ -201,8 +201,6 @@ r_nodemarks_remove()
 
 nodemarks_add()
 {
-   local RVAL
-
    r_nodemarks_add "$@"
 
    [ ! -z "${RVAL}" ] && echo "${RVAL}"
@@ -213,8 +211,6 @@ nodemarks_add()
 
 nodemarks_remove()
 {
-   local RVAL
-
    r_nodemarks_remove "$@"
 
    [ ! -z "${RVAL}" ] && echo "${RVAL}"
@@ -261,8 +257,6 @@ nodemarks_version_match()
    local result
    local i
    local markvalue
-   local RVAL
-
    set -o noglob ; IFS=","
    for i in ${marks}
    do

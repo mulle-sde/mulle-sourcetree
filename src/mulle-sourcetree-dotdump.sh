@@ -443,19 +443,19 @@ walk_dotdump()
    #
    # replace a known path with a variable
    #
-   if [ ! -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
+   if [ ! -z "${MULLE_SOURCETREE_STASH_DIR}" ]
    then
-      if string_has_prefix "${destination}" "${MULLE_SOURCETREE_SHARE_DIR}"
+      if string_has_prefix "${destination}" "${MULLE_SOURCETREE_STASH_DIR}"
       then
          isshared='YES'
 
          local tmp
 
-         if is_absolutepath "${MULLE_SOURCETREE_SHARE_DIR}"
+         if is_absolutepath "${MULLE_SOURCETREE_STASH_DIR}"
          then
             isglobalshared='YES'
-            tmp="`string_remove_prefix "${destination}" "${MULLE_SOURCETREE_SHARE_DIR}" `"
-            destination="`filepath_concat '${MULLE_SOURCETREE_SHARE_DIR}' "${tmp}"`"
+            tmp="`string_remove_prefix "${destination}" "${MULLE_SOURCETREE_STASH_DIR}" `"
+            destination="`filepath_concat '${MULLE_SOURCETREE_STASH_DIR}' "${tmp}"`"
          fi
       fi
    fi
@@ -795,7 +795,7 @@ sourcetree_dotdump_main()
    then
       if ! db_dir_exists "${SOURCETREE_START}"
       then
-         log_info "There is no ${SOURCETREE_DB_NAME} here"
+         log_info "There is no ${SOURCETREE_DB_FILENAME} here"
       fi
 
       r_comma_concat "${mode}" "walkdb"
@@ -803,7 +803,7 @@ sourcetree_dotdump_main()
    else
       if ! cfg_exists "${SOURCETREE_START}"
       then
-         log_info "There is no ${SOURCETREE_CONFIG_FILE} here"
+         log_info "There is no ${SOURCETREE_CONFIG_FILENAME} here"
       fi
    fi
 

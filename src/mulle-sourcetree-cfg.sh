@@ -37,24 +37,24 @@ MULLE_SOURCETREE_CFG_SH="included"
 #
 __cfg_common_configfile()
 {
-   [ -z "${SOURCETREE_CONFIG_FILE}" ] && internal_fail "SOURCETREE_CONFIG_FILE is not set"
+   [ -z "${SOURCETREE_CONFIG_FILENAME}" ] && internal_fail "SOURCETREE_CONFIG_FILENAME is not set"
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
-   case "${MULLE_SOURCETREE_SHARE_DIR}" in
+   case "${MULLE_SOURCETREE_STASH_DIR}" in
       /*)
-         if string_has_prefix "$1" "${MULLE_SOURCETREE_SHARE_DIR}"
+         if string_has_prefix "$1" "${MULLE_SOURCETREE_STASH_DIR}"
          then
             case "$1" in
                "/")
-                  configfile="${SOURCETREE_CONFIG_FILE}"
+                  configfile="${SOURCETREE_CONFIG_FILENAME}"
                ;;
 
                /*/)
-                  configfile="$1${SOURCETREE_CONFIG_FILE}"
+                  configfile="$1${SOURCETREE_CONFIG_FILENAME}"
                ;;
 
                *)
-                  configfile="$1/${SOURCETREE_CONFIG_FILE}"
+                  configfile="$1/${SOURCETREE_CONFIG_FILENAME}"
                ;;
             esac
             return
@@ -64,15 +64,15 @@ __cfg_common_configfile()
 
    case "$1" in
       "/")
-         configfile="${MULLE_VIRTUAL_ROOT}/${SOURCETREE_CONFIG_FILE}"
+         configfile="${MULLE_VIRTUAL_ROOT}/${SOURCETREE_CONFIG_FILENAME}"
       ;;
 
       /*/)
-         configfile="${MULLE_VIRTUAL_ROOT}$1${SOURCETREE_CONFIG_FILE}"
+         configfile="${MULLE_VIRTUAL_ROOT}$1${SOURCETREE_CONFIG_FILENAME}"
       ;;
 
       /*)
-         configfile="${MULLE_VIRTUAL_ROOT}$1/${SOURCETREE_CONFIG_FILE}"
+         configfile="${MULLE_VIRTUAL_ROOT}$1/${SOURCETREE_CONFIG_FILENAME}"
       ;;
 
       *)
@@ -86,9 +86,9 @@ __cfg_common_rootdir()
 {
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
-   case "${MULLE_SOURCETREE_SHARE_DIR}" in
+   case "${MULLE_SOURCETREE_STASH_DIR}" in
       /*)
-         if string_has_prefix "$1" "${MULLE_SOURCETREE_SHARE_DIR}"
+         if string_has_prefix "$1" "${MULLE_SOURCETREE_STASH_DIR}"
          then
             case "$1" in
                "/")
@@ -206,13 +206,18 @@ cfg_write()
 {
    log_entry "cfg_write" "$@"
 
+   [ -z "${MULLE_SOURCETREE_ETC_DIR}" ] && internal_fail "MULLE_SOURCETREE_ETC_DIR is empty"
+
    local configfile
 
    __cfg_common_configfile "$@"
    shift
 
    mkdir_if_missing "${MULLE_SOURCETREE_ETC_DIR}"
-   redirect_exekutor "${SOURCETREE_CONFIG_FILE}" echo "$*"
+   if ! redirect_exekutor "${configfile}" echo "$*"
+   then
+      exit 1
+   fi
 }
 
 
@@ -281,8 +286,6 @@ cfg_remove_nodeline()
    local address="$2"
 
    local escaped
-   local RVAL
-
    log_debug "Removing \"${address}\" from  \"${configfile}\""
    r_escaped_sed_pattern "${address}"
    escaped="${RVAL}"
@@ -306,8 +309,6 @@ cfg_remove_nodeline_by_url()
    local url="$2"
 
    local escaped
-   local RVAL
-
    log_debug "Removing \"${url}\" from \"${configfile}\""
 
    r_escaped_sed_pattern "${url}"
@@ -349,14 +350,12 @@ cfg_change_nodeline()
 
    local oldescaped
    local newescaped
-   local RVAL
-
    r_escaped_sed_pattern "${oldnodeline}"
    oldescaped="${RVAL}"
    r_escaped_sed_pattern "${newnodeline}"
    newescaped="${RVAL}"
 
-   log_debug "Editing \"${SOURCETREE_CONFIG_FILE}\""
+   log_debug "Editing \"${SOURCETREE_CONFIG_FILENAME}\""
 
    # linux don't like space after -i
    if ! inplace_sed -e "s/^${oldescaped}$/${newescaped}/" "${configfile}"
@@ -409,12 +408,12 @@ cfg_search_for_configfile()
       ;;
    esac
 
-   log_debug "Searching for configfile \"${SOURCETREE_CONFIG_FILE}\" \
+   log_debug "Searching for configfile \"${SOURCETREE_CONFIG_FILENAME}\" \
 from \"${physdirectory}\" to \"${physceiling}\""
 
    (
       cd "${physdirectory}" &&
-      while ! [ -f "${SOURCETREE_CONFIG_FILE}" ]
+      while [ ! -f "${SOURCETREE_CONFIG_FILENAME}" ]
       do
          # since we do physical paths, PWD is ok here
          if [ "${PWD}" = "${physceiling}" ]
@@ -501,7 +500,7 @@ cfg_determine_working_directory()
          return 0
       ;;
 
-      # not sure when this is useful, only give parent if exists
+      # used for touching parent configs in a sourcetree
       PARENT)
          directory="`cfg_search_for_configfile "${physpwd}" "/"`"
          if [ $? -ne 0 ]
@@ -519,6 +518,7 @@ cfg_determine_working_directory()
 
          r_fast_dirname "${directory}"
          parent="${RVAL}"
+
          cfg_search_for_configfile "${parent}" "/"
          if [ $? -eq 0 ]
          then
@@ -583,7 +583,7 @@ cfg_get_parent()
 {
    local start="$1"
 
-   start="${start:-${MULLE_EXECUTABLE_PHYSICAL_PWD}}"
+   start="${start:-${MULLE_SOURCETREE_PROJECT_DIR}}"
    cfg_determine_working_directory "PARENT" "${start}"
 }
 
@@ -602,7 +602,7 @@ cfg_touch_parents()
    do
       [ "${parent}" = "${rootdir}" ] && internal_fail "${parent} endless loop"
 
-      exekutor touch "${parent}/${SOURCETREE_CONFIG_FILE}"
+      exekutor touch "${parent}/${SOURCETREE_CONFIG_FILENAME}"
       rootdir="${parent}"
    done
 }
@@ -617,7 +617,7 @@ cfg_defer_if_needed()
    local directory
    local physpwd
 
-   physpwd="${MULLE_EXECUTABLE_PHYSICAL_PWD}"
+   physpwd="${MULLE_SOURCETREE_PROJECT_DIR}"
    if directory="`cfg_determine_working_directory "${defer}" "${physpwd}"`"
    then
       if [ "${directory}" != "${physpwd}" ]
@@ -637,6 +637,7 @@ cfg_absolute_filename()
 
    local config="$1"
    local address="$2"
+   local style="$3"
 
    case "${config}" in
       /|/*/)
@@ -649,11 +650,18 @@ cfg_absolute_filename()
 
    case "${address}" in
       /*)
-         internal_fail "address \"${config}\" is absolute"
+         internal_fail "address \"${address}\" is absolute"
       ;;
    esac
 
-   echo "${MULLE_VIRTUAL_ROOT}${config}${address}"
+   # support test for global shared dir, which no-one uses
+   #  "${style}" != "share" -a
+   if [ "${config#${MULLE_SOURCETREE_STASH_DIR}}" != "${config}" ]
+   then
+      echo "${config}${address}"
+   else
+      echo "${MULLE_VIRTUAL_ROOT}${config}${address}"
+   fi
 }
 
 

@@ -78,6 +78,33 @@ EOF
 }
 
 
+sourcetree_duplicate_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} duplicate [options] <address|url> <newaddress>
+
+   Duplicate a node to the sourcetree. You must specify a new address for
+   the duplicate node.
+
+   Examples:
+      ${MULLE_EXECUTABLE_NAME} duplicate foo foo2
+
+   This command only affects the local sourcetree.
+
+Options:
+EOF
+   (
+      echo "${SOURCETREE_COMMON_OPTIONS}"
+   ) | sort >&2
+   echo >&2
+   exit 1
+}
+
+
+
 sourcetree_remove_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -520,6 +547,46 @@ r_sanitized_marks()
 }
 
 
+_append_new_node()
+{
+   local contents
+   local appended
+
+   #
+   # now just some sanity checks and save it
+   #
+   local mode
+
+
+   if cfg_get_nodeline "${SOURCETREE_START}" "${_address}" > /dev/null
+   then
+      if [ "${OPTION_IF_MISSING}" = 'YES' ]
+      then
+         return 0
+      fi
+      fail "A node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} already exists \
+in the sourcetree (${PWD#${MULLE_USER_PWD}/})"
+   fi
+
+   if [ "${OPTION_UNSAFE}" = 'YES' ]
+   then
+      r_comma_concat "${mode}" "unsafe"
+      mode="${RVAL}"
+   fi
+
+   node_augment "${mode}"
+
+   contents="`egrep -s -v '^#' "${SOURCETREE_CONFIG_FILENAME}"`"
+   r_node_to_nodeline
+   r_add_line "${contents}" "${RVAL}"
+   appended="${RVAL}"
+
+   cfg_write "${SOURCETREE_START}" "${appended}"
+   cfg_touch_parents "${SOURCETREE_START}"
+
+   log_info "Added ${C_MAGENTA}${C_BOLD}${_address}"
+}
+
 #
 #
 #
@@ -584,41 +651,45 @@ sourcetree_add_node()
       fi
    fi
 
-   #
-   # now just some sanity checks and save it
-   #
-   local mode
+   _append_new_node
+}
 
-   if [ "${OPTION_UNSAFE}" = 'YES' ]
+
+#
+#
+#
+sourcetree_duplicate_node()
+{
+   log_entry "sourcetree_duplicate_node" "$@"
+
+   local input="$1"
+   local newname="$2"
+
+   local _branch
+   local _address
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _raw_userinfo
+   local _tag
+   local _url
+   local _uuid
+   local _userinfo
+
+   local node
+
+   node="`cfg_get_nodeline "${SOURCETREE_START}" "${input}"`"
+   if [ -z "${node}" ]
    then
-      r_comma_concat "${mode}" "unsafe"
-      mode="${RVAL}"
-   fi
-   node_augment "${mode}"
-
-   if cfg_get_nodeline "${SOURCETREE_START}" "${_address}" > /dev/null
-   then
-      if [ "${OPTION_IF_MISSING}" = 'YES' ]
-      then
-         return 0
-      fi
-      fail "A node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} already exists \
-in the sourcetree (${PWD#${MULLE_USER_PWD}/})"
+      fail "Node \"${input}\" not found"
    fi
 
-   local contents
-   local appended
-   local RVAL
+   nodeline_parse "${node}"
 
-   contents="`egrep -s -v '^#' "${SOURCETREE_CONFIG_FILE}"`"
-   r_node_to_nodeline
-   r_add_line "${contents}" "${RVAL}"
-   appended="${RVAL}"
+   _address="${newname}"
+   _uuid=""
 
-   cfg_write "${SOURCETREE_START}" "${appended}"
-   cfg_touch_parents "${SOURCETREE_START}"
-
- log_info "Added ${C_MAGENTA}${C_BOLD}${_address}"
+   _append_new_node
 }
 
 
@@ -743,6 +814,8 @@ sourcetree_move_node()
 
    cfg_write "${SOURCETREE_START}" "${moved}"
    cfg_touch_parents "${SOURCETREE_START}"
+
+   log_info "Moved ${C_MAGENTA}${C_BOLD}${_address}${C_INFO} ${direction}"
 }
 
 
@@ -763,6 +836,8 @@ sourcetree_remove_node()
    cfg_remove_nodeline "${SOURCETREE_START}" "${address}"
    cfg_file_remove_if_empty "${SOURCETREE_START}"
    cfg_touch_parents "${SOURCETREE_START}"
+
+   log_info "Remove ${C_MAGENTA}${C_BOLD}${address}"
 }
 
 
@@ -787,6 +862,8 @@ sourcetree_remove_node_by_url()
    cfg_remove_nodeline_by_url "${SOURCETREE_START}" "${url}"
    cfg_file_remove_if_empty "${SOURCETREE_START}"
    cfg_touch_parents "${SOURCETREE_START}"
+
+   log_info "Removed ${C_MAGENTA}${C_BOLD}${url}${C_INFO}"
 }
 
 
@@ -817,6 +894,8 @@ sourcetree_change_nodeline()
    then
       fail "Verify of config file failed."
    fi
+
+   log_info "Changed ${C_MAGENTA}${C_BOLD}${address}${C_INFO}"
 }
 
 
@@ -946,8 +1025,6 @@ _sourcetree_set_node()
 in the sourcetree (${PWD#${MULLE_USER_PWD}/})"
    fi
 
-   local RVAL
-
    r_node_to_nodeline
    sourcetree_change_nodeline "${oldnodeline}" "${RVAL}" "${_address}"
 }
@@ -1000,6 +1077,7 @@ _sourcetree_get_node()
    local _tag
    local _url
    local _uuid
+   local _raw_userinfo
    local _userinfo
 
    nodeline_parse "${nodeline}"
@@ -1079,6 +1157,7 @@ no-cmakeinherit
 no-cmakeloader
 no-defer
 no-delete
+no-descend
 no-fs
 no-header
 no-include
@@ -1115,8 +1194,6 @@ _sourcetree_add_mark_known_absent()
       fi
    fi
 
-   local RVAL
-
    r_nodemarks_add "${_marks}" "${mark}"
    r_nodemarks_sort "${RVAL}"
    _marks="${RVAL}"
@@ -1145,8 +1222,6 @@ _sourcetree_remove_mark_known_present()
          fail "mark \"${mark}\" is unknown. If this is not a typo use --extended-mark"
       fi
    fi
-
-   local RVAL
 
    r_nodemarks_remove "${_marks}" "${mark}"
    r_nodemarks_sort "${RVAL}"
@@ -1365,34 +1440,10 @@ sourcetree_info_node()
 {
    log_entry "sourcetree_info_node" "$@"
 
-   [ -z "${MULLE_EXECUTABLE_PWD}" ] && internal_fail "MULLE_EXECUTABLE_PWD is empty"
+   [ -z "${MULLE_SOURCETREE_LIST_SH}" ] && \
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-list.sh"
 
-   local database="${1:-/}"
-
-   local dbstate
-
-   dbstate="`db_state_description "${database}" `"
-
-   printf "%b\n" "${C_INFO}--------------------------------------------------${C_RESET}"
-   printf "%b\n" "${C_INFO}Sourcetree: ${C_RESET_BOLD}${PWD}${C_RESET}"
-   printf "%b\n" "${C_INFO}Database: ${C_MAGENTA}${C_BOLD}${dbstate}${C_RESET}"
-
-   if [ ! -z "${MULLE_VIRTUAL_ROOT}" ]
-   then
-      printf "%b\n" "${C_INFO}Virtual Root: ${C_MAGENTA}${C_BOLD}${MULLE_VIRTUAL_ROOT}${C_RESET}"
-   fi
-
-   case "${SOURCETREE_MODE}" in
-      share)
-         if [ ! -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
-         then
-            printf "%b\n" "${C_INFO}Shared directory: \
-${C_RESET_BOLD}${MULLE_SOURCETREE_SHARE_DIR}${C_RESET}"
-         fi
-      ;;
-   esac
-
-   printf "%b\n" "${C_INFO}--------------------------------------------------${C_RESET}"
+   _sourcetree_banner "$@"
 }
 
 
@@ -1631,16 +1682,18 @@ sourcetree_common_main()
    local mark
    local mode
    local direction
+   local newaddress
 
    #
    # make simple commands flat by default, except if the user wants it
    #
-   if [ -z "${FLAG_SOURCETREE_MODE}" ]
+   if [ -z "${FLAG_SOURCETREE_MODE}" -a "${COMMAND}" != "info" ]
    then
       SOURCETREE_MODE="flat"
+      log_verbose "Sourcetree mode set to \"flat\" for config operations"
    fi
 
-   [ -z "${SOURCETREE_CONFIG_FILE}" ] && fail "config file empty name"
+   [ -z "${SOURCETREE_CONFIG_FILENAME}" ] && fail "config file empty name"
 
    case "${COMMAND}" in
       add|nameguess|typeguess)
@@ -1687,6 +1740,20 @@ sourcetree_common_main()
          echo "${KNOWN_MARKS}"
       ;;
 
+      duplicate)
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         address="$1"
+         [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
+         shift
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         newaddress="$1"
+         shift
+         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+
+         sourcetree_${COMMAND}_node${suffix} "${address}" "${newaddress}"
+      ;;
+
+
       mark|unmark)
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          address="$1"
@@ -1703,7 +1770,7 @@ sourcetree_common_main()
       info)
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_${COMMAND}_node
+         sourcetree_info_node
       ;;
    esac
 }
@@ -1715,6 +1782,15 @@ sourcetree_add_main()
 
    USAGE="sourcetree_add_usage"
    COMMAND="add"
+   sourcetree_common_main "$@"
+}
+
+sourcetree_duplicate_main()
+{
+   log_entry "sourcetree_duplicate_main" "$@"
+
+   USAGE="sourcetree_duplicate_usage"
+   COMMAND="duplicate"
    sourcetree_common_main "$@"
 }
 

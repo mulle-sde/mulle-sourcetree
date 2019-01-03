@@ -27,6 +27,8 @@ set( PROJECT_VERSION "${MULLE_SOURCETREE_VERSION}")
 
 set( SCRIPTS
 mulle-sourcetree
+mulle-sourcetree-to-c
+mulle-sourcetree-to-cmake
 )
 
 

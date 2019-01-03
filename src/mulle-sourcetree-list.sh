@@ -76,20 +76,21 @@ _sourcetree_banner()
    dbsharedir="`db_get_shareddir "${database}" `"
 
    printf "%b\n" "${C_INFO}--------------------------------------------------${C_RESET}"
-   printf "%b\n" "${C_INFO}Sourcetree : ${C_RESET_BOLD}${PWD}${C_RESET}"
-   printf "%b\n" "${C_INFO}Database   : ${C_MAGENTA}${C_BOLD}${dbstate}${C_RESET}"
-
-   if [ ! -z "${dbsharedir}" ]
-   then
-      printf "%b\n" "${C_INFO}Sharedir   : ${C_RESET_BOLD}${dbsharedir}${C_RESET}"
-   fi
+   printf "%b\n" "${C_INFO}Sourcetree   : ${C_RESET_BOLD}${PWD}${C_RESET}"
+   printf "%b\n" "${C_INFO}Database     : ${C_MAGENTA}${C_BOLD}${dbstate}${C_RESET}"
+   printf "%b\n" "${C_INFO}Mode         : ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_RESET}"
 
    case "${SOURCETREE_MODE}" in
       share)
-         if [ ! -z "${MULLE_SOURCETREE_SHARE_DIR}" ]
+         if [ ! -z "${dbsharedir}" ]
          then
-            printf "%b\n" "${C_INFO}Shared directory: \
-${C_RESET_BOLD}${MULLE_SOURCETREE_SHARE_DIR}${C_RESET}"
+            printf "%b\n" "${C_INFO}DB  Sharedir : ${C_RESET_BOLD}${dbsharedir}${C_RESET}"
+         fi
+
+         if [ ! -z "${MULLE_SOURCETREE_STASH_DIR}" ]
+         then
+            printf "%b\n" "${C_INFO}ENV Sharedir : \
+${C_RESET_BOLD}${MULLE_SOURCETREE_STASH_DIR}${C_RESET}"
          fi
       ;;
    esac
@@ -103,8 +104,6 @@ _sourcetree_augment_mode_with_output_options()
    log_entry "_sourcetree_augment_mode_with_output_options" "$@"
 
    local mode="$1"
-   local RVAL
-
    if [ "${OPTION_OUTPUT_URL}" != 'NO' ]
    then
       r_comma_concat "${mode}" "output_url"
@@ -198,8 +197,6 @@ _sourcetree_nodeline_remove_marks()
    nodeline_parse "${nodeline}"
 
    local marks
-   local RVAL
-
    marks="${_marks}"
    _marks=
 
@@ -348,8 +345,6 @@ list_nodes()
 
    local arguments
    local flag
-   local RVAL
-
    arguments=
 
    if [ ! -z "${formatstring}" ]
@@ -644,7 +639,7 @@ sourcetree_list_main()
    local mark
    local mode
 
-   [ -z "${SOURCETREE_CONFIG_FILE}" ] && fail "Config filename is empty"
+   [ -z "${SOURCETREE_CONFIG_FILENAME}" ] && fail "Config filename is empty"
 
    [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && sourcetree_list_usage
 

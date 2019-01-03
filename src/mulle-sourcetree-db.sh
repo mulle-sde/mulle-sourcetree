@@ -61,9 +61,9 @@ _db_evaledurl()
 
 __db_common_sharedir()
 {
-   case "${MULLE_SOURCETREE_SHARE_DIR}" in
+   case "${MULLE_SOURCETREE_STASH_DIR}" in
       /*)
-         if string_has_prefix "$1" "${MULLE_SOURCETREE_SHARE_DIR}"
+         if string_has_prefix "$1" "${MULLE_SOURCETREE_STASH_DIR}"
          then
             case "$1" in
                "/")
@@ -132,26 +132,26 @@ __db_common_rootdir()
 
 __db_common_databasedir()
 {
-   [ -z "${SOURCETREE_DB_NAME}" ] && internal_fail "SOURCETREE_DB_NAME is not set"
+   [ -z "${SOURCETREE_DB_FILENAME}" ] && internal_fail "SOURCETREE_DB_FILENAME is not set"
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
    database="$1"
 
-   case "${MULLE_SOURCETREE_SHARE_DIR}" in
+   case "${MULLE_SOURCETREE_STASH_DIR}" in
       /*)
-         if string_has_prefix "${database}" "${MULLE_SOURCETREE_SHARE_DIR}"
+         if string_has_prefix "${database}" "${MULLE_SOURCETREE_STASH_DIR}"
          then
             case "${database}" in
                "/")
-                  databasedir="${SOURCETREE_DB_NAME}"
+                  databasedir="${SOURCETREE_DB_FILENAME}"
                ;;
 
                /*/)
-                  databasedir="${database}${SOURCETREE_DB_NAME}"
+                  databasedir="${database}${SOURCETREE_DB_FILENAME}"
                ;;
 
                *)
-                  databasedir="${database}/${SOURCETREE_DB_NAME}"
+                  databasedir="${database}/${SOURCETREE_DB_FILENAME}"
                ;;
             esac
             return
@@ -161,15 +161,15 @@ __db_common_databasedir()
 
    case "${database}" in
       "/")
-         databasedir="${MULLE_VIRTUAL_ROOT}/${SOURCETREE_DB_NAME}"
+         databasedir="${MULLE_VIRTUAL_ROOT}/${SOURCETREE_DB_FILENAME}"
       ;;
 
       /*/)
-         databasedir="${MULLE_VIRTUAL_ROOT}${database}${SOURCETREE_DB_NAME}"
+         databasedir="${MULLE_VIRTUAL_ROOT}${database}${SOURCETREE_DB_FILENAME}"
       ;;
 
       /*)
-         databasedir="${MULLE_VIRTUAL_ROOT}${database}/${SOURCETREE_DB_NAME}"
+         databasedir="${MULLE_VIRTUAL_ROOT}${database}/${SOURCETREE_DB_FILENAME}"
       ;;
 
       *)
@@ -354,13 +354,14 @@ db_bury()
       ;;
    esac
 
-# do this now in action
-#   if [ -L "${filename}" ]
-#   then
+# do removal now in action, we just skip this
+    if [ -L "${filename}" ]
+    then
 #      log_verbose "Removing old symlink \"${filename}\""
 #      exekutor rm -f "${filename}" >&2
-#      return
-#   fi
+      log_fluff "\"${filename}\" is a symlink so skipped"
+      return
+   fi
 
    if [ ! -e "${filename}" ]
    then
@@ -866,7 +867,7 @@ db_dir_exists()
 __db_environment()
 {
    echo "${databasedir}
-${MULLE_SOURCETREE_SHARE_DIR}"
+${MULLE_SOURCETREE_STASH_DIR}"
 }
 
 
@@ -880,7 +881,7 @@ db_environment()
    __db_common_databasedir "$@"
 
    echo "${databasedir}
-${MULLE_SOURCETREE_SHARE_DIR}"
+${MULLE_SOURCETREE_STASH_DIR}"
 }
 
 
@@ -1041,7 +1042,7 @@ db_set_shareddir()
    # empty is OK
 
    mkdir_if_missing "${databasedir}"
-   redirect_exekutor "${databasedir}/.db_shareddir"  echo "${shareddir}"
+   redirect_exekutor "${databasedir}/.db_stashdir"  echo "${shareddir}"
 }
 
 
@@ -1056,7 +1057,7 @@ db_clear_shareddir()
 
    __db_common_databasedir "$@"
 
-   remove_file_if_present "${databasedir}/.db_shareddir"
+   remove_file_if_present "${databasedir}/.db_stashdir"
 }
 
 
@@ -1071,8 +1072,7 @@ db_get_shareddir()
 
    __db_common_databasedir "$@"
 
-   cat "${databasedir}/.db_shareddir" 2> /dev/null
-   :
+   cat "${databasedir}/.db_stashdir" 2> /dev/null
 }
 
 #
@@ -1201,8 +1201,8 @@ _db_set_default_mode()
       log_verbose "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
       if [ "${SOURCETREE_MODE}" = share ]
       then
-         [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ] && internal_fail "MULLE_SOURCETREE_SHARE_DIR is empty"
-         log_verbose "Shared directory: ${C_RESET_BOLD}${MULLE_SOURCETREE_SHARE_DIR}${C_INFO}"
+         [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
+         log_verbose "Stash directory: ${C_RESET_BOLD}${MULLE_SOURCETREE_STASH_DIR}${C_INFO}"
       fi
    fi
 }
@@ -1214,7 +1214,7 @@ db_get_node_filename()
    local nodetype="$2"
    local marks="$3"
 
-   # in share mode, modify address by prepending MULLE_SOURCETREE_SHARE_DIR
+   # in share mode, modify address by prepending MULLE_SOURCETREE_STASH_DIR
    # to basename
    if [ "${SOURCETREE_MODE}" = "share" ]
    then
@@ -1223,7 +1223,7 @@ db_get_node_filename()
          ;;
 
          *)
-            echo "${MULLE_SOURCETREE_SHARE_DIR}/${address##*/}"
+            echo "${MULLE_SOURCETREE_STASH_DIR}/${address##*/}"
             return
          ;;
       esac
@@ -1643,9 +1643,9 @@ ${C_INFO}This probably means that \"${address}\" is used in two project
 but shares the same UUIDs in the mulle-sourcetree configuration.
 
 Remedial action:${C_RESET_BOLD}
-   cd \"${MULLE_SOURCETREE_SHARE_DIR}/${RVAL}\"
-   mulle-sourcetree -e -N reuuid
-   mulle-sourcetree -e -N reset"
+   cd \"${MULLE_SOURCETREE_STASH_DIR}/${RVAL}\"
+   mulle-sourcetree -N reuuid
+   mulle-sourcetree -N reset"
          # ok
          fi
       else
@@ -1660,7 +1660,7 @@ Remedial action:${C_RESET_BOLD}
    log_debug "Use root database for share node \"${address}\""
 
    #
-   # Use the "${MULLE_SOURCETREE_SHARE_DIR}" for shared nodes, except when
+   # Use the "${MULLE_SOURCETREE_STASH_DIR}" for shared nodes, except when
    # marked "local". We do not check the whole tree for another local node
    # though.
    #
@@ -1673,8 +1673,11 @@ Remedial action:${C_RESET_BOLD}
 
    local name
 
-   name="`fast_basename "${address}" `"
-   filename="`filepath_concat "${MULLE_SOURCETREE_SHARE_DIR}" "${name}" `"
+   r_fast_basename "${address}"
+   name="${RVAL}"
+   r_filepath_concat "${MULLE_SOURCETREE_STASH_DIR}" "${name}"
+   filename="${RVAL}"
+
    log_debug "Set filename to share directory \"${filename}\""
 
    echo "${filename}"

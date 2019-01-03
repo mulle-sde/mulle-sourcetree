@@ -13,9 +13,9 @@ run_mulle_sourcetree()
 }
 
 #
-# repository has no .mulle-sourcetree in 1.0.0
-# repository has a .mulle-sourcetree in 2.0.0
-# repository has no .mulle-sourcetree in 3.0.0
+# repository has no .mulle in 1.0.0
+# repository has a .mulle in 2.0.0
+# repository has no .mulle in 3.0.0
 #
 
 # a->b(->c)
@@ -28,10 +28,10 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/b"
-   run_mulle_sourcetree -e mark b "no-build"
-   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/c"
-   exekutor git add VERSION .mulle-sourcetree
+   run_mulle_sourcetree add --nodetype git "file://${reporoot}/b"
+   run_mulle_sourcetree mark b "no-build"
+   run_mulle_sourcetree add --nodetype git "file://${reporoot}/c"
+   exekutor git add VERSION .mulle
    exekutor git commit -m "a: initial version"
 }
 
@@ -44,8 +44,8 @@ _setup_demo_repo_b()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/c"
-   exekutor git add VERSION .mulle-sourcetree
+   run_mulle_sourcetree add --nodetype git "file://${reporoot}/c"
+   exekutor git add VERSION .mulle
    exekutor git commit -m "b: initial version"
 }
 
@@ -202,9 +202,6 @@ main()
    repos="${directory}/repositories"
 
    mkdir_if_missing "${project}"
-
-   MULLE_VIRTUAL_ROOT="`physicalpath "${project}"`"
-   export MULLE_VIRTUAL_ROOT
 
    setup_demo_repos "${repos}" || exit 1
 

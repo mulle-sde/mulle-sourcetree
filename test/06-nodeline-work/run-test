@@ -98,10 +98,8 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_VIRTUAL_ROOT="${directory}/project"
-   export MULLE_VIRTUAL_ROOT
 
-   local SOURCETREE_FIX_FILE=".mulle-sourcetree.fix"
+   local SOURCETREE_FIX_FILENAME=".mulle-sourcetree.fix"
 
    local project
    local repos
@@ -113,8 +111,11 @@ main()
 
    mkdir_if_missing "${project}"
 
+   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}/project"`"
+   export MULLE_VIRTUAL_ROOT
+
    (
-      SOURCETREE_DB_NAME="db"
+      SOURCETREE_DB_FILENAME="db"
 
       cd "${project}" &&
       run_test

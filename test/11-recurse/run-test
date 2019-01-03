@@ -13,9 +13,9 @@ run_mulle_sourcetree()
 }
 
 #
-# repository has no .mulle-sourcetree in 1.0.0
+# repository has no .mulle in 1.0.0
 # repository has a .mulle-sourcetree in 2.0.0
-# repository has no .mulle-sourcetree in 3.0.0
+# repository has no .mulle in 3.0.0
 #
 _setup_demo_repo_a()
 {
@@ -30,8 +30,8 @@ _setup_demo_repo_a()
 
    redirect_exekutor VERSION echo "2.0.0"
    run_mulle_sourcetree add --nodetype git "file://${reporoot}/b"
-   [ -f .mulle-sourcetree/etc/config ] || internal_fail "fail add"
-   exekutor git add VERSION .mulle-sourcetree
+   [ -f .mulle/etc/sourcetree/config ] || internal_fail "fail add"
+   exekutor git add VERSION .mulle
    exekutor git commit -m "a: version 2.0.0 (tagged)"
    exekutor git tag "2.0.0"
 }
@@ -71,8 +71,6 @@ main()
    local directory
 
    directory="`make_tmp_directory`" || exit 1
-   MULLE_VIRTUAL_ROOT="${directory}"
-   export MULLE_VIRTUAL_ROOT
 
    local project
 
@@ -143,10 +141,11 @@ init()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-update.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-callback.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-sync.sh"     || exit 1
 }
 
 

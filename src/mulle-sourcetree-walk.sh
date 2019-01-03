@@ -49,11 +49,11 @@ Usage:
 
    This example dumps the full information of each node:
 
-      mulle-sourcetree -e walk 'echo "\${MULLE_NODE}"'
+      mulle-sourcetree walk 'echo "\${MULLE_NODE}"'
 
    This example finds the location of a dependency named foo:
 
-      mulle-sourcetree -e walk --lenient '[ "\${MULLE_ADDRESS}" = "foo" ] && \\
+      mulle-sourcetree walk --lenient '[ "\${MULLE_ADDRESS}" = "foo" ] && \\
                                           echo "\${MULLE_FILENAME}"'
 
    There is a little qualifier language available to query the marks of a node.
@@ -107,15 +107,27 @@ EOF
 #
 # Walkers
 #
-# Possible permissions: "symlink\nmissing"
+# Possible permissions: "symlink,missing"
 # Useful for buildorder it would seem
 #
 walk_filter_permissions()
 {
    log_entry "walk_filter_permissions" "$@"
 
-   local filename="$1"
-   local permissions="$2"
+   local permissions="$1"
+   local filename="$2"
+   local marks="$3"
+
+   local rval=0
+
+   case ",${permissions}," in
+      *,descend-mark,*) # make more general no-*-descend later
+         if nodemarks_contain "${marks}" "no-descend"
+         then
+            rval=2
+         fi
+      ;;
+   esac
 
    [ -z "${filename}" ] && internal_fail "empty filename"
 
@@ -123,18 +135,18 @@ walk_filter_permissions()
    then
       log_fluff "${filename} does not exist (yet)"
 
-      case "${permissions}" in
-         *fail-noexist*)
+      case ",${permissions}," in
+         *,fail-noexist,*)
             fail "Missing \"${filename}\" is not yet fetched."
          ;;
 
-         *warn-noexist*)
+         *,warn-noexist,*)
             log_verbose "Repository expected in \"${filename}\" is not yet \
 fetched"
-            return 0
+            return $rval
          ;;
 
-         *skip-noexist*)
+         *,skip-noexist,*)
             log_fluff "Repository expected in \"${filename}\" is not yet \
 fetched, skipped"
             return 1
@@ -142,40 +154,45 @@ fetched, skipped"
 
          *)
             log_debug "\"${filename}\" passed"
-            return 0
+            return $rval
          ;;
       esac
    fi
 
-   #
-   # this check is not good enough for shared stuff
-   #
+
    if [ ! -L "${filename}" ]
    then
       log_debug "\"${filename}\" passed"
-      return 0
+      return $rval
    fi
 
-   case "${permissions}" in
-      *fail-symlink*)
+   case ",${permissions}," in
+      *,fail-symlink,*)
          fail "\"${filename}\" is a symlink."
       ;;
 
-      *warn-symlink*)
+      *,visit-symlink,*)
+         log_fluff "\"${filename}\" is a symlink"
+         return 2    # make traversal flat (i.e. don't descent)
+      ;;
+
+      *,warn-symlink,*)
          log_warning "\"${filename}\" is a symlink."
-         return 2 # curious...
+         return 2    # make traversal flat (i.e. don't descent)
       ;;
 
-      *descend-symlink*)
+      *,descend-symlink,*)
          log_fluff "\"${filename}\" is a symlink - it will be descended into."
-         return 0
+         return $rval
       ;;
 
-      *skip-symlink*|*)
+      *)
          log_fluff "\"${filename}\" is a symlink, skipped."
          return 1
       ;;
    esac
+
+   return $rval
 }
 
 
@@ -306,7 +323,6 @@ _visit_recurse()
    local filterpermissions="$1"; shift
    local marksqualifier="$1"; shift
    local mode="$1" ; shift
-
 
    case ",${mode}," in
       *,flat,*)
@@ -462,6 +478,7 @@ _visit_filter_nodeline()
    local _url
    local _userinfo
    local _uuid
+   local _raw_userinfo
 
    nodeline_parse "${nodeline}"
 
@@ -540,8 +557,13 @@ _visit_filter_nodeline()
       ;;
    esac
 
-   walk_filter_permissions "${_filename}" "${filterpermissions}"
-   case $? in
+   local rval
+
+   walk_filter_permissions "${filterpermissions}" "${_filename}" "${_marks}"
+   rval=$?
+
+   log_debug "permisions rval: ${rval}"
+   case $rval in
       2)
          # don't recurse into symlinks unless asked to
          r_comma_concat "${mode}" 'flat'
@@ -582,7 +604,7 @@ _visit_share_node()
    local marksqualifier="$1"; shift
    local mode="$1" ; shift
 
-#   [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ] && internal_fail "MULLE_SOURCETREE_SHARE_DIR is empty"
+#   [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
 
    #
    # So the node is shared, so virtual changes
@@ -596,7 +618,7 @@ _visit_share_node()
 
    local next_virtual
 
-   next_virtual="${MULLE_SOURCETREE_SHARE_DIR}/${_destination}"
+   next_virtual="${MULLE_SOURCETREE_STASH_DIR}/${_destination}"
 
    _virtual_address="${next_virtual}"
 
@@ -610,11 +632,9 @@ _visit_share_node()
       ;;
    esac
 
-   walk_filter_permissions "${_filename}" "${filterpermissions}"
+   walk_filter_permissions "${filterpermissions}" "${_filename}" "${_marks}"
    case $? in
       2)
-         local RVAL
-
          r_comma_concat "${mode}" "flat"  # don't recurse into symlinks unless asked to
          mode="${RVAL}"
       ;;
@@ -640,7 +660,6 @@ doesn't jive with permissions \"${filterpermissions}\""
       local va
       local vaf
 
-      # must be fast can't use concat
       case "${virtual}" in
          "")
             va="${_address}"
@@ -676,7 +695,7 @@ doesn't exist yet"
    fi
 
    _visit_node "${datasource}" \
-               "${MULLE_SOURCETREE_SHARE_DIR}" \
+               "${MULLE_SOURCETREE_STASH_DIR}" \
                "${next_datasource}" \
                "${next_virtual}" \
                "${filternodetypes}" \
@@ -774,7 +793,7 @@ _walk_nodelines()
 
 
 #
-# walk_auto_uuid settingname,callback,permissions,SOURCETREE_DB_NAME ...
+# walk_auto_uuid settingname,callback,permissions,SOURCETREE_DB_FILENAME ...
 #
 # datasource:  this is the current offset from ${PWD} where the config or
 #              database resides  PWD=/
@@ -801,8 +820,15 @@ _walk_config_uuids()
 
    local nodelines
 
+
    nodelines="`cfg_read "${datasource}" `"
-   _walk_nodelines "${nodelines}" "${datasource}" "${virtual}" "$@"
+   if [ ! -z "${nodelines}" ]
+   then
+      log_verbose "Walking config \"${datasource}\" nodes"
+      _walk_nodelines "${nodelines}" "${datasource}" "${virtual}" "$@"
+   else
+      log_fluff "Config \"${datasource}\" has no nodes"
+   fi
 }
 
 
@@ -852,8 +878,16 @@ _walk_db_uuids()
 
    local nodelines
 
+   log_verbose "Walking database \"${datasource}\" nodes"
+
    nodelines="`db_fetch_all_nodelines "${datasource}" `"
-   _walk_nodelines "${nodelines}" "${datasource}" "${virtual}" "$@"
+   if [ ! -z "${nodelines}" ]
+   then
+      log_verbose "Walking config \"${datasource}\" nodes"
+      _walk_nodelines "${nodelines}" "${datasource}" "${virtual}" "$@"
+   else
+      log_fluff "Database \"${datasource}\" has no nodes"
+   fi
 }
 
 
@@ -915,9 +949,7 @@ sourcetree_walk()
       ;;
 
       *)
-         local RVAL
-
-         r_comma_concat "${mode}" "pre-order"
+               r_comma_concat "${mode}" "pre-order"
          mode="${RVAL}"
       ;;
    esac
@@ -990,9 +1022,7 @@ _sourcetree_convert_marks_to_qualifier()
       IFS=","; set -o noglob
       for mark in ${OPTION_MARKS}
       do
-         local RVAL
-
-         r_concat "${OPTION_MARKS_QUALIFIER}" "MATCHES ${mark}" " AND "
+               r_concat "${OPTION_MARKS_QUALIFIER}" "MATCHES ${mark}" " AND "
          OPTION_MARKS_QUALIFIER="${RVAL}"
       done
       IFS="${DEFAULT_IFS}"; set +o noglob
@@ -1018,8 +1048,6 @@ sourcetree_walk_main()
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_EVAL_EXEKUTOR='YES'
    local OPTION_PASS_TECHNICAL_FLAGS='NO'
-   local RVAL
-
    while [ $# -ne 0 ]
    do
       case "$1" in
@@ -1082,6 +1110,17 @@ sourcetree_walk_main()
          #
          # filter flags
          #
+         --buildorder-qualifier)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            [ -z "${MULLE_SOURCETREE_BUILDORDER_SH}" ] && \
+               . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-buildorder.sh"
+
+            r_make_buildorder_qualifier "$1"
+            OPTION_MARKS_QUALIFIER="${RVAL}"
+         ;;
+
          -m|--marks)
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
@@ -1183,7 +1222,6 @@ sourcetree_walk_main()
                    "${callback}" \
                    "$@"
 }
-
 
 
 sourcetree_walk_initialize()

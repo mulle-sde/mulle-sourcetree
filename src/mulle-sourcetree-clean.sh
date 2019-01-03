@@ -75,7 +75,8 @@ walk_clean()
    if ! nodemarks_contain "${marks}" "delete"
    then
       log_fluff "\"${filename}\" is protected from delete"
-      NO_DELETES="`add_line "${NO_DELETES}" "${filename}" `"
+      r_add_line "${NO_DELETES}" "${filename}"
+      NO_DELETES="${RVAL}"
       return
    fi
 
@@ -84,15 +85,18 @@ walk_clean()
       if [ -L "${filename}" ]
       then
          log_fluff "Symlink \"${filename}\" marked for delete."
-         DELETE_FILES="`add_line "${DELETE_FILES}" "${filename}" `"
+         r_add_line "${DELETE_SYMLINKS}" "${filename}"
+         DELETE_SYMLINKS="${RVAL}"
       else
          if [ -d "${filename}" ]
          then
             log_fluff "Directory \"${filename}\" marked for delete."
-            DELETE_DIRECTORIES="`add_line "${DELETE_DIRECTORIES}" "${filename}" `"
+            r_add_line "${DELETE_DIRECTORIES}" "${filename}"
+            DELETE_DIRECTORIES="${RVAL}"
          else
-            log_fluff "File (or syml) \"${filename}\" marked for delete."
-            DELETE_FILES="`add_line "${DELETE_FILES}" "${filename}" `"
+            log_fluff "File \"${filename}\" marked for delete."
+            r_add_line "${DELETE_FILES}" "${filename}"
+            DELETE_FILES="${RVAL}"
          fi
       fi
    else
@@ -120,11 +124,13 @@ sourcetree_clean()
    #
    local NO_DELETES
    local DELETE_FILES
+   local DELETE_SYMLINKS
    local DELETE_DIRECTORIES
 
    NO_DELETES=
    DELETE_FILES=
    DELETE_DIRECTORIES=
+   DELETE_SYMLINKS=
 
    VISIT_TWICE='YES'  # need to pick up nodeletes
 
@@ -160,6 +166,15 @@ sourcetree_clean()
       fi
    done
 
+   for filename in ${DELETE_SYMLINKS}
+   do
+      IFS="${DEFAULT_IFS}"; set +o noglob
+
+      if ! fgrep -q -x -e "${filename}" <<< "${NO_DELETES}"
+      then
+         remove_file_if_present "${filename}"
+      fi
+   done
    IFS="${DEFAULT_IFS}"; set +o noglob
 }
 
@@ -169,12 +184,15 @@ sourcetree_clean_main()
    log_entry "sourcetree_clean_main" "$@"
 
    local OPTION_MARKS="ANY"
-   local OPTION_PERMISSIONS=""
+   local OPTION_PERMISSIONS="visit-symlink"
    local OPTION_NODETYPES="ALL"
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_IS_UPTODATE='NO'
    local OPTION_OUTPUT_HEADER="DEFAULT"
    local OPTION_OUTPUT_FORMAT='RAW'
+   local OPTION_CLEAN_SHARE_DIR='YES'
+
+   [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
 
    while [ $# -ne 0 ]
    do
@@ -205,6 +223,14 @@ sourcetree_clean_main()
             shift
 
             OPTION_PERMISSIONS="$1"
+         ;;
+
+         --share)
+            OPTION_CLEAN_SHARE_DIR='YES'
+         ;;
+
+         --no-share)
+            OPTION_CLEAN_SHARE_DIR='NO'
          ;;
 
          -*)
@@ -241,35 +267,40 @@ sourcetree_clean_main()
 
    if ! cfg_exists "${SOURCETREE_START}"
    then
-      log_verbose "There is no ${SOURCETREE_CONFIG_FILE} here"
-   fi
-
-   if ! db_exists "${SOURCETREE_START}"
-   then
-      log_verbose "Already clean"
-      return 0
-   fi
-
-   local mode
-
-   mode="${SOURCETREE_MODE}"
-   if [ "${SOURCETREE_MODE}" != "flat" ]
-   then
-      r_comma_concat "${mode}" "pre-order"
-      mode="${RVAL}"
+      log_verbose "There is no \"${SOURCETREE_CONFIG_FILENAME}\" here"
    fi
 
    local rval
 
-   sourcetree_clean "${OPTION_NODETYPES}" \
-                    "${OPTION_PERMISSIONS}" \
-                    "${OPTION_MARKS}" \
-                    "${mode}"
-   rval=$?
-
-   if [ "${rval}" -eq 0 ]
+   rval=0
+   if db_exists "${SOURCETREE_START}"
    then
-      rmdir_if_empty "${MULLE_SOURCETREE_SHARE_DIR}"
+
+      local mode
+
+      mode="${SOURCETREE_MODE}"
+      if [ "${SOURCETREE_MODE}" != "flat" ]
+      then
+         r_comma_concat "${mode}" "pre-order"
+         mode="${RVAL}"
+      fi
+
+      local rval
+
+      sourcetree_clean "${OPTION_NODETYPES}" \
+                       "${OPTION_PERMISSIONS}" \
+                       "${OPTION_MARKS}" \
+                       "${mode}"
+      rval=$?
+   else
+      log_verbose "Already clean"
+   fi
+
+   if [ "${rval}" -eq 0 -a "${OPTION_CLEAN_SHARE_DIR}" = 'YES' ]
+   then
+      rmdir_if_empty "${MULLE_SOURCETREE_STASH_DIR}"
+   else
+      log_debug "Not removing MULLE_SOURCETREE_STASH_DIR because of rval $?"
    fi
 
    return $rval

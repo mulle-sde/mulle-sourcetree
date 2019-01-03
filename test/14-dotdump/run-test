@@ -69,9 +69,9 @@ EOF
 
 
 #
-# repository has no .mulle-sourcetree in 1.0.0
-# repository has a .mulle-sourcetree in 2.0.0
-# repository has no .mulle-sourcetree in 3.0.0
+# repository has no .mulle in 1.0.0
+# repository has a .mulle in 2.0.0
+# repository has no .mulle in 3.0.0
 #
 
 #
@@ -85,11 +85,11 @@ _setup_demo_repo_a()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/b" || exit 1
-   run_mulle_sourcetree -e add --nodetype git --url "file://${reporoot}/d" "c/d" || exit 1
-   run_mulle_sourcetree -e list
+   run_mulle_sourcetree add --nodetype git "file://${reporoot}/b" || exit 1
+   run_mulle_sourcetree add --nodetype git --url "file://${reporoot}/d" "c/d" || exit 1
+   run_mulle_sourcetree list
 
-   exekutor git add VERSION .mulle-sourcetree
+   exekutor git add VERSION .mulle
    exekutor git commit -m "a: initial version"
 }
 
@@ -103,8 +103,8 @@ _setup_demo_repo_b()
    exekutor git init
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree -e add --nodetype git "file://${reporoot}/d" || exit 1
-   exekutor git add VERSION .mulle-sourcetree
+   run_mulle_sourcetree add --nodetype git "file://${reporoot}/d" || exit 1
+   exekutor git add VERSION .mulle
    exekutor git commit -m "b: initial version"
 }
 
@@ -162,8 +162,8 @@ run_test1()
       fail "update failed unexpectedly"
    fi
 
-   MULLE_SOURCETREE_SHARE_DIR="stashes"
-   export MULLE_SOURCETREE_SHARE_DIR
+   MULLE_SOURCETREE_STASH_DIRNAME="stashes"
+   export MULLE_SOURCETREE_STASH_DIRNAME
 
    run_mulle_sourcetree dotdump --output-html > /dev/null
    if [ $? -ne 0 ]
@@ -227,11 +227,11 @@ init()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dotdump.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"     || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dotdump.sh"  || exit 1
 }
 
 
