@@ -62,26 +62,26 @@ run_test()
    # lets make b a minion, it should not be clobbered by a
    if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
    then
-      internal_fail "add internal_failed unexpectedly"
+      internal_fail "#1 add internal_failed unexpectedly"
    fi
 
    # node is expected to be local and no-delete
    if ! run_mulle_sourcetree add --marks "no-delete,no-update,no-share" b
    then
-      internal_fail "add failed unexpectedly"
+      internal_fail "#1 add failed unexpectedly"
    fi
 
    if [ "`mulle-sourcetree get b nodetype`" != "local" ]
    then
-      internal_fail "minion b is not local"
+      internal_fail "#1 minion b is not local"
    fi
 
    if [ "`mulle-sourcetree get b marks`" != "no-delete,no-share,no-update" ]
    then
-      internal_fail "minion b is not no-delete"
+      internal_fail "#1 minion b is not no-delete"
    fi
 
-   run_mulle_sourcetree list
+   run_mulle_sourcetree list -r -l
    run_mulle_sourcetree status
 
    log_verbose "----- #1 PASSED -----"
@@ -94,10 +94,10 @@ run_test()
 
    if run_mulle_sourcetree ${UPDATE_FLAGS} --share update
    then
-      internal_fail "update succeeded unexpectedly"
+      internal_fail "#2 update succeeded unexpectedly"
    fi
 
-   run_mulle_sourcetree list
+   run_mulle_sourcetree list -r -l
    run_mulle_sourcetree status
 
    log_verbose "----- #2 PASSED -----"
@@ -109,13 +109,13 @@ run_test()
 
    if ! run_mulle_sourcetree ${UPDATE_FLAGS} --share update
    then
-      internal_fail "update failed unexpectedly"
+      internal_fail "#3 update failed unexpectedly"
    fi
 
-   [ -d "a" ]              || internal_fail "a should exist"
-   [ -f "b/DONTDELETEME" ] || internal_fail "b/DONTDELETEME should exist"
+   [ -d "a" ]              || internal_fail "#3 a should exist"
+   [ -f "b/DONTDELETEME" ] || internal_fail "#3 b/DONTDELETEME should exist"
 
-   run_mulle_sourcetree list
+   run_mulle_sourcetree list -r -l
    run_mulle_sourcetree status
 
    log_verbose "----- #3 PASSED -----"
@@ -125,13 +125,13 @@ run_test()
    #
    if ! run_mulle_sourcetree clean
    then
-      internal_fail "clean failed unexpectedly"
+      internal_fail "#4 clean failed unexpectedly"
    fi
 
-   [ -d "a" ]              && internal_fail "a should not exist"
-   [ -f "b/DONTDELETEME" ] || internal_fail "b/DONTDELETEME should exist"
+   [ -d "a" ]              && internal_fail "#4 a should not exist"
+   [ -f "b/DONTDELETEME" ] || internal_fail "#4 b/DONTDELETEME should exist"
 
-   run_mulle_sourcetree list
+   run_mulle_sourcetree list -r -l
    run_mulle_sourcetree status
 
    log_verbose "----- #4 PASSED -----"
@@ -145,10 +145,10 @@ run_test()
 
    if ! run_mulle_sourcetree ${UPDATE_FLAGS} --share update
    then
-      internal_fail "update failed unexpectedly"
+      internal_fail "#5 update failed unexpectedly"
    fi
 
-   run_mulle_sourcetree list
+   run_mulle_sourcetree list -r -l
    run_mulle_sourcetree status
 
    log_verbose "----- #5 PASSED -----"

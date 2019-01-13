@@ -345,47 +345,62 @@ nodeline_read_file()
 }
 
 
-__set_sep_and_formatstring()
+r_get_sep()
 {
+   log_entry "r_get_sep" "$@"
+
    local mode="$1"
 
    case ",${mode}," in
       *,output_column,*)
-         sep="; "
+         RVAL="; "
       ;;
 
       *)
-         sep=";"
+         RVAL=";"
       ;;
    esac
+}
+
+
+r_get_formatstring()
+{
+   log_entry "r_get_formatstring" "$@"
+
+   local mode="$1"
+   local formatstring="$2"
+   local sep="$3"
 
    # this could be much better
 
-   if [ -z "${formatstring}" ]
+   RVAL="${formatstring}"
+
+   if [ -z "${RVAL}" ]
    then
-      formatstring="%a${sep}%n${sep}%m${sep}%i"
+      RVAL="%a${sep}%n${sep}%m${sep}%i"
       case ",${mode}," in
          *,output_url,*)
-            formatstring="${formatstring}${sep}%u"
+            RVAL="${RVAL}${sep}%u"
          ;;
       esac
 
       case ",${mode}," in
          *,output_full,*)
-            formatstring="${formatstring}${sep}%b${sep}%t${sep}%f"
+            RVAL="${RVAL}${sep}%b${sep}%t${sep}%f"
          ;;
       esac
 
       case ",${mode}," in
          *,output_uuid,*)
-            formatstring="${formatstring}${sep}%_"
+            RVAL="${RVAL}${sep}%_"
          ;;
       esac
-      formatstring="${formatstring}\\n"
+      RVAL="${RVAL}\\n"
    fi
 
-   log_debug "Format: ${formatstring}"
+   log_debug "Format: ${RVAL}"
 }
+
 
 nodeline_printf_header()
 {
@@ -405,7 +420,11 @@ nodeline_printf_header()
 
    local sep
 
-   __set_sep_and_formatstring "${mode}"
+   r_get_sep "${mode}"
+   sep="${RVAL}"
+
+   r_get_formatstring "${mode}" "${formatstring}" "${sep}"
+   formatstring="${RVAL}"
 
    local h_line
    local s_line
@@ -443,22 +462,27 @@ nodeline_printf_header()
             dash="------------"
          ;;
 
-         %i*)
-            if [ "${formatstring:2:1}" = "=" ]
+         %i*|%v*)
+            if [ "${formatstring:2:2}" = "={" ]
             then
-               name="`sed -n 's/%i={[^,]*,\([^,]*\)[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+               name="`sed -n 's/%.={[^,]*,\([^,]*\)[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
                if [ -z "${name}" ]
                then
-                  name="`sed -n 's/%i={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+                  name="`sed -n 's/%.={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
                fi
-               dash="`sed -n 's/%i={[^,]*,[^,]*,\([^}]*\)}.*/\1/p' <<< "${formatstring}" `"
+               dash="`sed -n 's/%.={[^,]*,[^,]*,\([^}]*\)}.*/\1/p' <<< "${formatstring}" `"
                if [ -z "${dash}" ]
                then
                   dash="------"
                fi
                # skip over format string
-               formatstring="`sed 's/%i={[^}]*}//' <<< "${formatstring}" `"
-               formatstring="%i${formatstring}"
+               local tmp
+
+               tmp="`sed 's/%.={[^}]*}//' <<< "${formatstring}" `"
+               if [ "${tmp}" != "${formatstring}" ]
+               then
+                  formatstring="XX${tmp}"
+               fi
             else
                name="userinfo"
                dash="--------"
@@ -536,10 +560,10 @@ nodeline_printf_header()
       formatstring="${formatstring:2}"
    done
 
-   printf "%s" "${h_line}"
+   rexekutor printf "%s" "${h_line}"
    case ",${mode}," in
       *,output_separator,*)
-         printf "%s" "${s_line}"
+         rexekutor printf "%s" "${s_line}"
       ;;
    esac
 }
@@ -547,12 +571,7 @@ nodeline_printf_header()
 
 nodeline_printf()
 {
-   log_entry "nodeline_printf" "$@"
-
-   local nodeline=$1
-   local mode="$2"
-   local formatstring="$3"
-   local cmdline="$4"
+   local nodeline=$1; shift
 
    local _branch
    local _address
@@ -567,231 +586,26 @@ nodeline_printf()
 
    nodeline_parse "${nodeline}"
 
-   case ",${mode}," in
-      *,output_eval,*)
-         _url="`eval echo "${_url}"`"
-         _branch="`eval echo "${_branch}"`"
-         _tag="`eval echo "${_tag}"`"
-         _fetchoptions="`eval echo "${_fetchoptions}"`"
-      ;;
-   esac
-
-   local sep
-
-   __set_sep_and_formatstring "${mode}"
-
-   local line
-
-   if [ -z "${cmdline}" ]
-   then
-      cmdline="${MULLE_USAGE_NAME} -N add"
-   fi
-
-   local guess
-
-   guess=
-   case "${formatstring}" in
-      *%m*)
-         case ",${mode}," in
-            *,output_cmd,*|*,output_cmd2,*)
-               if [ ! -z "${_url}" ]
-               then
-                  guess="`node_guess_nodetype "${_url}"`"
-               fi
-            ;;
-         esac
-      ;;
-   esac
-
-   while [ ! -z "${formatstring}" ]
-   do
-      local value
-      local switch
-
-      case "${formatstring}" in
-         %a*)
-            switch=""
-            value="${_address}"
-         ;;
-
-         %b!*)
-            switch="--branch"
-            value="`eval echo "${_branch}"`"
-            formatstring="${formatstring:1}"
-         ;;
-
-         %b*)
-            switch="--branch"
-            value="${_branch}"
-         ;;
-
-         %f!*)
-            switch="--fetchoptions"
-            value="`eval echo "${_fetchoptions}"`"
-            formatstring="${formatstring:1}"
-         ;;
-
-         %f*)
-            switch="--fetchoptions"
-            value="${_fetchoptions}"
-         ;;
-
-         %i*)
-            if [ "${formatstring:2:1}" = "=" ]
-            then
-               if [ -z "${MULLE_ARRAY_SH}" ]
-               then
-                  . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || \
-                     internal_fail "Could not load mulle-array.sh via \"${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}\""
-               fi
-               switch=""
-               key="`sed -n 's/%i={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
-               if [ -z "${key}" ]
-               then
-                  fail "malformed formatstring \"${formatstring:1}\". Need ={<title>,<dashes>,<key>}"
-               fi
-               value="`assoc_array_get "${_userinfo}" "${key}" `"
-               # skip over format string
-               formatstring="`sed 's/^%i={[^}]*}//' <<< "${formatstring}" `"
-               formatstring="%i${formatstring}"
-            else
-               switch="--userinfo"
-               case ",${mode}," in
-                  *,output_cmd,*|*,output_cmd2,*)
-                     value="${_raw_userinfo}"
-                  ;;
-
-                  *)
-                     value="`tr '\012' ':' <<< "${_userinfo}" | sed -e 's/,$//g' `"
-                     value="${value#:}"
-                     value="${value%:}"
-                  ;;
-               esac
-            fi
-         ;;
-
-         %m*)
-            switch="--marks"
-            value="${_marks}"
-         ;;
-
-         %n*)
-            switch="--nodetype"
-            value="${_nodetype}"
-
-            if [ "${_nodetype}" = "git" -o "${guess}" = "git" ]
-            then
-               switch=""
-            fi
-         ;;
-
-         %t!*)
-            switch="--tag"
-            value="`eval echo "${_tag}"`"
-            formatstring="${formatstring:1}"
-         ;;
-
-         %t*)
-            switch="--tag"
-            value="${_tag}"
-         ;;
-
-         %u!*)
-            switch="--url"
-            value="`eval echo "${_url}"`"
-            formatstring="${formatstring:1}"
-         ;;
-
-         %u*)
-            switch="--url"
-            value="${_url}"
-         ;;
-
-         %U!*)
-            switch="--url"
-            if [ -z "${_url}" ]
-            then
-               value="${_address}"
-            else
-               value="`eval echo "${_url}"`"
-            fi
-            formatstring="${formatstring:1}"
-         ;;
-
-         %U*)
-            switch="--url"
-            if [ -z "${_url}" ]
-            then
-               value="${_address}"
-            else
-               value="${_url}"
-            fi
-         ;;
-
-         %_*)
-            switch=""
-            value="${_uuid}"
-         ;;
-
-         %*)
-            fail "unknown format character \"${formatstring:0:2}\""
-         ;;
-
-         \\n)
-            switch=""
-            value="
-"
-         ;;
-
-         *)
-            case ",${mode}," in
-               *,output_cmd,*|*,output_cmd2,*)
-               ;;
-
-               *)
-                  line="${line}${formatstring:0:1}"
-               ;;
-            esac
-            formatstring="${formatstring:1}"
-            continue
-         ;;
-      esac
-
-      formatstring="${formatstring:2}"
-
-      case ",${mode}," in
-         *,output_column,*)
-            if [ -z "${value}" ]
-            then
-               value=" "
-            fi
-         ;;
-      esac
-
-      line="${line}${value}"
-
-      if [ ! -z "${switch}" -a ! -z "${value}" ]
-      then
-      	r_concat "${cmdline}" "${switch} '${value}'"
-         cmdline="${RVAL}"
-      fi
-   done
-
-   case ",${mode}," in
-      *,output_cmd,*)
-         echo "${cmdline}" "'${_address}'"
-      ;;
-
-      *,output_cmd2,*)
-         echo "${cmdline}" "'${_url}'"
-      ;;
-
-      *,output_raw,*)
-         printf "%s" "${line}" | sed 's/;$//g'
-      ;;
-
-      *)
-         printf "%s" "${line}"
-      ;;
-   esac
+   node_printf "$@"
 }
+
+
+sourcetree_nodeline_initialize()
+{
+   log_entry "sourcetree_nodeline_initialize"
+
+   if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-nodemarks.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"|| exit 1
+   fi
+   if [ -z "${MULLE_SOURCETREE_NODEMARKS_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-nodemarks.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
+   fi
+}
+
+sourcetree_nodeline_initialize
+
+:

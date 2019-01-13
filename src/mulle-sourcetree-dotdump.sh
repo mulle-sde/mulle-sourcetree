@@ -510,7 +510,7 @@ walk_dotdump()
 
          if [ ! -z "${relidentifier}" ]
          then
-            if ! fgrep -q -s -x -e "${relidentifier}" <<< "${ALL_RELATIONSHIPS}"
+            if ! find_line "${ALL_RELATIONSHIPS}" "${relidentifier}"
             then
                exekutor echo "   ${relidentifier} [ style=\"${style}\", label=\"${label}\" ]"
                ALL_RELATIONSHIPS="`add_line "${ALL_RELATIONSHIPS}" "${relidentifier}"`"
@@ -520,12 +520,12 @@ walk_dotdump()
 
       log_debug "[i] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
 
-      if ! fgrep -q -s -x -e "${identifier}" <<< "${ALL_DIRECTORIES}"
+      if ! find_line "${ALL_DIRECTORIES}" "${identifier}"
       then
          ALL_DIRECTORIES="`add_line "${ALL_DIRECTORIES}" "${identifier}"`"
          log_debug "[+] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
 
-         if ! fgrep -q -s -x -e "${identifier}" <<< "${TOEMIT_DIRECTORIES}"
+         if ! find_line "${TOEMIT_DIRECTORIES}" "${identifier}"
          then
             TOEMIT_DIRECTORIES="`add_line "${TOEMIT_DIRECTORIES}" "${identifier}"`"
             log_debug "[+] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
@@ -623,10 +623,7 @@ sourcetree_dotdump_body()
 {
    log_entry "sourcetree_dotdump_body" "$@"
 
-   local filternodetypes="$1"; shift
-   local filterpermissions="$1"; shift
-   local filtermarks="$1"; shift
-   local mode="$1"; shift
+   local mode="$1"
 
    #
    # ugly hacks to avoid drawing multiple lines
@@ -641,21 +638,21 @@ sourcetree_dotdump_body()
 
    case ",${mode}," in
       *,walkdb,*)
-         walk_db_uuids "${filternodetypes}" \
-                       "${filterpermissions}" \
-                       "${filtermarks}" \
+         walk_db_uuids "ALL" \
+                       "descend-symlink" \
+                       "" \
+                       "" \
                        "${mode}" \
-                       "walk_dotdump" \
-                       "$@"
+                       "walk_dotdump"
       ;;
 
       *)
-         walk_config_uuids "${filternodetypes}" \
-                           "${filterpermissions}" \
-                           "${filtermarks}" \
+         walk_config_uuids "ALL" \
+                           "descend-symlink" \
+                           "" \
+                           "" \
                            "${mode}" \
-                           "walk_dotdump" \
-                           "$@"
+                           "walk_dotdump"
       ;;
    esac || return 1
 
@@ -812,10 +809,7 @@ sourcetree_dotdump_main()
       log_warning "Update has not run yet (mode=${SOURCETREE_MODE})"
    fi
 
-   sourcetree_dotdump "${OPTION_NODETYPES}" \
-                      "${OPTION_PERMISSIONS}" \
-                      "${OPTION_MARKS}" \
-                      "${mode}"
+   sourcetree_dotdump "${mode}"
 }
 
 

@@ -461,10 +461,7 @@ sourcetree_status()
 {
    log_entry "sourcetree_status" "$@"
 
-   local filternodetypes="$1"; shift
-   local filterpermissions="$1"; shift
-   local filtermarks="$1"; shift
-   local mode="$1"; shift
+   local mode="$1"
 
    local output
    local output2
@@ -472,12 +469,12 @@ sourcetree_status()
    # empty parameters means local
    r_emit_status
    output="${RVAL}"
-   output2="`walk_config_uuids "${filternodetypes}" \
-                               "${filterpermissions}" \
-                               "${filtermarks}" \
+   output2="`walk_config_uuids "ALL" \
+                               "descend-symlink" \
+                               "" \
+                               "" \
                                "${mode}" \
-                               "walk_status" \
-                               "$@"`"
+                               "walk_status"`"
    rval="$?"
    if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
    then
@@ -548,6 +545,7 @@ sourcetree_status_main()
    local OPTION_OUTPUT_HEADER="DEFAULT"
    local OPTION_OUTPUT_FORMAT="FMT"
    local OPTION_OUTPUT_FILENAME='DEFAULT'
+   local WALK_DEDUPE_MODE='filename'
 
    while [ $# -ne 0 ]
    do
@@ -557,7 +555,7 @@ sourcetree_status_main()
          ;;
 
          --all)
-            VISIT_TWICE='YES'
+            WALK_DEDUPE_MODE='none'
          ;;
 
          --output-header)
@@ -594,30 +592,6 @@ sourcetree_status_main()
 
          --is-uptodate)
             OPTION_IS_UPTODATE='YES'
-         ;;
-
-         #
-         # more common flags
-         #
-         -m|--marks)
-            [ $# -eq 1 ] && sourcetree_status_usage "Missing argument to \"$1\""
-            shift
-
-            OPTION_MARKS="$1"
-         ;;
-
-         -n|--nodetypes)
-            [ $# -eq 1 ] && sourcetree_status_usage "Missing argument to \"$1\""
-            shift
-
-            OPTION_NODETYPES="$1"
-         ;;
-
-         -p|--permissions)
-            [ $# -eq 1 ] && sourcetree_status_usage "Missing argument to \"$1\""
-            shift
-
-            OPTION_PERMISSIONS="$1"
          ;;
 
          -*)
@@ -673,10 +647,7 @@ sourcetree_status_main()
       fi
    fi
 
-   sourcetree_status "${OPTION_NODETYPES}" \
-                     "${OPTION_PERMISSIONS}" \
-                     "${OPTION_MARKS}" \
-                     "${mode}"
+   sourcetree_status "${mode}"
 }
 
 

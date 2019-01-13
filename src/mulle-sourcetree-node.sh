@@ -40,71 +40,9 @@ node_uuidgen()
 }
 
 
-node_guess_address()
+r_node_sanitized_address()
 {
-   log_entry "node_guess_address" "$@"
-
-   local url="$1"
-   local nodetype="${2:-local}"
-
-   [ -z "${url}" ] && fail "URL is empty"
-
-   local evaledurl
-   local result
-
-   evaledurl="`eval echo "${url}"`"
-
-   case "${evaledurl}" in
-      "")
-         fail "URL \"${url}\" evaluates to empty"
-      ;;
-
-      *)
-         result="`${MULLE_FETCH:-mulle-fetch} \
-                        ${MULLE_FETCH_FLAGS} \
-                     nameguess \
-                        -s "${nodetype}" \
-                        "${evaledurl}"`"
-         log_fluff "${MULLE_FETCH:-mulle-fetch} returned \"${result}\" as \
-default address for url ($url)"
-         echo "${result}"
-      ;;
-   esac
-}
-
-
-node_guess_nodetype()
-{
-   log_entry "node_guess_nodetype" "$@"
-
-   local url="$1"
-
-   [ -z "${url}" ] && fail "URL is empty"
-
-   local evaledurl
-   local result
-
-   evaledurl="`eval echo "${url}"`"
-   case "${evaledurl}" in
-      "")
-      ;;
-
-      *)
-         result="`${MULLE_FETCH:-mulle-fetch} \
-                        ${MULLE_FETCH_FLAGS} \
-                     typeguess \
-                        "${evaledurl}"`"
-         log_fluff "${MULLE_FETCH:-mulle-fetch} determined \"${result}\" as \
-nodetype from url ($evaledurl)"
-         echo "${result}"
-      ;;
-   esac
-}
-
-
-node_sanitized_address()
-{
-   log_entry "node_sanitized_address" "$@"
+   log_entry "r_node_sanitized_address" "$@"
 
    local address="$1"
 
@@ -126,102 +64,9 @@ node_sanitized_address()
    then
       log_fluff "Destination \"${address}\" sanitized to \"${modified}\""
    fi
-   echo "${modified}"
+   RVAL="${modified}"
 }
 
-
-node_fetch_operation()
-{
-   log_entry "node_fetch_operation" "$@"
-
-   local opname="$1"
-   local options="$2"
-
-   [ -z "${opname}" ] && internal_fail "opname is empty"
-
-   local url="$3"
-   local address="$4"
-   local branch="$5"
-   local tag="$6"
-   local nodetype="$7"
-   local fetchoptions="$8"
-
-   [ -z "${url}" ] && fail "URL is empty"
-
-   local rval
-   local evaledurl
-   local evaledbranch
-   local evaledtag
-   local evaledfetchoptions
-
-   evaledurl="`eval echo "${url}"`"
-   evaledtag="`eval echo "${tag}"`"
-   evaledbranch="`eval echo "${branch}"`"
-   evaledfetchoptions="`eval echo "${_fetchoptions}"`"
-
-   [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
-
-   case "${nodetype}" in
-      file)
-         # does not implement local search
-      ;;
-
-      *)
-         log_verbose "Looking for local copy of \
-${C_RESET_BOLD}${evaledurl}${C_INFO}"
-
-         local localurl
-         local localnodetype
-
-         localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
-                                          "${MULLE_TECHNICAL_FLAGS}" \
-                                          "${MULLE_FETCH_FLAGS}" \
-                                       "search-local" \
-                                          --scm "'${nodetype}'" \
-                                          --tag "'${evaledtag}'" \
-                                          --branch "'${evaledbranch}'" \
-                                          --options "'${evaledfetchoptions}'" \
-                                          --url "'${evaledurl}'" \
-                                          "'${address}'" )"
-         if [ ! -z "${localurl}" ]
-         then
-            evaledurl="${localurl}"
-            log_verbose "Local URL found \"${localurl}\""
-
-            localnodetype="`node_guess_nodetype "${localurl}"`"
-            if [ ! -z "${localnodetype}" -a "${localnodetype}" != "local" ]
-            then
-               nodetype="${localnodetype}"
-            fi
-         else
-            log_fluff "No local URL found"
-         fi
-      ;;
-   esac
-
-   eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
-                       "${MULLE_TECHNICAL_FLAGS}" \
-                       "${MULLE_FETCH_FLAGS}" \
-                    "${opname}" \
-                       --scm "'${nodetype}'" \
-                       --tag "'${evaledtag}'" \
-                       --branch "'${evaledbranch}'" \
-                       --options "'${evaledfetchoptions}'" \
-                       --url "'${evaledurl}'" \
-                       ${options} \
-                       "'${address}'"
-}
-
-
-node_list_operations()
-{
-   log_entry "node_list_operations" "$@"
-
-   local nodetype="$1"
-
-   ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} -s \
-      operation -s "${nodetype}" list
-}
 
 #
 # This function sets values of variables that should be declared
@@ -291,7 +136,8 @@ node_augment()
       ;;
 
       *)
-         _address="`node_sanitized_address "${_address}"`" || exit 1
+         r_node_sanitized_address "${_address}"
+         _address="${RVAL}" || exit 1
       ;;
    esac
 
@@ -476,8 +322,6 @@ nodetype_filter()
 
    [ -z "${nodetype}" ] && internal_fail "empty nodetype"
 
-   [ -z "${filter}" ] && return 0
-
    case ",${filter}," in
       *,no-${nodetype},*)
          return 1
@@ -485,11 +329,273 @@ nodetype_filter()
    esac
 
    case ",${filter}," in
-      *,ALL,*|*,${nodetype},*)
+      *,ALL,*|,,)
+         log_debug "ALL or empty matches always"
+         return 0
+      ;;
+
+      *,${nodetype},*)
+         log_debug "\"${nodetype}\" matches \"${filter}\""
          return 0
       ;;
    esac
 
+   log_debug "\"${nodetype}\" doesn't match \"${filter}\""
    return 1
 }
 
+
+__get_format_key()
+{
+   if [ -z "${MULLE_ARRAY_SH}" ]
+   then
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || \
+         internal_fail "Could not load mulle-array.sh via \"${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}\""
+   fi
+   switch=""
+   key="`sed -n 's/%.={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+
+   local tmp
+
+   tmp="`sed 's/^%.={[^}]*}//' <<< "${formatstring}" `"
+   if [ -z "${key}" -o "${tmp}" = "${formatstring}" ]
+   then
+      fail "malformed formatstring \"${formatstring:1}\". Need ={<title>,<dashes>,<key>}"
+   fi
+   formatstring="XX${tmp}"
+}
+
+
+node_printf()
+{
+   log_entry "node_printf" "$@"
+
+   local mode="$1"
+   local formatstring="$2"
+   local cmdline="$3"
+   local indent="$4"
+
+   local sep
+
+   r_get_sep "${mode}"
+   sep="${RVAL}"
+   r_get_formatstring "${mode}" "${formatstring}" "${sep}"
+   formatstring="${RVAL}"
+
+   local url="${_url}"
+   local branch="${_branch}"
+   local tag="${_tag}"
+   local fetchoptions="${_fetchoptions}"
+
+   case ",${mode}," in
+      *,no-indent,*)
+         indent=""
+      ;;
+   esac
+
+   case ",${mode}," in
+      *,output_eval,*)
+         url="`eval echo "${url}"`"
+         branch="`eval echo "${branch}"`"
+         tag="`eval echo "${tag}"`"
+         fetchoptions="`eval echo "${fetchoptions}"`"
+      ;;
+   esac
+
+   local _url="${url}"
+   local _branch="${branch}"
+   local _tag="${tag}"
+   local _fetchoptions="${fetchoptions}"
+
+   local line
+
+   if [ -z "${cmdline}" ]
+   then
+      cmdline="${MULLE_USAGE_NAME} -N add"
+   fi
+
+   while [ ! -z "${formatstring}" ]
+   do
+      local value
+      local switch
+
+      case "${formatstring}" in
+         %a*)
+            switch=""
+            value="${_address}"
+         ;;
+
+         %b!*)
+            switch="--branch"
+            value="`eval echo "${_branch}"`"
+            formatstring="${formatstring:1}"
+         ;;
+
+         %b*)
+            switch="--branch"
+            value="${_branch}"
+         ;;
+
+         %f!*)
+            switch="--fetchoptions"
+            value="`eval echo "${_fetchoptions}"`"
+            formatstring="${formatstring:1}"
+         ;;
+
+         %f*)
+            switch="--fetchoptions"
+            value="${_fetchoptions}"
+         ;;
+
+         %i*)
+            if [ "${formatstring:2:2}" = "={" ]
+            then
+               __get_format_key
+               value="`assoc_array_get "${_userinfo}" "${key}" `"
+            else
+               switch="--userinfo"
+               case ",${mode}," in
+                  *,output_cmd,*|*,output_cmd2,*)
+                     value="${_raw_userinfo}"
+                  ;;
+
+                  *)
+                     value="`tr '\012' ':' <<< "${_userinfo}" | sed -e 's/,$//g' `"
+                     value="${value#:}"
+                     value="${value%:}"
+                  ;;
+               esac
+            fi
+         ;;
+
+         %m*)
+            switch="--marks"
+            value="${_marks}"
+         ;;
+
+         %n*)
+            switch="--nodetype"
+            value="${_nodetype}"
+         ;;
+
+         %t!*)
+            switch="--tag"
+            value="`eval echo "${_tag}"`"
+            formatstring="${formatstring:1}"
+         ;;
+
+         %t*)
+            switch="--tag"
+            value="${_tag}"
+         ;;
+
+         %u!*)
+            switch="--url"
+            value="`eval echo "${_url}"`"
+            formatstring="${formatstring:1}"
+         ;;
+
+         %u*)
+            switch="--url"
+            value="${_url}"
+         ;;
+
+         %U!*)
+            switch="--url"
+            if [ -z "${_url}" ]
+            then
+               value="${_address}"
+            else
+               value="`eval echo "${_url}"`"
+            fi
+            formatstring="${formatstring:1}"
+         ;;
+
+         %U*)
+            switch="--url"
+            if [ -z "${_url}" ]
+            then
+               value="${_address}"
+            else
+               value="${_url}"
+            fi
+         ;;
+
+         # output an "environment" variable
+         %v*)
+            if [ "${formatstring:2:1}" = "=" ]
+            then
+               __get_format_key
+               value="`eval echo \$\{${key}\}`"
+            else
+               value="failed format"
+            fi
+         ;;
+
+         %_*)
+            switch=""
+            value="${_uuid}"
+         ;;
+
+         %*)
+            fail "unknown format character \"${formatstring:0:2}\""
+         ;;
+
+         \\n)
+            switch=""
+            value="
+"
+         ;;
+
+         *)
+            case ",${mode}," in
+               *,output_cmd,*|*,output_cmd2,*)
+               ;;
+
+               *)
+                  line="${line}${formatstring:0:1}"
+               ;;
+            esac
+            formatstring="${formatstring:1}"
+            continue
+         ;;
+      esac
+
+      formatstring="${formatstring:2}"
+
+      case ",${mode}," in
+         *,output_column,*)
+            if [ -z "${value}" ]
+            then
+               value=" "
+            fi
+         ;;
+      esac
+
+      line="${line}${value}"
+
+      if [ ! -z "${switch}" -a ! -z "${value}" ]
+      then
+         r_concat "${cmdline}" "${switch} '${value}'"
+         cmdline="${RVAL}"
+      fi
+   done
+
+   case ",${mode}," in
+      *,output_cmd,*)
+         rexekutor echo "${cmdline}" "'${_address}'"
+      ;;
+
+      *,output_cmd2,*)
+         rexekutor echo "${cmdline}" "'${_url}'"
+      ;;
+
+      *,output_raw,*)
+         rexekutor printf "${indent}%s" "${line}" | sed 's/;$//g'
+      ;;
+
+      *)
+         rexekutor printf "${indent}%s" "${line}"
+      ;;
+   esac
+}

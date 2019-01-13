@@ -56,25 +56,16 @@ Usage:
       done
 
 Options:
-   --output-marks            : output marks of sourcetree node
-   --callback <f>            : a callback function to modiy the output
+   --output-no-marks : don't output marks of sourcetree node
+   --callback <f>    : a callback function to modify the output
 EOF
   exit 1
 }
 
 
-print_buildorder_line()
+r_create_buildorder_filename()
 {
-   log_entry "print_buildorder_line" "$@"
-
-   #
-   # if we are in root, we want to add no-memo marks to the output, but
-   # only for subprojects
-   #
-   if [ ! -z "${OPTION_CALLBACK}" ]
-   then
-      "${OPTION_CALLBACK}" # "${line}"
-   fi
+   local filename="$1"
 
    if [ "${SOURCETREE_MODE}" = "share" -a \
         "${OPTION_PRINT_ENV}" = 'YES' -a \
@@ -83,37 +74,83 @@ print_buildorder_line()
    then
       local reduce
 
-      reduce="${MULLE_FILENAME#${MULLE_SOURCETREE_STASH_DIR}}"
-      if [ "${reduce}" != "${MULLE_FILENAME}" ]
+      reduce="${filename#${MULLE_SOURCETREE_STASH_DIR}}"
+      if [ "${reduce}" != "${filename}" ]
       then
-         MULLE_FILENAME='${MULLE_SOURCETREE_STASH_DIR}'"${reduce}"
+         filename='${MULLE_SOURCETREE_STASH_DIR}'"${reduce}"
       fi
    fi
 
    if [ "${OPTION_ABSOLUTE}" = 'NO' ]
    then
-      MULLE_FILENAME="${MULLE_FILENAME#${MULLE_VIRTUAL_ROOT}/}"
+      filename="${filename#${MULLE_VIRTUAL_ROOT}/}"
    fi
 
-   if [ "${OPTION_MARKS}" = 'YES' ]
-   then
-      rexekutor echo "${MULLE_FILENAME};${MULLE_MARKS}"
-      return
-   fi
-
-   rexekutor echo "${MULLE_FILENAME}"
+   RVAL="${filename%#*}"
 }
 
+
+collect_buildorder_line()
+{
+   log_entry "collect_buildorder_line" "$@"
+
+   local filename
+
+   r_create_buildorder_filename "${_filename}"
+   filename="${RVAL}"
+
+   r_add_line "${_buildorder_collection}" "${filename}"
+   _buildorder_collection="${RVAL}"
+
+   return 0
+}
+
+
+augment_buildorder_line()
+{
+   log_entry "augment_buildorder_line" "$@"
+
+   local filename
+   local marks
+
+   r_create_buildorder_filename "${_filename}"
+   filename="${RVAL}"
+
+   if ! find_line "${_remainder_collection}" "${filename}"
+   then
+      return
+   fi
+   _remainder_collection="`fgrep -x -v -e "${filename}" <<< "${_remainder_collection}"`"
+
+   marks="${_marks}"
+   if [ ! -z "${OPTION_CALLBACK}" ]
+   then
+      if "${OPTION_CALLBACK}" "${_datasource}" "${_nodetype}" "${marks}"
+      then
+         marks="${RVAL}"
+      fi
+   fi
+
+   r_add_line "${_augmented_collection}" "${filename};${marks}"
+   _augmented_collection="${RVAL}"
+
+   if [ -z "${_remainder_collection}" ]
+   then
+      return 2  #signal done but no error
+   fi
+
+   return 0
+}
 
 
 sourcetree_buildorder_main()
 {
    log_entry "sourcetree_buildorder_main" "$@"
 
-   local OPTION_MARKS='NO'
    local OPTION_PRINT_ENV='YES'
    local OPTION_CALLBACK
    local OPTION_ABSOLUTE='NO'
+   local OUTPUT_MARKS='YES'
 
    while [ $# -ne 0 ]
    do
@@ -122,20 +159,12 @@ sourcetree_buildorder_main()
             sourcetree_buildorder_usage
          ;;
 
-         --output-marks)
-            OPTION_MARKS='YES'
-         ;;
-
          --output-absolute)
             OPTION_ABSOLUTE='YES'
          ;;
 
          --output-relative)
             OPTION_ABSOLUTE='NO'
-         ;;
-
-         --output-no-marks|--no-output-marks)
-            OPTION_MARKS='NO'
          ;;
 
          --callback)
@@ -161,6 +190,10 @@ sourcetree_buildorder_main()
             OPTION_PRINT_ENV='NO'
          ;;
 
+         --no-output-marks|--output-no-marks)
+            OUTPUT_MARKS='NO'
+         ;;
+
          --print-qualifier)
             echo "${SOURCETREE_BUILDORDER_QUALIFIER}"
             exit 0
@@ -180,12 +213,64 @@ sourcetree_buildorder_main()
 
    [ "$#" -eq 0 ] || sourcetree_buildorder_usage "Superflous arguments \"$*\""
 
+   #
+   # First we walk in-order to get the filenames in the proper order
+   # of compilation.
+   #
+   # Then we need to run it in breadth-first again to collect the proper
+   # marks, since marks on the top should override those on the bottom.
+   #
+   # Finally we need to output again in the first order
+   #
+   local _buildorder_collection
 
+   WALK_DEDUPE_MODE="address-filename"
    sourcetree_walk "" \
                    "descend-symlink" \
                    "${SOURCETREE_BUILDORDER_QUALIFIER}" \
+                   "${SOURCETREE_BUILDORDER_QUALIFIER}" \
                    "${SOURCETREE_MODE},in-order" \
-                   "print_buildorder_line"
+                   "collect_buildorder_line"
+
+   log_info "Buildorder"
+
+   if [ -z "${_buildorder_collection}" ]
+   then
+      log_verbose "Buildorder is empty"
+      return 0
+   fi
+
+   if [ "${OUTPUT_MARKS}" = 'NO' ]
+   then
+      echo "${_buildorder_collection}"
+      return 0
+   fi
+
+   local _remainder_collection
+   local _augmented_collection
+
+   _remainder_collection="${_buildorder_collection}"
+
+   WALK_DEDUPE_MODE="none"
+   sourcetree_walk "" \
+                   "descend-symlink" \
+                   "${SOURCETREE_BUILDORDER_QUALIFIER}" \
+                   "${SOURCETREE_BUILDORDER_QUALIFIER}" \
+                   "${SOURCETREE_MODE},breadth-order" \
+                   "augment_buildorder_line"
+
+   local pattern
+
+   set -o noglob ; IFS="
+"
+   for filename in ${_buildorder_collection}
+   do
+      IFS="${DEFAULT_IFS}" ; set +o noglob
+
+      r_escaped_sed_pattern "${filename}"
+      egrep -e "^${RVAL};" <<< "${_augmented_collection}"
+   done
+   IFS="${DEFAULT_IFS}" ; set +o noglob
 }
 
 

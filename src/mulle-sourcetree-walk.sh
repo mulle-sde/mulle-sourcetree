@@ -34,6 +34,8 @@ MULLE_SOURCETREE_WALK_SH="included"
 
 sourcetree_walk_usage()
 {
+   [ $# -ne 0 ] && log_error "$*"
+
    cat <<EOF >&2
 Usage:
    ${MULLE_USAGE_NAME} walk [options] <shell command>
@@ -98,6 +100,7 @@ Options:
    --lenient        : allow shell command to error
    --pre-order      : walk tree in pre-order  (Root, Left, Right)
    --in-order       : walk tree in in-order (Left, Root, Right)
+   --breadth-first  : walk tree breadth first (first all top levels)
    --walk-db        : walk over information contained in the database instead
 EOF
   exit 1
@@ -110,20 +113,86 @@ EOF
 # Possible permissions: "symlink,missing"
 # Useful for buildorder it would seem
 #
-walk_filter_permissions()
+
+
+walk_filter_visit_permissions()
 {
-   log_entry "walk_filter_permissions" "$@"
+   log_entry "walk_filter_visit_permissions" "$@"
 
    local permissions="$1"
    local filename="$2"
    local marks="$3"
 
-   local rval=0
+
+   [ -z "${filename}" ] && internal_fail "empty filename"
+
+   # it should be faster to put [ -e ] into each case statement
+   case ",${permissions}," in
+      *,fail-noexist,*)
+         if [ ! -e "${filename}" ]
+         then
+            fail "Missing \"${filename}\" is not yet fetched."
+         fi
+      ;;
+
+      *,warn-noexist,*)
+         if [ ! -e "${filename}" ]
+         then
+            log_warning "Repository expected in \"${filename}\" is not yet \
+fetched"
+            return 0
+         fi
+      ;;
+
+      *,skip-noexist,*)
+         if [ ! -e "${filename}" ]
+         then
+            log_fluff "Repository expected in \"${filename}\" is not yet \
+fetched, skipped"
+            return 1
+         fi
+      ;;
+   esac
 
    case ",${permissions}," in
-      *,descend-mark,*) # make more general no-*-descend later
+      *,fail-symlink,*)
+         if [ -L "${filename}" ]
+         then
+            fail "\"${filename}\" is a symlink."
+         fi
+      ;;
+
+      *,warn-symlink,*)
+         if [ -L "${filename}" ]
+         then
+            log_warning "\"${filename}\" is a symlink."
+            return 2    # make traversal flat (i.e. don't descent)
+         fi
+      ;;
+   esac
+
+   log_debug "\"${filename}\" returns with $rval"
+   return 0
+}
+
+
+walk_filter_descend_permissions()
+{
+   log_entry "walk_filter_descend_permissions" "$@"
+
+   local permissions="$1"
+   local filename="$2"
+   local marks="$3"
+
+   local rval
+
+   rval=0
+
+   case ",${permissions}," in
+      *,descend-mark,*)
          if nodemarks_contain "${marks}" "no-descend"
          then
+            log_debug "permission \"descend-mark\" and mark \"no-descend\" match"
             rval=2
          fi
       ;;
@@ -131,67 +200,44 @@ walk_filter_permissions()
 
    [ -z "${filename}" ] && internal_fail "empty filename"
 
-   if [ ! -e "${filename}" ]
-   then
-      log_fluff "${filename} does not exist (yet)"
-
-      case ",${permissions}," in
-         *,fail-noexist,*)
+   case ",${permissions}," in
+      *,fail-noexist,*)
+         if [ ! -e "${filename}" ]
+         then
             fail "Missing \"${filename}\" is not yet fetched."
-         ;;
+         fi
+      ;;
 
-         *,warn-noexist,*)
-            log_verbose "Repository expected in \"${filename}\" is not yet \
-fetched"
-            return $rval
-         ;;
-
-         *,skip-noexist,*)
+      *,skip-noexist,*)
+         if [ ! -e "${filename}" ]
+         then
             log_fluff "Repository expected in \"${filename}\" is not yet \
 fetched, skipped"
             return 1
+         fi
+      ;;
+   esac
+
+   if [ -L "${filename}" ]
+   then
+      case ",${permissions}," in
+         *,fail-symlink,*)
+            fail "\"${filename}\" is a symlink."
+         ;;
+
+         *,descend-symlink,*)
+            log_debug "\"${filename}\" is a symlink - it will be descended into."
+            return $rval
          ;;
 
          *)
-            log_debug "\"${filename}\" passed"
-            return $rval
+            log_fluff "\"${filename}\" is a symlink, skipped."
+            return 1
          ;;
       esac
    fi
 
-
-   if [ ! -L "${filename}" ]
-   then
-      log_debug "\"${filename}\" passed"
-      return $rval
-   fi
-
-   case ",${permissions}," in
-      *,fail-symlink,*)
-         fail "\"${filename}\" is a symlink."
-      ;;
-
-      *,visit-symlink,*)
-         log_fluff "\"${filename}\" is a symlink"
-         return 2    # make traversal flat (i.e. don't descent)
-      ;;
-
-      *,warn-symlink,*)
-         log_warning "\"${filename}\" is a symlink."
-         return 2    # make traversal flat (i.e. don't descent)
-      ;;
-
-      *,descend-symlink,*)
-         log_fluff "\"${filename}\" is a symlink - it will be descended into."
-         return $rval
-      ;;
-
-      *)
-         log_fluff "\"${filename}\" is a symlink, skipped."
-         return 1
-      ;;
-   esac
-
+   log_debug "\"${filename}\" returns with $rval"
    return $rval
 }
 
@@ -237,18 +283,15 @@ __docd_postamble()
 }
 
 
-
-
 #
-# this never returns non-zero
-# it bails or ignores (lenient)
-#
+# Easier to pass all in, because we need the trailing args to pass
 #
 # datasource
 # virtual
 # filternodetypes
 # filterpermissions
-# marksqualifier
+# visitqualifier
+# descendqualifier
 # mode
 # callback
 # ...
@@ -262,17 +305,35 @@ _visit_callback()
    local next_datasource="$1"; shift
    local next_virtual="$1"; shift
 
-   shift 3
+   local filternodetypes="$1"; shift
+   local filterpermissions="$1"; shift
+   local visitqualifier="$1"; shift
+   local descendqualifier="$1"; shift
+   local mode="$1" ; shift
 
-   local mode="$1"; shift
    local callback="$1"; shift
 
    if [ -z "${callback}" ]
    then
       log_debug "No callback, why am I doing this ?"
-      return
+      return 0
    fi
 
+   if ! walk_filter_marks "${_marks}" "${visitqualifier}"
+   then
+      log_fluff "Node \"${_address}\": \"${_marks}\" doesn't jive with marks \"${visitqualifier}\""
+      return 0
+   fi
+
+   if ! walk_filter_nodetypes "${_nodetype}" "${filternodetypes}"
+   then
+      log_fluff "Node \"${_address}\": \"${_nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
+      return 0
+   fi
+
+   local rval
+
+   rval=0
    case ",${mode}," in
       *,docd,*)
          local old
@@ -282,30 +343,37 @@ _visit_callback()
          then
             __docd_preamble "${_filename}"
                __call_callback "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
+               rval=$?
             __docd_postamble
          else
             log_fluff "\"${_filename}\" not there, so no callback"
          fi
-         return
       ;;
 
       *)
          __call_callback "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
+         rval=$?
       ;;
    esac
+
+   if [ "${rval}" -ne 0 ]
+   then
+      log_fluff "Callback returned non-zero, walk will terminate"
+   fi
+   return $rval
 }
 
 
 #
-# this should always return 0 except
-# if a callback failed and we are not lenient
+# this should always return 0
 #
 #
 # datasource
 # virtual
 # filternodetypes
 # filterpermissions
-# marksqualifier
+# visitqualifier
+# descendqualifier
 # mode
 # callback
 # ...
@@ -321,7 +389,8 @@ _visit_recurse()
 
    local filternodetypes="$1"; shift
    local filterpermissions="$1"; shift
-   local marksqualifier="$1"; shift
+   local visitqualifier="$1"; shift
+   local descendqualifier="$1"; shift
    local mode="$1" ; shift
 
    case ",${mode}," in
@@ -337,18 +406,61 @@ _visit_recurse()
       return 0
    fi
 
+   if ! walk_filter_marks "${_marks}" "${descendqualifier}"
+   then
+      log_fluff "Node \"${_address}\": \"${_marks}\" doesn't jive with marks \"${descendqualifier}\""
+      return 0
+   fi
+
+   walk_filter_descend_permissions "${filterpermissions}" "${_filename}" "${_marks}"
+   case $? in
+      2)
+         r_comma_concat "${mode}" "flat"  # don't recurse now
+         mode="${RVAL}"
+      ;;
+
+      1)
+         # filter should have fluffed already
+         log_debug "Node \"${_address}\" with filename \"${_filename}\" \
+doesn't jive with permissions \"${filterpermissions}\""
+         return 0
+      ;;
+   esac
+
+   if [ ! -z "${WILL_RECURSE_CALLBACK}" ]
+   then
+      if ! "${WILL_RECURSE_CALLBACK}" "${next_datasource}" \
+                                      "${next_virtual}" \
+                                      "${filternodetypes}" \
+                                      "${filterpermissions}" \
+                                      "${visitqualifier}" \
+                                      "${descendqualifier}" \
+                                      "${mode}" \
+                                      "$@"
+      then
+         log_debug "Do not visit on \"${virtual}/${_destination}\" due to WILL_RECURSE_CALLBACK"
+         return 0 # only callback can stop the train though
+      fi
+   fi
+
+   local rval
+
    #
    # Preserve state and globals vars, so dont subshell
    #
+   MULLE_WALK_INDENT="${MULLE_WALK_INDENT} "
+
    case ",${mode}," in
       *,walkdb,*)
          _walk_db_uuids "${next_datasource}" \
                         "${next_virtual}" \
                         "${filternodetypes}" \
                         "${filterpermissions}" \
-                        "${marksqualifier}" \
+                        "${visitqualifier}" \
+                        "${descendqualifier}" \
                         "${mode}" \
                         "$@"
+         rval=$?
       ;;
 
       *)
@@ -356,13 +468,107 @@ _visit_recurse()
                             "${next_virtual}" \
                             "${filternodetypes}" \
                             "${filterpermissions}" \
-                            "${marksqualifier}" \
+                            "${visitqualifier}" \
+                            "${descendqualifier}" \
                             "${mode}" \
                             "$@"
+         rval=$?
       ;;
    esac
+
+   MULLE_WALK_INDENT="${MULLE_WALK_INDENT%?}"
+
+   if [ ! -z "${DID_RECURSE_CALLBACK}" ]
+   then
+      "${DID_RECURSE_CALLBACK}" "${next_datasource}" \
+                                "${next_virtual}" \
+                                "${filternodetypes}" \
+                                "${filterpermissions}" \
+                                "${visitqualifier}" \
+                                "${descendqualifier}" \
+                                "${mode}" \
+                                "${rval}" \
+                                "$@"
+   fi
+
+   return $rval
 }
 
+
+r_visit_line_from_node()
+{
+   case "${WALK_DEDUPE_MODE}" in
+      ''|'none')
+         RVAL=
+         return 1
+      ;;
+
+      'nodeline')
+         RVAL="${_nodeline}"
+      ;;
+
+      'nodeline-no-uuid')
+          RVAL="${_address};${_nodetype};${_marks};\
+${_url};${_branch};${_tag};${_fetchoptions};\
+${_raw_userinfo}"
+      ;;
+
+      'address')
+         RVAL="${_address}"
+      ;;
+
+      'address-filename')
+         RVAL="${_address};${_filename}"
+      ;;
+
+      'address-url')
+         RVAL="${_address};${_url}"
+      ;;
+
+      'filename')
+         RVAL="${_filename}"
+      ;;
+
+      # libraries have no url...
+      'url-filename')
+         RVAL="${_url};${_filename}"
+      ;;
+
+      *)
+         internal_fail "unknown dedupe mode \"${WALK_DEDUPE_MODE}\""
+      ;;
+   esac
+   return 0
+}
+
+
+walk_remove_from_visited()
+{
+   if r_visit_line_from_node
+   then
+      r_escaped_sed_pattern "${RVAL}"
+
+      VISITED="`sed -e "/^${RVAL}$/d" <<< "${VISITED}"`"
+   fi
+}
+
+
+walk_add_to_visited()
+{
+   if ! r_visit_line_from_node
+   then
+      return 0
+   fi
+
+   if find_line "${VISITED}" "${RVAL}"
+   then
+      log_fluff "A node \"${_address}/${_url}\" has already been visited"
+      return 1
+   fi
+
+   r_add_line "${VISITED}" "${RVAL}"
+   VISITED="${RVAL}"
+}
 
 #
 # datasource
@@ -371,7 +577,8 @@ _visit_recurse()
 # next_virtual
 # filternodetypes
 # filterpermissions
-# marksqualifier
+# visitqualifier
+# descendqualifier
 # mode
 # callback
 # ...
@@ -382,7 +589,8 @@ _visit_node()
 
    local datasource="$1"
    local virtual="$2"
-   local mode="$8"
+   local next_datasource="$3"
+   local mode="$9"
 
    case "${virtual}" in
       */)
@@ -403,38 +611,69 @@ _visit_node()
       ;;
    esac
 
-   #
-   # filename comes from "environment"
-   #
-   if [ "${VISIT_TWICE}" != 'YES' ]
-   then
-      case ":${VISITED}:" in
-         *\:${_filename}\:*)
-            log_fluff "A node \"${_filename}\" has already been visited"
-            return 0  # error condition too hard
-         ;;
-      esac
-      VISITED="${VISITED}:${_filename}"
-   fi
+   local rval
 
+   rval=0
    case ",${mode}," in
       *,flat,*)
+         if ! walk_add_to_visited
+         then
+            return 0
+         fi
+
          log_debug "No recursion"
          _visit_callback "$@"
+         rval=$?
       ;;
 
       *,in-order,*)
-         log_debug "In-order recursion"
+         #
+         # Dedupe now before going to callback and recursion
+         #
+         if ! walk_add_to_visited
+         then
+            return 0
+         fi
+
+         log_debug "In-order recursion into ${next_datasource}"
          _visit_recurse "$@"
-         _visit_callback "$@"
+         rval=$?
+         if [ $rval -eq 0 ]
+         then
+            _visit_callback "$@"
+            rval=$?
+         fi
       ;;
 
       *,pre-order,*)
-         log_debug "Pre-order recursion"
+         if ! walk_add_to_visited
+         then
+            return 0
+         fi
+
+         log_fluff "Pre-order recursion into ${next_datasource}"
          _visit_callback "$@"
-         _visit_recurse "$@"
+         rval=$?
+         if [ $rval -eq 0 ]
+         then
+            _visit_recurse "$@"
+            rval=$?
+         fi
+      ;;
+
+      *,breadth-order,*)
+         # node will already have been visited flat, so don't dedupe again
+         rval=$?
+         if [ $rval -eq 0 ]
+         then
+            log_fluff "Breadth-first recursion into ${next_datasource}"
+            _visit_recurse "$@"
+            rval=$?
+         fi
       ;;
    esac
+
+   return $rval
 }
 
 
@@ -443,7 +682,7 @@ _visit_node()
 # virtual             // same but relative to project and possibly remapped
 # filternodetypes
 # filterpermissions
-# marksqualifier
+# visitqualifier
 # mode
 # callback
 # ...
@@ -457,7 +696,8 @@ _visit_filter_nodeline()
    local virtual="$1"; shift
    local filternodetypes="$1" ; shift
    local filterpermissions="$1"; shift
-   local marksqualifier="$1"; shift
+   local visitqualifier="$1"; shift
+   local descendqualifier="$1"; shift
    local mode="$1"; shift
 
    # rest are arguments
@@ -486,19 +726,6 @@ _visit_filter_nodeline()
 
    _nodeline="${nodeline}"
 
-   if ! walk_filter_marks "${_marks}" "${marksqualifier}"
-   then
-      log_fluff "Node \"${_address}\": \"${_marks}\" doesn't jive with marks \"${marksqualifier}\""
-      return 0
-   fi
-
-   if ! walk_filter_nodetypes "${_nodetype}" "${filternodetypes}"
-   then
-      log_fluff "Node \"${_address}\": \"${_nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
-      return 0
-   fi
-
-
    #
    # if we are walking in shared mode, then we fold the _address
    # into the shared directory.
@@ -515,7 +742,8 @@ _visit_filter_nodeline()
                               "${virtual}" \
                               "${filternodetypes}" \
                               "${filterpermissions}" \
-                              "${marksqualifier}" \
+                              "${visitqualifier}" \
+                              "${descendqualifier}" \
                               "${mode}" \
                               "$@"
             return $?
@@ -532,7 +760,7 @@ _visit_filter_nodeline()
    local _filename  # always absolute!
    local _virtual_address
 
-   _destination="${_address}"
+   _destination="${_address%#*}"
 
    local next_virtual
 
@@ -559,23 +787,13 @@ _visit_filter_nodeline()
 
    local rval
 
-   walk_filter_permissions "${filterpermissions}" "${_filename}" "${_marks}"
-   rval=$?
-
-   log_debug "permisions rval: ${rval}"
-   case $rval in
-      2)
-         # don't recurse into symlinks unless asked to
-         r_comma_concat "${mode}" 'flat'
-         mode="${RVAL}"
-      ;;
-
-      1)
-         log_fluff "Node \"${_address}\" with filename \"${_filename}\" \
+   if ! walk_filter_visit_permissions "${filterpermissions}" "${_filename}" "${_marks}"
+   then
+      # filter should have fluffed already
+      log_debug "Node \"${_address}\" with filename \"${_filename}\" \
 doesn't jive with permissions \"${filterpermissions}\""
-         return 0
-      ;;
-   esac
+      return 0
+   fi
 
    local next_datasource
 
@@ -587,7 +805,8 @@ doesn't jive with permissions \"${filterpermissions}\""
                "${next_virtual}" \
                "${filternodetypes}" \
                "${filterpermissions}" \
-               "${marksqualifier}" \
+               "${visitqualifier}" \
+               "${descendqualifier}" \
                "${mode}" \
                "$@"
 }
@@ -601,7 +820,8 @@ _visit_share_node()
    local virtual="$1"; shift
    local filternodetypes="$1"; shift
    local filterpermissions="$1"; shift
-   local marksqualifier="$1"; shift
+   local visitqualifier="$1"; shift
+   local descendqualifier="$1"; shift
    local mode="$1" ; shift
 
 #   [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
@@ -615,6 +835,8 @@ _visit_share_node()
    local _virtual_address
 
    _destination="${_address##*/}" # like fast_basename
+   # get rid of duplicate marker
+   _destination="${_destination%#*}"
 
    local next_virtual
 
@@ -632,19 +854,13 @@ _visit_share_node()
       ;;
    esac
 
-   walk_filter_permissions "${filterpermissions}" "${_filename}" "${_marks}"
-   case $? in
-      2)
-         r_comma_concat "${mode}" "flat"  # don't recurse into symlinks unless asked to
-         mode="${RVAL}"
-      ;;
-
-      1)
-         log_fluff "Node \"${_address}\" with filename \"${_filename}\" \
+   if ! walk_filter_visit_permissions "${filterpermissions}" "${_filename}" "${_marks}"
+   then
+      # filter should have fluffed already
+      log_debug "Node \"${_address}\" with filename \"${_filename}\" \
 doesn't jive with permissions \"${filterpermissions}\""
-         return 0
-      ;;
-   esac
+      return 0
+   fi
 
    #
    # hacky hack. If shareddir exists visit that.
@@ -700,7 +916,8 @@ doesn't exist yet"
                "${next_virtual}" \
                "${filternodetypes}" \
                "${filterpermissions}" \
-               "${marksqualifier}" \
+               "${visitqualifier}" \
+               "${descendqualifier}" \
                "${mode}" \
                "$@"
 }
@@ -739,6 +956,10 @@ _print_walk_info()
          log_debug "Recursive pre-order walk \"${datasource:-.}\""
       ;;
 
+      *,breadth-order,*)
+         log_debug "Recursive breadth-first walk \"${datasource:-.}\""
+      ;;
+
       *)
          internal_fail "Mode \"${mode}\" incomplete"
       ;;
@@ -765,14 +986,56 @@ _walk_nodelines()
 
    local nodelines="$1"; shift
 
-   local datasource="$1"
-   local virtual="$2"
-   local mode="$6"
+   local datasource="$1"; shift
+   local virtual="$1"; shift
+   local filternodetypes="$1"; shift
+   local filterpermissions="$1"; shift
+   local visitqualifier="$1"; shift
+   local descendqualifier="$1"; shift
+   local mode="$1" ; shift
 
    if ! _print_walk_info "${datasource}" "${nodelines}" "${mode}"
    then
-      return
+      return 0
    fi
+
+   local rval
+
+   case ",${mode}," in
+      *,breadth-order,*)
+         local tmpmode
+
+         r_comma_concat "${mode}" 'flat'
+         tmpmode="${RVAL}"
+
+         set -o noglob ; IFS="
+"
+         for nodeline in ${nodelines}
+         do
+            IFS="${DEFAULT_IFS}" ; set +o noglob
+
+            [ -z "${nodeline}" ] && continue
+
+
+            _visit_filter_nodeline "${nodeline}" \
+                                   "${datasource}" \
+                                   "${virtual}" \
+                                   "${filternodetypes}" \
+                                   "${filterpermissions}" \
+                                   "${visitqualifier}" \
+                                   "${descendqualifier}" \
+                                   "${tmpmode}" \
+                                   "$@"
+            rval=$?
+            if [ $rval -ne 0 ]
+            then
+               log_debug "Walk aborts"
+               return 1
+            fi
+         done
+      ;;
+   esac
+
 
    set -o noglob ; IFS="
 "
@@ -782,9 +1045,20 @@ _walk_nodelines()
 
       [ -z "${nodeline}" ] && continue
 
-      if ! _visit_filter_nodeline "${nodeline}" "$@"
+      _visit_filter_nodeline "${nodeline}" \
+                             "${datasource}" \
+                             "${virtual}" \
+                             "${filternodetypes}" \
+                             "${filterpermissions}" \
+                             "${visitqualifier}" \
+                             "${descendqualifier}" \
+                             "${mode}" \
+                             "$@"
+      rval=$?
+      if [ $rval -ne 0 ]
       then
-         return 1
+         log_debug "Walk aborts"
+         return $rval
       fi
    done
 
@@ -805,7 +1079,7 @@ _walk_nodelines()
 # virtual
 # filternodetypes
 # filterpermissions
-# marksqualifier
+# visitqualifier
 # mode
 # callback
 # ...
@@ -815,20 +1089,20 @@ _walk_config_uuids()
 {
    log_entry "_walk_config_uuids" "$@"
 
-   local datasource="$1"; shift # !
-   local virtual="$1"; shift # !
+   local datasource="$1"
+   local virtual="$2"
 
    local nodelines
 
-
    nodelines="`cfg_read "${datasource}" `"
-   if [ ! -z "${nodelines}" ]
+   if [ -z "${nodelines}" ]
    then
-      log_verbose "Walking config \"${datasource}\" nodes"
-      _walk_nodelines "${nodelines}" "${datasource}" "${virtual}" "$@"
-   else
       log_fluff "Config \"${datasource}\" has no nodes"
+      return 0
    fi
+
+   log_fluff "Walking config \"${datasource}\" nodes"
+   _walk_nodelines "${nodelines}" "$@"
 }
 
 
@@ -836,6 +1110,7 @@ walk_config_uuids()
 {
    log_entry "walk_config_uuids" "$@"
 
+   local MULLE_WALK_INDENT=""
    local VISITED
 
    VISITED=
@@ -849,10 +1124,13 @@ walk_config_uuids()
 #
 # datasource
 # virtual
+#
 # filternodetypes
 # filterpermissions
-# marksqualifier
+# visitqualifier
+# descendqualifier
 # mode
+#
 # callback
 # ...
 #
@@ -860,9 +1138,9 @@ _walk_db_uuids()
 {
    log_entry "_walk_db_uuids" "$@"
 
-   local datasource="$1"; shift
-   local virtual="$1"; shift
-   local mode="$4"
+   local datasource="$1"
+   local virtual="$2"
+   local mode="$7"
 
    case ",${mode}," in
       *,no-dbcheck,*)
@@ -878,16 +1156,16 @@ _walk_db_uuids()
 
    local nodelines
 
-   log_verbose "Walking database \"${datasource}\" nodes"
 
    nodelines="`db_fetch_all_nodelines "${datasource}" `"
-   if [ ! -z "${nodelines}" ]
+   if [ -z "${nodelines}" ]
    then
-      log_verbose "Walking config \"${datasource}\" nodes"
-      _walk_nodelines "${nodelines}" "${datasource}" "${virtual}" "$@"
-   else
       log_fluff "Database \"${datasource}\" has no nodes"
+      return 0
    fi
+
+   log_fluff "Walking database \"${datasource}\" nodes"
+   _walk_nodelines "${nodelines}" "$@"
 }
 
 
@@ -895,6 +1173,7 @@ walk_db_uuids()
 {
    log_entry "walk_db_uuids" "$@"
 
+   local MULLE_WALK_INDENT=""
    local VISITED
 
    VISITED=
@@ -933,7 +1212,8 @@ sourcetree_walk()
 
    local filternodetypes="${1}"; shift
    local filterpermissions="${1}"; shift
-   local marksqualifier="${1}"; shift
+   local visitqualifier="${1}"; shift
+   local descendqualifier="${1}"; shift
    local mode="${1}" ; shift
    local callback="${1}"; shift
 
@@ -941,6 +1221,9 @@ sourcetree_walk()
 
    MULLE_ROOT_DIR="`pwd -P`"
 
+   local rval
+
+   rval=0
    #
    # make pre-order default if no order set for share or recurse
    #
@@ -949,7 +1232,7 @@ sourcetree_walk()
       ;;
 
       *)
-               r_comma_concat "${mode}" "pre-order"
+         r_comma_concat "${mode}" "pre-order"
          mode="${RVAL}"
       ;;
    esac
@@ -957,45 +1240,64 @@ sourcetree_walk()
    case ",${mode}," in
       *,callroot,*)
          case ",${mode}," in
-            *,pre-order,*)
+            *,pre-order,breadth-order,*)
                _visit_root_callback "${mode}" "${callback}" "$@"
+               rval=$?
             ;;
          esac
       ;;
    esac
 
-   case ",${mode}," in
-      *,walkdb,*)
-         walk_db_uuids "${filternodetypes}" \
-                       "${filterpermissions}" \
-                       "${marksqualifier}" \
-                       "${mode}" \
-                       "${callback}" \
-                       "$@"
-      ;;
+   if [ $rval -eq 0 ]
+   then
+      case ",${mode}," in
+         *,walkdb,*)
+            walk_db_uuids "${filternodetypes}" \
+                          "${filterpermissions}" \
+                          "${visitqualifier}" \
+                          "${descendqualifier}" \
+                          "${mode}" \
+                          "${callback}" \
+                          "$@"
+            rval=$?
+         ;;
 
-      *)
-         walk_config_uuids "${filternodetypes}" \
-                           "${filterpermissions}" \
-                           "${marksqualifier}" \
-                           "${mode}" \
-                           "${callback}" \
-                           "$@"
-      ;;
-   esac
+         *)
+            walk_config_uuids "${filternodetypes}" \
+                              "${filterpermissions}" \
+                              "${visitqualifier}" \
+                              "${descendqualifier}" \
+                              "${mode}" \
+                              "${callback}" \
+                              "$@"
+            rval=$?
+         ;;
+      esac
+   fi
 
-   case ",${mode}," in
-      *,callroot,*)
-         case ",${mode}," in
-            *,pre-order,*)
-            ;;
+   if [ $rval -eq 0 ]
+   then
+      case ",${mode}," in
+         *,callroot,*)
+            case ",${mode}," in
+               *,pre-order,*)
+               ;;
 
-            *)
-               _visit_root_callback "${mode}" "${callback}" "$@"
-            ;;
-         esac
-      ;;
-   esac
+               *)
+                  _visit_root_callback "${mode}" "${callback}" "$@"
+                  rval=$?
+               ;;
+            esac
+         ;;
+      esac
+   fi
+
+   if [ $rval -eq 2 ]
+   then
+      return 0
+   fi
+
+   return $rval
 }
 
 
@@ -1003,30 +1305,7 @@ sourcetree_walk_internal()
 {
    log_entry "sourcetree_walk_internal" "$@"
 
-   sourcetree_walk "" "" "" "$@"
-}
-
-
-# evil global variable stuff
-_sourcetree_convert_marks_to_qualifier()
-{
-   if [ ! -z "${OPTION_MARKS}" ]
-   then
-      if [ ! -z "${OPTION_MARKS_QUALIFIER}" ]
-      then
-         fail "You can not specify --marks and --qualifier at the same time"
-      fi
-
-      local mark
-
-      IFS=","; set -o noglob
-      for mark in ${OPTION_MARKS}
-      do
-               r_concat "${OPTION_MARKS_QUALIFIER}" "MATCHES ${mark}" " AND "
-         OPTION_MARKS_QUALIFIER="${RVAL}"
-      done
-      IFS="${DEFAULT_IFS}"; set +o noglob
-   fi
+   sourcetree_walk "" "" "" "" "$@"
 }
 
 
@@ -1042,12 +1321,18 @@ sourcetree_walk_main()
    local OPTION_EXTERNAL_CALL='YES'
    local OPTION_LENIENT='NO'
    local OPTION_MARKS=""
-   local OPTION_MARKS_QUALIFIER=""
+   local OPTION_QUALIFIER=""
+   local OPTION_DESCEND_QUALIFIER=""
+   local OPTION_VISIT_QUALIFIER=""
    local OPTION_NODETYPES=""
-   local OPTION_PERMISSIONS="" # empty!
+   local OPTION_PERMISSIONS="descend-symlink"
    local OPTION_WALK_DB="DEFAULT"
-   local OPTION_EVAL_EXEKUTOR='YES'
-   local OPTION_PASS_TECHNICAL_FLAGS='NO'
+   local OPTION_EVAL='YES'
+
+   local WALK_VISIT_CALLBACK=
+   local WALK_RECURSE_CALLBACK=
+   local WALK_DEDUPE_MODE=''
+
    while [ $# -ne 0 ]
    do
       case "$1" in
@@ -1059,8 +1344,12 @@ sourcetree_walk_main()
             OPTION_CALLBACK_ROOT='YES'
          ;;
 
-         -N|--no-eval-exekutor)
-            OPTION_EVAL_EXEKUTOR='NO'
+         -E|--eval)
+            OPTION_EVAL='YES'
+         ;;
+
+         -N|--no-eval)
+            OPTION_EVAL='NO'
          ;;
 
          --no-callback-root)
@@ -1083,12 +1372,23 @@ sourcetree_walk_main()
             OPTION_WALK_DB='NO'
          ;;
 
+         --dedupe-mode)
+            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            shift
+
+            WALK_DEDUPE_MODE="$1"
+         ;;
+
          --in-order)
             OPTION_TRAVERSE_STYLE="INORDER"
          ;;
 
          --pre-order)
             OPTION_TRAVERSE_STYLE="PREORDER"
+         ;;
+
+         --breadth-order|--breadth-first)
+            OPTION_TRAVERSE_STYLE="BREADTH"
          ;;
 
          -l|--lenient)
@@ -1099,30 +1399,25 @@ sourcetree_walk_main()
             OPTION_LENIENT='NO'
          ;;
 
-         --pass-flags)
-            OPTION_PASS_TECHNICAL_FLAGS='YES'
+         --will-recurse-callback)
+            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            shift
+
+            WILL_RECURSE_CALLBACK="$1"
          ;;
 
-         --no-pass-flags)
-            OPTION_PASS_TECHNICAL_FLAGS='NO'
+         --did-recurse-callback)
+            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            shift
+
+            DID_RECURSE_CALLBACK="$1"
          ;;
 
          #
          # filter flags
          #
-         --buildorder-qualifier)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
-            shift
-
-            [ -z "${MULLE_SOURCETREE_BUILDORDER_SH}" ] && \
-               . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-buildorder.sh"
-
-            r_make_buildorder_qualifier "$1"
-            OPTION_MARKS_QUALIFIER="${RVAL}"
-         ;;
-
          -m|--marks)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
             shift
 
             r_comma_concat "${OPTION_MARKS}" "$1"
@@ -1133,26 +1428,43 @@ sourcetree_walk_main()
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
-            OPTION_MARKS_QUALIFIER="$1"
+            OPTION_QUALIFIER="$1"
+         ;;
+
+         --visit-qualifier)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            OPTION_VISIT_QUALIFIER="$1"
+         ;;
+
+         --descend-qualifier)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            OPTION_DESCEND_QUALIFIER="$1"
+         ;;
+
+         --prune)
+            OPTION_PRUNE='YES'
          ;;
 
          -n|--nodetypes)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
             shift
 
             OPTION_NODETYPES="$1"
          ;;
 
-         -p|--permissions)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+         -p|--perm*)
+            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
             shift
 
             OPTION_PERMISSIONS="$1"
          ;;
 
          -*)
-            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown walk option $1"
-            sourcetree_walk_usage
+            sourcetree_walk_usage "Unknown walk option $1"
          ;;
 
          *)
@@ -1163,12 +1475,17 @@ sourcetree_walk_main()
       shift
    done
 
-   [ "$#" -eq 0 ] && sourcetree_walk_usage
+   [ $# -gt 1 ] && shift && sourcetree_walk_usage "Superflous arguments \"$*\". Pass callback as one string and use "
 
    local callback
 
-   callback="$1"
-   shift
+   if [ $# -eq 0 ]
+   then
+      callback='echo "${MULLE_NODE}"'
+   else
+      callback="$1"
+      shift
+   fi
 
    local mode
 
@@ -1177,6 +1494,11 @@ sourcetree_walk_main()
    case "${OPTION_TRAVERSE_STYLE}" in
       "INORDER")
          r_comma_concat "${mode}" "in-order"
+         mode="${RVAL}"
+      ;;
+
+      "BREADTH")
+         r_comma_concat "${mode}" "breadth-order"
          mode="${RVAL}"
       ;;
 
@@ -1211,13 +1533,41 @@ sourcetree_walk_main()
       r_comma_concat "${mode}" "callroot"
       mode="${RVAL}"
    fi
+   if [ "${OPTION_EVAL}" = 'YES' ]
+   then
+      r_comma_concat "${mode}" "eval"
+      mode="${RVAL}"
+   fi
 
    # convert marks into a qualifier with globals
-   _sourcetree_convert_marks_to_qualifier
+   if [ ! -z "${OPTION_MARKS}" ]
+   then
+      local mark
+
+      IFS=","; set -o noglob
+      for mark in ${OPTION_MARKS}
+      do
+         r_concat "${OPTION_QUALIFIER}" "MATCHES ${mark}" " AND "
+         OPTION_QUALIFIER="${RVAL}"
+      done
+      IFS="${DEFAULT_IFS}"; set +o noglob
+   fi
+
+   #
+   # Qualifier works for both, but you can specify each differently
+   # use ANY to ignore one
+   #
+   OPTION_VISIT_QUALIFIER="${OPTION_VISIT_QUALIFIER:-${OPTION_QUALIFIER}}"
+   if [ "${OPTION_PRUNE}" = 'YES' ]
+   then
+      [ ! -z "${OPTION_DESCEND_QUALIFIER}" ] && fail "--prune and --descend-qualifier conflict"
+      OPTION_DESCEND_QUALIFIER="${OPTION_VISIT_QUALIFIER}"
+   fi
 
    sourcetree_walk "${OPTION_NODETYPES}" \
                    "${OPTION_PERMISSIONS}" \
-                   "${OPTION_MARKS_QUALIFIER}" \
+                   "${OPTION_VISIT_QUALIFIER}" \
+                   "${OPTION_DESCEND_QUALIFIER}" \
                    "${mode}" \
                    "${callback}" \
                    "$@"
@@ -1228,28 +1578,10 @@ sourcetree_walk_initialize()
 {
    log_entry "sourcetree_walk_initialize"
 
-   if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
-   then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
-
-      # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-   fi
-
    if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
    then
       # shellcheck source=mulle-sourcetree-db.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
-   fi
-   if [ -z "${MULLE_SOURCETREE_NODEMARKS_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-nodemarks.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
-   fi
-   if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-node.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
    fi
    if [ -z "${MULLE_SOURCETREE_NODELINE_SH}" ]
    then

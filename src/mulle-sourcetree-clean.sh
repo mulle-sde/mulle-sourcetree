@@ -109,10 +109,7 @@ sourcetree_clean()
 {
    log_entry "sourcetree_clean" "$@"
 
-   local filternodetypes="$1"
-   local filterpermissions="$2"
-   local filtermarks="$3"
-   local mode="$4"
+   local mode="$1"
 
    local OPTION_EVAL_EXEKUTOR
 
@@ -132,15 +129,18 @@ sourcetree_clean()
    DELETE_DIRECTORIES=
    DELETE_SYMLINKS=
 
-   VISIT_TWICE='YES'  # need to pick up nodeletes
-
    #
    # We must walk the dbs, because only the dbs know where
    # stuff eventually ended up being placed (think share)
    #
-   walk_db_uuids "${filternodetypes}" \
-                 "${filterpermissions}" \
-                 "${filtermarks}" \
+   local WALK_DEDUPE_MODE
+
+   WALK_DEDUPE_MODE="filename"
+
+   walk_db_uuids "ALL" \
+                 "" \
+                 "" \
+                 "" \
                  "${mode},no-dbcheck" \
                  "walk_clean"
 
@@ -158,7 +158,7 @@ sourcetree_clean()
    do
       IFS="${DEFAULT_IFS}"; set +o noglob
 
-      if ! fgrep -q -x -e "${filename}" <<< "${NO_DELETES}"
+      if ! find_line "${NO_DELETES}" "${filename}"
       then
          uuid="`node_uuidgen`"
 
@@ -170,7 +170,7 @@ sourcetree_clean()
    do
       IFS="${DEFAULT_IFS}"; set +o noglob
 
-      if ! fgrep -q -x -e "${filename}" <<< "${NO_DELETES}"
+      if ! find_line "${NO_DELETES}" "${filename}"
       then
          remove_file_if_present "${filename}"
       fi
@@ -183,14 +183,9 @@ sourcetree_clean_main()
 {
    log_entry "sourcetree_clean_main" "$@"
 
-   local OPTION_MARKS="ANY"
-   local OPTION_PERMISSIONS="visit-symlink"
-   local OPTION_NODETYPES="ALL"
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_IS_UPTODATE='NO'
-   local OPTION_OUTPUT_HEADER="DEFAULT"
-   local OPTION_OUTPUT_FORMAT='RAW'
-   local OPTION_CLEAN_SHARE_DIR='YES'
+   local OPTION_CLEAN_SHARE_DIR='DEFAULT'
 
    [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
 
@@ -199,30 +194,6 @@ sourcetree_clean_main()
       case "$1" in
          -h*|--help|help)
             sourcetree_clean_usage
-         ;;
-
-         #
-         # more common flags
-         #
-         -m|--marks)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
-            shift
-
-            OPTION_MARKS="$1"
-         ;;
-
-         -n|--nodetypes)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
-            shift
-
-            OPTION_NODETYPES="$1"
-         ;;
-
-         -p|--permissions)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
-            shift
-
-            OPTION_PERMISSIONS="$1"
          ;;
 
          --share)
@@ -287,20 +258,20 @@ sourcetree_clean_main()
 
       local rval
 
-      sourcetree_clean "${OPTION_NODETYPES}" \
-                       "${OPTION_PERMISSIONS}" \
-                       "${OPTION_MARKS}" \
-                       "${mode}"
+      sourcetree_clean "${mode}"
       rval=$?
    else
       log_verbose "Already clean"
    fi
 
-   if [ "${rval}" -eq 0 -a "${OPTION_CLEAN_SHARE_DIR}" = 'YES' ]
+   if [ "${OPTION_CLEAN_SHARE_DIR}" = 'YES' ]
    then
-      rmdir_if_empty "${MULLE_SOURCETREE_STASH_DIR}"
+      # TODO: if MULLE_SOURCETREE_STASH_DIR is inside project remove it
+      # if its outside probably not...
+      rmdir_safer "${MULLE_SOURCETREE_STASH_DIR}"
    else
       log_debug "Not removing MULLE_SOURCETREE_STASH_DIR because of rval $?"
+      rmdir_if_empty "${MULLE_SOURCETREE_STASH_DIR}"
    fi
 
    return $rval

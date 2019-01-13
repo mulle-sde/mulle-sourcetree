@@ -65,7 +65,7 @@ __walk_get_db_filename()
          # ok could be an edit
       fi
 
-         r_fast_basename "${MULLE_ADDRESS}"
+      r_fast_basename "${MULLE_ADDRESS}"
       filepath_concat "${MULLE_SOURCETREE_STASH_DIR}" "${RVAL}"
       return
    fi
@@ -96,19 +96,12 @@ __call_callback()
 
    local evaluator
 
-   if [ "${OPTION_EVAL_EXEKUTOR}" = 'YES' ]
-   then
-      evaluator="_eval_exekutor"
-   else
-      evaluator="eval"
-   fi
-
-   local technical_flags
-
-   if [ "${OPTION_PASS_TECHNICAL_FLAGS}" = 'YES' ]
-   then
-      technical_flags="${MULLE_TECHNICAL_FLAGS}" # from bashfunctions
-   fi
+   evaluator="rexekutor"
+   case ",${mode}," in
+      *,eval,*)
+         evaluator="eval_rexekutor"
+      ;;
+   esac
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
@@ -132,6 +125,13 @@ __call_callback()
    fi
 
    #
+   # "pass" these as globals
+   #
+   local _mode="${mode}"
+   local _datasource="${datasource}"
+   local _virtual="${virtual}"
+
+   #
    # MULLE_NODE the current nodelines from config or database, unchanged
    #
    # MULLE_ADDRESS-MULLE_UUID as defined in nodeline, unchanged
@@ -140,6 +140,13 @@ __call_callback()
    # MULLE_DESTINATION : either "_address" or in shared case basename of "_address"
    # MULLE_VIRTUAL     : either ${MULLE_SOURECTREE_SHARE_DIR} or ${MULLE_VIRTUAL_ROOT}
    #
+   #
+   log_fluff "Calling callback: ${callback} $*"
+
+   #
+   # DO NOT WRAP THIS IN A SUBSHELL, BECAUSE THE CALLBACK LOSES STATE THEN
+   # TODO: since callback is evaluated we actually do not not need to pass the
+   # extra parameters around anymore
    #
    MULLE_NODE="${_nodeline}" \
    MULLE_ADDRESS="${_address}" \
@@ -158,7 +165,7 @@ __call_callback()
    MULLE_MODE="${mode}" \
    MULLE_VIRTUAL="${virtual}" \
    MULLE_VIRTUAL_ADDRESS="${_virtual_address}" \
-      "${evaluator}" "${callback}" "${technical_flags}" "$@"
+      ${evaluator} "${callback}" "$@"
    rval="$?"
 
    if [ ${rval} -eq 0 ]
@@ -166,14 +173,13 @@ __call_callback()
       return 0
    fi
 
+   log_debug "Command \"${callback}\" returned $rval for node \"${_address}\""
+
    case ",${mode}," in
       *,lenient,*)
-         log_fluff "Command \"${callback}\" failed for node \"${_address}\" with $rval (ignored)"
          return 0
       ;;
    esac
-
-   fail "Command \"${callback}\" failed for node \"${_address}\" with $rval"
 
    return $rval
 }

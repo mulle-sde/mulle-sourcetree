@@ -185,6 +185,9 @@ _recurse_db_nodeline()
 
    _get_db_recurseinfo "${database}" "${_uuid}"
 
+   # remove duplicate marker from _filename
+   _filename="${_filename%#*}"
+
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
       log_trace2 "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
@@ -291,7 +294,7 @@ _recurse_db_nodelines()
       # needed for root database only
       if [ "${database}" = "/" ]
       then
-         if fgrep -q -s -x -e "${nodeline}" <<< "${VISITED}"
+         if find_line "${VISITED}" "${nodeline}"
          then
             continue
          fi
@@ -347,7 +350,7 @@ _recurse_config_nodelines()
       # needed for root database only
       if [ "${database}" = "/" ]
       then
-         if fgrep -q -s -x -e "${nodeline}" <<< "${VISITED}"
+         if find_line "${VISITED}" "${nodeline}"
          then
             log_fluff "\${nodeline}\" was already visited"
             continue
@@ -427,7 +430,7 @@ _sourcetree_sync_only_share()
    local style
    style="only_share"
 
-   if ! fgrep -q -s -x -e "${config}" <<< "${UPDATED}"
+   if ! find_line "${UPDATED}" "${config}"
    then
       log_debug "Add \"${config}\" to UPDATED"
 
@@ -463,7 +466,7 @@ _sourcetree_sync_only_share()
       # needed for root database only
       if [ "${database}" = "/" ]
       then
-         if fgrep -q -s -x -e "${nodeline}" <<< "${VISITED}"
+         if find_line "${VISITED}" "${nodeline}"
          then
             continue
          fi
@@ -524,7 +527,7 @@ _sourcetree_sync_share()
    local style
    style="share"
 
-   if ! fgrep -q -s -x "${config}" <<< "${UPDATED}"
+   if ! find_line "${UPDATED}" "${config}"
    then
       log_debug "Add \"${config}\" to UPDATED"
       r_add_line "${UPDATED}" "${config}"
@@ -616,7 +619,7 @@ sourcetree_sync_share()
    then
       log_debug "UPDATED: ${UPDATED}"
 
-      if ! fgrep -q -s -x -e "${startpoint}" <<< "${UPDATED}"
+      if ! find_line "${UPDATED}" "${startpoint}"
       then
          fail "\"${MULLE_VIRTUAL_ROOT}${startpoint}\" is not reachable from the sourcetree root (${MULLE_VIRTUAL_ROOT})"
       fi
@@ -944,44 +947,7 @@ sourcetree_sync_main()
       shift
    done
 
-   log_entry "sourcetree_sync_initialize"
 
-   if [ -z "${MULLE_PATH_SH}" ]
-   then
-      # shellcheck source=mulle-path.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh" || exit 1
-   fi
-   if [ -z "${MULLE_FILE_SH}" ]
-   then
-      # shellcheck source=mulle-file.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-db.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
-   fi
-   if [ -z "${MULLE_SOURCETREE_NODEMARKS_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-nodemarks.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
-   fi
-   if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-node.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
-   fi
-   if [ -z "${MULLE_SOURCETREE_NODELINE_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-nodeline.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   fi
-   if [ -z "${MULLE_SOURCETREE_ACTION_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-action.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-action.sh" || exit 1
-   fi
 
    MULLE_FETCH="${MULLE_FETCH:-`command -v mulle-fetch`}"
    [ -z "${MULLE_FETCH}" ] && fail "mulle-fetch not installed"
@@ -993,3 +959,19 @@ sourcetree_sync_main()
    sourcetree_sync_start
 }
 
+
+sourcetree_sync_initialize()
+{
+   log_entry "sourcetree_sync_initialize" "$@"
+
+   if [ -z "${MULLE_SOURCETREE_ACTION_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-action.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-action.sh" || exit 1
+   fi
+}
+
+
+sourcetree_sync_initialize
+
+:

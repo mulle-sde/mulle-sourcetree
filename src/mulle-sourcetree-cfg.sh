@@ -79,6 +79,25 @@ __cfg_common_configfile()
          internal_fail "database \"$1\" must start with '/'"
       ;;
    esac
+
+   #
+   # allow "hacky" per-platform config files if all else fails
+   #
+   case "${SOURCETREE_SCOPE}" in
+      'default')
+         if [ -f "${configfile}.${MULLE_UNAME}" ]
+         then
+            configfile="${configfile}.${MULLE_UNAME}"
+         fi
+      ;;
+
+      'global')
+      ;;
+
+      *)
+         configfile="${configfile}.${SOURCETREE_SCOPE}"
+      ;;
+   esac
 }
 
 

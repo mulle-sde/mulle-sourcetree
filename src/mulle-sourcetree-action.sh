@@ -215,13 +215,13 @@ _do_fetch_operation()
    r_mulle_fetch_eval_options
    options="${RVAL}"
 
-   node_fetch_operation "${opname}" "${options}" \
-                                    "${_url}" \
-                                    "${_address}" \
-                                    "${_branch}" \
-                                    "${_tag}" \
-                                    "${_nodetype}" \
-                                    "${_fetchoptions}"
+   sourcetree_fetch_operation "${opname}" "${options}" \
+                                          "${_url}" \
+                                          "${_address}" \
+                                          "${_branch}" \
+                                          "${_tag}" \
+                                          "${_nodetype}" \
+                                          "${_fetchoptions}"
 
 
    rval="$?"
@@ -334,7 +334,7 @@ do_operation()
    options="${RVAL}"
 
 
-   node_fetch_operation "${opname}" "${options}" \
+   sourcetree_fetch_operation "${opname}" "${options}" \
                                     "${_url}" \
                                     "${destination}" \
                                     "${_branch}" \
@@ -432,7 +432,8 @@ update_actions_for_node()
    #
    local sanitized
 
-   sanitized="`node_sanitized_address "${newaddress}"`"
+   r_node_sanitized_address "${newaddress}"
+   sanitized="${RVAL}"
    if [ "${newaddress}" != "${sanitized}" ]
    then
       fail "New _address \"${newaddress}\" looks suspicious ($sanitized), \
@@ -578,7 +579,8 @@ As node is marked \"no-delete\" just remember it."
 
    local sanitized
 
-   sanitized="`node_sanitized_address "${_address}"`"
+   r_node_sanitized_address "${_address}"
+   sanitized="${RVAL}"
    if [ "${_address}" != "${sanitized}" ]
    then
       fail "Old address \"${_address}\" looks suspicious (${sanitized}), \
@@ -692,7 +694,7 @@ in URL related info."
         "${_tag}" != "${newtag}" -o \
         "${_url}" != "${newurl}" ]
    then
-      available="`node_list_operations "${_nodetype}"`" || return 1
+      available="`sourcetree_list_operations "${_nodetype}"`" || return 1
    fi
 
    if [ "${_branch}" != "${newbranch}" ]
@@ -832,7 +834,7 @@ __update_perform_item()
             ;;
          esac
 
-         if [ -d "${filename}/.mulle-sourcetree" ]
+         if [ -f "${filename}/.mulle-sourcetree/config" -a ! -f "${filename}/.mulle/etc/sourcetree/config" ]
          then
             log_warning "\"`fast_basename "${filename}"`\" contains an old-fashioned sourcetree \
 which must be upgraded to be usable."
@@ -1048,7 +1050,7 @@ do_actions_with_nodeline()
    if [ ! -z "${_url}" -a "${style}" = "share" ] && nodemarks_contain "${_marks}" "share"
    then
       filename="`db_update_determine_share_filename "${database}" \
-                                                    "${_address}" \
+                                                    "${_address%#*}" \
                                                     "${_url}" \
                                                     "${_nodetype}" \
                                                     "${_marks}" \
@@ -1067,7 +1069,7 @@ do_actions_with_nodeline()
       esac
       database="/"   # see only-share if you're tempted to change this
    else
-      filename="`cfg_absolute_filename "${config}" "${_address}" "${style}"`"
+      filename="`cfg_absolute_filename "${config}" "${_address%#*}" "${style}"`"
    fi
 
    r_simplified_absolutepath "${filename}"
@@ -1286,3 +1288,25 @@ do_actions_with_nodelines()
 
    IFS="${DEFAULT_IFS}" ; set +o noglob
 }
+
+
+sourcetree_action_initialize()
+{
+   log_entry "sourcetree_action_initialize"
+
+   if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-db.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
+   fi
+   if [ -z "${MULLE_SOURCETREE_FETCH_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-callback.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-fetch.sh" || exit 1
+   fi
+}
+
+
+sourcetree_action_initialize
+
+:

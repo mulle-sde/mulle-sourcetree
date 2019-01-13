@@ -84,13 +84,13 @@ sourcetree_duplicate_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} duplicate [options] <address|url> <newaddress>
+   ${MULLE_EXECUTABLE_NAME} duplicate [options] <address>
 
-   Duplicate a node to the sourcetree. You must specify a new address for
-   the duplicate node.
+   Duplicate a node in the sourcetree. The new node will have a #1 appended to
+   it, if it's the first duplicate. Otherwise #2, #3 and so on.
 
    Examples:
-      ${MULLE_EXECUTABLE_NAME} duplicate foo foo2
+      ${MULLE_EXECUTABLE_NAME} duplicate foo
 
    This command only affects the local sourcetree.
 
@@ -284,17 +284,16 @@ sourcetree_set_usage()
 
    cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} set [options] <address> [key [value]]*
+   ${MULLE_EXECUTABLE_NAME} set <address> [key [value]]*
 
-   Change any value of a node with the set command. Changes are applied
-   with the next update. You can can specify values with the options or
-   parameter key value pairs, which have precedence.
-
+   Change any value of a node referenced by <address> with the set command.
+   Changes are applied with the next sync.
    This command only affects the local sourcetree.
 
-Options:
+Keys:
 EOF
-  echo "${SOURCETREE_COMMON_OPTIONS}" >&2
+  sed 's/--//' <<< "${SOURCETREE_COMMON_OPTIONS}" >&2
+  echo >&2
 
   exit 1
 }
@@ -330,37 +329,39 @@ EOF
 #
 # returns
 #
-#   _nodetype
+#  nodetype
 #
-_sourcetree_typeguess_node()
+r_sourcetree_typeguess_node()
 {
-   log_entry "_sourcetree_typeguess_node" "$@"
+   log_entry "r_sourcetree_typeguess_node" "$@"
 
    local input="$1"
    local nodetype="$2"
    local url="$3"
 
-   _nodetype="${nodetype}"
+   RVAL="${nodetype}"
 
    local guesssource
 
    guesssource="${input}"
 
    #
-   # try to figure out _nodetype. At this point adress is empty
+   # try to figure out nodetype
    #
-   if [ -z "${_nodetype}" -a ! -z "${url}" ]
+   if [ -z "${nodetype}" -a ! -z "${url}" ]
    then
-      _nodetype="`node_guess_nodetype "${url}"`"
+      r_sourcetree_guess_nodetype "${url}"
+      nodetype="${RVAL}"
       guesssource="${url}"
    fi
 
-   if [ -z "${_nodetype}" -a ! -z "${input}" ]
+   if [ -z "${nodetype}" -a ! -z "${input}" ]
    then
-      _nodetype="`node_guess_nodetype "${input}"`"
+      r_sourcetree_guess_nodetype "${input}"
+      nodetype="${RVAL}"
    fi
 
-   if [ -z "${_nodetype}" ]
+   if [ -z "${nodetype}" ]
    then
       case "${input}" in
          *:*|~*|/*)
@@ -368,20 +369,27 @@ _sourcetree_typeguess_node()
          ;;
 
          ../*)
-            _nodetype="symlink"
+            nodetype="symlink"
          ;;
 
          *)
             if [ ! -z "${url}" ]
             then
                fail "Please specify --nodetype"
+            else
+               if [ -e "${url}" ]
+               then
+                  nodetype="local"
+               else
+                  nodetype="none"
+               fi
             fi
-            _nodetype="local"
          ;;
       esac
    fi
 
-   log_fluff "Guessed nodetype \"${_nodetype}\" from \"${guesssource}\""
+   log_fluff "Guessed nodetype \"${nodetype}\" from \"${guesssource}\""
+   RVAL="${nodetype}"
 }
 
 
@@ -400,59 +408,52 @@ _sourcetree_nameguess_node()
    local nodetype="$2"
    local url="$3"
 
-   _sourcetree_typeguess_node "${input}" "${nodetype}" "${url}"
+   r_sourcetree_typeguess_node "${input}" "${nodetype}" "${url}"
+   _nodetype="${RVAL}"
 
+   _address="${input}"
    _url="${url}"
 
    #
    # try to figure out if input is an _url
    # trivially, it is the _address if _url is empty and _address is set
    #
-   if [ ! -z "${_url}" ]
+   # locals and none have no URL usually
+   #
+   if [ -z "${_url}" ]
    then
-      log_fluff "Guessed URL \"${_url}\" from \"${url}\""
-      return
+      if [ -z "${_address}" ]
+      then
+         return 1
+      fi
+
+      if [ "${_nodetype}" = "local" -o "${_nodetype}" = "none" ]
+      then
+         log_fluff "Taken address \"${_address}\" and url \"${_url}\""
+         return
+      fi
+
+      # must be an_url then
+      _url="${_address}"
+      _address=
    fi
 
-   if [ ! -z "${_address}" -o "${_nodetype}" = "local" ]
+   # url is set
+   if [ -z "${_address}" ]
    then
-      _url="${input}"
-      log_fluff "Guessed URL \"${_url}\" from \"${input}\""
-      return
+      if [ "${_nodetype}" = "local" -o "${_nodetype}" = "none" ]
+      then
+         _address="${_url}"
+         _url=""
+         log_fluff "Taken address \"${_address}\" from \"${_url}\""
+         return
+      fi
+
+      r_sourcetree_guess_address "${_url}" "${_nodetype}"
+      _address="${RVAL}"
+
+      log_fluff "Guessed address \"${_address}\" from \"${_url}\""
    fi
-
-   case "${input}" in
-      *:*)
-         _url="${input}"
-         log_fluff "Guessed URL \"${_url}\" from \"${input}\""
-         _address="`node_guess_address "${_url}" "${_nodetype}"`"
-         log_fluff "Guessed address \"${_address}\" from \"${_url}\""
-      ;;
-
-      /*|~*)
-         case "${_nodetype}" in
-            local)
-               _address="`symlink_relpath "${input}" "${PWD}"`"
-               log_fluff "Guessed Address \"${_address}\" from \"${_nodetype}\" and \"${input}\""
-            ;;
-
-            *)
-               _url="${input}"
-               log_fluff "Guessed URL \"${_url}\" from \"${input}\""
-               _address="`node_guess_address "${_url}" "${_nodetype}"`"
-               log_fluff "Guessed address \"${_address}\" from \"${_url}\""
-            ;;
-         esac
-      ;;
-
-      *)
-         _url="${input}"
-         log_fluff "Guessed URL \"${_url}\" from \"${input}\""
-         _address="${input%/*}"
-         _address="`extensionless_basename "${_address}"`"
-         log_fluff "Guessed address \"${_address}\" from \"${input}\""
-      ;;
-   esac
 }
 
 
@@ -482,9 +483,8 @@ sourcetree_typeguess_node()
    local _url
    local _nodetype
 
-   _sourcetree_typeguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
-
-   echo "${_nodetype}"
+   r_sourcetree_typeguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
+   echo "${RVAL}"
 }
 
 
@@ -628,6 +628,12 @@ sourcetree_add_node()
       _marks="${RVAL}"
    fi
 
+   if [ "${_nodetype}" = "none" ]
+   then
+      r_comma_concat "${_marks}" "no-delete,no-fs,no-update,no-share"
+      _marks="${RVAL}"
+   fi
+
    r_sanitized_marks "${_marks}"
    _marks="${RVAL}" || exit 1
 
@@ -663,7 +669,6 @@ sourcetree_duplicate_node()
    log_entry "sourcetree_duplicate_node" "$@"
 
    local input="$1"
-   local newname="$2"
 
    local _branch
    local _address
@@ -684,7 +689,30 @@ sourcetree_duplicate_node()
       fail "Node \"${input}\" not found"
    fi
 
+   local newname
+   local i
+
+   i=1
+   while :
+   do
+      newname="${input%%#*}#${i}"
+      if [ -z "`cfg_get_nodeline "${SOURCETREE_START}" "${newname}"`" ]
+      then
+         break
+      fi
+      i=$(( i + 1))
+   done
+
    nodeline_parse "${node}"
+
+   if [ ! -z "${OPTION_MARKS}" ]
+   then
+      _marks=
+      if [ "${OPTION_MARKS}" != "NONE" ]
+      then
+         _marks="${OPTION_MARKS}"
+      fi
+   fi
 
    _address="${newname}"
    _uuid=""
@@ -1004,7 +1032,7 @@ _sourcetree_set_node()
          ;;
 
          *)
-            log_error "unknown keyword \"$1\""
+            log_error "Unknown keyword \"${key}\""
             sourcetree_set_usage
          ;;
       esac
@@ -1012,7 +1040,7 @@ _sourcetree_set_node()
 
    if [ "$#" -ne 0 ]
    then
-      log_error "Key \"$1\" without value"
+      log_error "Key \"${key}\" without value"
       sourcetree_set_usage
    fi
 
@@ -1157,7 +1185,7 @@ no-cmakeinherit
 no-cmakeloader
 no-defer
 no-delete
-no-descend
+no-dispense
 no-fs
 no-header
 no-include
@@ -1173,6 +1201,7 @@ no-require
 no-set
 no-singlephase
 no-singlephase-link
+no-static-link
 no-share
 no-update
 only-standalone"
@@ -1696,7 +1725,7 @@ sourcetree_common_main()
    [ -z "${SOURCETREE_CONFIG_FILENAME}" ] && fail "config file empty name"
 
    case "${COMMAND}" in
-      add|nameguess|typeguess)
+      add|duplicate|nameguess|typeguess)
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          argument="$1"
          [ -z "${argument}" ] && log_error "empty argument" && ${USAGE}
@@ -1739,20 +1768,6 @@ sourcetree_common_main()
       knownmarks)
          echo "${KNOWN_MARKS}"
       ;;
-
-      duplicate)
-         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
-         address="$1"
-         [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
-         shift
-         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
-         newaddress="$1"
-         shift
-         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
-
-         sourcetree_${COMMAND}_node${suffix} "${address}" "${newaddress}"
-      ;;
-
 
       mark|unmark)
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
@@ -1941,6 +1956,11 @@ sourcetree_commands_initialize()
    then
       # shellcheck source=mulle-sourcetree-cfg.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh" || exit 1
+   fi
+   if [ -z "${MULLE_SOURCETREE_FETCH_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-fetch.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-fetch.sh" || exit 1
    fi
 }
 

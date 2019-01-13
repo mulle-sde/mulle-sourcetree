@@ -99,7 +99,7 @@ main()
    local expected="`physicalpath "${project}"`/a/b;
 `physicalpath "${project}"`/a;no-delete"
 
-   result="`run_mulle_sourcetree buildorder --output-absolute --no-print-env --output-marks`"
+   result="`run_mulle_sourcetree buildorder --output-absolute --no-print-env`"
    if [ "${expected}" != "${result}" ]
    then
       fail "missed expectation:
@@ -119,7 +119,7 @@ ${result}
    fi
 
    # should be the same
-   result="`run_mulle_sourcetree buildorder --output-relative --no-print-env --output-marks`"
+   result="`run_mulle_sourcetree buildorder --output-relative --no-print-env`"
    expected="a/b;
 a;no-delete,no-os-fantasy"
    if [ "${expected}" != "${result}" ]
@@ -145,7 +145,7 @@ ${result}
    #
    local expected=""
 
-   result="`run_mulle_sourcetree buildorder --output-relative --no-print-env --output-marks`"
+   result="`run_mulle_sourcetree buildorder --output-relative --no-print-env`"
    if [ "${expected}" != "${result}" ]
    then
       fail "missed expectation:

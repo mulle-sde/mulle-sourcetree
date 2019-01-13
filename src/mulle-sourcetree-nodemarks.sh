@@ -343,7 +343,6 @@ nodemarks_contain()
 }
 
 
-
 # match can use wildcard *
 nodemarks_match()
 {
@@ -383,7 +382,6 @@ nodemarks_match()
       ;;
    esac
 }
-
 
 
 nodemarks_intersect()
@@ -433,7 +431,7 @@ r_nodemarks_sort()
 #
 _nodemarks_filter_iexpr()
 {
-   log_entry "_nodemarks_filter_iexpr" "${marks}" "${_s}" "${expr}"
+#  log_entry "_nodemarks_filter_iexpr" "${marks}" "${_s}" "${expr}"
 
    local marks="$1"
    local qualifier="$2"
@@ -484,7 +482,7 @@ _nodemarks_filter_iexpr()
 
 _nodemarks_filter_sexpr()
 {
-   log_entry "_nodemarks_filter_sexpr" "${marks}" "${_s}"
+#   log_entry "_nodemarks_filter_sexpr" "${marks}" "${_s}"
 
    local marks="$1"
    local qualifier="$2"
@@ -525,6 +523,17 @@ _nodemarks_filter_sexpr()
             return 1
          fi
          return 0
+      ;;
+
+      # experimental and untested
+      IFDEF*)
+         _s="${_s:5}"
+         _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
+         key="${_s%%[ )]*}"
+         _s="${_s#"${key}"}"
+         value="`eval echo \$\{__DEFINE__${key}\}`"
+         [ ! -z "${value}" ]
+         return $?
       ;;
 
       MATCHES*)
@@ -571,7 +580,7 @@ _nodemarks_filter_sexpr()
 
 _nodemarks_filter_expr()
 {
-   log_entry "_nodemarks_filter_expr" "${marks}" "${_s}"
+#  log_entry "_nodemarks_filter_expr" "${marks}" "${_s}"
 
    local marks="$1"
    local qualifier="$2"
@@ -614,5 +623,32 @@ nodemarks_filter_with_qualifier()
    _s="${qualifier}"
 
    _nodemarks_filter_expr "${marks}" "${qualifier}"
+}
+
+
+nodemarks_walk()
+{
+   local marks="$1"; shift
+   local callback="$1"; shift
+
+   local i
+   local rval=0
+
+   set -o noglob ; IFS=","
+   for i in ${marks}
+   do
+      IFS="${DEFAULT_IFS}" ; set +o noglob
+
+      "${callback}" "${i}" "$@"
+      rval=$?
+
+      if [ $rval -ne 0 ]
+      then
+         break
+      fi
+   done
+   IFS="${DEFAULT_IFS}" ; set +o noglob
+
+   return $rval
 }
 

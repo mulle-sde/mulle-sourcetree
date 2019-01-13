@@ -99,125 +99,64 @@ ${C_RESET_BOLD}${MULLE_SOURCETREE_STASH_DIR}${C_RESET}"
 }
 
 
-_sourcetree_augment_mode_with_output_options()
+r_sourcetree_remove_marks()
 {
-   log_entry "_sourcetree_augment_mode_with_output_options" "$@"
+   log_entry "r_sourcetree_remove_marks" "$@"
 
-   local mode="$1"
-   if [ "${OPTION_OUTPUT_URL}" != 'NO' ]
-   then
-      r_comma_concat "${mode}" "output_url"
-      mode="${RVAL}"
-   fi
-   if [ "${OPTION_OUTPUT_FULL}" = 'YES' ]
-   then
-      r_comma_concat "${mode}" "output_full"
-      mode="${RVAL}"
-   fi
-   if [ "${OPTION_OUTPUT_EVAL}" = 'YES' ]
-   then
-      r_comma_concat "${mode}" "output_eval"
-      mode="${RVAL}"
-   fi
-   if [ "${OPTION_OUTPUT_UUID}" = 'YES' ]
-   then
-      r_comma_concat "${mode}" "output_uuid"
-      mode="${RVAL}"
-   fi
+   local marks="$1"
+   local nomarks="$2"
 
-   case "${OPTION_OUTPUT_FORMAT}" in
-      "RAW")
-         r_comma_concat "${mode}" "output_raw"
-         mode="${RVAL}"
-         if [ "${OPTION_OUTPUT_HEADER}" != 'NO' ]
-         then
-            r_comma_concat "${mode}" "output_header"
-            mode="${RVAL}"
-         fi
-      ;;
+   RVAL=
+   set +f; IFS=","
+   for mark in ${marks}
+   do
+      set +f; IFS="${DEFAULT_IFS}"
 
-      "CMD")
-         r_comma_concat "${mode}" "output_cmd"
-         mode="${RVAL}"
-         r_comma_concat "${mode}" "output_full"
-         mode="${RVAL}"
-      ;;
-
-      "CMD2")
-         r_comma_concat "${mode}" "output_cmd2"
-         mode="${RVAL}"
-         r_comma_concat "${mode}" "output_full"
-         mode="${RVAL}"
-      ;;
-
-      *)
-         [ -z "`command -v column`" ] && fail "Tool \"column\" is not available, use --output-raw"
-
-         if [ "${OPTION_OUTPUT_HEADER}" != 'NO' ]
-         then
-            r_comma_concat "${mode}" "output_header"
-            mode="${RVAL}"
-            if [ "${OPTION_OUTPUT_SEPARATOR}" != 'NO' ]
-            then
-               r_comma_concat "${mode}" "output_separator"
-               mode="${RVAL}"
-            fi
-         fi
-
-         if [ "${OPTION_OUTPUT_COLUMN}" != 'NO' ]
-         then
-            r_comma_concat "${mode}" "output_column"
-            mode="${RVAL}"
-         fi
-      ;;
-   esac
-
-   echo "${mode}"
+      if ! nodemarks_contain "${nomarks}" "${mark}"
+      then
+         r_comma_concat "${RVAL}" "${mark}"
+      fi
+   done
+   set +f; IFS="${DEFAULT_IFS}"
 }
 
 
-_sourcetree_nodeline_remove_marks()
+list_walk_callback()
 {
-   log_entry "_sourcetree_nodeline_remove_marks" "$@"
+   log_entry "list_walk_callback" "$@"
 
-   local nodeline="$1"
-   local nomarks="$2"
+   local formatstring="$1"
+   local cmdline="$2"
+
+   local nodeline
+
+   nodeline="${_nodeline}"
 
    local _branch
    local _address
    local _fetchoptions
-   local _nodetype
    local _marks
+   local _nodetype
    local _tag
-   local _raw_userinfo
    local _url
-   local _uuid
    local _userinfo
+   local _uuid
+   local _raw_userinfo
 
    nodeline_parse "${nodeline}"
 
-   local marks
-   marks="${_marks}"
-   _marks=
-
-   set -f; IFS=","
-   for mark in ${marks}
-   do
-      if ! nodemarks_contain "${nomarks}" "${mark}"
-      then
-         r_comma_concat "${_marks}" "${mark}"
-         _marks="${RVAL}"
-      fi
-   done
-   set +f; IFS="${DEFAULT_IFS}"
-
-   node_to_nodeline
+   if [ ! -z "${OPTION_NO_OUTPUT_MARKS}" ]
+   then
+      r_sourcetree_remove_marks "${_marks}" "${OPTION_NO_OUTPUT_MARKS}"
+      _marks="${RVAL}"
+   fi
+   node_printf "${_mode}" "${formatstring}" "${cmdline}" "${MULLE_WALK_INDENT}"
 }
 
 
-_sourcetree_contents()
+_list_sourcetree()
 {
-   log_entry "_sourcetree_contents" "$@"
+   log_entry "_list_sourcetree" "$@"
 
    local mode="$1"
    local filternodetypes="$2"
@@ -225,56 +164,20 @@ _sourcetree_contents()
    local formatstring="$4"
    local cmdline="$5"
 
-   local nodeline
-   local nodelines
-
-   nodelines="`cfg_read "${SOURCETREE_START}"`" || exit 1
-
    nodeline_printf_header "${mode}" "${formatstring}"
 
-   set -o noglob ; IFS="
-"
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}"; set +o noglob
-
-      if [ -z "${nodeline}" ]
-      then
-         continue
-      fi
-
-      local _address
-      local _nodetype
-      local _marks
-
-      __nodeline_get_address_nodetype_marks "${nodeline}"
-
-      if ! nodetype_filter "${_nodetype}" "${filternodetypes}"
-      then
-         log_fluff "Node \"${nodeline}\": \"${_nodetype}\" doesn't jive with nodetypes filter \"${filternodetypes}\""
-         continue
-      fi
-
-      if ! nodemarks_filter_with_qualifier "${_marks}" "${marksqualifier}"
-      then
-         log_fluff "Node \"${nodeline}\": \"${_marks}\" doesn't jive with marks \"${marksqualifier}\""
-         continue
-      fi
-
-      if [ ! -z "${OPTION_NO_OUTPUT_MARKS}" ]
-      then
-         nodeline="`_sourcetree_nodeline_remove_marks "${nodeline}" "${OPTION_NO_OUTPUT_MARKS}" `"
-      fi
-
-      nodeline_printf "${nodeline}" "${mode}" "${formatstring}" "${cmdline}"
-   done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   sourcetree_walk "${filternodetypes}" \
+                   "descend-symlink" \
+                   "${marksqualifier}" \
+                   "" \
+                   "${mode}" \
+                   list_walk_callback "${formatstring}" "${cmdline}"
 }
 
 
-_list_nodes()
+sourcetree_list_sourcetree()
 {
-   log_entry "_list_nodes" "$@"
+   log_entry "sourcetree_list_sourcetree" "$@"
 
    local mode="$1"
 
@@ -287,171 +190,117 @@ _list_nodes()
       return
    fi
 
-   if [ "${OPTION_OUTPUT_BANNER}" = 'YES' ] ||
-      [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" -a "${OPTION_OUTPUT_FORMAT}" = "FMT" ]
+   if [ "${OPTION_OUTPUT_BANNER}" = 'YES' ]
    then
       _sourcetree_banner
    fi
 
    case ",${mode}," in
       *,output_column,*)
-         _sourcetree_contents "$@" | exekutor column -t -s ';'
+         _list_sourcetree "$@" | exekutor column -t -s ';'
       ;;
 
       *)
-         _sourcetree_contents "$@"
+         _list_sourcetree "$@"
       ;;
    esac
-}
-
-
-r_commandline_flag()
-{
-   log_entry "r_commandline_flag" "$@"
-
-   local value="$1"
-   local flag="$2"
-
-   RVAL=""
-   case "${value}" in
-      'NO')
-         RVAL="--no-${flag}"
-      ;;
-
-      'YES')
-         RVAL="--${flag}"
-      ;;
-   esac
-}
-
-
-list_nodes()
-{
-   log_entry "list_nodes" "$@"
-
-   local rval
-   local formatstring="$4"
-
-   _list_nodes "$@"
-   rval=$?
-
-   if [ "${SOURCETREE_MODE}" = "flat" ]
-   then
-      return $rval
-   fi
-
-   # shellcheck source=src/mulle-sourcetree-walk.sh
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
-
-   local arguments
-   local flag
-   arguments=
-
-   if [ ! -z "${formatstring}" ]
-   then
-      arguments="--format ${formatstring}"
-   fi
-
-   r_commandline_flag "${OPTION_OUTPUT_BANNER}" "output-banner"
-   r_concat "${arguments}" "${RVAL}"
-   arguments="${RVAL}"
-
-   r_commandline_flag"${OPTION_OUTPUT_EVAL}" "output-eval"
-   r_concat "${arguments}" "${RVAL}"
-   arguments="${RVAL}"
-
-   r_commandline_flag"${OPTION_OUTPUT_UUID}" "output-uuid"
-   r_concat "${arguments}" "${RVAL}"
-   arguments="${RVAL}"
-
-   r_commandline_flag"${OPTION_OUTPUT_FULL}" "output-full"
-   r_concat "${arguments}" "${RVAL}"
-   arguments="${RVAL}"
-
-   r_commandline_flag"${OPTION_OUTPUT_SEPARATOR}" "output-separator"
-   r_concat "${arguments}" "${RVAL}"
-   arguments="${RVAL}"
-
-   r_commandline_flag"${OPTION_OUTPUT_COLOR}" "output-color"
-   r_concat "${arguments}" "${RVAL}"
-   arguments="${RVAL}"
-
-
-#   if [ "${OPTION_OUTPUT_HEADER}" = 'NO' ]
-#   then
-#      arguments="`concat "${arguments}" "--output-no-header" `"
-#   fi
-
-   case "${OPTION_OUTPUT_FORMAT}" in
-      "RAW")
-         r_concat "${arguments}" "--output-raw"
-         arguments="${RVAL}"
-         if [ -z "${OPTION_OUTPUT_HEADER}" ]
-         then
-            OPTION_OUTPUT_HEADER='NO'
-         fi
-      ;;
-
-      "CMD")
-         r_concat "${arguments}" "--output-cmd"
-         arguments="${RVAL}"
-         OPTION_OUTPUT_HEADER='NO'
-      ;;
-
-      "FMT")
-         r_concat "${arguments}" "--output-fmt"
-         arguments="${RVAL}"
-         if [ -z "${OPTION_OUTPUT_HEADER}" ]
-         then
-            if [ "${IS_PRINTING}" != 'YES' ]
-            then
-               OPTION_OUTPUT_HEADER='NO'
-            else
-               OPTION_OUTPUT_HEADER='YES'
-            fi
-         fi
-      ;;
-   esac
-
-   #
-   # some special treatment
-   #
-   r_commandline_flag"${OPTION_OUTPUT_HEADER}" "output-header"
-   r_concat "${arguments}" "${RVAL}"
-   arguments="${RVAL}"
-
-   IS_PRINTING='YES'; export IS_PRINTING
-
-   sourcetree_walk_main --pre-order --cd \
-         "${MULLE_EXECUTABLE}" "${MULLE_TECHNICAL_FLAGS}" --flat -e list ${arguments}
 }
 
 
 # evil global variable stuff
-_sourcetree_list_convert_marks_to_qualifier()
+r_sourcetree_list_convert_marks_to_qualifier()
 {
-   if [ ! -z "${OPTION_MARKS}" ]
+   log_entry "r_sourcetree_list_convert_marks_to_qualifier" "$@"
+
+   local marks="$1"
+   local qualifier="$2"
+
+   local mark
+
+   IFS=","; set -o noglob
+   for mark in ${marks}
+   do
+      r_concat "${qualifier}" "MATCHES ${mark}" " AND "
+      qualifier="${RVAL}"
+   done
+   IFS="${DEFAULT_IFS}"; set +o noglob
+
+   RVAL="${qualifier}"
+}
+
+
+r_sourcetree_augment_mode_with_output_options()
+{
+   log_entry "r_sourcetree_augment_mode_with_output_options" "$@"
+
+   local mode="$1"
+
+   RVAL="${mode}"
+   if [ "${OPTION_OUTPUT_URL}" != 'NO' ]
    then
-      if [ ! -z "${OPTION_MARKS_QUALIFIER}" ]
-      then
-         fail "You can not specify --marks and --qualifier at the same time"
-      fi
+      r_comma_concat "${RVAL}" "output_url"
+   fi
+   if [ "${OPTION_OUTPUT_FULL}" = 'YES' ]
+   then
+      r_comma_concat "${RVAL}" "output_full"
+   fi
+   if [ "${OPTION_OUTPUT_EVAL}" = 'YES' ]
+   then
+      r_comma_concat "${RVAL}" "output_eval"
+   fi
+   if [ "${OPTION_OUTPUT_UUID}" = 'YES' ]
+   then
+      r_comma_concat "${RVAL}" "output_uuid"
+   fi
 
-      local mark
+   case "${OPTION_OUTPUT_FORMAT}" in
+      "RAW")
+         r_comma_concat "${RVAL}" "output_raw"
+         if [ "${OPTION_OUTPUT_HEADER}" != 'NO' ]
+         then
+            r_comma_concat "${RVAL}" "output_header"
+         fi
+      ;;
 
-      IFS=","; set -o noglob
-      for mark in ${OPTION_MARKS}
-      do
-         OPTION_MARKS_QUALIFIER="`concat "${OPTION_MARKS_QUALIFIER}" "MATCHES ${mark}" " AND "`"
-      done
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      "CMD")
+         r_comma_concat "${RVAL}" "output_cmd"
+         r_comma_concat "${RVAL}" "output_full"
+      ;;
+
+      "CMD2")
+         r_comma_concat "${RVAL}" "output_cmd2"
+         r_comma_concat "${RVAL}" "output_full"
+      ;;
+
+      *)
+         [ -z "`command -v column`" ] && fail "Tool \"column\" is not available, use --output-raw"
+
+         if [ "${OPTION_OUTPUT_HEADER}" != 'NO' ]
+         then
+            r_comma_concat "${RVAL}" "output_header"
+            if [ "${OPTION_OUTPUT_SEPARATOR}" != 'NO' ]
+            then
+               r_comma_concat "${RVAL}" "output_separator"
+            fi
+         fi
+
+         if [ "${OPTION_OUTPUT_COLUMN}" != 'NO' ]
+         then
+            r_comma_concat "${RVAL}" "output_column"
+         fi
+      ;;
+   esac
+
+   if [ "${OPTION_OUTPUT_INDENT}" = 'NO' ]
+   then
+      r_comma_concat "${RVAL}" "no-indent"
    fi
 }
 
 
 sourcetree_list_main()
 {
-   log_entry "sourcetree_list_main (1)" "$@"
+   log_entry "sourcetree_list_main" "$@"
 
    local ROOT_DIR
 
@@ -464,6 +313,7 @@ sourcetree_list_main()
    local OPTION_OUTPUT_EVAL="DEFAULT"
    local OPTION_OUTPUT_FULL="DEFAULT"
    local OPTION_OUTPUT_HEADER="" # empty more convenient default
+   local OPTION_OUTPUT_INDENT="DEFAULT"
    local OPTION_OUTPUT_SEPARATOR="DEFAULT"
    local OPTION_OUTPUT_COLUMN="DEFAULT"
    local OPTION_OUTPUT_UUID="DEFAULT"
@@ -473,7 +323,8 @@ sourcetree_list_main()
    local OPTION_NODETYPES
    local OPTION_MARKS
    local OPTION_MARKS_QUALIFIER
-   local OPTION_FORMAT
+   local OPTION_FORMAT='DEFAULT'
+   local WALK_DEDUPE_MODE='none'
 
    while [ $# -ne 0 ]
    do
@@ -499,12 +350,14 @@ sourcetree_list_main()
             OPTION_MARKS_QUALIFIER="$1"
          ;;
 
-         -n|--nodetypes)
+         -n|--nodetype|--nodetypes)
             [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
             shift
 
             r_comma_concat "${OPTION_NODETYPES}" "$1"
             OPTION_NODETYPES="${RVAL}"
+
+            [ "${OPTION_OUTPUT_INDENT}" = "DEFAULT" ] && OPTION_OUTPUT_INDENT="NO"
          ;;
 
          --format)
@@ -562,15 +415,64 @@ sourcetree_list_main()
             OPTION_OUTPUT_SEPARATOR='NO'
          ;;
 
-         #
-         #
-         #
-         --output-full)
-            OPTION_OUTPUT_FULL='YES'
+         --no-output-indent)
+            OPTION_OUTPUT_INDENT='NO'
          ;;
 
-         --no-output-full|--output-no-full)
-            OPTION_OUTPUT_FULL='NO'
+         --dedupe)
+            WALK_DEDUPE_MODE="nodeline-no-uuid"
+         ;;
+
+         --dedupe-mode)
+            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            shift
+
+            WALK_DEDUPE_MODE="$1"
+         ;;
+
+         #
+         #
+         #
+         -g)
+            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+            then
+               OPTION_FORMAT="%a;%t;%b\\n"
+            else
+               OPTION_FORMAT="${OPTION_FORMAT%??}"
+               OPTION_FORMAT="${OPTION_FORMAT};%t;%b\\n"
+            fi
+         ;;
+
+         -l|--output-more)
+            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+            then
+               OPTION_FORMAT="%a;%n;%m\\n"
+            else
+               OPTION_FORMAT="${OPTION_FORMAT%??}"
+               OPTION_FORMAT="${OPTION_FORMAT};%n;%m\\n"
+            fi
+         ;;
+
+         -r)
+            FLAG_SOURCETREE_MODE="share"
+         ;;
+
+         -u)
+            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+            then
+               OPTION_FORMAT="%a;%u!;%f\\n"
+            else
+               OPTION_FORMAT="${OPTION_FORMAT%??}"
+               OPTION_FORMAT="${OPTION_FORMAT};%u!;%f\\n"
+            fi
+         ;;
+
+         -ll|--output-full)
+            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+            then
+               OPTION_FORMAT=
+            fi
+            OPTION_OUTPUT_FULL='YES'
          ;;
 
          --output-url)
@@ -653,22 +555,29 @@ sourcetree_list_main()
    fi
 
    # if mode is not flat, we use output-banner by default
-   if [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" -a "${SOURCETREE_MODE}" != "flat" ]
+   if [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" ]
    then
-      OPTION_OUTPUT_BANNER='YES'
+      OPTION_OUTPUT_BANNER='NO'
    fi
 
    local mode
 
-   mode="`_sourcetree_augment_mode_with_output_options`"
+   r_sourcetree_augment_mode_with_output_options "${SOURCETREE_MODE}"
+   mode="${RVAL}"
 
-   _sourcetree_list_convert_marks_to_qualifier  ## UGLY
+   r_sourcetree_list_convert_marks_to_qualifier "${OPTION_MARKS}" "${OPTION_MARKS_QUALIFIER}" ## UGLY
+   OPTION_MARKS_QUALIFIER="${RVAL}"
 
-   list_nodes "${mode}" \
-              "${OPTION_NODETYPES}" \
-              "${OPTION_MARKS_QUALIFIER}" \
-              "${OPTION_FORMAT}" \
-              "${OPTION_OUTPUT_CMDLINE}"
+   if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+   then
+      OPTION_FORMAT='%a\n'
+   fi
+
+   sourcetree_list_sourcetree "${mode}" \
+                              "${OPTION_NODETYPES}" \
+                              "${OPTION_MARKS_QUALIFIER}" \
+                              "${OPTION_FORMAT}" \
+                              "${OPTION_OUTPUT_CMDLINE}"
 }
 
 
@@ -676,39 +585,10 @@ sourcetree_list_initialize()
 {
    log_entry "sourcetree_list_initialize"
 
-
-   if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
+   if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
    then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
-
-      # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
-   then
-   # shellcheck source=mulle-sourcetree-db.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
-   fi
-   if [ -z "${MULLE_SOURCETREE_NODEMARKS_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-nodemarks.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
-   fi
-   if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-node.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
-   fi
-   if [ -z "${MULLE_SOURCETREE_NODELINE_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-nodeline.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   fi
-   if [ -z "${MULLE_SOURCETREE_CFG_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-cfg.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh" || exit 1
+      # shellcheck source=mulle-sourcetree-walk.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
    fi
 }
 

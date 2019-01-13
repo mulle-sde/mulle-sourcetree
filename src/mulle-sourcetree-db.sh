@@ -383,8 +383,26 @@ db_bury()
       mkdir_if_missing "${graveyard}"
    fi
 
-   log_info "Burying ${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
-   exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}" >&2
+   #
+   # if we have tar available, we archive the grave, because it takes less space
+   # and we also don't accidentally find files in it. Otherwise at least write
+   # protect to prevent accidental "surprise" edits.
+   #
+   TAR="`command -v "tar"`"
+   if [ ! -z "${TAR}" -a -d "${gravepath}" ]
+   then
+      log_info "Burying charred ${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
+      exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}.tmp" >&2 &&
+      (
+         rexekutor cd "${gravepath}.tmp" &&
+         exekutor "${TAR}" cfz "${gravepath}" . &&
+         rmdir_safer "${gravepath}.tmp"
+      ) &
+   else
+      log_info "Burying ${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
+      exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}" >&2
+      exekutor find "${gravepath}" -type f -exec chmod a-w {} \;
+   fi
 }
 
 
@@ -1172,7 +1190,7 @@ _db_set_default_mode()
       then
          dbtype="share"       # the default
       else
-         log_verbose "Database: ${C_RESET_BOLD}`simplified_absolutepath "${rootdir}"`${C_INFO} ${C_MAGENTA}${C_BOLD}${actualdbtype}${C_INFO}"
+         log_fluff "Database: ${C_RESET_BOLD}`simplified_absolutepath "${rootdir}"`${C_INFO} ${C_MAGENTA}${C_BOLD}${actualdbtype}${C_INFO}"
       fi
    fi
 
@@ -1198,11 +1216,11 @@ _db_set_default_mode()
 
    if [ ! -z "${SOURCETREE_MODE}" ]
    then
-      log_verbose "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
+      log_fluff "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
       if [ "${SOURCETREE_MODE}" = share ]
       then
          [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
-         log_verbose "Stash directory: ${C_RESET_BOLD}${MULLE_SOURCETREE_STASH_DIR}${C_INFO}"
+         log_fluff "Stash directory: ${C_RESET_BOLD}${MULLE_SOURCETREE_STASH_DIR}${C_INFO}"
       fi
    fi
 }

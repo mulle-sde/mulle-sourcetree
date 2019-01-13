@@ -370,9 +370,9 @@ ${indent}      get_filename_component( _TMP_${identifier}_ROOT "\${_TMP_${identi
 ${indent}      #
 EOF
 
-      _emit_dependencies_loader_cmake_code "${identifier}" \
-                                           "${quoted_names}" \
-                                           "${marks}"
+         _emit_dependencies_loader_cmake_code "${identifier}" \
+                                              "${quoted_names}" \
+                                              "${marks}"
       ;;
    esac
 
@@ -564,23 +564,21 @@ emit_cmake_dependency()
       esac
    fi
 
-   if [ ! -z "${ifstatement}" ]
-   then
-      echo "${ifstatement}"
-   fi
-
    local addressname
    local identifier
    local filename
    local names
-   r_fast_basename "${address}"
-   addressname="${RVAL}"
-   r_comma_concat "${aliases}" "${addressname}"
-   names="${RVAL}"
 
-   # first alias determines the identifier
+   names="${aliases}"
+   if [ -z "${names}" ]
+   then
+      r_fast_basename "${address%#*}"
+      names="${RVAL}"
+   fi
+
+   # first of the names determines the identifier
    r_fast_basename "${names%%,*}"
-   filename="${RVAL}"
+   addressname="${RVAL}"
 
    if [ -z "${MULLE_CASE_SH}" ]
    then
@@ -591,6 +589,17 @@ emit_cmake_dependency()
    r_tweaked_de_camel_case "${addressname}"
    identifier="`printf "%s" "${RVAL}" | tr -c 'a-zA-Z0-9' '_'`"
    identifier="`tr 'a-z' 'A-Z' <<< "${identifier}"`"
+
+   [ -z "${identifier}" ] && \
+      fail "Identifier derived from \"${names}\" is empty"
+
+
+   echo "# sourcetree: ${identifier};${marks};${aliases}"
+
+   if [ ! -z "${ifstatement}" ]
+   then
+      echo "${ifstatement}"
+   fi
 
    "${emitter}" "${names}" \
                 "${identifier}" \
@@ -661,7 +670,7 @@ emit_dependency_subproject()
                            ${MULLE_TECHNICAL_FLAGS} \
                            ${MULLE_SOURCETREE_FLAGS} \
                            list \
-                              --format '%a;%m;%i={aliases,,-------};%i={include,,}\n' \
+                              --format '%a;%m;%i={aliases,,};%i={include,,}\n' \
                               --marks 'dependency,header,no-link' \
                               --output-raw \
                               --no-output-header`" || return 1
@@ -716,6 +725,32 @@ emit_library()
                            "${library}"
 }
 
+
+
+output_file()
+{
+   log_entry "output_file" "$@"
+
+   local filename="$1"
+   local text="$2"
+   local title="$3"
+
+   if [ "${filename}" = "-" ]
+   then
+      log_info "${title}"
+      rexekutor echo "${text}"
+   else
+      log_verbose "Writing ${C_RESET_BOLD}${filename}"
+      r_fast_dirname "${filename}"
+      exekutor mkdir -p "${RVAL}" 2> /dev/null
+      exekutor chmod a+w "${filename}"  2> /dev/null
+      r_mkdir_parent_if_missing "${filename}"
+      redirect_exekutor "${filename}" echo "${text}"
+      exekutor chmod a-w "${filename}"
+   fi
+}
+
+
 #
 # collect library and dependency, with routines in
 # mulle-sde-updatesupport.sh for reuse with stuff other than cmake
@@ -750,13 +785,9 @@ endif()
 
 ${text_lib}"
 
-   log_verbose "Writing ${C_RESET_BOLD}${MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE}"
-   r_fast_dirname "${MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE}"
-   exekutor mkdir -p "${RVAL}" 2> /dev/null
-   exekutor chmod a+w "${MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE}"  2> /dev/null
-   r_mkdir_parent_if_missing "${MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE}"
-   redirect_exekutor "${MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE}" echo "${text_lib}"
-   exekutor chmod a-w "${MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE}"
+  output_file "${MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE}" \
+              "${text_lib}" \
+              "_Libraries.cmake"
 }
 
 
@@ -789,15 +820,9 @@ endif()
 
 ${text_dep}"
 
-   log_fluff "Create cmake files (${PWD})"
-
-   log_verbose "Writing ${C_RESET_BOLD}${MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE}"
-   r_fast_dirname "${MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE}"
-   exekutor mkdir -p "${RVAL}" 2> /dev/null
-   exekutor chmod a+w "${MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE}"  2> /dev/null
-   r_mkdir_parent_if_missing "${MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE}"
-   redirect_exekutor "${MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE}" echo "${text_dep}"
-   exekutor chmod a-w "${MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE}"
+   output_file "${MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE}" \
+               "${text_dep}" \
+               "_Dependencies.cmake"
 }
 
 
@@ -848,6 +873,20 @@ main()
             OPTION_PARALLEL='NO'
          ;;
 
+         --stdout)
+            MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE="-"
+            MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE="-"
+            OPTION_PARALLEL='NO'
+         ;;
+
+         --no-dependencies)
+            MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE="NONE"
+         ;;
+
+         --no-libraries)
+            MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE="NONE"
+         ;;
+
          --version)
             echo "${MULLE_EXECUTABLE_VERSION}"
             return 0
@@ -872,8 +911,6 @@ main()
    [ -z "${MULLE_SOURCETREE}" ] && fail "mulle-sourcetree not in PATH"
 
    options_setup_trace "${MULLE_TRACE}"
-
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && fail "Must run inside the mulle-sde environment"
 
    if [ "${OPTION_PARALLEL}" = 'YES' ]
    then

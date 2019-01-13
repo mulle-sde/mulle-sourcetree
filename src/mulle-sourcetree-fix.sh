@@ -294,14 +294,12 @@ sourcetree_fix()
 {
    log_entry "sourcetree_fix" "$@"
 
-   local filternodetypes="$1"
-   local filterpermissions="$2"
-   local filtermarks="$3"
-   local mode="$4"
+   local mode="$1"
 
-   walk_config_uuids "${filternodetypes}" \
-                     "${filterpermissions}" \
-                     "${filtermarks}" \
+   walk_config_uuids "ALL" \
+                     "" \
+                     "" \
+                     "" \
                      "${mode}" \
                      "walk_fix"
 }
@@ -311,43 +309,11 @@ sourcetree_fix_main()
 {
    log_entry "sourcetree_fix_main" "$@"
 
-   local OPTION_MARKS="ANY"
-   local OPTION_PERMISSIONS="" # empty!
-   local OPTION_NODETYPES=""
-   local OPTION_WALK_DB="DEFAULT"
-   local OPTION_IS_UPTODATE='NO'
-   local OPTION_OUTPUT_HEADER="DEFAULT"
-   local OPTION_OUTPUT_RAW='YES'
-
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
             sourcetree_fix_usage
-         ;;
-
-         #
-         # more common flags
-         #
-         -m|--marks)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
-            shift
-
-            OPTION_MARKS="$1"
-         ;;
-
-         -n|--nodetypes)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
-            shift
-
-            OPTION_NODETYPES="$1"
-         ;;
-
-         -p|--permissions)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
-            shift
-
-            OPTION_PERMISSIONS="$1"
          ;;
 
          -*)
@@ -381,7 +347,6 @@ sourcetree_fix_main()
       fail "The sourcetree isn't updated. Can't fix config entries"
    fi
 
-
    local mode
 
    mode="${SOURCETREE_MODE}"
@@ -391,10 +356,6 @@ sourcetree_fix_main()
    fi
 
    log_info "Run sourcetree fix"
-
-   sourcetree_fix "${OPTION_NODETYPES}" \
-                  "${OPTION_PERMISSIONS}" \
-                  "${OPTION_MARKS}" \
-                  "${mode}"
+   sourcetree_fix "${mode}"
 }
 
