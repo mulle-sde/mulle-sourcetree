@@ -289,7 +289,7 @@ r_make_buildorder_qualifier()
    then
       case "${MULLE_UNAME}" in
          darwin)
-            MULLE_OS_VERSION="`sw_vers -productVersion`"
+            MULLE_OS_VERSION="`sw_vers -productVersion`" || exit 1
          ;;
       esac
    fi

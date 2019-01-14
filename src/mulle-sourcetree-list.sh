@@ -260,6 +260,7 @@ r_sourcetree_augment_mode_with_output_options()
          then
             r_comma_concat "${RVAL}" "output_header"
          fi
+         OPTION_OUTPUT_CMDLINE=""
       ;;
 
       "CMD")
@@ -288,6 +289,7 @@ r_sourcetree_augment_mode_with_output_options()
          then
             r_comma_concat "${RVAL}" "output_column"
          fi
+         OPTION_OUTPUT_CMDLINE=""
       ;;
    esac
 

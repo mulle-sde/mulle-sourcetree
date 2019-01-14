@@ -32,7 +32,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_C_SOURCETREE_UPDATE_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.17.0"
+MULLE_EXECUTABLE_VERSION="0.17.1"
 
 
 usage()
@@ -331,11 +331,8 @@ output_file()
 
    local filename="$1"
    local text="$2"
-
-   local title
-
-   r_fast_basename "$1"
-   title="${RVAL}"
+   local title="$3"
+   local varname="$4"
 
    if [ "${filename}" = "-" ]
    then
@@ -422,7 +419,7 @@ ${text_h}
 
    output_file  "${MULLE_SOURCETREE_TO_C_INCLUDE_FILE}" \
                 "${text_h}" \
-                "-include.h" \
+                "_${projectname}-include.h" \
                 "MULLE_SOURCETREE_TO_C_INCLUDE_FILE"
 }
 
@@ -480,9 +477,10 @@ ${text_h}
 
    output_file  "${MULLE_SOURCETREE_TO_C_IMPORT_FILE}" \
                 "${text_h}" \
-                "-import.h" \
+                "_${projectname}-import.h" \
                 "MULLE_SOURCETREE_TO_C_IMPORT_FILE"
 }
+
 
 c_include_private()
 {
@@ -547,7 +545,7 @@ ${text_h}
 
    output_file "${MULLE_SOURCETREE_TO_C_PRIVATEINCLUDE_FILE}" \
                "${text_h}" \
-               "-include-private.h" \
+               "_${projectname}-include-private.h" \
                "MULLE_SOURCETREE_TO_C_PRIVATEINCLUDE_FILE"
 }
 
@@ -605,7 +603,7 @@ ${text_h}
 
    output_file "${MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE}" \
                "${text_h}" \
-               "-import-private.h" \
+               "_${projectname}-import-private.h" \
                "MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE"
 }
 

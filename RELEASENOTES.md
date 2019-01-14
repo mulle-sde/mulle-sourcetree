@@ -1,3 +1,20 @@
+### 0.17.1
+
+* config files can be scoped to an OS when in dire straits
+* aliases need to include the name, so you can determine the lookup order
+* buildorder is now using breadth-first for marks and in-order for filename to make things easier
+* support various dedupe options
+* `node_printf` can print environment variables now with %v{ENVNAME,,}
+* many commands lose the unused filter options --marks --nodetypes and --permissions
+* there is now a duplicate command for nodes
+* node typeguess is a bit better now
+* when tar is available, graves are now archived and zipped
+* the list command has seen a complete overhaul can now do recursive listings
+* the qualifier has been split into a visit qualifier and a descend qualifier
+* use .mulle instead of .mulle-sourcetree
+* do not require -e anymore
+* enable output of filename in status
+
 ## 0.17.0
 
 * use .mulle instead of .mulle-sourcetree
