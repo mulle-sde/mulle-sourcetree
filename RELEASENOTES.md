@@ -1,3 +1,7 @@
+### 0.17.3
+
+* fix installer script
+
 ### 0.17.2
 
 * be less harsh if there is no sourcetree
