@@ -819,9 +819,12 @@ sourcetree_sync_start()
 
    "sourcetree_sync_${style}" "${SOURCETREE_START}" "${SOURCETREE_START}"
    rval=$?
+
    if [ $rval -eq 127 ]
    then
-       fail "There is no sourcetree in \"${MULLE_VIRTUAL_ROOT}${SOURCETREE_START}\""
+      # it's OK we can live with that
+      log_verbose "There is no sourcetree in \"${MULLE_VIRTUAL_ROOT}${SOURCETREE_START}\""
+      return 0
    fi
 }
 

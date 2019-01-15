@@ -1,3 +1,7 @@
+### 0.17.2
+
+* be less harsh if there is no sourcetree
+
 ### 0.17.1
 
 * config files can be scoped to an OS when in dire straits
