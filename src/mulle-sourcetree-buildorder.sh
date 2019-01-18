@@ -229,7 +229,7 @@ sourcetree_buildorder_main()
                    "descend-symlink" \
                    "${SOURCETREE_BUILDORDER_QUALIFIER}" \
                    "${SOURCETREE_BUILDORDER_QUALIFIER}" \
-                   "${SOURCETREE_MODE},in-order" \
+                   "${SOURCETREE_MODE},in-order,no-exekutor" \
                    "collect_buildorder_line"
 
    log_info "Buildorder"
@@ -256,7 +256,7 @@ sourcetree_buildorder_main()
                    "descend-symlink" \
                    "${SOURCETREE_BUILDORDER_QUALIFIER}" \
                    "${SOURCETREE_BUILDORDER_QUALIFIER}" \
-                   "${SOURCETREE_MODE},breadth-order" \
+                   "${SOURCETREE_MODE},breadth-order,no-exekutor" \
                    "augment_buildorder_line"
 
    local pattern

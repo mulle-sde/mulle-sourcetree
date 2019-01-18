@@ -1326,6 +1326,7 @@ sourcetree_walk_main()
    local OPTION_VISIT_QUALIFIER=""
    local OPTION_NODETYPES=""
    local OPTION_PERMISSIONS="descend-symlink"
+   local OPTION_CALLBACK_TRACE='YES'
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_EVAL='YES'
 
@@ -1350,6 +1351,10 @@ sourcetree_walk_main()
 
          -N|--no-eval)
             OPTION_EVAL='NO'
+         ;;
+
+         --no-callback-trace)
+            OPTION_CALLBACK_TRACE='NO'
          ;;
 
          --no-callback-root)
@@ -1536,6 +1541,11 @@ sourcetree_walk_main()
    if [ "${OPTION_EVAL}" = 'YES' ]
    then
       r_comma_concat "${mode}" "eval"
+      mode="${RVAL}"
+   fi
+   if [ "${OPTION_CALLBACK_TRACE}" = 'NO' ]
+   then
+      r_comma_concat "${mode}" "no-trace"
       mode="${RVAL}"
    fi
 

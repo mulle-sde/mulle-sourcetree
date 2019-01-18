@@ -1,3 +1,7 @@
+### 0.17.4
+
+* add --no-callback-trace to walk as the output got tedious for buildorder
+
 ### 0.17.3
 
 * fix installer script

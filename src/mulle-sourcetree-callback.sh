@@ -96,10 +96,23 @@ __call_callback()
 
    local evaluator
 
-   evaluator="rexekutor"
    case ",${mode}," in
-      *,eval,*)
-         evaluator="eval_rexekutor"
+      *,no-trace,*)
+         evaluator=""
+         case ",${mode}," in
+            *,eval,*)
+               evaluator="eval"
+            ;;
+         esac
+      ;;
+
+      *)
+         evaluator="rexekutor"
+         case ",${mode}," in
+            *,eval,*)
+               evaluator="eval_rexekutor"
+            ;;
+         esac
       ;;
    esac
 

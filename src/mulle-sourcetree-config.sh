@@ -1185,11 +1185,11 @@ no-cmakeinherit
 no-cmakeloader
 no-defer
 no-delete
-no-dispense
 no-fs
 no-header
 no-include
 no-import
+no-inplace
 no-link
 no-os-mingw
 no-os-darwin
