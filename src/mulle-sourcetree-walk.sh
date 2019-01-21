@@ -945,7 +945,7 @@ _print_walk_info()
 
    case ",${mode}," in
       *,flat,*)
-         log_verbose "Flat walk \"${datasource:-.}\""
+         log_debug "Flat walk \"${datasource:-.}\""
       ;;
 
       *,in-order,*)

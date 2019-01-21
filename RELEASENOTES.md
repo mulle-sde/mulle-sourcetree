@@ -1,3 +1,7 @@
+### 0.17.5
+
+* fix a verbosity annoyance
+
 ### 0.17.4
 
 * add --no-callback-trace to walk as the output got tedious for buildorder
