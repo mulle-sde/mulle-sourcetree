@@ -154,7 +154,7 @@ __call_callback()
    # MULLE_VIRTUAL     : either ${MULLE_SOURECTREE_SHARE_DIR} or ${MULLE_VIRTUAL_ROOT}
    #
    #
-   log_fluff "Calling callback: ${callback} $*"
+   log_debug "Calling callback: ${callback} $*"
 
    #
    # DO NOT WRAP THIS IN A SUBSHELL, BECAUSE THE CALLBACK LOSES STATE THEN

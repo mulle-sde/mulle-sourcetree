@@ -1,3 +1,7 @@
+### 0.17.6
+
+* a bit less verbose on callback
+
 ### 0.17.5
 
 * fix a verbosity annoyance
