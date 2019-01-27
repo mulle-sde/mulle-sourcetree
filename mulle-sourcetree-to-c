@@ -32,7 +32,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_C_SOURCETREE_UPDATE_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.17.6"
+MULLE_EXECUTABLE_VERSION="0.17.7"
 
 
 usage()
@@ -60,9 +60,9 @@ Usage:
       os         : to producde #ifndef __APPLE__ and such
 
 Flags:
-   --stdout    : Emit to stdout instead
-   --import    : Emit import files
-   --no-import : Don't emit import files
+   --stdout      : Emit to stdout instead
+   --import      : Emit import files
+   --no-import   : Don't emit import files
 
 Environment:
    MULLE_SOURCETREE_TO_C_INCLUDE_FILE        | Use DISABLE to turn of

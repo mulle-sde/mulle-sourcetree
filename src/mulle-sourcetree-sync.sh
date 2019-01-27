@@ -820,12 +820,14 @@ sourcetree_sync_start()
    "sourcetree_sync_${style}" "${SOURCETREE_START}" "${SOURCETREE_START}"
    rval=$?
 
-   if [ $rval -eq 127 ]
+   if [ $rval -eq 127 -a "${OPTION_LENIENT}" = 'YES' ]
    then
       # it's OK we can live with that
       log_verbose "There is no sourcetree in \"${MULLE_VIRTUAL_ROOT}${SOURCETREE_START}\""
       return 0
    fi
+
+   return $rval
 }
 
 
@@ -858,6 +860,7 @@ sourcetree_sync_main()
    local OPTION_FETCH_REFRESH="DEFAULT"
    local OPTION_FETCH_SYMLINK="DEFAULT"
    local OPTION_FETCH_ABSOLUTE_SYMLINK="DEFAULT"
+   local OPTION_LENIENT='YES'
 
    while [ $# -ne 0 ]
    do
@@ -869,6 +872,14 @@ sourcetree_sync_main()
          #
          # stuff passed to mulle-fetch
          #
+         --lenient)
+            OPTION_LENIENT='YES'
+         ;;
+
+         --no-lenient)
+            OPTION_LENIENT='NO'
+         ;;
+
          --cache-refresh|--refresh|--mirror-refresh)
             OPTION_FETCH_REFRESH='YES'
          ;;

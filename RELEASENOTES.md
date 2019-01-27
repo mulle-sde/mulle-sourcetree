@@ -1,3 +1,7 @@
+### 0.17.7
+
+* improved clean code
+
 ### 0.17.6
 
 * a bit less verbose on callback

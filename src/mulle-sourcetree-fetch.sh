@@ -51,6 +51,7 @@ r_sourcetree_guess_address()
    fi
 
    RVAL="`${MULLE_FETCH:-mulle-fetch} \
+               ${MULLE_TECHNICAL_FLAGS} \
                ${MULLE_FETCH_FLAGS} \
             nameguess \
                -s "${nodetype}" \
@@ -79,6 +80,7 @@ r_sourcetree_guess_nodetype()
    fi
 
    RVAL="`${MULLE_FETCH:-mulle-fetch} \
+                  ${MULLE_TECHNICAL_FLAGS} \
                   ${MULLE_FETCH_FLAGS} \
                typeguess \
                   "${evaledurl}"`" || return 1
@@ -180,7 +182,9 @@ sourcetree_list_operations()
 
    local nodetype="$1"
 
-   ${MULLE_FETCH:-mulle-fetch} ${MULLE_FETCH_FLAGS} -s \
+   ${MULLE_FETCH:-mulle-fetch} \
+         ${MULLE_TECHNICAL_FLAGS} \
+         ${MULLE_FETCH_FLAGS} -s \
       operation -s "${nodetype}" list
 }
 

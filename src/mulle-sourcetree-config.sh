@@ -646,14 +646,14 @@ sourcetree_add_node()
             ;;
 
             *)
-               log_warning "There is no directory or file named \"${_address}\" ($PWD#${MULLE_USER_PWD}/)"
+               log_warning "There is no directory or file named \"${_address}\" (${PWD#${MULLE_USER_PWD}/})"
             ;;
          esac
       fi
    else
       if [ -e "${_address}" -a "${_nodetype}" != "local" ]
       then
-         log_warning "A directory or file named \"${_address}\" already exists ($PWD#${MULLE_USER_PWD}/)"
+         log_warning "A directory or file named \"${_address}\" already exists (${PWD#${MULLE_USER_PWD}/})"
       fi
    fi
 

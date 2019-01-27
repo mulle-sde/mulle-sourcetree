@@ -34,11 +34,24 @@ MULLE_SOURCETREE_CLEAN_SH="included"
 
 sourcetree_clean_usage()
 {
-    cat <<EOF >&2
-Usage:
-   ${MULLE_USAGE_NAME} clean
+   [ $# -ne 0 ] && log_error "$*"
 
-   Remove everything fetched or symlinked.
+   cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} clean [options]
+
+   Remove everything fetched or symlinked, except when you specify
+   a graveyard option. You can combine both with a second --fs though.
+
+Options:
+   --all-graveyards : remove all graveyards, implies --no-fs      
+   --fs             : remove fetched files (default)
+   --graveyard      : remove host graveyard, implies --no-fs
+   --no-fs          : don't remove fetched files
+   --no-graveyard   : don't remove graveyards (default)
+   --no-share       : don't forcibly remove share directory (default)
+   --share          : forcibly remove share directory 
+
 EOF
   exit 1
 }
@@ -176,6 +189,8 @@ sourcetree_clean()
       fi
    done
    IFS="${DEFAULT_IFS}"; set +o noglob
+
+   :
 }
 
 
@@ -186,6 +201,8 @@ sourcetree_clean_main()
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_IS_UPTODATE='NO'
    local OPTION_CLEAN_SHARE_DIR='DEFAULT'
+   local OPTION_CLEAN_GRAVEYARD='DEFAULT'
+   local OPTION_CLEAN_FS='DEFAULT'
 
    [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
 
@@ -204,9 +221,26 @@ sourcetree_clean_main()
             OPTION_CLEAN_SHARE_DIR='NO'
          ;;
 
+         --graveyard)
+            OPTION_CLEAN_GRAVEYARD='YES'
+            OPTION_CLEAN_FS='NO'
+         ;;
+
+         --all-graveyards)
+            OPTION_CLEAN_GRAVEYARD='ALL'
+            OPTION_CLEAN_FS='NO'
+         ;;
+
+         --fs)
+            OPTION_CLEAN_FS='YES'
+         ;;
+
+         --no-db)
+            OPTION_CLEAN_FS='NO'
+         ;;
+
          -*)
-            log_error "${MULLE_EXECUTABLE_FAIL_PRECLEAN}: Unknown clean option $1"
-            sourcetree_clean_usage
+            sourcetree_clean_usage "Unknown clean option $1"
          ;;
 
          *)
@@ -217,7 +251,8 @@ sourcetree_clean_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_clean_usage
+   [ "$#" -eq 0 ] || sourcetree_clean_usage "Superflous arguments $*"
+
 
    if [ -z "${MULLE_PATH_SH}" ]
    then
@@ -230,38 +265,66 @@ sourcetree_clean_main()
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"      || return 1
    fi
 
-   if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
+   case "${OPTION_CLEAN_GRAVEYARD}" in
+      NO|DEFAULT)
+      ;;
+
+      ALL)
+         local graveyard
+
+         log_verbose "Removing all graveyards"
+
+         shopt -s nullglob
+         # clean for all hosts
+         for graveyard in ${MULLE_SOURCETREE_VAR_DIR}/../../*/sourcetree/graveyard
+         do
+            r_simplified_path "${graveyard}"
+            rmdir_safer "${RVAL}"
+         done
+         shopt -u nullglob
+      ;;
+
+      YES)
+         local graveyard
+
+         graveyard="${MULLE_SOURCETREE_VAR_DIR}/../../${MULLE_HOSTNAME}/sourcetree/graveyard"
+
+         log_verbose "Removing host graveyard"
+         r_simplified_path "${graveyard}"
+         rmdir_safer "${RVAL}"
+      ;;
+   esac
+
+   if [ "${OPTION_CLEAN_FS}" != 'NO' ]
    then
-      # shellcheck source=mulle-sourcetree-walk.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
-   fi
-
-   if ! cfg_exists "${SOURCETREE_START}"
-   then
-      log_verbose "There is no \"${SOURCETREE_CONFIG_FILENAME}\" here"
-   fi
-
-   local rval
-
-   rval=0
-   if db_exists "${SOURCETREE_START}"
-   then
-
-      local mode
-
-      mode="${SOURCETREE_MODE}"
-      if [ "${SOURCETREE_MODE}" != "flat" ]
+      if ! cfg_exists "${SOURCETREE_START}"
       then
-         r_comma_concat "${mode}" "pre-order"
-         mode="${RVAL}"
+         log_verbose "There is no \"${SOURCETREE_CONFIG_FILENAME}\" here"
       fi
 
       local rval
 
-      sourcetree_clean "${mode}"
-      rval=$?
-   else
-      log_verbose "Already clean"
+      rval=0
+      if db_exists "${SOURCETREE_START}"
+      then
+
+         # shellcheck source=mulle-sourcetree-walk.sh
+         [ -z "${MULLE_SOURCETREE_WALK_SH}" ] && \
+            . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
+
+         local mode
+
+         mode="${SOURCETREE_MODE}"
+         if [ "${SOURCETREE_MODE}" != "flat" ]
+         then
+            r_comma_concat "${mode}" "breadth-order"
+            mode="${RVAL}"
+         fi
+
+         sourcetree_clean "${mode}"
+      else
+         log_verbose "Already clean"
+      fi
    fi
 
    if [ "${OPTION_CLEAN_SHARE_DIR}" = 'YES' ]
@@ -270,10 +333,7 @@ sourcetree_clean_main()
       # if its outside probably not...
       rmdir_safer "${MULLE_SOURCETREE_STASH_DIR}"
    else
-      log_debug "Not removing MULLE_SOURCETREE_STASH_DIR because of rval $?"
       rmdir_if_empty "${MULLE_SOURCETREE_STASH_DIR}"
    fi
-
-   return $rval
 }
 

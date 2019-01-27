@@ -92,7 +92,7 @@ run_test()
    #
    MULLE_VIRTUAL_ROOT="`physicalpath "${directory}"`"
 
-   if run_mulle_sourcetree ${UPDATE_FLAGS} --share update
+   if run_mulle_sourcetree ${UPDATE_FLAGS} --share update --no-lenient
    then
       internal_fail "#2 update succeeded unexpectedly"
    fi
@@ -107,7 +107,7 @@ run_test()
    #
    MULLE_VIRTUAL_ROOT="`physicalpath "${directory}/project"`"
 
-   if ! run_mulle_sourcetree ${UPDATE_FLAGS} --share update
+   if ! run_mulle_sourcetree ${UPDATE_FLAGS} --share update --no-lenient
    then
       internal_fail "#3 update failed unexpectedly"
    fi
@@ -143,7 +143,7 @@ run_test()
    #
    cd "${directory}/project/b"
 
-   if ! run_mulle_sourcetree ${UPDATE_FLAGS} --share update
+   if ! run_mulle_sourcetree ${UPDATE_FLAGS} --share update --no-lenient
    then
       internal_fail "#5 update failed unexpectedly"
    fi
