@@ -408,7 +408,7 @@ _visit_recurse()
 
    if ! walk_filter_marks "${_marks}" "${descendqualifier}"
    then
-      log_fluff "Node \"${_address}\": \"${_marks}\" doesn't jive with marks \"${descendqualifier}\""
+      log_fluff "Node \"${_address}\" marks \"${_marks}\" don't jive with \"${descendqualifier}\""
       return 0
    fi
 
@@ -542,17 +542,6 @@ ${_raw_userinfo}"
 }
 
 
-walk_remove_from_visited()
-{
-   if r_visit_line_from_node
-   then
-      r_escaped_sed_pattern "${RVAL}"
-
-      VISITED="`sed -e "/^${RVAL}$/d" <<< "${VISITED}"`"
-   fi
-}
-
-
 walk_add_to_visited()
 {
    if ! r_visit_line_from_node
@@ -560,15 +549,37 @@ walk_add_to_visited()
       return 0
    fi
 
-   if find_line "${VISITED}" "${RVAL}"
+   local lineid
+
+   lineid="${RVAL}"
+   if find_line "${VISITED}" "${lineid}"
    then
-      log_fluff "A node \"${_address}/${_url}\" has already been visited"
-      return 1
+      log_fluff "A node with \"${lineid}\" has already been visited"
+      return 126
    fi
 
-   r_add_line "${VISITED}" "${RVAL}"
+   r_add_line "${VISITED}" "${lineid}"
    VISITED="${RVAL}"
+
+   return 0
 }
+
+
+walk_remove_from_visited()
+{
+   if ! r_visit_line_from_node
+   then
+      return 0
+   fi
+
+   local lineid
+
+   lineid="${RVAL}"
+   r_escaped_sed_pattern "${lineid}"
+   VISITED="`sed -e "/^${RVAL}$/d" <<< "${VISITED}"`"
+}
+
+
 
 #
 # datasource
@@ -618,7 +629,7 @@ _visit_node()
       *,flat,*)
          if ! walk_add_to_visited
          then
-            return 0
+            return 126  # marker for dedupe
          fi
 
          log_debug "No recursion"
@@ -632,7 +643,7 @@ _visit_node()
          #
          if ! walk_add_to_visited
          then
-            return 0
+            return 126
          fi
 
          log_debug "In-order recursion into ${next_datasource}"
@@ -648,12 +659,13 @@ _visit_node()
       *,pre-order,*)
          if ! walk_add_to_visited
          then
-            return 0
+            return 126
          fi
 
          log_fluff "Pre-order recursion into ${next_datasource}"
          _visit_callback "$@"
          rval=$?
+
          if [ $rval -eq 0 ]
          then
             _visit_recurse "$@"
@@ -663,13 +675,9 @@ _visit_node()
 
       *,breadth-order,*)
          # node will already have been visited flat, so don't dedupe again
+         log_fluff "Breadth-first recursion into ${next_datasource}"
+         _visit_recurse "$@"
          rval=$?
-         if [ $rval -eq 0 ]
-         then
-            log_fluff "Breadth-first recursion into ${next_datasource}"
-            _visit_recurse "$@"
-            rval=$?
-         fi
       ;;
    esac
 
@@ -999,6 +1007,8 @@ _walk_nodelines()
       return 0
    fi
 
+   local recurse_nodelines
+
    local rval
 
    case ",${mode}," in
@@ -1008,14 +1018,12 @@ _walk_nodelines()
          r_comma_concat "${mode}" 'flat'
          tmpmode="${RVAL}"
 
-         set -o noglob ; IFS="
-"
+         set -o noglob ; IFS=$'\n'
          for nodeline in ${nodelines}
          do
             IFS="${DEFAULT_IFS}" ; set +o noglob
 
             [ -z "${nodeline}" ] && continue
-
 
             _visit_filter_nodeline "${nodeline}" \
                                    "${datasource}" \
@@ -1027,19 +1035,31 @@ _walk_nodelines()
                                    "${tmpmode}" \
                                    "$@"
             rval=$?
-            if [ $rval -ne 0 ]
+            if [ $rval -eq 0 ]
             then
-               log_debug "Walk aborts"
+               r_add_line "${recurse_nodelines}" "${nodeline}"
+               recurse_nodelines="${RVAL}"
+               continue
+            fi
+
+            # deduped is 126 which is OK
+            if [ $rval -ne 126 ]
+            then
+               log_debug "Walk aborts (with $rval)"
                return 1
             fi
+            log_debug "Nodeline \"${nodeline}\" deduped"
          done
+      ;;
+
+      *)
+         recurse_nodelines="${nodelines}"
       ;;
    esac
 
 
-   set -o noglob ; IFS="
-"
-   for nodeline in ${nodelines}
+   set -o noglob ; IFS=$'\n'
+   for nodeline in ${recurse_nodelines}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
 
@@ -1057,8 +1077,12 @@ _walk_nodelines()
       rval=$?
       if [ $rval -ne 0 ]
       then
-         log_debug "Walk aborts"
-         return $rval
+         if [  $rval -ne 126 ]
+         then
+            log_debug "Walk aborts (with %rval)"
+            return $rval
+         fi
+         log_debug "Nodeline \"${nodeline}\" deduped"
       fi
    done
 

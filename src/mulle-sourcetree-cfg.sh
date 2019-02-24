@@ -371,7 +371,7 @@ cfg_change_nodeline()
    local newescaped
    r_escaped_sed_pattern "${oldnodeline}"
    oldescaped="${RVAL}"
-   r_escaped_sed_pattern "${newnodeline}"
+   r_escaped_sed_replacement "${newnodeline}"
    newescaped="${RVAL}"
 
    log_debug "Editing \"${SOURCETREE_CONFIG_FILENAME}\""
@@ -698,8 +698,7 @@ cfg_reuuid()
 
    [ -z "${nodelines}" ] && return 0
 
-   set -o noglob ; IFS="
-"
+   set -o noglob ; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob

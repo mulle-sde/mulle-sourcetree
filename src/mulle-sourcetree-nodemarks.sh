@@ -413,8 +413,7 @@ r_nodemarks_sort()
    local result
    local i
 
-   IFS="
-"
+   IFS=$'\n'
    for i in `tr ',' '\n' <<< "${marks}" | LC_ALL=C sort -u`
    do
       r_comma_concat "${result}" "${i}"

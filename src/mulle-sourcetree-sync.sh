@@ -280,8 +280,7 @@ _recurse_db_nodelines()
 
    local nodeline
 
-   set -o noglob ; IFS="
-"
+   set -o noglob ; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
@@ -336,8 +335,7 @@ _recurse_config_nodelines()
 
    local nodeline
 
-   set -o noglob ; IFS="
-"
+   set -o noglob ; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
@@ -452,8 +450,7 @@ _sourcetree_sync_only_share()
 
    local nodeline
 
-   set -o noglob ; IFS="
-"
+   set -o noglob ; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob

@@ -91,9 +91,9 @@ nodetype from url ($evaledurl)"
 }
 
 
-sourcetree_fetch_operation()
+sourcetree_sync_operation()
 {
-   log_entry "sourcetree_fetch_operation" "$@"
+   log_entry "sourcetree_sync_operation" "$@"
 
    local opname="$1"
    local options="$2"
@@ -115,10 +115,13 @@ sourcetree_fetch_operation()
    local evaledtag
    local evaledfetchoptions
 
-   evaledurl="`eval echo "${url}"`"
+   # we use evaluated values to then pass as "environment" into the
+   # echo, this allows us to specify a URL as
+   #
    evaledtag="`eval echo "${tag}"`"
    evaledbranch="`eval echo "${branch}"`"
-   evaledfetchoptions="`eval echo "${_fetchoptions}"`"
+   evaledurl="`MULLE_BRANCH="${evaledbranch}" MULLE_TAG="${evaledtag}" eval echo "${url}"`"
+   evaledfetchoptions="`MULLE_URL="${evaledurl}" MULLE_BRANCH="${evaledbranch}" MULLE_TAG="${evaledtag}" eval echo "${_fetchoptions}"`"
 
    [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
 

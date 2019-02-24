@@ -627,8 +627,7 @@ emit_cmake_dependencies()
 
    local dependency
 
-   set -o noglob ; IFS="
-"
+   set -o noglob ; IFS=$'\n'
    for dependency in ${dependencies}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob

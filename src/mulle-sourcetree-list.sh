@@ -46,6 +46,11 @@ Usage:
    This command only reads config files.
 
 Options:
+   -l                       : output long information
+   -ll                      : output full information
+   -r                       : recursive list
+   -g                       : output branch/tag information (-G raw)
+   -u                       : output URL information  (-U raw)
    --nodetypes <value>      : node types to list (default: ALL)
    --marks <value>          : specify marks to match (e.g. build)
    --qualifier <value>      : specify marks qualifier
@@ -435,7 +440,17 @@ sourcetree_list_main()
          #
          #
          #
-         -g)
+         -g|--output-git)
+            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+            then
+               OPTION_FORMAT="%a;%t!;%b!\\n"
+            else
+               OPTION_FORMAT="${OPTION_FORMAT%??}"
+               OPTION_FORMAT="${OPTION_FORMAT};%t!;%b!\\n"
+            fi
+         ;;
+
+         -G)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
                OPTION_FORMAT="%a;%t;%b\\n"
@@ -466,6 +481,16 @@ sourcetree_list_main()
             else
                OPTION_FORMAT="${OPTION_FORMAT%??}"
                OPTION_FORMAT="${OPTION_FORMAT};%u!;%f\\n"
+            fi
+         ;;
+
+         -U)
+            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+            then
+               OPTION_FORMAT="%a;%u;%f\\n"
+            else
+               OPTION_FORMAT="${OPTION_FORMAT%??}"
+               OPTION_FORMAT="${OPTION_FORMAT};%u;%f\\n"
             fi
          ;;
 

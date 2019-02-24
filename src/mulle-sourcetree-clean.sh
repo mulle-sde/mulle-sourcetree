@@ -44,13 +44,13 @@ Usage:
    a graveyard option. You can combine both with a second --fs though.
 
 Options:
-   --all-graveyards : remove all graveyards, implies --no-fs      
+   --all-graveyards : remove all graveyards, implies --no-fs
    --fs             : remove fetched files (default)
    --graveyard      : remove host graveyard, implies --no-fs
    --no-fs          : don't remove fetched files
    --no-graveyard   : don't remove graveyards (default)
    --no-share       : don't forcibly remove share directory (default)
-   --share          : forcibly remove share directory 
+   --share          : forcibly remove share directory
 
 EOF
   exit 1
@@ -154,7 +154,7 @@ sourcetree_clean()
                  "" \
                  "" \
                  "" \
-                 "${mode},no-dbcheck" \
+                 "${mode},no-dbcheck,no-trace" \
                  "walk_clean"
 
    local filename
@@ -165,8 +165,7 @@ sourcetree_clean()
 
    local uuid
 
-   set -o noglob ; IFS="
-"
+   set -o noglob ; IFS=$'\n'
    for filename in ${DELETE_FILES} ${DELETE_DIRECTORIES}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob

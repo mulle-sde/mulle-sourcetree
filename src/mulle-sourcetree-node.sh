@@ -395,10 +395,10 @@ node_printf()
 
    case ",${mode}," in
       *,output_eval,*)
-         url="`eval echo "${url}"`"
          branch="`eval echo "${branch}"`"
          tag="`eval echo "${tag}"`"
-         fetchoptions="`eval echo "${fetchoptions}"`"
+         url="`MULLE_BRANCH="${branch}" MULLE_TAG="${tag}" eval echo "${url}"`"
+         fetchoptions="`MULLE_BRANCH="${branch}" MULLE_TAG="${branch}" MULLE_URL="${url}"  eval echo "${fetchoptions}"`"
       ;;
    esac
 
@@ -491,7 +491,7 @@ node_printf()
 
          %u!*)
             switch="--url"
-            value="`eval echo "${_url}"`"
+            value="`MULLE_BRANCH=$(eval echo "${_branch}") MULLE_TAG=$(eval echo "${_tag}") eval echo "${_url}"`"
             formatstring="${formatstring:1}"
          ;;
 

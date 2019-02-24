@@ -744,8 +744,7 @@ line_mover()
    local line
    local prev
 
-   IFS="
-"
+   IFS=$'\n'
    while read line
    do
       case "${direction}" in
@@ -1735,34 +1734,18 @@ sourcetree_common_main()
          sourcetree_${COMMAND}_node "${argument}"
       ;;
 
-      move)
-         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
-         address="$1"
-         [ -z "${address}" ] && log_error "empty address" && ${USAGE}
-         shift
-         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
-         direction="$1"
-         shift
-         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
-
-         sourcetree_${COMMAND}_node "${address}" "${direction}"
-      ;;
-
-      remove)
-         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
-         address="$1"
-         [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
-         shift
-         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
-         sourcetree_${COMMAND}_node${suffix} "${address}"
-      ;;
-
       get|set)
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          address="$1"
          [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
          shift
          sourcetree_${COMMAND}_node${suffix} "${address}" "$@"
+      ;;
+
+      info)
+         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+
+         sourcetree_info_node
       ;;
 
       knownmarks)
@@ -1782,10 +1765,42 @@ sourcetree_common_main()
          sourcetree_${COMMAND}_node${suffix} "${address}" "${mark}"
       ;;
 
-      info)
+      move)
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         address="$1"
+         [ -z "${address}" ] && log_error "empty address" && ${USAGE}
+         shift
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         direction="$1"
+         shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_info_node
+         sourcetree_${COMMAND}_node "${address}" "${direction}"
+      ;;
+
+      rename)
+         local newaddress
+
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         address="$1"
+         [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
+         shift
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         newaddress="$1"
+         [ -z "${newaddress}" ] && log_error "empty argument" && ${USAGE}
+         shift
+         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+
+         sourcetree_set_node "${address}" address "${newaddress}"
+      ;;
+
+      remove)
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         address="$1"
+         [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
+         shift
+         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+         sourcetree_${COMMAND}_node${suffix} "${address}"
       ;;
    esac
 }
@@ -1800,12 +1815,23 @@ sourcetree_add_main()
    sourcetree_common_main "$@"
 }
 
+
 sourcetree_duplicate_main()
 {
    log_entry "sourcetree_duplicate_main" "$@"
 
    USAGE="sourcetree_duplicate_usage"
    COMMAND="duplicate"
+   sourcetree_common_main "$@"
+}
+
+
+sourcetree_rename_main()
+{
+   log_entry "sourcetree_rename_main" "$@"
+
+   USAGE="sourcetree_rename_usage"
+   COMMAND="rename"
    sourcetree_common_main "$@"
 }
 

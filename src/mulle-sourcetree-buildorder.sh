@@ -118,7 +118,7 @@ augment_buildorder_line()
 
    if ! find_line "${_remainder_collection}" "${filename}"
    then
-      return
+      return 0
    fi
    _remainder_collection="`fgrep -x -v -e "${filename}" <<< "${_remainder_collection}"`"
 
@@ -136,6 +136,7 @@ augment_buildorder_line()
 
    if [ -z "${_remainder_collection}" ]
    then
+      log_debug "Done with collection"
       return 2  #signal done but no error
    fi
 
@@ -246,12 +247,16 @@ sourcetree_buildorder_main()
       return 0
    fi
 
+   log_fluff "Collected \"${_buildorder_collection}\""
+
+
    local _remainder_collection
    local _augmented_collection
 
    _remainder_collection="${_buildorder_collection}"
 
-   WALK_DEDUPE_MODE="none"
+   # why none here ?
+   WALK_DEDUPE_MODE="address-filename"
    sourcetree_walk "" \
                    "descend-symlink" \
                    "${SOURCETREE_BUILDORDER_QUALIFIER}" \
@@ -261,8 +266,7 @@ sourcetree_buildorder_main()
 
    local pattern
 
-   set -o noglob ; IFS="
-"
+   set -o noglob ; IFS=$'\n'
    for filename in ${_buildorder_collection}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob

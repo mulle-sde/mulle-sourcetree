@@ -215,7 +215,7 @@ _do_fetch_operation()
    r_mulle_fetch_eval_options
    options="${RVAL}"
 
-   sourcetree_fetch_operation "${opname}" "${options}" \
+   sourcetree_sync_operation "${opname}" "${options}" \
                                           "${_url}" \
                                           "${_address}" \
                                           "${_branch}" \
@@ -334,13 +334,13 @@ do_operation()
    options="${RVAL}"
 
 
-   sourcetree_fetch_operation "${opname}" "${options}" \
-                                    "${_url}" \
-                                    "${destination}" \
-                                    "${_branch}" \
-                                    "${_tag}" \
-                                    "${_nodetype}" \
-                                    "${_fetchoptions}"
+   sourcetree_sync_operation "${opname}" "${options}" \
+                                          "${_url}" \
+                                          "${destination}" \
+                                          "${_branch}" \
+                                          "${_tag}" \
+                                          "${_nodetype}" \
+                                          "${_fetchoptions}"
 }
 
 
@@ -790,7 +790,8 @@ __update_perform_item()
             # fetch part didn't work out we need to remove
             # the previousaddress
             update_safe_remove_node "${previousfilename}" "${_marks}" "${_uuid}" "${database}"
-            fail "Failed to ${item} ${_url}"
+            log_fluff "Failed to ${item} ${_url}" # operation should have errored already
+            exit 1
          fi
          contentschanged='YES'
          remember='YES'
@@ -830,7 +831,7 @@ __update_perform_item()
                   return 1
                fi
 
-               fail "The fetch of ${_url} failed and it is required."
+               fail "The fetch of ${_address} failed and it is required."
             ;;
          esac
 
@@ -917,8 +918,7 @@ _update_perform_actions()
 
    local item
 
-   set -o noglob ; IFS="
-"
+   set -o noglob ; IFS=$'\n'
    for item in ${actionitems}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
@@ -1272,8 +1272,7 @@ do_actions_with_nodelines()
 
    local nodeline
 
-   set -o noglob ; IFS="
-"
+   set -o noglob ; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob

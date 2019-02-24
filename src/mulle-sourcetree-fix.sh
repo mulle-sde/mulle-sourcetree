@@ -99,9 +99,8 @@ r_locate_fix_file()
    r_fast_basename "${SOURCETREE_FIX_FILENAME}"
    fixname=${RVAL}
 
-   IFS="
-"
-   for found in `find "${start}" -name "${fixname}" -type f -print`
+   IFS=$'\n'
+   for found in `rexekutor find "${start}" -name "${fixname}" -type f -print`
    do
       IFS="${DEFAULT_IFS}"
 

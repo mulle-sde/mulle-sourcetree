@@ -338,7 +338,8 @@ db_bury()
    local gravepath
    local graveyard
 
-   graveyard="${databasedir}/../graveyard"
+   r_fast_dirname "${databasedir}"
+   graveyard="${RVAL}/graveyard"
    gravepath="${graveyard}/${uuid}"
 
    local rootdir
@@ -625,8 +626,7 @@ db_fetch_uuid_for_evaledurl()
       local candidate
 
       cd "${databasedir}"
-      IFS="
-"
+      IFS=$'\n'
       for candidate in `fgrep -l -x -s -e "${searchurl}" *`
       do
          IFS="${DEFAULT_IFS}"
@@ -666,8 +666,7 @@ db_fetch_uuid_for_filename()
       local candidate
 
       cd "${databasedir}"
-      IFS="
-"
+      IFS=$'\n'
       for candidate in `fgrep -l -x -s -e "${searchfilename}" *`
       do
          IFS="${DEFAULT_IFS}"
