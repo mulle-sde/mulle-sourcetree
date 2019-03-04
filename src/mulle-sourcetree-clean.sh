@@ -57,6 +57,14 @@ EOF
 }
 
 
+#
+# emit clean action
+#
+#  P - protect, don't delete
+#  L - delete symlink
+#  D - delete directory
+#  F - delete file
+#
 walk_clean()
 {
    log_entry "${C_RESET}walk_clean${C_DEBUG}" "${MULLE_FILENAME}" "${MULLE_MARKS}"
@@ -88,9 +96,7 @@ walk_clean()
    if ! nodemarks_contain "${marks}" "delete"
    then
       log_fluff "\"${filename}\" is protected from delete"
-      r_add_line "${NO_DELETES}" "${filename}"
-      NO_DELETES="${RVAL}"
-      return
+      echo "P ${filename}"
    fi
 
    if [ -e "${filename}" ]
@@ -98,18 +104,15 @@ walk_clean()
       if [ -L "${filename}" ]
       then
          log_fluff "Symlink \"${filename}\" marked for delete."
-         r_add_line "${DELETE_SYMLINKS}" "${filename}"
-         DELETE_SYMLINKS="${RVAL}"
+         echo "L ${filename}"
       else
          if [ -d "${filename}" ]
          then
             log_fluff "Directory \"${filename}\" marked for delete."
-            r_add_line "${DELETE_DIRECTORIES}" "${filename}"
-            DELETE_DIRECTORIES="${RVAL}"
+            echo "D ${filename}"
          else
             log_fluff "File \"${filename}\" marked for delete."
-            r_add_line "${DELETE_FILES}" "${filename}"
-            DELETE_FILES="${RVAL}"
+            echo "F ${filename}"
          fi
       fi
    else
@@ -146,46 +149,61 @@ sourcetree_clean()
    # We must walk the dbs, because only the dbs know where
    # stuff eventually ended up being placed (think share)
    #
-   local WALK_DEDUPE_MODE
+   local commands
 
-   WALK_DEDUPE_MODE="filename"
+   commands="`walk_db_uuids "ALL" \
+                             "" \
+                             "" \
+                             "" \
+                             "${mode},no-dbcheck,no-trace,dedupe-filename" \
+                             "walk_clean" `"
 
-   walk_db_uuids "ALL" \
-                 "" \
-                 "" \
-                 "" \
-                 "${mode},no-dbcheck,no-trace" \
-                 "walk_clean"
 
+   log_debug "COMMANDS: ${commands}"
+
+   local line
    local filename
 
-   log_debug "DELETE_FILES:       ${DELETE_FILES}"
-   log_debug "DELETE_DIRECTORIES: ${DELETE_DIRECTORIES}"
-   log_debug "NO_DELETES:         ${NO_DELETES}"
+   local protected
+
+   set -o noglob ; IFS=$'\n'
+   for line in ${commands}
+   do
+      IFS="${DEFAULT_IFS}"; set +o noglob
+
+      filename="${line:2}"
+      case "${line}" in
+         P*)
+            r_add_line "${protected}" "${filename}"
+            protected=${RVAL}
+         ;;
+      esac
+   done
 
    local uuid
 
    set -o noglob ; IFS=$'\n'
-   for filename in ${DELETE_FILES} ${DELETE_DIRECTORIES}
+   for line in ${commands}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob
 
-      if ! find_line "${NO_DELETES}" "${filename}"
+      filename="${line:2}"
+      if find_line "${protected}" "${filename}"
       then
-         uuid="`node_uuidgen`"
-
-         db_bury "${SOURCETREE_START}" "${uuid}" "${filename}"
+         continue
       fi
-   done
 
-   for filename in ${DELETE_SYMLINKS}
-   do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      case "${line}" in
+         D*|F*)
+            uuid="`node_uuidgen`"
 
-      if ! find_line "${NO_DELETES}" "${filename}"
-      then
-         remove_file_if_present "${filename}"
-      fi
+            db_bury "${SOURCETREE_START}" "${uuid}" "${filename}"
+         ;;
+
+         L*)
+            remove_file_if_present "${filename}"
+         ;;
+      esac
    done
    IFS="${DEFAULT_IFS}"; set +o noglob
 

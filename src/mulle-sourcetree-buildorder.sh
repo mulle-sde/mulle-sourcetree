@@ -99,10 +99,7 @@ collect_buildorder_line()
    r_create_buildorder_filename "${_filename}"
    filename="${RVAL}"
 
-   r_add_line "${_buildorder_collection}" "${filename}"
-   _buildorder_collection="${RVAL}"
-
-   return 0
+   echo "${filename}"
 }
 
 
@@ -131,13 +128,12 @@ augment_buildorder_line()
       fi
    fi
 
-   r_add_line "${_augmented_collection}" "${filename};${marks}"
-   _augmented_collection="${RVAL}"
+   echo "${filename};${marks}"
 
    if [ -z "${_remainder_collection}" ]
    then
       log_debug "Done with collection"
-      return 2  #signal done but no error
+      exit 2  #signal done but no error
    fi
 
    return 0
@@ -152,6 +148,7 @@ sourcetree_buildorder_main()
    local OPTION_CALLBACK
    local OPTION_ABSOLUTE='NO'
    local OUTPUT_MARKS='YES'
+   local OPTION_OUTPUT_COLLECTION='NO'
 
    while [ $# -ne 0 ]
    do
@@ -225,13 +222,12 @@ sourcetree_buildorder_main()
    #
    local _buildorder_collection
 
-   WALK_DEDUPE_MODE="address-filename"
-   sourcetree_walk "" \
-                   "descend-symlink" \
-                   "${SOURCETREE_BUILDORDER_QUALIFIER}" \
-                   "${SOURCETREE_BUILDORDER_QUALIFIER}" \
-                   "${SOURCETREE_MODE},in-order,no-exekutor" \
-                   "collect_buildorder_line"
+   _buildorder_collection="`sourcetree_walk "" \
+                                            "" \
+                                            "${SOURCETREE_BUILDORDER_QUALIFIER}" \
+                                            "${SOURCETREE_BUILDORDER_QUALIFIER}" \
+                                            "${SOURCETREE_MODE},in-order,no-exekutor" \
+                                            "collect_buildorder_line"`"
 
    log_info "Buildorder"
 
@@ -254,15 +250,12 @@ sourcetree_buildorder_main()
    local _augmented_collection
 
    _remainder_collection="${_buildorder_collection}"
-
-   # why none here ?
-   WALK_DEDUPE_MODE="address-filename"
-   sourcetree_walk "" \
-                   "descend-symlink" \
-                   "${SOURCETREE_BUILDORDER_QUALIFIER}" \
-                   "${SOURCETREE_BUILDORDER_QUALIFIER}" \
-                   "${SOURCETREE_MODE},breadth-order,no-exekutor" \
-                   "augment_buildorder_line"
+   _augmented_collection="`sourcetree_walk "" \
+                                           "" \
+                                           "${SOURCETREE_BUILDORDER_QUALIFIER}" \
+                                           "${SOURCETREE_BUILDORDER_QUALIFIER}" \
+                                           "${SOURCETREE_MODE},breadth-order,no-exekutor" \
+                                           "augment_buildorder_line"`"
 
    local pattern
 

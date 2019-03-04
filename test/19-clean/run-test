@@ -120,19 +120,19 @@ run_test2()
       internal_fail "#2 update failed unexpectedly"
    fi
 
-   [ -d "shared/a" ] || internal_fail "#2 shared/a should exist"
-   [ -d "shared/b" ] || internal_fail "#2 shared/b should exist"
-   [ -d "c" ]        || internal_fail "#2 c should exist"
+   [ -d "shared/a" ] || internal_fail "#2.1 shared/a should exist"
+   [ -d "shared/b" ] || internal_fail "#2.1 shared/b should exist"
+   [ -d "c" ]        || internal_fail "#2.1 c should exist"
 
    if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
    then
       internal_fail "clean failed unexpectedly"
    fi
 
-   [ ! -d "shared/a" ] || internal_fail "#2 shared/a should not exist"
-   [ ! -d "shared/b" ] || internal_fail "#2 shared/b should not exist"
-   [ ! -d "c" ]        || internal_fail "#2 shared/c should not exist"
-   [ ! -d "shared" ]   || log_warning "#2 shared could have been removed"
+   [ ! -d "shared/a" ] || internal_fail "#2.2 shared/a should not exist"
+   [ ! -d "shared/b" ] || internal_fail "#2.2 shared/b should not exist"
+   [ ! -d "c" ]        || internal_fail "#2.2 shared/c should not exist"
+   [ ! -d "shared" ]   || log_warning   "#2.2 shared could have been removed"
 }
 
 
@@ -164,10 +164,10 @@ run_test3()
       ;;
 
       *)
-         [ -L "shared/a" ]      || internal_fail "#3 shared/a should exist as a symlink"
-         [ ! -e "shared/b" ]    || internal_fail "#3 shared/b should not exist"
-         [ ! -e "shared/a/b" ]  || internal_fail "#3 shared/a/b should not exist"
-         [ -L "c" ]             || internal_fail "#3 c should exist as a symlink"
+         [ -L "shared/a" ]      || internal_fail "#3.1 shared/a should exist as a symlink"
+         [ ! -e "shared/b" ]    || internal_fail "#3.1 shared/b should not exist"
+         [ ! -e "shared/a/b" ]  || internal_fail "#3.1 shared/a/b should not exist"
+         [ -L "c" ]             || internal_fail "#3.1 c should exist as a symlink"
       ;;
    esac
 
@@ -182,12 +182,12 @@ run_test3()
 
    ls -lR  ${project}
 
-   [ ! -e "shared/a" ] || internal_fail "#3 shared/a should not exist"
-   [ -d "${repos}/a" ] || internal_fail "#3 ${repos}/a should still exist"
-   [ ! -e "c" ]        || internal_fail "#3 c should not exist"
-   [ -d "${repos}/c" ] || internal_fail "#3 ${repos}/c should still exist"
+   [ ! -e "shared/a" ] || internal_fail "#3.2 shared/a should not exist"
+   [ -d "${repos}/a" ] || internal_fail "#3.2 ${repos}/a should still exist"
+   [ ! -e "c" ]        || internal_fail "#3.2 c should not exist"
+   [ -d "${repos}/c" ] || internal_fail "#3.2 ${repos}/c should still exist"
 
-   [ ! -d "shared" ]   || log_warning "3 shared could have been removed"
+   [ ! -d "shared" ]   || log_warning   "3.2 shared could have been removed"
 }
 
 
@@ -211,18 +211,18 @@ run_test4()
       internal_fail "#4 update failed unexpectedly"
    fi
 
-   [ -d "shared/a" ]   || internal_fail "#4 shared/a should exist"
-   [ -d "shared/a/b" ] || internal_fail "#4 shared/a/b should exist"
-   [ -d "c" ]          || internal_fail "#4 shared/c should exist"
+   [ -d "shared/a" ]   || internal_fail "#4.1 shared/a should exist"
+   [ -d "shared/a/b" ] || internal_fail "#4.1 shared/a/b should exist"
+   [ -d "c" ]          || internal_fail "#4.1 shared/c should exist"
 
    if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
    then
       internal_fail "#4 clean failed unexpectedly"
    fi
 
-   [ ! -d "shared/a" ] || internal_fail "shared/a should not exist"
-   [ ! -d "c" ]        || internal_fail "shared/c should not exist"
-   [ ! -d "shared" ]   || log_warning "shared could have been removed"
+   [ ! -d "shared/a" ] || internal_fail "#4.2 shared/a should not exist"
+   [ ! -d "c" ]        || internal_fail "#4.2 shared/c should not exist"
+   [ ! -d "shared" ]   || log_warning   "#4.2 shared could have been removed"
 }
 
 
@@ -244,18 +244,18 @@ run_test5()
       internal_fail "#5 update failed unexpectedly"
    fi
 
-   [ -d "shared/a" ]   || internal_fail "#5 shared/a should exist"
-   [ -d "shared/a/b" ] || internal_fail "#5 shared/a/b should exist"
-   [ -d "c" ]          || internal_fail "#5 shared/c should exist"
+   [ -d "shared/a" ]   || internal_fail "#5.1 shared/a should exist"
+   [ -d "shared/a/b" ] || internal_fail "#5.1 shared/a/b should exist"
+   [ -d "c" ]          || internal_fail "#5.1 shared/c should exist"
 
    if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
    then
       internal_fail "clean failed unexpectedly"
    fi
 
-   [ -d "shared/a" ]     || internal_fail "#5 shared/a should exist"
-   [ ! -d "shared/a/b" ] || internal_fail "#5 shared/a/b should exist"
-   [ ! -d "c" ]          || internal_fail "#5 shared/c should not exist"
+   [ -d "shared/a" ]     || internal_fail "#5.2 shared/a should exist"
+   [ ! -d "shared/a/b" ] || internal_fail "#5.2 shared/a/b should exist"
+   [ ! -d "c" ]          || internal_fail "#5.2 shared/c should not exist"
 }
 
 

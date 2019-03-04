@@ -1,0 +1,35 @@
+digraph G {
+   graph [rankdir = TD];
+   node[ shape=box];
+
+   compound=true;
+   subgraph cluster0
+   {
+      style=invis
+      {  rank="same"; a }
+      {  rank="same"; b, c }
+      {  rank="same"; d }
+
+      a -> b
+      a -> c
+
+      b -> d
+      c -> d
+   }
+   subgraph cluster1
+   {
+      style=invis
+      {  rank="same"; av, bv, cv, dv1, dv2 }
+
+      av [ label="a" ]
+      bv [ label="b" ]
+      cv [ label="c" ]
+      dv1 [ label="d" ]
+      dv2 [ label="d" ]
+
+      dv1 -> bv -> dv2 -> cv -> av;
+   }
+
+   c -> dv2 [ltail=cluster0,lhead=cluster1,style="dotted"];
+}
+

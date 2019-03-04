@@ -82,15 +82,15 @@ _setup_demo_repo_a()
 {
    local reporoot="$1"
 
-   exekutor git init
+   exekutor git init -q
 
    redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree add --nodetype git "file://${reporoot}/b" || exit 1
-   run_mulle_sourcetree add --nodetype git --url "file://${reporoot}/d" "c/d" || exit 1
+   run_mulle_sourcetree -s add --nodetype git "file://${reporoot}/b" || exit 1
+   run_mulle_sourcetree -s add --nodetype git --url "file://${reporoot}/d" "c/d" || exit 1
    run_mulle_sourcetree list
 
    exekutor git add VERSION .mulle
-   exekutor git commit -m "a: initial version"
+   exekutor git commit -q -m "a: initial version"
 }
 
 #
@@ -100,12 +100,12 @@ _setup_demo_repo_b()
 {
    local reporoot="$1"
 
-   exekutor git init
+   exekutor git init -q
 
    redirect_exekutor VERSION echo "1.1.0"
-   run_mulle_sourcetree add --nodetype git "file://${reporoot}/d" || exit 1
+   run_mulle_sourcetree -s add --nodetype git "file://${reporoot}/d" || exit 1
    exekutor git add VERSION .mulle
-   exekutor git commit -m "b: initial version"
+   exekutor git commit -q -m "b: initial version"
 }
 
 
@@ -113,11 +113,11 @@ _setup_demo_repo_d()
 {
    local reporoot="$1"
 
-   exekutor git init
+   exekutor git init -q
 
    redirect_exekutor VERSION echo "1.0.0"
    exekutor git add VERSION
-   exekutor git commit -m "d: initial version"
+   exekutor git commit -q -m "d: initial version"
 }
 
 
@@ -147,17 +147,19 @@ run_dump()
    fi
 
    expect_content "${output}" "${directory}/${output}"
+   log_verbose "----- #${runs} PASSED -----"
+   runs=$((runs + 1))
 }
 
 
 run_test1()
 {
-   if ! run_mulle_sourcetree add --nodetype git --url "file://${repos}/a" "root/a"
+   if ! run_mulle_sourcetree -s add --nodetype git --url "file://${repos}/a" "root/a"
    then
       fail "add failed unexpectedly"
    fi
 
-   if ! run_mulle_sourcetree --recurse update  # > /dev/null 2>&1
+   if ! run_mulle_sourcetree -s --recurse update  # > /dev/null 2>&1
    then
       fail "update failed unexpectedly"
    fi
@@ -201,6 +203,7 @@ main()
 
    testdir="${PWD}"
    (
+      runs=0
       rmdir_safer "${project}" &&
       mkdir_if_missing "${project}" &&
 
@@ -210,7 +213,6 @@ main()
       cd "${project}" &&
       run_test1
    ) || exit 1
-   log_verbose "----- #1 PASSED -----"
 
    log_info "----- ALL PASSED -----"
 

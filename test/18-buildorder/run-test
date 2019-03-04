@@ -73,6 +73,7 @@ main()
    directory="`make_tmp_directory`" || exit 1
 
    local project
+   local repos
 
    project="${directory}/project"
    repos="${directory}/repositories"
@@ -102,7 +103,7 @@ main()
    result="`run_mulle_sourcetree buildorder --output-absolute --no-print-env`"
    if [ "${expected}" != "${result}" ]
    then
-      fail "missed expectation:
+      fail "missed expectation in \"${project}\":
 ---
 ${expected}
 ---
@@ -124,7 +125,7 @@ ${result}
 a;no-delete,no-os-fantasy"
    if [ "${expected}" != "${result}" ]
    then
-      fail "missed expectation:
+      fail "missed expectation in \"${project}\":
 ---
 ${expected}
 ---
@@ -148,7 +149,7 @@ ${result}
    result="`run_mulle_sourcetree buildorder --output-relative --no-print-env`"
    if [ "${expected}" != "${result}" ]
    then
-      fail "missed expectation:
+      fail "missed expectation in \"${project}\":
 ---
 ${expected}
 ---
@@ -174,11 +175,11 @@ init()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-callback.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-sync.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-sync.sh"     || exit 1
 }
 
 

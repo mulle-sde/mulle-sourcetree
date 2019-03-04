@@ -540,7 +540,7 @@ _nodemarks_filter_sexpr()
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
          key="${_s%%[ )]*}"
          _s="${_s#"${key}"}"
-         log_entry nodemarks_match "${marks}" "${key}"
+         #log_entry nodemarks_match "${marks}" "${key}"
          nodemarks_match "${marks}" "${key}"
          return $?
       ;;

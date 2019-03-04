@@ -5,6 +5,6 @@ digraph sourcetree
    "project" -> "root" [ style="", label="" ]
    "root" -> "root/a" [ style="", label="" ]
    "root/a" [ shape="folder", penwidth="2", color="goldenrod", style="" label="a"]
-   "project" [ shape="folder", penwidth="3", color="goldenrod", style="" label="project"]
    "root" [ shape="folder", penwidth="1", color="honeydew4", style="" label="root"]
+   "project" [ shape="folder", penwidth="3", color="goldenrod", style="" label="project"]
 }

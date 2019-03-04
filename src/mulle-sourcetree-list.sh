@@ -49,8 +49,8 @@ Options:
    -l                       : output long information
    -ll                      : output full information
    -r                       : recursive list
-   -g                       : output branch/tag information (-G raw)
-   -u                       : output URL information  (-U raw)
+   -g                       : output branch/tag information (use -G for raw output)
+   -u                       : output URL information  (use -U for raw output)
    --nodetypes <value>      : node types to list (default: ALL)
    --marks <value>          : specify marks to match (e.g. build)
    --qualifier <value>      : specify marks qualifier
@@ -172,7 +172,7 @@ _list_sourcetree()
    nodeline_printf_header "${mode}" "${formatstring}"
 
    sourcetree_walk "${filternodetypes}" \
-                   "descend-symlink" \
+                   "" \
                    "${marksqualifier}" \
                    "" \
                    "${mode}" \
@@ -241,6 +241,29 @@ r_sourcetree_augment_mode_with_output_options()
    local mode="$1"
 
    RVAL="${mode}"
+
+   case ",${mode}," in
+      *,flat,*|*,pre-order,*|*,in-order,*|*,breadth-order,*)
+      ;;
+
+      *)
+         r_comma_concat "${RVAL}" "pre-order"
+      ;;
+   esac
+
+   case "${OPTION_DEDUPE_MODE}" in
+      address|address-filename|address-url|filename|nodeline|nodeline-no-uuid|none|url|url-filename)
+         r_comma_concat "${RVAL}" "dedupe-${OPTION_DEDUPE_MODE}"
+      ;;
+
+      *)
+         fail "Unknown dedupe mode.
+${C_INFO}Choose one of:
+${C_RESET}   address address-filename address-url filename nodeline
+             nodeline-no-uuid none url url-filename"
+      ;;
+   esac
+
    if [ "${OPTION_OUTPUT_URL}" != 'NO' ]
    then
       r_comma_concat "${RVAL}" "output_url"
@@ -331,7 +354,7 @@ sourcetree_list_main()
    local OPTION_MARKS
    local OPTION_MARKS_QUALIFIER
    local OPTION_FORMAT='DEFAULT'
-   local WALK_DEDUPE_MODE='none'
+   local OPTION_DEDUPE_MODE='nodeline-no-uuid'
 
    while [ $# -ne 0 ]
    do
@@ -426,15 +449,15 @@ sourcetree_list_main()
             OPTION_OUTPUT_INDENT='NO'
          ;;
 
-         --dedupe)
-            WALK_DEDUPE_MODE="nodeline-no-uuid"
+         --no-dedupe)
+            OPTION_DEDUPE_MODE="none"
          ;;
 
          --dedupe-mode)
             [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
             shift
 
-            WALK_DEDUPE_MODE="$1"
+            OPTION_DEDUPE_MODE="$1"
          ;;
 
          #
@@ -572,14 +595,6 @@ sourcetree_list_main()
 
    [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && sourcetree_list_usage
 
-   #
-   # generally we use flat, if the user didn't indicate otherwise
-   # via flags
-   #
-   if [ -z "${FLAG_SOURCETREE_MODE}" ]
-   then
-      SOURCETREE_MODE="flat"
-   fi
 
    # if mode is not flat, we use output-banner by default
    if [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" ]
@@ -589,7 +604,11 @@ sourcetree_list_main()
 
    local mode
 
-   r_sourcetree_augment_mode_with_output_options "${SOURCETREE_MODE}"
+   #
+   # generally we use flat, if the user didn't indicate otherwise
+   # via flags
+   #
+   r_sourcetree_augment_mode_with_output_options "${FLAG_SOURCETREE_MODE:-flat}"
    mode="${RVAL}"
 
    r_sourcetree_list_convert_marks_to_qualifier "${OPTION_MARKS}" "${OPTION_MARKS_QUALIFIER}" ## UGLY

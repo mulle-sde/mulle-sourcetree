@@ -157,7 +157,7 @@ __call_callback()
    log_debug "Calling callback: ${callback} $*"
 
    #
-   # DO NOT WRAP THIS IN A SUBSHELL, BECAUSE THE CALLBACK LOSES STATE THEN
+   # DO NOT WRAP THIS IN A SUBSHELL, BECAUSE THE CALLBACK LOSES STATE!
    # TODO: since callback is evaluated we actually do not not need to pass the
    # extra parameters around anymore
    #

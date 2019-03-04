@@ -470,7 +470,7 @@ sourcetree_status()
    r_emit_status
    output="${RVAL}"
    output2="`walk_config_uuids "ALL" \
-                               "descend-symlink" \
+                               "" \
                                "" \
                                "" \
                                "${mode}" \
@@ -538,7 +538,7 @@ sourcetree_status_main()
    log_entry "sourcetree_status_main" "$@"
 
    local OPTION_MARKS="ANY"
-   local OPTION_PERMISSIONS="descend-symlink"
+   local OPTION_PERMISSIONS=""
    local OPTION_NODETYPES=""
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_IS_UPTODATE='NO'

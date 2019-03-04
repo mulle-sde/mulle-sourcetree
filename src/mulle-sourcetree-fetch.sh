@@ -131,7 +131,7 @@ sourcetree_sync_operation()
       ;;
 
       *)
-         log_verbose "Looking for local copy of \
+         log_fluff "Looking for local copy of \
 ${C_RESET_BOLD}${evaledurl}${C_INFO}"
 
          local localurl

@@ -1,0 +1,20 @@
+digraph G {
+   graph [ rankdir = "TD" ];
+   node[ shape="none" ];
+
+   {  rank="same"; dedupe }
+   {  rank="same"; "visit" }
+   {  rank="same"; "callback-filter", "descend-filter" }
+   {  rank="same"; "callback-permissions", "descend-permissions" }
+   {  rank="same"; callback, descend }
+
+   dedupe -> "visit"
+   "visit" -> "callback-filter" -> "callback-permissions" -> callback
+   "visit" -> "descend-filter" -> "descend-permissions" -> descend
+
+   visit    [ shape="box" ]
+   callback [ shape="box" ]
+   descend  [ shape="box" ]
+
+}
+

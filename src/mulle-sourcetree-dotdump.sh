@@ -278,7 +278,8 @@ print_node()
 
    case "${identifier}" in
       "")
-         [ -z "${destination}" ] && internal_fail "destination and identifer are empty for \"${MULLE_NODE}\""
+         [ -z "${destination}" ] && \
+            internal_fail "destination and identifer are empty for \"${MULLE_NODE}\""
 
          identifier="\"${destination}\""
       ;;
@@ -391,13 +392,12 @@ print_node()
       ;;
    esac
 
+   r_fast_basename "${address}"
    exekutor echo "   ${identifier} [ shape=\"${shape}\", \
 penwidth=\"${penwidth}\", \
 color=\"${color}\", \
 style=\"${style}\" \
-label=\"`fast_basename "${address}"`\"]"
-
-   log_debug "print_node done"
+label=\"${RVAL}\"]"
 }
 
 
@@ -454,7 +454,7 @@ walk_dotdump()
          if is_absolutepath "${MULLE_SOURCETREE_STASH_DIR}"
          then
             isglobalshared='YES'
-            tmp="`string_remove_prefix "${destination}" "${MULLE_SOURCETREE_STASH_DIR}" `"
+            tmp="${destination#${MULLE_SOURCETREE_STASH_DIR}}"
             destination="`filepath_concat '${MULLE_SOURCETREE_STASH_DIR}' "${tmp}"`"
          fi
       fi
@@ -473,7 +473,8 @@ walk_dotdump()
       fi
       label="`html_escape "${component}"`" # yeah...
 
-      relative="`filepath_concat "${relative}" "${component}"`"
+      r_filepath_concat "${relative}" "${component}"
+      relative="${RVAL}"
       identifier="\"${relative}\""
 
       log_debug "identifier: ${identifier}"
@@ -522,12 +523,14 @@ walk_dotdump()
 
       if ! find_line "${ALL_DIRECTORIES}" "${identifier}"
       then
-         ALL_DIRECTORIES="`add_line "${ALL_DIRECTORIES}" "${identifier}"`"
+         r_add_line "${ALL_DIRECTORIES}" "${identifier}"
+         ALL_DIRECTORIES="${RVAL}"
          log_debug "[+] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
 
          if ! find_line "${TOEMIT_DIRECTORIES}" "${identifier}"
          then
-            TOEMIT_DIRECTORIES="`add_line "${TOEMIT_DIRECTORIES}" "${identifier}"`"
+            r_add_line "${TOEMIT_DIRECTORIES}" "${identifier}"
+            TOEMIT_DIRECTORIES="${RVAL}"
             log_debug "[+] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
          fi
       fi
@@ -536,6 +539,7 @@ walk_dotdump()
    done
    IFS="${DEFAULT_IFS}"; set +o noglob
 
+   # remove destinatipn from toemit, as we are emitting it now
    identifier="\"${destination}\""
    TOEMIT_DIRECTORIES="`fgrep -v -s -x -e "${identifier}" <<< "${TOEMIT_DIRECTORIES}"`"
    log_debug "[-] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
@@ -569,9 +573,18 @@ walk_dotdump()
 }
 
 
+walk_dotdump_finished()
+{
+   log_debug "[†] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
+   emit_remaining_directories "${TOEMIT_DIRECTORIES}"
+}
+
+
 emit_root()
 {
    log_entry "emit_root" "$@"
+
+   local name
 
    if [ "${OPTION_OUTPUT_HTML}" = 'YES' ]
    then
@@ -583,10 +596,11 @@ emit_root()
                            "" \
                            "root"
    else
+      r_fast_basename "${PWD}"
       print_node "root" \
                  "." \
                  "${ROOT_IDENTIFIER}" \
-                 "`fast_basename "${PWD}"`" \
+                 "${RVAL}" \
                  'NO'
    fi
 }
@@ -637,28 +651,28 @@ sourcetree_dotdump_body()
 
    case ",${mode}," in
       *,walkdb,*)
-         walk_db_uuids "ALL" \
-                       "descend-symlink" \
-                       "" \
-                       "" \
-                       "${mode}" \
-                       "walk_dotdump"
+         DID_WALK_CALLBACK=walk_dotdump_finished \
+            walk_db_uuids "ALL" \
+                          "" \
+                          "" \
+                          "" \
+                          "${mode}" \
+                          "walk_dotdump"
       ;;
 
       *)
-         walk_config_uuids "ALL" \
-                           "descend-symlink" \
-                           "" \
-                           "" \
-                           "${mode}" \
-                           "walk_dotdump"
+         DID_WALK_CALLBACK=walk_dotdump_finished \
+            walk_config_uuids "ALL" \
+                              "" \
+                              "" \
+                              "" \
+                              "${mode}" \
+                              "walk_dotdump"
       ;;
    esac || return 1
 
-   log_debug "[†] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
 
    emit_root
-   emit_remaining_directories "${TOEMIT_DIRECTORIES}"
 }
 
 

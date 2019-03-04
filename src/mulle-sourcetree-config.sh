@@ -205,7 +205,7 @@ Options:
 Marks:
    [no-]build     : the node contains a buildable project (used by buildorder)
    [no-]delete    : the node may be deleted or moved
-   [no-]recurse   : the node takes part in recursive operations
+   [no-]descend   : the nodes sourcetree takes part in recursive operations
    [no-]require   : the node must exist
    [no-]set       : the nodes properies can be changed
    [no-]share     : the node may be shared with subtree nodes of the same url
@@ -248,7 +248,7 @@ Options:
 Marks:
    no-build
    no-delete
-   no-recurse
+   no-descend
    no-require
    no-set
    no-share
@@ -1184,6 +1184,7 @@ no-cmakeinherit
 no-cmakeloader
 no-defer
 no-delete
+no-descend
 no-fs
 no-header
 no-include
@@ -1195,7 +1196,6 @@ no-os-darwin
 no-os-freebsd
 no-os-linux
 no-public
-no-recurse
 no-require
 no-set
 no-singlephase
@@ -1718,7 +1718,7 @@ sourcetree_common_main()
    if [ -z "${FLAG_SOURCETREE_MODE}" -a "${COMMAND}" != "info" ]
    then
       SOURCETREE_MODE="flat"
-      log_verbose "Sourcetree mode set to \"flat\" for config operations"
+      log_fluff "Sourcetree mode set to \"flat\" for config operations"
    fi
 
    [ -z "${SOURCETREE_CONFIG_FILENAME}" ] && fail "config file empty name"

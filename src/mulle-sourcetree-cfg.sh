@@ -545,7 +545,7 @@ cfg_determine_working_directory()
             return 0
          fi
 
-         log_verbose "No parent found"
+         log_fluff "No parent found"
          return 1
       ;;
 

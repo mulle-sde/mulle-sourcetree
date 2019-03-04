@@ -1078,19 +1078,33 @@ do_actions_with_nodeline()
 
    [ -z "${database}" ] && internal_fail "A share-only update gone wrong"
 
-   if ! nodemarks_contain "${_marks}" "update" ||
-      ! nodemarks_contain "${_marks}" "os-${MULLE_UNAME}" ||
-      ! nodemarks_contain "${_marks}" "os-${MULLE_UNAME}-update"
+   if nodemarks_contain "${_marks}" "no-update" ||
+      nodemarks_contain "${_marks}" "no-os-${MULLE_UNAME}" ||
+      nodemarks_contain "${_marks}" "no-os-${MULLE_UNAME}-update"
    then
       if [ ! -e "${filename}"  ]
       then
-         if nodemarks_contain "${_marks}" "require"
+         if nodemarks_contain "${_marks}" "no-require" ||
+            nodemarks_contain "${_marks}" "no-os-${MULLE_UNAME}-require"
          then
             log_fluff "\"${_address}\" is marked as no-update and doesn't exist, \
 but it is not required"
             return
          fi
-         fail "\"${_address}\" is missing, marked as no-update, but required"
+
+         if nodemarks_contain "${_marks}" "no-os-${MULLE_UNAME}"
+         then
+            log_fluff "\"${_address}\" is marked as no-os-${MULLE_UNAME} so its ignored"
+            return
+         fi
+
+         if nodemarks_contain "${_marks}" "no-os-${MULLE_UNAME}-update"
+         then
+            log_fluff "\"${_address}\" is marked as no-os-${MULLE_UNAME}-update, but its required"
+            return
+         fi
+
+         fail "\"${_address}\" is missing, marked as no-update, but its required"
       fi
 
       log_fluff "\"${_address}\" is marked as no-update and exists"

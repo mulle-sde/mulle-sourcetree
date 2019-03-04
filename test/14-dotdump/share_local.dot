@@ -8,6 +8,6 @@ digraph sourcetree
    "${MULLE_SOURCETREE_STASH_DIR}/d" [ shape="folder", penwidth="2", color="maroon", style="" label="d"]
    "${MULLE_SOURCETREE_STASH_DIR}" -> "${MULLE_SOURCETREE_STASH_DIR}/a" [ style="", label="" ]
    "${MULLE_SOURCETREE_STASH_DIR}/a" [ shape="folder", penwidth="2", color="maroon", style="" label="a"]
-   "project" [ shape="folder", penwidth="3", color="goldenrod", style="" label="project"]
    "${MULLE_SOURCETREE_STASH_DIR}" [ shape="folder", penwidth="1", color="honeydew4", style="" label="${MULLE_SOURCETREE_STASH_DIR}"]
+   "project" [ shape="folder", penwidth="3", color="goldenrod", style="" label="project"]
 }

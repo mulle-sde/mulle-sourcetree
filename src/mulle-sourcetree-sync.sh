@@ -63,9 +63,9 @@ EOF
 }
 
 
-_get_db_recurseinfo()
+_get_db_descendinfo()
 {
-   log_entry "_get_db_recurseinfo" "$@"
+   log_entry "_get_db_descendinfo" "$@"
 
    local database="$1"
    local uuid="$2"
@@ -80,9 +80,9 @@ _get_db_recurseinfo()
 }
 
 
-_get_config_recurseinfo()
+_get_config_descendinfo()
 {
-   log_entry "_get_config_recurseinfo" "$@"
+   log_entry "_get_config_descendinfo" "$@"
 
    local config="$1"
    local address="$2"
@@ -102,16 +102,16 @@ _get_config_recurseinfo()
 #     : 2 symlink
 #
 # input: parsed nodeline + filename
-_check_recurse_nodeline()
+_check_descend_nodeline()
 {
-   log_entry "_check_recurse_nodeline" "$@"
+   log_entry "_check_descend_nodeline" "$@"
 
    local filename="$1"
    local marks="$2"
 
-   if ! nodemarks_contain "${marks}" "recurse"
+   if ! nodemarks_contain "${marks}" "descend"
    then
-      log_fluff "Node \"${filename}\" is marked no-recurse"
+      log_fluff "Node \"${filename}\" is marked no-descend"
       return 1
    fi
 
@@ -126,7 +126,7 @@ _check_recurse_nodeline()
       # properly, we also don't really want to write our .mulle-sourcetree
       # database into it.
       #
-      log_fluff "\"${filename}\" is a symlink, so don't recurse"
+      log_fluff "\"${filename}\" is a symlink, so don't descend"
       return 2
    fi
 
@@ -151,9 +151,9 @@ a directory"
 }
 
 
-_recurse_db_nodeline()
+_descend_db_nodeline()
 {
-   log_entry "_recurse_db_nodeline" "$@"
+   log_entry "_descend_db_nodeline" "$@"
 
    [ "$#" -ne 4 ] && internal_fail "api error"
 
@@ -183,7 +183,7 @@ _recurse_db_nodeline()
    local _config
    local _database
 
-   _get_db_recurseinfo "${database}" "${_uuid}"
+   _get_db_descendinfo "${database}" "${_uuid}"
 
    # remove duplicate marker from _filename
    _filename="${_filename%#*}"
@@ -200,7 +200,7 @@ _recurse_db_nodeline()
 
    local _style
 
-   _check_recurse_nodeline "${_filename}"
+   _check_descend_nodeline "${_filename}"
    if _style_for_${style} $?
    then
       _sourcetree_sync_${_style} "${_config}" "${_database}"
@@ -208,9 +208,9 @@ _recurse_db_nodeline()
 }
 
 
-_recurse_config_nodeline()
+_descend_config_nodeline()
 {
-   log_entry "_recurse_config_nodeline" "$@"
+   log_entry "_descend_config_nodeline" "$@"
 
    [ "$#" -ne 4 ] && internal_fail "api error"
 
@@ -240,7 +240,7 @@ _recurse_config_nodeline()
    local _config
    local _database
 
-   _get_config_recurseinfo "${config}" "${_address}"
+   _get_config_descendinfo "${config}" "${_address}"
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
@@ -252,7 +252,7 @@ _recurse_config_nodeline()
       log_trace2 "newdatabase        : ${_database}"
    fi
 
-   _check_recurse_nodeline "${_filename}"
+   _check_descend_nodeline "${_filename}"
 
    [ $? -ne 0 ] && return 1
 
@@ -264,9 +264,9 @@ _recurse_config_nodeline()
 # A flat update has run. Now walk over the DB entries (actually existing
 # stuff at proper position) and recursively do the inferior sourcetrees
 #
-_recurse_db_nodelines()
+_descend_db_nodelines()
 {
-   log_entry "_recurse_db_nodelines" "$@"
+   log_entry "_descend_db_nodelines" "$@"
 
    local style="$1"; shift
 
@@ -301,7 +301,7 @@ _recurse_db_nodelines()
          VISITED="${RVAL}"
       fi
 
-      _recurse_db_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+      _descend_db_nodeline "${nodeline}" "${style}" "${config}" "${database}"
    done
 
    IFS="${DEFAULT_IFS}" ; set +o noglob
@@ -312,9 +312,9 @@ _recurse_db_nodelines()
 # A flat update has run. Now walk over the DB entries (actually existing
 # stuff at proper position) and recursively do the inferior sourcetrees
 #
-_recurse_config_nodelines()
+_descend_config_nodelines()
 {
-   log_entry "_recurse_config_nodelines" "$@"
+   log_entry "_descend_config_nodelines" "$@"
 
    local style="$1"; shift
 
@@ -357,7 +357,7 @@ _recurse_config_nodelines()
          VISITED="${RVAL}"
       fi
 
-      _recurse_config_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+      _descend_config_nodeline "${nodeline}" "${style}" "${config}" "${database}"
    done
 
    IFS="${DEFAULT_IFS}" ; set +o noglob
@@ -476,9 +476,9 @@ _sourcetree_sync_only_share()
    done
    IFS="${DEFAULT_IFS}" ; set +o noglob
 
-   log_verbose "Doing a \"${style}\" update for \"${config}\"."
+   log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
-   _recurse_config_nodelines "only_share" "${config}" "${database}" || return 1
+   _descend_config_nodelines "only_share" "${config}" "${database}" || return 1
 }
 
 
@@ -547,7 +547,7 @@ _sourcetree_sync_share()
       fi
    fi
 
-   log_verbose "Doing a \"${style}\" update for \"${config}\"."
+   log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
    db_set_dbtype "${database}" "${style}"
    db_set_update "${database}"
@@ -574,7 +574,7 @@ _sourcetree_sync_share()
 
       before="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`"
 
-      _recurse_db_nodelines "share" "${config}" "${database}" || return 1
+      _descend_db_nodelines "share" "${config}" "${database}" || return 1
 
       while :
       do
@@ -586,12 +586,12 @@ _sourcetree_sync_share()
 
          log_debug "Redo root because lines have changed"
 
-         _recurse_db_nodelines "share" "${config}" "${database}" || return 1
+         _descend_db_nodelines "share" "${config}" "${database}" || return 1
 
          before="${nodelines}"
       done
    else
-      _recurse_db_nodelines "share" "${config}" "${database}" || return 1
+      _descend_db_nodelines "share" "${config}" "${database}" || return 1
    fi
 
    db_clear_update "${database}"
@@ -675,7 +675,7 @@ _sourcetree_sync_recurse()
       fi
    fi
 
-   log_verbose "Doing a \"${style}\" update for \"${config}\"."
+   log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
    db_set_dbtype "${database}" "${style}"
    db_set_update "${database}"
@@ -689,7 +689,7 @@ _sourcetree_sync_recurse()
 
    # until now, it was just like flat. Now recurse through nodelines.
 
-   _recurse_db_nodelines "recurse" "${config}" "${database}"  || return 1
+   _descend_db_nodelines "recurse" "${config}" "${database}"  || return 1
 
    db_clear_update "${database}"
    db_set_ready "${database}"
@@ -741,7 +741,7 @@ _sourcetree_sync_flat()
       fi
    fi
 
-   log_verbose "Doing a \"${style}\" update for \"${config}\"."
+   log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
    db_set_dbtype "${database}" "${style}"
    db_set_update "${database}"

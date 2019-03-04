@@ -12,7 +12,7 @@ digraph sourcetree
    "root/a/c" -> "root/a/c/d" [ style="", label="" ]
    "root/a/c/d" [ shape="folder", penwidth="2", color="dodgerblue", style="" label="d"]
    "root/a" [ shape="folder", penwidth="2", color="goldenrod", style="" label="a"]
-   "project" [ shape="folder", penwidth="3", color="goldenrod", style="" label="project"]
    "root" [ shape="folder", penwidth="1", color="honeydew4", style="" label="root"]
    "root/a/c" [ shape="folder", penwidth="1", color="honeydew4", style="" label="c"]
+   "project" [ shape="folder", penwidth="3", color="goldenrod", style="" label="project"]
 }
