@@ -411,7 +411,10 @@ _sourcetree_nameguess_node()
    r_sourcetree_typeguess_node "${input}" "${nodetype}" "${url}"
    _nodetype="${RVAL}"
 
-   _address="${input}"
+   if [ -z "${_address}" ]
+   then
+      _address="${input}"
+   fi
    _url="${url}"
 
    #
@@ -584,6 +587,8 @@ in the sourcetree (${PWD#${MULLE_USER_PWD}/})"
    cfg_write "${SOURCETREE_START}" "${appended}"
    cfg_touch_parents "${SOURCETREE_START}"
 
+   local evaled_adress
+
    log_info "Added ${C_MAGENTA}${C_BOLD}${_address}"
 }
 
@@ -600,22 +605,22 @@ sourcetree_add_node()
 
    local _address="${OPTION_ADDRESS}"
    local _url="${OPTION_URL}"
+   local _branch="${OPTION_BRANCH}"
+   local _nodetype="${OPTION_NODETYPE}"
+   local _fetchoptions="${OPTION_FETCHOPTIONS}"
+   local _marks="${OPTION_MARKS}"
+   local _tag="${OPTION_TAG}"
+   local _userinfo="${OPTION_USERINFO}"
+   local _uuid
 
-   if [ ! -z "${OPTION_ADDRESS}" -a ! -z "${OPTION_URL}" ]
+   if [ ! -z "${_address}" -a ! -z "${_url}" ]
    then
       fail "Specifying --address and --url together conflicts with the main argument"
    fi
 
    local _nodetype
 
-   _sourcetree_nameguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
-
-   local _branch="${OPTION_BRANCH}"
-   local _fetchoptions="${OPTION_FETCHOPTIONS}"
-   local _marks="${OPTION_MARKS}"
-   local _tag="${OPTION_TAG}"
-   local _userinfo="${OPTION_USERINFO}"
-   local _uuid
+   _sourcetree_nameguess_node "${input}" "${_nodetype}" "${_url}"
 
    if [ -z "${_address}" ]
    then

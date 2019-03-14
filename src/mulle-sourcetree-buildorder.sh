@@ -128,7 +128,12 @@ augment_buildorder_line()
       fi
    fi
 
-   echo "${filename};${marks}"
+   if [ "${OUTPUT_RAW_USERINFO}" = 'YES' ]
+   then
+      rexekutor echo "${filename};${marks};${_raw_userinfo}"
+   else
+      rexekutor echo "${filename};${marks}"
+   fi
 
    if [ -z "${_remainder_collection}" ]
    then
@@ -148,6 +153,8 @@ sourcetree_buildorder_main()
    local OPTION_CALLBACK
    local OPTION_ABSOLUTE='NO'
    local OUTPUT_MARKS='YES'
+   local OUTPUT_DIRECTION='FORWARD'
+   local OUTPUT_RAW_USERINFO='NO'
    local OPTION_OUTPUT_COLLECTION='NO'
 
    while [ $# -ne 0 ]
@@ -163,6 +170,10 @@ sourcetree_buildorder_main()
 
          --output-relative)
             OPTION_ABSOLUTE='NO'
+         ;;
+
+         --backwards)
+            OPTION_DIRECTION="BACKWARDS"
          ;;
 
          --callback)
@@ -190,6 +201,10 @@ sourcetree_buildorder_main()
 
          --no-output-marks|--output-no-marks)
             OUTPUT_MARKS='NO'
+         ;;
+
+         --output-raw-userinfo)
+            OUTPUT_RAW_USERINFO='YES'
          ;;
 
          --print-qualifier)
@@ -220,13 +235,22 @@ sourcetree_buildorder_main()
    #
    # Finally we need to output again in the first order
    #
+   local mode
+
+   mode="${SOURCETREE_MODE},no-trace"
+   if [ "${OPTION_DIRECTION}" = "BACKWARDS" ]
+   then
+      r_comma_concat "${mode}" "backwards"
+      mode="${RVAL}"
+   fi
+
    local _buildorder_collection
 
    _buildorder_collection="`sourcetree_walk "" \
                                             "" \
                                             "${SOURCETREE_BUILDORDER_QUALIFIER}" \
                                             "${SOURCETREE_BUILDORDER_QUALIFIER}" \
-                                            "${SOURCETREE_MODE},in-order,no-exekutor" \
+                                            "${mode},in-order" \
                                             "collect_buildorder_line"`"
 
    log_info "Buildorder"
@@ -245,7 +269,6 @@ sourcetree_buildorder_main()
 
    log_fluff "Collected \"${_buildorder_collection}\""
 
-
    local _remainder_collection
    local _augmented_collection
 
@@ -254,7 +277,7 @@ sourcetree_buildorder_main()
                                            "" \
                                            "${SOURCETREE_BUILDORDER_QUALIFIER}" \
                                            "${SOURCETREE_BUILDORDER_QUALIFIER}" \
-                                           "${SOURCETREE_MODE},breadth-order,no-exekutor" \
+                                           "${mode},breadth-order" \
                                            "augment_buildorder_line"`"
 
    local pattern

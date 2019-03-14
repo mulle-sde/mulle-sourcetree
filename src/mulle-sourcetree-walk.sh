@@ -457,6 +457,7 @@ doesn't jive with permissions \"${filterpermissions}\""
    # Preserve state and globals vars, so dont subshell
    #
    MULLE_WALK_INDENT="${MULLE_WALK_INDENT} "
+   MULLE_WALK_LEVEL=$((MULLE_WALK_LEVEL + 1))
 
    case ",${mode}," in
       *,walkdb,*)
@@ -482,6 +483,7 @@ doesn't jive with permissions \"${filterpermissions}\""
       ;;
    esac
 
+   MULLE_WALK_LEVEL=$((MULLE_WALK_LEVEL - 1))
    MULLE_WALK_INDENT="${MULLE_WALK_INDENT%?}"
 
    if [ ! -z "${DID_DESCEND_CALLBACK}" ]
@@ -506,6 +508,10 @@ doesn't jive with permissions \"${filterpermissions}\""
 #
 r_get_dedupe_lineid_from_node()
 {
+   log_entry "r_get_dedupe_lineid_from_node" "$@"
+
+   local mode="$1"
+
    case ",${mode}," in
       *,dedupe-none,*)
          RVAL=
@@ -544,6 +550,10 @@ ${_raw_userinfo}"
          RVAL="${_url};${_filename}"
          return 0
       ;;
+
+      *,dedupe-*,*)
+        internal_fail "Unknown dedupe mark in \"${mode}"
+      ;;
    esac
 
 # address-filename is default
@@ -560,7 +570,9 @@ ${_raw_userinfo}"
 #
 r_walk_has_visited()
 {
-   if ! r_get_dedupe_lineid_from_node
+   local mode="$1"
+
+   if ! r_get_dedupe_lineid_from_node "${mode}"
    then
       RVAL=""
       return 1
@@ -591,9 +603,11 @@ walk_remember_visit()
 
 walk_remove_from_visited()
 {
+   local mode="$1"
+
    local lineid
 
-   if ! r_get_dedupe_lineid_from_node
+   if ! r_get_dedupe_lineid_from_node "${mode}"
    then
       # not deduping anyway
       return
@@ -601,7 +615,7 @@ walk_remove_from_visited()
 
    lineid="${RVAL}"
    r_escaped_sed_pattern "${lineid}"
-   VISITED="`sed -e "/^${RVAL}$/d" <<< "${VISITED}"`"
+   VISITED="`sed -e "/^${RVAL}\$/d" <<< "${VISITED}"`"
 }
 
 
@@ -620,7 +634,7 @@ walk_remove_from_visited()
 #
 _visit_node()
 {
-   log_entry "_visit_node" "$@"
+   log_entry "_visit_node" "$2/${_address}"
 
    local datasource="$1"
    local virtual="$2"
@@ -652,7 +666,7 @@ _visit_node()
    # breadth-order: node will already have been visited flat, so don't dedupe again
    case ",${mode}," in
       *,flat,*|*,in-order,*|*,pre-order,*)
-         r_walk_has_visited
+         r_walk_has_visited "${mode}"
          case $? in
             0) # has visited
                return
@@ -701,7 +715,7 @@ _visit_node()
 
 _walk_share_node()
 {
-   log_entry "_walk_share_node" "$@"
+   log_entry "_walk_share_node" "$2/${_address}"
 
    local datasource="$1"; shift
    local virtual="$1"; shift
@@ -815,7 +829,7 @@ doesn't exist yet"
 #
 walk_nodeline()
 {
-   log_entry "walk_nodeline" "$@"
+#   log_entry "walk_nodeline" "$@"
 
    local nodeline="$1"; shift
    local mode="$7"
@@ -841,6 +855,22 @@ walk_nodeline()
    local _raw_userinfo
 
    nodeline_parse "${nodeline}"
+
+   if [ ${MULLE_WALK_LEVEL} -gt 0 ]
+   then
+      case ",${mode}," in
+         *,ignore-bequeath,*)
+         ;;
+
+         *)
+            if nodemarks_contain "${_marks}" "no-bequeath"
+            then
+               log_debug "Do not act on non-toplevel \"${virtual}/${_destination}\" with no-bequeath mark"
+               return 0
+            fi
+         ;;
+      esac
+   fi
 
    local _nodeline
 
@@ -925,42 +955,40 @@ walk_nodeline()
 
 _print_walk_info()
 {
-   log_entry "_print_walk_info" "$@"
+#   log_entry "_print_walk_info" "$@"
 
    local datasource="$1"
    local nodelines="$2"
    local mode="$3"
 
-   if [ -z "${nodelines}" ]
-   then
-      if [ -z "${datasource}" ]
-      then
-         log_debug "Nothing to walk over ($PWD)"
-      else
-         log_debug "Nothing to walk over ($datasource)"
-      fi
-      return 1
-   fi
+   local direction
+
+   direction="forward"
+   case ",${mode}," in
+      *,backwards,*)
+         direction="backwards"
+      ;;
+   esac
 
    case ",${mode}," in
       *,flat,*)
-         log_debug "Flat walk \"${datasource:-.}\""
+         log_debug "Flat ${direction} walk \"${datasource:-.}\""
       ;;
 
       *,in-order,*)
-         log_debug "Recursive depth-first walk \"${datasource:-.}\""
+         log_debug "Recursive depth-first ${direction} walk \"${datasource:-.}\""
       ;;
 
       *,pre-order,*)
-         log_debug "Recursive pre-order walk \"${datasource:-.}\""
+         log_debug "Recursive pre-order ${direction} walk \"${datasource:-.}\""
       ;;
 
       *,breadth-order,*)
-         log_debug "Recursive breadth-first walk \"${datasource:-.}\""
+         log_debug "Recursive breadth-first ${direction} walk \"${datasource:-.}\""
       ;;
 
       *)
-         internal_fail "Mode \"${mode}\" incomplete"
+         internal_fail "Mode \"${mode}\" lacks walk order"
       ;;
    esac
 
@@ -981,7 +1009,7 @@ _print_walk_info()
 #
 _walk_nodelines()
 {
-   log_entry "_walk_nodelines" "$@"
+#   log_entry "_walk_nodelines" "$@"
 
    local nodelines="$1"; shift
 
@@ -997,6 +1025,13 @@ _walk_nodelines()
    then
       return
    fi
+
+   case ",${mode}," in
+      *,backwards,*)
+         r_reverse_lines "${nodelines}"
+         nodelines="${RVAL}"
+      ;;
+   esac
 
    case ",${mode}," in
       *,breadth-order,*)
@@ -1052,8 +1087,9 @@ _walk_nodelines()
 walk_dedupe()
 {
    local datasource="$1"
+   local mode="$2"
 
-   case ",mode," in
+   case ",${mode}," in
       *,dedupe-none,*)
          return 1
       ;;
@@ -1072,6 +1108,15 @@ walk_dedupe()
 }
 
 
+walk_remove_from_deduped()
+{
+   local datasource="$1"
+
+   r_escaped_sed_pattern "${datasource}"
+   WALKED="`sed -e "/^${RVAL}\$/d" <<< "${WALKED}"`"
+}
+
+
 #
 # walk_auto_uuid settingname,callback,permissions,SOURCETREE_DB_FILENAME ...
 #
@@ -1080,14 +1125,14 @@ walk_dedupe()
 # virtual:     what to prefix addres with. Can be different than datasource
 #              also is empty for PWD. (used in shared configuration)
 #
-#
 # datasource
 # virtual
+#
 # filternodetypes
 # filterpermissions
 # callbackqualifier
+# descendqualifier
 # mode
-# callback
 # ...
 #
 _walk_config_uuids()
@@ -1096,15 +1141,21 @@ _walk_config_uuids()
 
    local datasource="$1"
    local virtual="$2"
+   local mode="$7"
 
-   if walk_dedupe "${datasource}"
+   if walk_dedupe "${datasource}" "${mode}"
    then
       return 0
    fi
 
    local nodelines
 
-   nodelines="`cfg_read "${datasource}" `"
+   if ! nodelines="`cfg_read "${datasource}" `"
+   then
+      log_fluff "Config \"${datasource}\" does not exist"
+      return 0
+   fi
+
    if [ -z "${nodelines}" ]
    then
       log_fluff "Config \"${datasource}\" has no nodes"
@@ -1127,6 +1178,7 @@ walk_config_uuids()
       local VISITED
       local WALKED
       local rval
+      local MULLE_WALK_LEVEL=0
 
       WALKED=
       VISITED=
@@ -1174,7 +1226,7 @@ _walk_db_uuids()
    local virtual="$2"
    local mode="$7"
 
-   if walk_dedupe "${datasource}"
+   if walk_dedupe "${datasource}" "${mode}"
    then
       return 0
    fi
@@ -1194,7 +1246,12 @@ yet, can not proceed"
 
    local nodelines
 
-   nodelines="`db_fetch_all_nodelines "${datasource}" `"
+   if ! nodelines="`db_fetch_all_nodelines "${datasource}" `"
+   then
+      log_warning "Database \"${datasource}\" does not exist"
+      return 0
+   fi
+
    if [ -z "${nodelines}" ]
    then
       log_fluff "Database \"${datasource}\" has no nodes"
@@ -1214,6 +1271,7 @@ walk_db_uuids()
    # to preempt walking
    (
       local MULLE_WALK_INDENT=""
+      local MULLE_WALK_LEVEL=0
       local VISITED
       local WALKED
 
@@ -1372,6 +1430,7 @@ sourcetree_walk_main()
    local OPTION_CALLBACK_TRACE='YES'
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_EVAL='YES'
+   local OPTION_DIRECTION="FORWARD"
 
    local WALK_VISIT_CALLBACK=
    local WALK_DESCEND_CALLBACK=
@@ -1447,6 +1506,10 @@ sourcetree_walk_main()
             OPTION_TRAVERSE_STYLE="BREADTH"
          ;;
 
+         --backwards)
+            OPTION_DIRECTION="BACKWARDS"
+         ;;
+
          -l|--lenient)
             OPTION_LENIENT='YES'
          ;;
@@ -1506,10 +1569,6 @@ sourcetree_walk_main()
             shift
 
             OPTION_DESCEND_QUALIFIER="$1"
-         ;;
-
-         --prune)
-            OPTION_PRUNE='YES'
          ;;
 
          -n|--nodetypes)
@@ -1579,9 +1638,15 @@ as one string and use "
       ;;
    esac
 
+   if [ "${OPTION_DIRECTION}" = "BACKWARDS" ]
+   then
+      r_comma_concat "${mode}" "backwards"
+      mode="${RVAL}"
+   fi
+
    case "${OPTION_DEDUPE_MODE}" in
       address|address-filename|address-url|filename|nodeline|nodeline-no-uuid|none|url|url-filename)
-         r_comma_concat "${mode}" "dedupe-${WALK_DEDUPE_MODE}"
+         r_comma_concat "${mode}" "dedupe-${OPTION_DEDUPE_MODE}"
          mode="${RVAL}"
       ;;
 
@@ -1650,11 +1715,6 @@ ${C_RESET}   nodeline-no-uuid none url url-filename"
    # use ANY to ignore one
    #
    OPTION_CALLBACK_QUALIFIER="${OPTION_CALLBACK_QUALIFIER:-${OPTION_QUALIFIER}}"
-   if [ "${OPTION_PRUNE}" = 'YES' ]
-   then
-      [ ! -z "${OPTION_DESCEND_QUALIFIER}" ] && fail "--prune and --descend-qualifier conflict"
-      OPTION_DESCEND_QUALIFIER="${OPTION_CALLBACK_QUALIFIER}"
-   fi
 
    sourcetree_walk "${OPTION_NODETYPES}" \
                    "${OPTION_PERMISSIONS}" \

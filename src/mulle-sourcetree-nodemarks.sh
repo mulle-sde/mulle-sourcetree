@@ -606,7 +606,7 @@ _nodemarks_filter_expr()
 
 nodemarks_filter_with_qualifier()
 {
-   log_entry "nodemarks_filter_with_qualifier" "$@"
+#   log_entry "nodemarks_filter_with_qualifier" "$@"
 
    local marks="$1"
    local qualifier="$2"

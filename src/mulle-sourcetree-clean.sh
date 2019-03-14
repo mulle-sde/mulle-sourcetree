@@ -338,6 +338,10 @@ sourcetree_clean_main()
             mode="${RVAL}"
          fi
 
+         r_comma_concat "${mode}" "ignore-bequeath"
+         mode="${RVAL}"
+
+
          sourcetree_clean "${mode}"
       else
          log_verbose "Already clean"

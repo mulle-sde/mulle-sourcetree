@@ -194,7 +194,7 @@ _do_fetch_operation()
 
    if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" != 'YES' ] && [ -e "${_address}" ]
    then
-      fail "Should have cleaned \"${_address}\" before"
+      fail "Should have cleaned \"${_address}\" beforehand. It's in the way."
    fi
 
    local parent
