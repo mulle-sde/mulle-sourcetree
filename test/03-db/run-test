@@ -27,6 +27,7 @@ main()
    cd "${directory}"
    MULLE_VIRTUAL_ROOT="`physicalpath "${directory}" `"
    SOURCETREE_DB_FILENAME="db"
+   SOURCETREE_DB_FILENAME_RELATIVE=".."
 
    local nodeline
    local sourcenodeline

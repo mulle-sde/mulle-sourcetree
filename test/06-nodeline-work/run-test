@@ -116,6 +116,7 @@ main()
 
    (
       SOURCETREE_DB_FILENAME="db"
+      SOURCETREE_DB_FILENAME_RELATIVE=".."
 
       cd "${project}" &&
       run_test

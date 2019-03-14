@@ -110,6 +110,7 @@ Use -e if this is desired."
    if [ -z "${SOURCETREE_DB_FILENAME}" ]
    then
       SOURCETREE_DB_FILENAME=".mulle/var/${MULLE_HOSTNAME}/sourcetree/db"
+      SOURCETREE_DB_FILENAME_RELATIVE="../../../../.."
    fi
 }
 

@@ -225,6 +225,8 @@ main()
 
    SOURCETREE_DB_FILENAME=".mulle/var/sourcetree/db"
    export SOURCETREE_DB_FILENAME
+   SOURCETREE_DB_FILENAME_RELATIVE="../../../.."
+   export SOURCETREE_DB_FILENAME_RELATIVE
 
    local project
    local repos

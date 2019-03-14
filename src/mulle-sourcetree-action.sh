@@ -388,8 +388,8 @@ update_safe_remove_node()
       fail "Can't remove \"${filename}\" as it is marked no-delete"
    fi
 
-   db_forget "${database}" "${_uuid}"
    db_bury "${database}" "${_uuid}" "${filename}"
+   db_forget "${database}" "${_uuid}"
 }
 
 

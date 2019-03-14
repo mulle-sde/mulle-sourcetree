@@ -370,6 +370,29 @@ db_bury()
       return
    fi
 
+   [ -z "${SOURCETREE_DB_FILENAME_RELATIVE}" ] && internal_fail "SOURCETREE_DB_FILENAME_RELATIVE is empty"
+
+   #
+   # protect from catastrophies
+   #
+   local project_dir
+
+   r_simplified_absolutepath "${databasedir}/${SOURCETREE_DB_FILENAME_RELATIVE}"
+   project_dir="${RVAL}"
+   r_simplified_absolutepath "${filename}"
+   filename="${RVAL}"
+
+   r_relative_path_between "${filename}" "${project_dir}"
+   case "${RVAL}" in
+      ../*)
+         internal_fail "Bury path \"${filename#${MULLE_USER_PWD}/}\" escapes project \"${project_dir#${MULLE_USER_PWD}/}"
+      ;;
+   esac
+
+   log_debug "project_dir: ${project_dir}"
+   log_debug "filename:    ${filename}"
+   log_debug "relative:    ${RVAL}"
+
    if [ -e "${gravepath}" ]
    then
       local otheruuid
