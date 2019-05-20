@@ -1621,7 +1621,7 @@ db_fetch_uuid_for_url()
 
    local evaledurl
 
-   evaledurl="`eval echo "${url}"`"
+   evaledurl="`eval "echo \"${url}\""`"
    if [ -z "${evaledurl}" ]
    then
       fail "URL \"${url}\" evaluates to empty"
@@ -1656,7 +1656,7 @@ db_update_determine_share_filename()
    local filename
    local evaledurl
 
-   evaledurl="`eval echo "${url}"`"
+   evaledurl="`eval "echo \"${url}\""`"
    if [ -z "${evaledurl}" ]
    then
       fail "URL \"${url}\" evaluates to empty"

@@ -200,10 +200,11 @@ Usage:
    This command only affects the local sourcetree.
 
 Options:
+   --match         : use regular expression to find address to match
    --extended-mark : allow the use of non-predefined marks
 
 Marks:
-   [no-]build     : the node contains a buildable project (used by buildorder)
+   [no-]build     : the node contains a buildable project (used by craftorder)
    [no-]delete    : the node may be deleted or moved
    [no-]descend   : the nodes sourcetree takes part in recursive operations
    [no-]require   : the node must exist
@@ -243,6 +244,7 @@ Usage:
    This command only affects the local sourcetree.
 
 Options:
+   --match         : use regular expression to find address to match
    --extended-mark : allow the use of non-predefined marks
 
 Marks:
@@ -271,7 +273,7 @@ Usage:
    ${MULLE_EXECUTABLE_NAME} move <address> <top|bottom|up|down>
 
    Change the position of a node with a certain address in the sourcetree.
-   This changes the buildorder, which may be very important.
+   This changes the craftorder, which may be very important.
 
 EOF
   exit 1
@@ -417,9 +419,11 @@ _sourcetree_nameguess_node()
    fi
    _url="${url}"
 
+   log_debug "_url set to \"${_url}\""
+   log_debug "_address set to \"${_address}\""
+
    #
    # try to figure out if input is an _url
-   # trivially, it is the _address if _url is empty and _address is set
    #
    # locals and none have no URL usually
    #
@@ -437,8 +441,12 @@ _sourcetree_nameguess_node()
       fi
 
       # must be an_url then
-      _url="${_address}"
+
+      _url="${input}"
       _address=
+
+      log_debug "_url set to \"${_url}\""
+      log_debug "_address set to \"${_address}\""
    fi
 
    # url is set
@@ -448,12 +456,18 @@ _sourcetree_nameguess_node()
       then
          _address="${_url}"
          _url=""
+
+         log_debug "_url set to \"${_url}\""
+         log_debug "_address set to \"${_address}\""
+
          log_fluff "Taken address \"${_address}\" from \"${_url}\""
          return
       fi
 
       r_sourcetree_guess_address "${_url}" "${_nodetype}"
       _address="${RVAL}"
+      log_debug "_url set to \"${_url}\""
+      log_debug "_address set to \"${_address}\""
 
       log_fluff "Guessed address \"${_address}\" from \"${_url}\""
    fi
@@ -539,7 +553,7 @@ r_sanitized_marks()
          ;;
 
          no-*|only-*|version-*)
-            r_comma_concat "${result}" "${mark}"
+            r_nodemarks_add "${result}" "${mark}"
             result="${RVAL}"
          ;;
       esac
@@ -552,8 +566,23 @@ r_sanitized_marks()
 
 _append_new_node()
 {
+   log_entry "_append_new_node" "$@"
+
    local contents
    local appended
+
+   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
+   then
+      log_trace2 "ADDRESS:      \"${_address}\""
+      log_trace2 "NODETYPE:     \"${_nodetype}\""
+      log_trace2 "MARKS:        \"${_marks}\""
+      log_trace2 "UUID:         \"${_uuid}\""
+      log_trace2 "URL:          \"${_url}\""
+      log_trace2 "BRANCH:       \"${_branch}\""
+      log_trace2 "TAG:          \"${_tag}\""
+      log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
+      log_trace2 "USERINFO:     \"${_raw_userinfo}\""
+   fi
 
    #
    # now just some sanity checks and save it
@@ -749,8 +778,7 @@ line_mover()
    local line
    local prev
 
-   IFS=$'\n'
-   while read line
+   while IFS=$'\n' read -r line
    do
       case "${direction}" in
          top|bottom)
@@ -933,9 +961,12 @@ sourcetree_change_nodeline()
 
 _unfailing_get_nodeline()
 {
-   local address="$1"
+   log_entry "_unfailing_get_nodeline" "$@"
 
-   if ! cfg_get_nodeline "${SOURCETREE_START}" "${address}"
+   local address="$1"
+   local fuzzy="$2"
+
+   if ! cfg_get_nodeline "${SOURCETREE_START}" "${address}" "${fuzzy}"
    then
       fail "A node \"${address}\" does not exist (${MULLE_VIRTUAL_ROOT}${SOURCETREE_START})"
    fi
@@ -944,6 +975,8 @@ _unfailing_get_nodeline()
 
 _matching_nodeline_url()
 {
+   log_entry "_matching_nodeline_url" "$@"
+
    local url="$1"
 
    [ -z "${url}" ] && fail "url is empty"
@@ -966,6 +999,8 @@ _matching_nodeline_url()
 
 _unfailing_get_nodeline_by_url()
 {
+   log_entry "_unfailing_get_nodeline_by_url" "$@"
+
    local url="$1"
 
    if ! cfg_get_nodeline_by_url "${SOURCETREE_START}" "${url}"
@@ -1022,9 +1057,9 @@ _sourcetree_set_node()
    local key
    local value
 
+   key="$1"
    while [ "$#" -ge 2 ]
    do
-      key="$1"
       shift
       value="$1"
       shift
@@ -1067,10 +1102,11 @@ sourcetree_set_node()
    log_entry "sourcetree_set_node" "$@"
 
    local address="$1"; shift
+   local fuzzy="$1"; shift
 
    local oldnodeline
 
-   oldnodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
+   oldnodeline="`_unfailing_get_nodeline "${address}" "${fuzzy}" `" || exit 1
 
    _sourcetree_set_node "${oldnodeline}" "$@"
 }
@@ -1080,12 +1116,16 @@ sourcetree_set_node_by_url()
 {
    log_entry "sourcetree_set_node_by_url" "$@"
 
-   local url
+   local url="$1"; shift
+   local fuzzy="$1"; shift
 
-   url="`_matching_nodeline_url "$1"`"
-   url="${url:-$1}"
+   local matchurl
 
-   shift
+   matchurl="`_matching_nodeline_url "${url}"`"
+   if [ ! -z "${matchurl}" ]
+   then
+      url="${matchurl}"
+   fi
 
    local oldnodeline
 
@@ -1127,9 +1167,14 @@ _sourcetree_get_node()
             exekutor eval echo \$"_${1}"
          ;;
 
+         raw_userinfo)
+            exekutor echo "${_raw_userinfo}"
+         ;;
+
          userinfo)
-				exekutor echo "${_userinfo}"
-			;;
+            nodeline_raw_userinfo_parse "${_raw_userinfo}"
+            exekutor echo "${_userinfo}"
+         ;;
 
          *)
             log_error "unknown keyword \"$1\""
@@ -1146,10 +1191,11 @@ sourcetree_get_node()
    log_entry "sourcetree_get_node" "$@"
 
    local address="$1"; shift
+   local fuzzy="$1"; shift
 
    local nodeline
 
-   if ! nodeline="`cfg_get_nodeline "${SOURCETREE_START}" "${address}"`"
+   if ! nodeline="`cfg_get_nodeline "${SOURCETREE_START}" "${address}" "${fuzzy}" `"
    then
       log_warning "Node \"${address}\" does not exist"
       return 1
@@ -1163,12 +1209,16 @@ sourcetree_get_node_by_url()
 {
    log_entry "sourcetree_get_node_by_url" "$@"
 
-   local url
+   local url="$1"; shift
+   local fuzzy="$1"; shift
 
-   url="`_matching_nodeline_url "$1"`"
-   url="${url:-$1}"
+   local matchurl
 
-   shift
+   matchurl="`_matching_nodeline_url "${url}"`"
+   if [ ! -z "${matchurl}" ]
+   then
+      url="${matchurl}"
+   fi
 
    local nodeline
 
@@ -1189,6 +1239,7 @@ no-cmakeinherit
 no-cmakeloader
 no-defer
 no-delete
+no-dependency
 no-descend
 no-fs
 no-header
@@ -1291,7 +1342,7 @@ _sourcetree_mark_node()
 
    case "${mark}" in
       no-*|only-*|version-*)
-         if nodemarks_contain "${_marks}" "${mark}"
+         if _nodemarks_contain "${_marks}" "${mark}"
          then
             log_info "Node is already marked as \"${mark}\"."
             return
@@ -1325,12 +1376,13 @@ sourcetree_mark_node()
    log_entry "sourcetree_mark_node" "$@"
 
    local address="$1"; shift
+   local fuzzy="$1"; shift
 
    [ -z "${address}" ] && fail "address is empty"
 
    local oldnodeline
 
-   oldnodeline="`_unfailing_get_nodeline "${address}"`" || exit 1
+   oldnodeline="`_unfailing_get_nodeline "${address}" "${fuzzy}"`" || exit 1
 
    _sourcetree_mark_node "${oldnodeline}" "$@"
 }
@@ -1340,12 +1392,16 @@ sourcetree_mark_node_by_url()
 {
    log_entry "sourcetree_mark_node_by_url" "$@"
 
-   local url
+   local url="$1"; shift
+   local fuzzy="$1"; shift
 
-   url="`_matching_nodeline_url "$1"`"
-   url="${url:-$1}"
+   local matchurl
 
-   shift
+   matchurl="`_matching_nodeline_url "${url}"`"
+   if [ ! -z "${matchurl}" ]
+   then
+      url="${matchurl}"
+   fi
 
    local oldnodeline
 
@@ -1405,7 +1461,8 @@ sourcetree_unmark_node()
    log_entry "sourcetree_unmark_node" "$@"
 
    local address="$1"
-   local mark="$2"
+   local fuzzy="$2"
+   local mark="$3"
 
    [ -z "${address}" ] && fail "address is empty"
    [ -z "${mark}" ] && fail "mark is empty"
@@ -1422,7 +1479,7 @@ sourcetree_unmark_node()
       version-*)
          if nodemarks_contain "${_marks}" "${mark}"
          then
-            sourcetree_remove_mark_node "${address}" "${mark}"
+            sourcetree_remove_mark_node "${address}" "${fuzzy}" "${mark}"
          fi
       ;;
 
@@ -1431,7 +1488,7 @@ sourcetree_unmark_node()
       ;;
    esac
 
-   sourcetree_mark_node "${address}" "${mark}"
+   sourcetree_mark_node "${address}" "${fuzzy}" "${mark}"
 }
 
 
@@ -1439,13 +1496,18 @@ sourcetree_unmark_node_by_url()
 {
    log_entry "sourcetree_unmark_node_by_url" "$@"
 
-   local url="$1"
-   local mark="$2"
+   local url="$1"; shift
+   local fuzzy="$1"; shift
 
-   [ -z "${mark}" ] && fail "mark is empty"
+   local matchurl
 
-   url="`_matching_nodeline_url "${url}"`"
-   url="${url:-$1}"
+   matchurl="`_matching_nodeline_url "${url}"`"
+   if [ ! -z "${matchurl}" ]
+   then
+      url="${matchurl}"
+   fi
+
+   local mark="$1"
 
    case "${mark}" in
       no-*)
@@ -1460,12 +1522,16 @@ sourcetree_unmark_node_by_url()
          mark="${mark:8}"
       ;;
 
+      "")
+         fail "mark is empty"
+      ;;
+
       *)
          fail "Mark to unmark must start with \"no-\" or \"only-\""
       ;;
    esac
 
-   sourcetree_mark_node_by_url "${url}" "${mark}"
+   sourcetree_mark_node_by_url "${url}" "${fuzzy}" "${mark}"
 }
 
 
@@ -1503,6 +1569,10 @@ sourcetree_common_main()
    local OPTION_CACHE_DIR
    local OPTION_MIRROR_DIR
 
+   #
+   # TODO: I think many of these options are not used anymore
+   #
+
    local OPTION_OUTPUT_FORMAT="DEFAULT"
    local OPTION_OUTPUT_COLOR="DEFAULT"
    local OPTION_OUTPUT_HEADER="DEFAULT"
@@ -1516,6 +1586,7 @@ sourcetree_common_main()
    local OPTION_OUTPUT_EVAL='NO'
    local OPTION_OUTPUT_FULL='NO'
    local OPTION_IF_MISSING='NO'
+   local OPTION_MATCH='NO'
 
    local suffix
 
@@ -1526,16 +1597,23 @@ sourcetree_common_main()
             ${USAGE}
          ;;
 
-         --output-format*)
-            OPTION_OUTPUT_FORMAT="FORMATTED"
-         ;;
+         --output-format)
+            shift
 
-         --output-cmd)
-            OPTION_OUTPUT_FORMAT="COMMANDLINE"
-         ;;
-
-         --output-raw|--output-csv)
-            OPTION_OUTPUT_FORMAT="RAW"
+            case "$1" in
+               fmt|formatted)
+                  OPTION_OUTPUT_FORMAT="FMT"
+               ;;
+               cmd|command)
+                  OPTION_OUTPUT_FORMAT="CMD"
+               ;;
+               raw|csv)
+                  OPTION_OUTPUT_FORMAT="RAW"
+               ;;
+               *)
+                  fail "Unknown output-format $1"
+               ;;
+            esac
          ;;
 
          --output-color)
@@ -1694,6 +1772,10 @@ sourcetree_common_main()
             OPTION_USERINFO="$1"
          ;;
 
+         --regex|--match)
+            OPTION_MATCH='YES'
+         ;;
+
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown ${COMMAND} option $1"
             ${USAGE}
@@ -1744,7 +1826,7 @@ sourcetree_common_main()
          address="$1"
          [ -z "${address}" ] && log_error "empty argument" && ${USAGE}
          shift
-         sourcetree_${COMMAND}_node${suffix} "${address}" "$@"
+         sourcetree_${COMMAND}_node${suffix} "${address}" "${OPTION_MATCH}" "$@"
       ;;
 
       info)
@@ -1767,7 +1849,7 @@ sourcetree_common_main()
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_${COMMAND}_node${suffix} "${address}" "${mark}"
+         sourcetree_${COMMAND}_node${suffix} "${address}" "${OPTION_MATCH}" "${mark}"
       ;;
 
       move)
@@ -1796,7 +1878,7 @@ sourcetree_common_main()
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_set_node "${address}" address "${newaddress}"
+         sourcetree_set_node "${address}" 'NO' address "${newaddress}"
       ;;
 
       remove)

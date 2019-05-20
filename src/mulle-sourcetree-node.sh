@@ -81,7 +81,7 @@ r_node_sanitized_address()
 #   local _nodetype
 #   local _tag
 #   local _url
-#   local _userinfo
+#   local _raw_userinfo
 #   local _uuid
 #
 node_augment()
@@ -101,7 +101,6 @@ node_augment()
          # since they are local, they can not be deleted and are always
          # required they are also never updated. So mode can be unsafe here
          #
-
          mode="unsafe"
 
          local before
@@ -151,7 +150,7 @@ node_augment()
       log_trace2 "BRANCH:       \"${_branch}\""
       log_trace2 "TAG:          \"${_tag}\""
       log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
-      log_trace2 "USERINFO:     \"${_userinfo}\""
+      log_trace2 "USERINFO:     \"${_raw_userinfo}\""
    fi
 
    local rval
@@ -183,18 +182,35 @@ _r_node_to_nodeline()
 
    if [ ! -z "${_userinfo}" ]
    then
-      if [ `wc -l <<< "${_userinfo}"` -gt 1 ] ||
-         egrep -q '[^-A-Za-z0-9%&/()=|+_.,$# ]' <<< "${_userinfo}"
+      local convert
+
+      convert="NO"
+      case "${_userinfo}" in
+         *$'\n'*)
+            convert="YES"
+         ;;
+
+         *)
+            if egrep -q '[^-A-Za-z0-9%&/()=|+_.,$# ]' <<< "${_userinfo}"
+            then
+               convert="YES"
+            fi
+         ;;
+      esac
+
+      if [ "${convert}" = "YES" ]
       then
          case "${MULLE_UNAME}" in
             linux)
-               _userinfo="base64:`base64 -w 0 <<< "${_userinfo}"`"
+               _raw_userinfo="base64:`base64 -w 0 <<< "${_userinfo}"`"
             ;;
 
             *)
-               _userinfo="base64:`base64 -b 0 <<< "${_userinfo}"`"
+               _raw_userinfo="base64:`base64 -b 0 <<< "${_userinfo}"`"
             ;;
          esac
+      else
+         _raw_userinfo="${_userinfo}"
       fi
    fi
 
@@ -208,12 +224,12 @@ _r_node_to_nodeline()
       log_trace2 "BRANCH:       \"${_branch}\""
       log_trace2 "TAG:          \"${_tag}\""
       log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
-      log_trace2 "USERINFO:     \"${_userinfo}\""
+      log_trace2 "USERINFO:     \"${_raw_userinfo}\""
    fi
 
    RVAL="${_address};${_nodetype};${_marks};${_uuid};\
 ${_url};${_branch};${_tag};${_fetchoptions};\
-${_userinfo}"
+${_raw_userinfo}"
 }
 
 #
@@ -345,24 +361,32 @@ nodetype_filter()
 }
 
 
-__get_format_key()
+#
+# returns _formatstring
+# and key in RVAL
+#
+_r_get_format_key()
 {
+   log_entry "_r_get_format_key" "$@"
+
+   local formatstring="$1"
+
    if [ -z "${MULLE_ARRAY_SH}" ]
    then
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || \
          internal_fail "Could not load mulle-array.sh via \"${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}\""
    fi
-   switch=""
-   key="`sed -n 's/%.={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
 
-   local tmp
+   RVAL="`sed -n 's/%.={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
 
-   tmp="`sed 's/^%.={[^}]*}//' <<< "${formatstring}" `"
-   if [ -z "${key}" -o "${tmp}" = "${formatstring}" ]
+   local remainder
+
+   remainder="`sed 's/^%.={[^}]*}//' <<< "${formatstring}" `"
+   if [ -z "${RVAL}" -o "${remainder}" = "${formatstring}" ]
    then
       fail "malformed formatstring \"${formatstring:1}\". Need ={<title>,<dashes>,<key>}"
    fi
-   formatstring="XX${tmp}"
+   _formatstring="XX${remainder}" ## XX is used for skipping first two chars
 }
 
 
@@ -395,9 +419,9 @@ node_printf()
 
    case ",${mode}," in
       *,output_eval,*)
-         branch="`eval echo "${branch}"`"
-         tag="`eval echo "${tag}"`"
-         url="`MULLE_BRANCH="${branch}" MULLE_TAG="${tag}" eval echo "${url}"`"
+         branch="`eval "echo \"${branch}\""`"
+         tag="`eval "echo \"${tag}\""`"
+         url="`MULLE_BRANCH="${branch}" MULLE_TAG="${tag}" eval "echo \"${url}\""`"
          fetchoptions="`MULLE_BRANCH="${branch}" MULLE_TAG="${branch}" MULLE_URL="${url}"  eval echo "${fetchoptions}"`"
       ;;
    esac
@@ -408,11 +432,15 @@ node_printf()
    local _fetchoptions="${fetchoptions}"
 
    local line
+   local lf=$'\n'
 
    if [ -z "${cmdline}" ]
    then
       cmdline="${MULLE_USAGE_NAME} -N add"
    fi
+
+   local _formatstring
+   local extended
 
    while [ ! -z "${formatstring}" ]
    do
@@ -427,7 +455,7 @@ node_printf()
 
          %b!*)
             switch="--branch"
-            value="`eval echo "${_branch}"`"
+            value="`eval "echo \"${_branch}\""`"
             formatstring="${formatstring:1}"
          ;;
 
@@ -438,7 +466,7 @@ node_printf()
 
          %f!*)
             switch="--fetchoptions"
-            value="`eval echo "${_fetchoptions}"`"
+            value="`eval "echo \"${_fetchoptions}\""`"
             formatstring="${formatstring:1}"
          ;;
 
@@ -448,24 +476,42 @@ node_printf()
          ;;
 
          %i*)
+            switch="--userinfo"
+
+            if [ ! -z "${_raw_userinfo}" -a -z "${_userinfo}" ]
+            then
+               nodeline_raw_userinfo_parse "${_raw_userinfo}"
+            fi
+
+            extended='NO'
             if [ "${formatstring:2:2}" = "={" ]
             then
-               __get_format_key
-               value="`assoc_array_get "${_userinfo}" "${key}" `"
-            else
-               switch="--userinfo"
-               case ",${mode}," in
-                  *,output_cmd,*|*,output_cmd2,*)
-                     value="${_raw_userinfo}"
-                  ;;
+               _r_get_format_key "${formatstring}"
+               key="${RVAL}"
+               formatstring="${_formatstring}"
+               extended='YES'
+            fi
 
-                  *)
-                     value="`tr '\012' ':' <<< "${_userinfo}" | sed -e 's/,$//g' `"
+            case ",${mode}," in
+               *,output_cmd,*|*,output_cmd2,*)
+                  value="${_raw_userinfo}"
+               ;;
+
+               *)
+                  if [ "${extended}" = 'YES' ]
+                  then
+                     switch="--${key}"
+
+                     r_assoc_array_get "${_userinfo}" "${key}"
+                     value="${RVAL}"
+                  else
+                     value="${_userinfo//${lf}/:}"
+                     value="${value%%;}"
                      value="${value#:}"
                      value="${value%:}"
-                  ;;
-               esac
-            fi
+                  fi
+               ;;
+            esac
          ;;
 
          %m*)
@@ -480,7 +526,7 @@ node_printf()
 
          %t!*)
             switch="--tag"
-            value="`eval echo "${_tag}"`"
+            value="`eval "echo \"${_tag}\""`"
             formatstring="${formatstring:1}"
          ;;
 
@@ -491,7 +537,7 @@ node_printf()
 
          %u!*)
             switch="--url"
-            value="`MULLE_BRANCH=$(eval echo "${_branch}") MULLE_TAG=$(eval echo "${_tag}") eval echo "${_url}"`"
+            value="`MULLE_BRANCH=$(eval "echo \"${_branch}\"") MULLE_TAG=$(eval "echo \"${_tag}\"") eval "echo \"${_url}\""`"
             formatstring="${formatstring:1}"
          ;;
 
@@ -506,7 +552,7 @@ node_printf()
             then
                value="${_address}"
             else
-               value="`eval echo "${_url}"`"
+               value="`eval "echo \"${_url}\""`"
             fi
             formatstring="${formatstring:1}"
          ;;
@@ -523,9 +569,14 @@ node_printf()
 
          # output an "environment" variable
          %v*)
+            switch=""
             if [ "${formatstring:2:1}" = "=" ]
             then
-               __get_format_key
+               _r_get_format_key "${formatstring}"
+               key="${RVAL}"
+               formatstring="${_formatstring}"
+               switch=""
+
                value="`eval echo \$\{${key}\}`"
             else
                value="failed format"
@@ -543,8 +594,7 @@ node_printf()
 
          \\n)
             switch=""
-            value="
-"
+            value=$'\n'
          ;;
 
          *)
@@ -587,7 +637,7 @@ node_printf()
       ;;
 
       *,output_cmd2,*)
-         rexekutor echo "${cmdline}" "'${_url}'"
+         rexekutor echo "${cmdline}" "'${_url:-${_address}}'"
       ;;
 
       *,output_raw,*)

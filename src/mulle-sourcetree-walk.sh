@@ -32,6 +32,7 @@
 MULLE_SOURCETREE_WALK_SH="included"
 
 
+
 sourcetree_walk_usage()
 {
    [ $# -ne 0 ] && log_error "$*"
@@ -42,21 +43,21 @@ Usage:
 
    Walk over the nodes described by the config file and execute <shell command>
    for each node. Unprocessed node information is passed in the following
-   environment variables: MULLE_URL, MULLE_ADDRESS, MULLE_BRANCH, MULLE_TAG,
-   MULLE_NODETYPE, MULLE_UUID, MULLE_MARKS, MULLE_FETCHOPTIONS, MULLE_USERINFO,
-   MULLE_NODE.  Additional information is passed in: MULLE_DESTINATION,
-   MULLE_MODE, MULLE_FILENAME, MULLE_DATABASE, MULLE_ROOT_DIR.
+   environment variables: NODE_URL, NODE_ADDRESS, NODE_BRANCH, NODE_TAG,
+   NODE_TYPE, NODE_UUID, NODE_MARKS, NODE_FETCHOPTIONS, NODE_USERINFO,
+   WALK_NODE.  Additional information is passed in: WALK_DESTINATION,
+   WALK_MODE, NODE_FILENAME, WALK_INDEX, WALK_INDEX, WALK_LEVEL.
 
    The working directory will be the node (if it's a directory).
 
-   This example dumps the full information of each node:
+   This example dumps the names of each node with index and indentation:
 
-      mulle-sourcetree walk 'echo "\${MULLE_NODE}"'
+      mulle-sourcetree walk 'echo "${WALK_INDEX} ${WALK_INDENT}${NODE_ADDRESS}"'
 
    This example finds the location of a dependency named foo:
 
-      mulle-sourcetree walk --lenient '[ "\${MULLE_ADDRESS}" = "foo" ] && \\
-                                          echo "\${MULLE_FILENAME}"'
+      mulle-sourcetree walk --lenient '[ "\${NODE_ADDRESS}" = "foo" ] && \\
+                                          echo "\${NODE_FILENAME}"'
 
    There is a little qualifier language available to query the marks of a node.
 EOF
@@ -98,9 +99,10 @@ Options:
    -q <value>       : qualifier for marks to match (e.g. MATCHES build)
    --cd             : change directory to node's working directory
    --lenient        : allow shell command to error
+   --backwards      : walk tree nodes backwards [rarely useful]
    --pre-order      : walk tree in pre-order  (Root, Left, Right)
-   --in-order       : walk tree in in-order (Left, Root, Right)
    --breadth-first  : walk tree breadth first (first all top levels)
+   --post-order     : walk tree depth first (Left, Right, Root)
    --walk-db        : walk over information contained in the database instead
 EOF
   exit 1
@@ -111,7 +113,7 @@ EOF
 # Walkers
 #
 # Possible permissions: "symlink,missing"
-# Useful for buildorder it would seem
+# Useful for craftorder it would seem
 #
 
 _callback_permissions()
@@ -354,6 +356,7 @@ doesn't jive with permissions \"${filterpermissions}\""
       fi
    fi
 
+   WALK_INDEX=$((WALK_INDEX + 1))
    case ",${mode}," in
       *,docd,*)
          local old
@@ -456,8 +459,8 @@ doesn't jive with permissions \"${filterpermissions}\""
    #
    # Preserve state and globals vars, so dont subshell
    #
-   MULLE_WALK_INDENT="${MULLE_WALK_INDENT} "
-   MULLE_WALK_LEVEL=$((MULLE_WALK_LEVEL + 1))
+   WALK_INDENT="${WALK_INDENT} "
+   WALK_LEVEL=$((WALK_LEVEL + 1))
 
    case ",${mode}," in
       *,walkdb,*)
@@ -483,8 +486,8 @@ doesn't jive with permissions \"${filterpermissions}\""
       ;;
    esac
 
-   MULLE_WALK_LEVEL=$((MULLE_WALK_LEVEL - 1))
-   MULLE_WALK_INDENT="${MULLE_WALK_INDENT%?}"
+   WALK_LEVEL=$((WALK_LEVEL - 1))
+   WALK_INDENT="${WALK_INDENT%?}"
 
    if [ ! -z "${DID_DESCEND_CALLBACK}" ]
    then
@@ -540,6 +543,40 @@ ${_raw_userinfo}"
          return 0
       ;;
 
+      *,dedupe-linkorder,*)
+         local i
+         local linkmarks
+
+         set -o noglob ; IFS=","
+         for i in ${_marks}
+         do
+            case "${i}" in
+               no-configuration-${CONFIGURATION})
+                  r_comma_concat "${linkmarks}" "${i}"
+                  linkmarks="${RVAL}"
+               ;;
+
+               no-configuration-*)
+                  # ignore these flag for deduping otherwise
+               ;;
+
+               *-os-*|only-configuration-*|no-link)
+                  r_comma_concat "${linkmarks}" "${i}"
+                  linkmarks="${RVAL}"
+               ;;
+            esac
+         done
+         IFS="${DEFAULT_IFS}" ; set +o noglob
+
+         RVAL="${_address};${linkmarks:-DEFAULT}" #;${_filename}"
+         return 0
+      ;;
+
+      *,dedupe-address-marks-filename,*)
+         RVAL="${_address};DEFAULT;${_filename}"
+         return 0
+      ;;
+
       *,dedupe-filename,*)
          RVAL="${_filename}"
          return 0
@@ -557,7 +594,7 @@ ${_raw_userinfo}"
    esac
 
 # address-filename is default
-#   dedupe-address-filename,*)
+#      *,address-filename,*)
    RVAL="${_address};${_filename}"
    return 0
 }
@@ -572,15 +609,15 @@ r_walk_has_visited()
 {
    local mode="$1"
 
+   local lineid
+
    if ! r_get_dedupe_lineid_from_node "${mode}"
    then
       RVAL=""
       return 1
    fi
-
-   local lineid
-
    lineid="${RVAL}"
+
    if find_line "${VISITED}" "${lineid}"
    then
       log_fluff "A node with \"${lineid}\" has already been visited"
@@ -662,10 +699,9 @@ _visit_node()
       ;;
    esac
 
-   # dedupe first because its easy and reduces lots of slow code
-   # breadth-order: node will already have been visited flat, so don't dedupe again
+   # don't dedupe post-flat and breadth-flat
    case ",${mode}," in
-      *,flat,*|*,in-order,*|*,pre-order,*)
+      *,post-flat,*|*,breadth-flat,*|*,flat,*|*,pre-order,*)
          r_walk_has_visited "${mode}"
          case $? in
             0) # has visited
@@ -680,31 +716,29 @@ _visit_node()
    esac
 
    case ",${mode}," in
-      *,flat,*)
-         log_fluff "No descend"
+      *,flat,*|*,post-flat,*|*,breadth-flat,*)
+         log_debug "No descend"
          _visit_callback "$@"
       ;;
 
-      *,in-order,*)
-         log_fluff "In-order descend into ${next_datasource}"
-         if _visit_descend "$@" || [ "${descendqualifier}" != "${callbackqualifier}" ]
-         then
-            _visit_callback "$@"
-         fi
+      *,post-order,*)
+         log_debug "Post-order descend into ${next_datasource}"
+         _visit_descend "$@"
       ;;
 
       *,pre-order,*)
          if _visit_callback "$@" || [ "${descendqualifier}" != "${callbackqualifier}" ]
          then
-            log_fluff "Pre-order descend into ${next_datasource}"
+            log_debug "Pre-order descend into ${next_datasource}"
             _visit_descend "$@"
          fi
       ;;
 
+      #
       # on the first ruin breadth-order will appear as flat, so no callback
       # here
       *,breadth-order,*)
-         log_fluff "Breadth-first descend into ${next_datasource}"
+         log_debug "Breadth-first descend into ${next_datasource}"
          _visit_descend "$@"
       ;;
    esac
@@ -850,13 +884,12 @@ walk_nodeline()
    local _nodetype
    local _tag
    local _url
-   local _userinfo
-   local _uuid
    local _raw_userinfo
+   local _uuid
 
    nodeline_parse "${nodeline}"
 
-   if [ ${MULLE_WALK_LEVEL} -gt 0 ]
+   if [ ${WALK_LEVEL} -gt 0 ]
    then
       case ",${mode}," in
          *,ignore-bequeath,*)
@@ -975,12 +1008,12 @@ _print_walk_info()
          log_debug "Flat ${direction} walk \"${datasource:-.}\""
       ;;
 
-      *,in-order,*)
-         log_debug "Recursive depth-first ${direction} walk \"${datasource:-.}\""
-      ;;
-
       *,pre-order,*)
          log_debug "Recursive pre-order ${direction} walk \"${datasource:-.}\""
+      ;;
+
+      *,post-order,*)
+         log_debug "Recursive post-order ${direction} walk \"${datasource:-.}\""
       ;;
 
       *,breadth-order,*)
@@ -1037,7 +1070,7 @@ _walk_nodelines()
       *,breadth-order,*)
          local tmpmode
 
-         r_comma_concat "${mode}" 'flat'
+         r_comma_concat "${mode}" 'breadth-flat'
          tmpmode="${RVAL}"
 
          set -o noglob ; IFS=$'\n'
@@ -1078,10 +1111,36 @@ _walk_nodelines()
                     "${mode}" \
                     "$@"
    done
-
    IFS="${DEFAULT_IFS}" ; set +o noglob
-}
 
+   case ",${mode}," in
+      *,post-order,*)
+         local tmpmode
+
+         r_comma_concat "${mode}" 'post-flat'
+         tmpmode="${RVAL}"
+
+         set -o noglob ; IFS=$'\n'
+         for nodeline in ${nodelines}
+         do
+            IFS="${DEFAULT_IFS}" ; set +o noglob
+
+            [ -z "${nodeline}" ] && continue
+
+            walk_nodeline "${nodeline}" \
+                          "${datasource}" \
+                          "${virtual}" \
+                          "${filternodetypes}" \
+                          "${filterpermissions}" \
+                          "${callbackqualifier}" \
+                          "${descendqualifier}" \
+                          "${tmpmode}" \
+                          "$@"
+         done
+         IFS="${DEFAULT_IFS}" ; set +o noglob
+      ;;
+   esac
+}
 
 
 walk_dedupe()
@@ -1174,11 +1233,12 @@ walk_config_uuids()
    # this is a subshell, so that the callback max call "exit"
    # to preempt walking
    (
-      local MULLE_WALK_INDENT=""
       local VISITED
       local WALKED
       local rval
-      local MULLE_WALK_LEVEL=0
+      local WALK_INDENT=""
+      local WALK_LEVEL=0
+      local WALK_INDEX=0
 
       WALKED=
       VISITED=
@@ -1187,14 +1247,8 @@ walk_config_uuids()
 
       if [ ! -z "${DID_WALK_CALLBACK}" ]
       then
-         "${DID_WALK_CALLBACK}" "" \
-                                "" \
-                                "${filternodetypes}" \
-                                "${filterpermissions}" \
-                                "${callbackqualifier}" \
-                                "${descendqualifier}" \
-                                "${mode}" \
-                                "$@"
+         # keep callback signature somewhat uniform with other callbacks
+         "${DID_WALK_CALLBACK}" "${SOURCETREE_START}" "" "$@"
       fi
 
       exit $rval
@@ -1270,10 +1324,11 @@ walk_db_uuids()
    # this is a subshell, so that the callback max call "exit"
    # to preempt walking
    (
-      local MULLE_WALK_INDENT=""
-      local MULLE_WALK_LEVEL=0
       local VISITED
       local WALKED
+      local WALK_INDENT=""
+      local WALK_LEVEL=0
+      local WALK_INDEX=0
 
       WALKED=
       VISITED=
@@ -1282,14 +1337,7 @@ walk_db_uuids()
 
       if [ ! -z "${DID_WALK_CALLBACK}" ]
       then
-         "${DID_WALK_CALLBACK}" "" \
-                                "" \
-                                "${filternodetypes}" \
-                                "${filterpermissions}" \
-                                "${callbackqualifier}" \
-                                "${descendqualifier}" \
-                                "${mode}" \
-                                "$@"
+         "${DID_WALK_CALLBACK}" "${SOURCETREE_START}" "" "$@"
       fi
 
       exit $rval
@@ -1308,6 +1356,7 @@ _visit_root_callback()
    local _nodetype
    local _tag
    local _url
+   local _raw_userinfo
    local _userinfo
    local _uuid
 
@@ -1431,7 +1480,7 @@ sourcetree_walk_main()
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_EVAL='YES'
    local OPTION_DIRECTION="FORWARD"
-
+   local CONFIGURATION="Release"
    local WALK_VISIT_CALLBACK=
    local WALK_DESCEND_CALLBACK=
    local OPTION_DEDUPE_MODE=''
@@ -1441,6 +1490,13 @@ sourcetree_walk_main()
       case "$1" in
          -h*|--help|help)
             sourcetree_walk_usage
+         ;;
+
+         --configuration)
+            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            shift
+
+            CONFIGURATION="$1"
          ;;
 
          --callback-root)
@@ -1494,12 +1550,12 @@ sourcetree_walk_main()
             OPTION_TRAVERSE_STYLE="FLAT"
          ;;
 
-         --in-order)
-            OPTION_TRAVERSE_STYLE="INORDER"
-         ;;
-
          --pre-order)
             OPTION_TRAVERSE_STYLE="PREORDER"
+         ;;
+
+         --post-order|--breadth-last)
+            OPTION_TRAVERSE_STYLE="POSTORDER"
          ;;
 
          --breadth-order|--breadth-first)
@@ -1606,7 +1662,7 @@ as one string and use "
 
    if [ $# -eq 0 ]
    then
-      callback='echo "${MULLE_NODE}"'
+      callback='echo "${WALK_NODE}"'
    else
       callback="$1"
       shift
@@ -1616,14 +1672,19 @@ as one string and use "
 
    mode="${SOURCETREE_MODE}"
 
+   #
+   # MEMO: as we are not binary tree but really a graph with multiple
+   # siblings per node, an in-order traversal does not seem to make much sense
+   # as the node would be visited repeatedly for each set of nodelines
+   #
    case "${OPTION_TRAVERSE_STYLE}" in
       "FLAT")
          r_comma_concat "${mode}" "flat"
          mode="${RVAL}"
       ;;
 
-      "INORDER")
-         r_comma_concat "${mode}" "in-order"
+      "POSTORDER")
+         r_comma_concat "${mode}" "post-order"
          mode="${RVAL}"
       ;;
 
@@ -1645,7 +1706,8 @@ as one string and use "
    fi
 
    case "${OPTION_DEDUPE_MODE}" in
-      address|address-filename|address-url|filename|nodeline|nodeline-no-uuid|none|url|url-filename)
+      address|address-filename|address-marks-filename|address-url|filename|\
+linkorder|nodeline|nodeline-no-uuid|none|url|url-filename)
          r_comma_concat "${mode}" "dedupe-${OPTION_DEDUPE_MODE}"
          mode="${RVAL}"
       ;;
@@ -1656,8 +1718,8 @@ as one string and use "
       *)
          fail "Unknown dedupe mode \"${OPTION_DEDUPE_MODE}\".
 ${C_INFO}Choose one of:
-${C_RESET}   address address-filename address-url filename nodeline
-${C_RESET}   nodeline-no-uuid none url url-filename"
+${C_RESET}   address address-filename address-marks-filename address-url
+${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
    esac
 
    if [ "${OPTION_LENIENT}" = 'YES' ]

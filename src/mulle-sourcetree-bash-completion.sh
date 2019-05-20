@@ -45,7 +45,7 @@ _mulle_sourcetree_complete()
    for i in "${COMP_WORDS[@]}"
    do
       case "$i" in
-         add|buildorder|clean|dotdump|fix|get|info|list|\
+         add|craftorder|clean|dotdump|fix|get|info|list|\
 mark|move|nameguess|remove|reset|set|status|typeguess|unmark|update|walk)
             context="$i"
          ;;
@@ -80,7 +80,7 @@ no-update no-${mulle_uname} only-${mulle_uname}" -- "$cur" ) )
       ;;
 
       *)
-         COMPREPLY=( $( compgen -W "add buildorder clean dotdump fix get info \
+         COMPREPLY=( $( compgen -W "add craftorder clean dotdump fix get info \
 list mark move nameguess remove reset set status typeguess unmark update walk" -- "$cur" ) )
       ;;
    esac

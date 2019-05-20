@@ -48,7 +48,7 @@ walk_reset()
 {
    log_entry "walk_reset" "$@"
 
-   sourcetree_db_reset "/${MULLE_VIRTUAL_ADDRESS}"
+   sourcetree_db_reset "/${WALK_VIRTUAL_ADDRESS}"
 }
 
 

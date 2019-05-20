@@ -62,6 +62,7 @@ Usage:
 
 Flags:
       --serial       : serial operation
+      --stdout       : emit to stdout (implies --serial)
 
 Environment:
    MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE : the dependencies output file
@@ -100,36 +101,12 @@ r_uname_to_cmake()
 }
 
 
-r_osexclude_to_cmake_if()
+r_create_exclude_only_if()
 {
-   log_entry "r_osexclude_to_cmake_if" "$@"
+   log_entry "r_create_exclude_only_if" "$@"
 
-   local marks="$1"
-
-   local excludes
-   local onlys
-
-   set -o noglob ; IFS=","
-
-   for osexclude in ${marks}
-   do
-      IFS="${DEFAULT_IFS}"; set +o noglob
-
-      case "${osexclude}" in
-         only-os-*)
-            r_uname_to_cmake "${osexclude:8}"
-            r_concat "${onlys}" "${RVAL}" " OR "
-            onlys="${RVAL}"
-         ;;
-
-         no-os-*)
-            r_uname_to_cmake "${osexclude:6}"
-            r_concat "${excludes}" "${RVAL}" " AND "
-            excludes="${RVAL}"
-         ;;
-      esac
-   done
-
+   local excludes="$1"
+   local onlys="$2"
 
    IFS="${DEFAULT_IFS}"; set +o noglob
 
@@ -155,6 +132,72 @@ r_osexclude_to_cmake_if()
    fi
 
    RVAL=""
+}
+
+
+r_osexclude_configuration_to_cmake_if()
+{
+   log_entry "r_osexclude_configuration_to_cmake_if" "$@"
+
+   local marks="$1"
+
+   local excludes
+   local onlys
+   local mark
+
+   set -o noglob ; IFS=","
+   for mark in ${marks}
+   do
+      IFS="${DEFAULT_IFS}"; set +o noglob
+
+      case "${mark}" in
+         only-os-*)
+            r_uname_to_cmake "${mark:8}"
+            r_concat "${onlys}" "${RVAL}" " OR "
+            onlys="${RVAL}"
+         ;;
+
+         no-os-*)
+            r_uname_to_cmake "${mark:6}"
+            r_concat "${excludes}" "${RVAL}" " OR "
+            excludes="${RVAL}"
+         ;;
+      esac
+   done
+
+
+   set -o noglob ; IFS=","
+   for mark in ${marks}
+   do
+      IFS="${DEFAULT_IFS}"; set +o noglob
+
+      case "${mark}" in
+         only-configuration-test)
+            r_concat "${onlys}" "MULLE_TEST" " OR "
+            onlys="${RVAL}"
+         ;;
+
+         no-configuration-test)
+            r_concat "${excludes}" "MULLE_TEST" " OR "
+            excludes="${RVAL}"
+         ;;
+
+         only-configuration-*)
+            r_capitalize_string "${mark:19}"
+            r_concat "${onlys}" "(\${CMAKE_BUILD_TYPE} MATCHES \"${RVAL}*\")" " OR "
+            onlys="${RVAL}"
+         ;;
+
+         no-configuration-*)
+            r_capitalize_string "${mark:17}"
+            r_concat "${excludes}" "(\${CMAKE_BUILD_TYPE} MATCHES \"${RVAL}*\")" " OR "
+            excludes="${RVAL}"
+         ;;
+      esac
+   done
+   IFS="${DEFAULT_IFS}"; set +o noglob
+
+   r_create_exclude_only_if "${excludes}" "${onlys}"
 }
 
 
@@ -263,6 +306,7 @@ _emit_cmake_find_library()
    log_entry "_emit_cmake_find_library" "$@"
 
    local preference="$1"; shift
+   local findoptions="$1"; shift
 
    local names="$1"
    local identifier="$2"
@@ -320,12 +364,16 @@ _emit_cmake_find_library()
       ;;
    esac
 
+   if [ ! -z "${findoptions}" ]
+   then
+      findoptions=" ${findoptions}"
+   fi
 #
 # this is getting unwieldy, should probably use a function
 #
    cat <<EOF
 ${indent}if( NOT ${identifier}_LIBRARY)
-${indent}   find_library( ${identifier}_LIBRARY NAMES ${libraries})
+${indent}   find_library( ${identifier}_LIBRARY NAMES ${libraries}${findoptions})
 ${indent}   message( STATUS "${identifier}_LIBRARY is \${${identifier}_LIBRARY}")
 ${indent}   #
 ${indent}   # the order looks ascending, but due to the way this file is read
@@ -391,15 +439,18 @@ _emit_cmake_library()
 {
    log_entry "_emit_cmake_library" "$@"
 
-   _emit_cmake_find_library "any" "$@"
+   _emit_cmake_find_library "any" "" "$@"
 }
 
 
+#
+# dependencies will not be searched in the host system
+#
 _emit_cmake_dependency()
 {
    log_entry "_emit_cmake_dependency" "$@"
 
-   _emit_cmake_find_library "static" "$@"
+   _emit_cmake_find_library "static" "NO_CMAKE_SYSTEM_PATH" "$@"
 }
 
 
@@ -549,9 +600,8 @@ emit_cmake_dependency()
 
    if [ ! -z "${marks}" ]
    then
-      r_osexclude_to_cmake_if "${marks}"
+      r_osexclude_configuration_to_cmake_if "${marks}"
       ifstatement="${RVAL}"
-
       if [ ! -z "${ifstatement}" ]
       then
          indent="   "
@@ -671,7 +721,7 @@ emit_dependency_subproject()
                            list \
                               --format '%a;%m;%i={aliases,,};%i={include,,}\n' \
                               --marks 'dependency,header,no-link' \
-                              --output-raw \
+                              --output-format raw \
                               --no-output-header`" || return 1
    emit_cmake_dependencies "_emit_cmake_header_only" \
                            "HEADER_ONLY_LIBRARIES" \
@@ -683,7 +733,7 @@ emit_dependency_subproject()
                            list \
                               --format '%a;%m;%i={aliases,,};%i={include,,}\n' \
                               --marks 'dependency,link' \
-                              --output-raw \
+                              --output-format raw \
                               --no-output-header`" || return 1
 
    emit_cmake_dependencies "_emit_cmake_dependency" \
@@ -705,7 +755,7 @@ emit_library()
                         library list \
                            --marks header,no-link \
                            -- \
-                           --output-raw \
+                           --output-format raw \
                            --output-no-header`" || return 1
    emit_cmake_dependencies "_emit_cmake_header_only" \
                            "HEADER_ONLY_LIBRARIES" \
@@ -717,7 +767,7 @@ emit_library()
                         library list \
                            --marks link \
                            -- \
-                           --output-raw \
+                           --output-format raw \
                            --output-no-header`" || return 1
    emit_cmake_dependencies "_emit_cmake_library" \
                            "OS_SPECIFIC_LIBRARIES" \

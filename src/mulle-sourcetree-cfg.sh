@@ -245,11 +245,12 @@ cfg_get_nodeline()
    log_entry "cfg_get_nodeline" "$@"
 
    local address="$2"
+   local fuzzy="$3"
 
    local nodelines
 
    nodelines="`cfg_read "$1"`"
-   nodeline_find "${nodelines}" "${address}"
+   nodeline_find "${nodelines}" "${address}" "${fuzzy}"
 }
 
 

@@ -268,9 +268,9 @@ walk_fix()
    local filename
    local address
 
-   datasource="${MULLE_DATASOURCE}"
-   address="${MULLE_ADDRESS}"
-   filename="${MULLE_FILENAME}"
+   datasource="${WALK_DATASOURCE}"
+   address="${NODE_ADDRESS}"
+   filename="${NODE_FILENAME}"
 
    if [ -e "${filename}" ]
    then

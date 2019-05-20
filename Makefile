@@ -1,7 +1,7 @@
 SCRIPTS=./bin/installer \
 src/mulle-sourcetree-action.sh \
 src/mulle-sourcetree-bash-completion.sh \
-src/mulle-sourcetree-buildorder.sh \
+src/mulle-sourcetree-craftorder.sh \
 src/mulle-sourcetree-callback.sh \
 src/mulle-sourcetree-cfg.sh \
 src/mulle-sourcetree-clean.sh \

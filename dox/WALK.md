@@ -3,7 +3,7 @@
 There are four different fundamental modes of walking the sourcetree
 
 * flat
-* in-order
+* post-order
 * pre-order
 * breadth-first
 
@@ -31,12 +31,12 @@ The pre-order walker visits each node first, before descending into child nodes.
 the most intuitive kind of recursion. Notice how **d** will be visited
 twice, as it is a child node of **b** and also of **c**.
 
-### In-order
+### Post-order
 
-![In order](walk-in-order.png)
+![Post order](walk-post-order.png)
 
-The in-order walker descends into each nodes child nodes
-first before actually visiting the node. This is for example useful to list the buildorder of nodes.
+The post-order walker descends into each nodes child nodes
+first before actually visiting the node. This is for example useful to list the craftorder of nodes.
 
 
 ### Breadth-first
@@ -83,10 +83,10 @@ Now walk the project in various modes:
 
 
 ```
-mulle-sourcetree walk --flat 'echo "${MULLE_ADDRESS}"'
-mulle-sourcetree walk --in-order 'echo "${MULLE_ADDRESS}"'
-mulle-sourcetree walk --pre-order 'echo "${MULLE_ADDRESS}"'
-mulle-sourcetree walk --breadth-first 'echo "${MULLE_ADDRESS}"'
+mulle-sourcetree walk --flat 'echo "${NODE_ADDRESS}"'
+mulle-sourcetree walk --post-order 'echo "${NODE_ADDRESS}"'
+mulle-sourcetree walk --pre-order 'echo "${NODE_ADDRESS}"'
+mulle-sourcetree walk --breadth-first 'echo "${NODE_ADDRESS}"'
 ```
 
 ## Deduplication of nodes
@@ -98,7 +98,7 @@ this can slow the proceedings down immensely.
 Let's deduplicate based on the address:
 
 ```
-mulle-sourcetree walk --dedupe address --pre-order 'echo "${MULLE_ADDRESS}"'
+mulle-sourcetree walk --dedupe address --pre-order 'echo "${NODE_ADDRESS}"'
 ```
 
 You will see that the second **d** has vanished from the output.
@@ -108,7 +108,7 @@ You will see that the second **d** has vanished from the output.
 
 To explain filtering we need some terminology.
 
-* callback     : at each node the walker may execute a callback. In the examples above the callback was the 'echo "${MULLE_ADDRESS}'
+* callback     : at each node the walker may execute a callback. In the examples above the callback was the 'echo "${NODE_ADDRESS}'
 * descend      : the walker will read child nodes of a node, if it has a sourcetree
 * visit a node : the walker is contemplating a callback or a descend
 
@@ -119,7 +119,7 @@ twice)
 Mode           | Visit #1          | Visit #2
 ---------------|-------------------|-----------------
 flat           | callback          |
-in-order       | descend, callback |
+post-order      | descend, callback |
 pre-order      | callback, descend |
 breadth-first  | callback          | descend
 

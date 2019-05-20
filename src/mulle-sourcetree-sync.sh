@@ -47,6 +47,7 @@ Usage:
 
 Options:
    -r                         : sync recursively
+   --quick-check              : if present in filesystem assume node is OK
    --no-fix                   : do not write ${SOURCETREE_FIX_FILENAME} files
    --share                    : create database in shared configuration
    --override-branch <branch> : temporary override of the _branch for all nodes
@@ -172,9 +173,9 @@ _descend_db_nodeline()
    local _marks
    local _nodetype
    local _raw_userinfo
+   local _userinfo
    local _tag
    local _url
-   local _userinfo
    local _uuid
 
    nodeline_parse "${nodeline}"
@@ -229,9 +230,9 @@ _descend_config_nodeline()
    local _marks
    local _nodetype
    local _raw_userinfo
+   local _userinfo
    local _tag
    local _url
-   local _userinfo
    local _uuid
 
    nodeline_parse "${nodeline}"
@@ -405,9 +406,9 @@ _sync_nodeline_only_share()
    local _marks
    local _nodetype
    local _raw_userinfo
+   local _userinfo
    local _tag
    local _url
-   local _userinfo
    local _uuid
 
    nodeline_parse "${nodeline}"
@@ -679,14 +680,13 @@ _sourcetree_sync_recurse()
 
    db_set_dbtype "${database}" "${style}"
    db_set_update "${database}"
-   db_clear_shareddir "${database}"
 
+   db_clear_shareddir "${database}"
    db_zombify_nodes "${database}"
 
    do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}" || return 1
 
    db_bury_zombies "${database}"
-
    # until now, it was just like flat. Now recurse through nodelines.
 
    _descend_db_nodelines "recurse" "${config}" "${database}"  || return 1
@@ -745,8 +745,8 @@ _sourcetree_sync_flat()
 
    db_set_dbtype "${database}" "${style}"
    db_set_update "${database}"
-   db_clear_shareddir "${database}"
 
+   db_clear_shareddir "${database}"
    db_zombify_nodes "${database}"
 
    do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}" || return 1
@@ -858,6 +858,7 @@ sourcetree_sync_main()
    local OPTION_FETCH_SYMLINK="DEFAULT"
    local OPTION_FETCH_ABSOLUTE_SYMLINK="DEFAULT"
    local OPTION_LENIENT='YES'
+   local OPTION_QUICK='NO'
 
    while [ $# -ne 0 ]
    do
@@ -875,6 +876,10 @@ sourcetree_sync_main()
 
          --no-lenient)
             OPTION_LENIENT='NO'
+         ;;
+
+         --quick)
+            OPTION_QUICK='YES'
          ;;
 
          --cache-refresh|--refresh|--mirror-refresh)

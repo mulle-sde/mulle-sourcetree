@@ -56,13 +56,12 @@ Options:
    --qualifier <value>      : specify marks qualifier
    --format <format>        : supply a custom format (abfimntu_)
    --output-banner          : print a banner with config information
-   --output-cmd             : output as ${MULLE_EXECUTABLE_NAME} command line
+   --output-format          : possible values (formatted, command, cmd2, raw)
    --output-eval            : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
    --output-full            : show url and various fetch options
    --output-no-header       : suppress header in raw and default lists
    --output-no-marks <list> : suppress output of certain marks (comma sep)
    --output-no-separator    : suppress separator line if header is printed
-   --output-raw             : output as CSV (semicolon separated values)
 EOF
   exit 1
 }
@@ -155,7 +154,7 @@ list_walk_callback()
       r_sourcetree_remove_marks "${_marks}" "${OPTION_NO_OUTPUT_MARKS}"
       _marks="${RVAL}"
    fi
-   node_printf "${_mode}" "${formatstring}" "${cmdline}" "${MULLE_WALK_INDENT}"
+   node_printf "${_mode}" "${formatstring}" "${cmdline}" "${WALK_INDENT}"
 }
 
 
@@ -243,7 +242,7 @@ r_sourcetree_augment_mode_with_output_options()
    RVAL="${mode}"
 
    case ",${mode}," in
-      *,flat,*|*,pre-order,*|*,in-order,*|*,breadth-order,*)
+      *,flat,*|*,pre-order,*|*,post-order,*|*,breadth-order,*)
       ;;
 
       *)
@@ -293,16 +292,14 @@ ${C_RESET}   address address-filename address-url filename nodeline
 
       "CMD")
          r_comma_concat "${RVAL}" "output_cmd"
-         r_comma_concat "${RVAL}" "output_full"
       ;;
 
       "CMD2")
          r_comma_concat "${RVAL}" "output_cmd2"
-         r_comma_concat "${RVAL}" "output_full"
       ;;
 
       *)
-         [ -z "`command -v column`" ] && fail "Tool \"column\" is not available, use --output-raw"
+         [ -z "`command -v column`" ] && fail "Tool \"column\" is not available, use --output-format raw"
 
          if [ "${OPTION_OUTPUT_HEADER}" != 'NO' ]
          then
@@ -397,20 +394,33 @@ sourcetree_list_main()
             OPTION_FORMAT="$1"
          ;;
 
-         --output-fmt|--output-format*)
-            OPTION_OUTPUT_FORMAT="FMT"
-         ;;
+         --output-format)
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            shift
 
-         --output-cmd|--out-command)
-            OPTION_OUTPUT_FORMAT="CMD"
-         ;;
+            case "$1" in
+               formatted|fmt)
+                  OPTION_OUTPUT_FORMAT="FMT"
+               ;;
 
-         --output-cmd2|--out-command2)
-            OPTION_OUTPUT_FORMAT="CMD2"
-         ;;
+               cmd|command)
+                  OPTION_OUTPUT_FULL='YES'
+                  OPTION_OUTPUT_FORMAT="CMD"
+               ;;
 
-         --output-raw|--output-csv)
-            OPTION_OUTPUT_FORMAT="RAW"
+               cmd2|command2)
+                  OPTION_OUTPUT_FULL='YES'
+                  OPTION_OUTPUT_FORMAT="CMD2"
+               ;;
+
+               raw|csv)
+                 OPTION_OUTPUT_FORMAT="RAW"
+               ;;
+
+               *)
+                  sourcetree_list_usage "Unknown output format \"$1\""
+               ;;
+            esac
          ;;
 
          --output-color)
@@ -518,10 +528,6 @@ sourcetree_list_main()
          ;;
 
          -ll|--output-full)
-            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
-            then
-               OPTION_FORMAT=
-            fi
             OPTION_OUTPUT_FULL='YES'
          ;;
 
@@ -614,9 +620,14 @@ sourcetree_list_main()
    r_sourcetree_list_convert_marks_to_qualifier "${OPTION_MARKS}" "${OPTION_MARKS_QUALIFIER}" ## UGLY
    OPTION_MARKS_QUALIFIER="${RVAL}"
 
-   if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+   if [ "${OPTION_OUTPUT_FULL}" = 'YES' ]
    then
-      OPTION_FORMAT='%a\n'
+      OPTION_FORMAT=
+   else
+      if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+      then
+         OPTION_FORMAT='%a\n'
+      fi
    fi
 
    sourcetree_list_sourcetree "${mode}" \

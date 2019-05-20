@@ -31,53 +31,6 @@
 #
 MULLE_SOURCETREE_CALLBACK_SH="included"
 
-#
-# convenience for callbacks in shared configuration
-# TODO: is this still needed for statzs ? isn't this the same as _filename
-# now ?
-#
-__walk_get_db_filename()
-{
-   log_entry "__walk_get_db_filename" "$@"
-
-   if ! nodemarks_contain "${MULLE_MARKS}" "fs"
-   then
-      return
-   fi
-
-   local database
-
-   database="${MULLE_DATASOURCE}"
-   if nodemarks_contain "${MULLE_MARKS}" "share" && \
-      [ "${SOURCETREE_MODE}" = "share" -a ! -z "${MULLE_URL}" ]
-   then
-      database="/"
-      if db_is_ready "${database}"
-      then
-         local uuid
-
-         uuid="`db_fetch_uuid_for_url "${database}" "${MULLE_URL}" `"
-         if [ ! -z "${uuid}" ]
-         then
-            db_fetch_filename_for_uuid "${database}" "${uuid}"
-            return
-         fi
-         # ok could be an edit
-      fi
-
-      r_fast_basename "${MULLE_ADDRESS}"
-      filepath_concat "${MULLE_SOURCETREE_STASH_DIR}" "${RVAL}"
-      return
-   fi
-
-   if db_is_ready "${database}"
-   then
-      db_fetch_filename_for_uuid "${database}" "${MULLE_UUID}"
-   else
-      echo "${MULLE_FILENAME}"
-   fi
-}
-
 
 #
 # "cheat" and read global _ values defined in _visit_node and friends
@@ -118,23 +71,22 @@ __call_callback()
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
-      log_trace2 "MULLE_ADDRESS:         \"${_address}\""
-      log_trace2 "MULLE_BRANCH:          \"${_branch}\""
-      log_trace2 "MULLE_DATASOURCE:      \"${datasource}\""
-      log_trace2 "MULLE_DESTINATION:     \"${_destination}\""
-      log_trace2 "MULLE_FETCHOPTIONS:    \"${_fetchoptions}\""
-      log_trace2 "MULLE_FILENAME:        \"${_filename}\""
-      log_trace2 "MULLE_MARKS:           \"${_marks}\""
-      log_trace2 "MULLE_MODE:            \"${mode}\""
-      log_trace2 "MULLE_NODE:            \"${_nodeline}\""
-      log_trace2 "MULLE_NODETYPE:        \"${_nodetype}\""
-      log_trace2 "MULLE_TAG:             \"${_tag}\""
-      log_trace2 "MULLE_URL:             \"${_url}\""
-      log_trace2 "MULLE_RAW_USERINFO:    \"${_raw_userinfo}\""
-      log_trace2 "MULLE_USERINFO:        \"${_userinfo}\""
-      log_trace2 "MULLE_UUID:            \"${_uuid}\""
-      log_trace2 "MULLE_VIRTUAL:         \"${virtual}\""
-      log_trace2 "MULLE_VIRTUAL_ADDRESS: \"${_virtual_address}\""
+      log_trace2 "NODE_ADDRESS:         \"${_address}\""
+      log_trace2 "NODE_BRANCH:          \"${_branch}\""
+      log_trace2 "NODE_FETCHOPTIONS:    \"${_fetchoptions}\""
+      log_trace2 "NODE_FILENAME:        \"${_filename}\""
+      log_trace2 "NODE_MARKS:           \"${_marks}\""
+      log_trace2 "NODE_RAW_USERINFO:    \"${_raw_userinfo}\""
+      log_trace2 "NODE_TAG:             \"${_tag}\""
+      log_trace2 "NODE_TYPE:            \"${_nodetype}\""
+      log_trace2 "NODE_URL:             \"${_url}\""
+      log_trace2 "NODE_UUID:            \"${_uuid}\""
+      log_trace2 "WALK_DATASOURCE:      \"${datasource}\""
+      log_trace2 "WALK_DESTINATION:     \"${_destination}\""
+      log_trace2 "WALK_MODE:            \"${mode}\""
+      log_trace2 "WALK_NODE:            \"${_nodeline}\""
+      log_trace2 "WALK_VIRTUAL:         \"${virtual}\""
+      log_trace2 "WALK_VIRTUAL_ADDRESS: \"${_virtual_address}\""
    fi
 
    #
@@ -145,13 +97,13 @@ __call_callback()
    local _virtual="${virtual}"
 
    #
-   # MULLE_NODE the current nodelines from config or database, unchanged
+   # WALK_NODE the current nodelines from config or database, unchanged
    #
-   # MULLE_ADDRESS-MULLE_UUID as defined in nodeline, unchanged
+   # NODE_ADDRESS-NODE_UUID as defined in nodeline, unchanged
    #
    # MULLE_DATASOURCE  : config or database "handle" where nodelines was read
    # MULLE_DESTINATION : either "_address" or in shared case basename of "_address"
-   # MULLE_VIRTUAL     : either ${MULLE_SOURECTREE_SHARE_DIR} or ${MULLE_VIRTUAL_ROOT}
+   # WALK_VIRTUAL     : either ${MULLE_SOURECTREE_SHARE_DIR} or ${MULLE_VIRTUAL_ROOT}
    #
    #
    log_debug "Calling callback: ${callback} $*"
@@ -161,23 +113,22 @@ __call_callback()
    # TODO: since callback is evaluated we actually do not not need to pass the
    # extra parameters around anymore
    #
-   MULLE_NODE="${_nodeline}" \
-   MULLE_ADDRESS="${_address}" \
-   MULLE_BRANCH="${_branch}" \
-   MULLE_FETCHOPTIONS="${_fetchoptions}" \
-   MULLE_MARKS="${_marks}" \
-   MULLE_NODETYPE="${_nodetype}" \
-   MULLE_RAW_USERINFO="${_raw_userinfo}" \
-   MULLE_URL="${_url}" \
-   MULLE_USERINFO="${_userinfo}" \
-   MULLE_TAG="${_tag}" \
-   MULLE_UUID="${_uuid}" \
-   MULLE_DATASOURCE="${datasource}" \
-   MULLE_DESTINATION="${_destination}" \
-   MULLE_FILENAME="${_filename}" \
-   MULLE_MODE="${mode}" \
-   MULLE_VIRTUAL="${virtual}" \
-   MULLE_VIRTUAL_ADDRESS="${_virtual_address}" \
+   NODE_ADDRESS="${_address}" \
+   NODE_BRANCH="${_branch}" \
+   NODE_FETCHOPTIONS="${_fetchoptions}" \
+   NODE_FILENAME="${_filename}" \
+   NODE_MARKS="${_marks}" \
+   NODE_RAW_USERINFO="${_raw_userinfo}" \
+   NODE_TAG="${_tag}" \
+   NODE_TYPE="${_nodetype}" \
+   NODE_URL="${_url}" \
+   NODE_UUID="${_uuid}" \
+   WALK_DATASOURCE="${datasource}" \
+   WALK_DESTINATION="${_destination}" \
+   WALK_MODE="${mode}" \
+   WALK_NODE="${_nodeline}" \
+   WALK_VIRTUAL="${virtual}" \
+   WALK_VIRTUAL_ADDRESS="${_virtual_address}" \
       ${evaluator} "${callback}" "$@"
    rval="$?"
 

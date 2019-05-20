@@ -86,7 +86,8 @@ _sourcetree_get_userinfo_field()
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || exit 1
    fi
 
-   assoc_array_get "${userinfo}" "${field}"
+   r_assoc_array_get "${userinfo}" "${field}"
+   printf "%s" "${RVAL}"
 }
 
 
@@ -114,12 +115,14 @@ _sourcetree_set_userinfo_field()
 
    if [ "${append}" = 'YES' ]
    then
-      list="`assoc_array_get "${userinfo}" "${field}" `"
+      r_assoc_array_get "${userinfo}" "${field}"
+      list="${RVAL}"
       r_commalist_add "${list}" "${value}"
       value="${RVAL}"
    fi
 
-   userinfo="`assoc_array_set "${userinfo}" "${field}" "${value}" `"
+   r_assoc_array_set "${userinfo}" "${field}" "${value}"
+   userinfo="${RVAL}"
 
    exekutor run_mulle_sourcetree ${MULLE_SOURCETREE_FLAGS} \
       set "${address}" "userinfo" "${userinfo}"

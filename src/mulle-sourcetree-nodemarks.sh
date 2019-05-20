@@ -63,24 +63,11 @@ _r_nodemarks_add()
    local marks="$1"
    local key="$2"
 
-   _nodemarks_key_check "${key}"
-
-   local i
-
-   # is this faster than case ?
-   set -o noglob ; IFS=","
-   for i in ${marks}
-   do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
-      if [ "$i" = "${key}" ]
-      then
-         RVAL="${marks}"   # already set
-         return
-      fi
-   done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
-
-   r_comma_concat "${marks}" "${key}"
+   # avoid duplicates and reorg
+   if ! _nodemarks_contain "${marks}" "${key}"
+   then
+      r_comma_concat "${marks}" "${key}"
+   fi
 }
 
 #
@@ -90,8 +77,6 @@ _r_nodemarks_find_prefix()
 {
    local marks="$1"
    local prefix="$2"
-
-   _nodemarks_key_check "${prefix}"
 
    local i
 
@@ -113,31 +98,15 @@ _r_nodemarks_find_prefix()
 }
 
 
-
 _r_nodemarks_remove()
 {
    local marks="$1"
    local key="$2"
 
-   _nodemarks_key_check "${key}"
-
-   local result
-   local i
-
-   set -o noglob ; IFS=","
-   for i in ${marks}
-   do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
-
-      if [ "${i}" != "${key}" ]
-      then
-         r_comma_concat "${result}" "${i}"
-         result="${RVAL}"
-      fi
-   done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
-
-   RVAL="${result}"
+   RVAL=",${marks},"
+   RVAL=${RVAL//,${key},/,}
+   RVAL=${RVAL##,}
+   RVAL=${RVAL%%,}
 }
 
 
@@ -225,8 +194,6 @@ _nodemarks_contain()
 {
    local marks="$1"
    local key="$2"
-
-   _nodemarks_key_check "${key}"
 
    # this is a bit faster than IFS=, parsing but not much
    case ",${marks}," in
@@ -361,11 +328,11 @@ nodemarks_match()
          fi
 
          rval=1
-         pattern="`LC_ALL=C sed -e 's/\*/*([^,])/g' <<< "${pattern}"`"
+         pattern="${pattern//\*/*([^,])}"
 
          shopt -s extglob
          case ",${marks}," in
-            *","${pattern}","*)
+            *\,${pattern}\,*)
                rval=0
             ;;
          esac
@@ -395,7 +362,7 @@ nodemarks_intersect()
    for key in ${anymarks}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
-      if nodemarks_contain "${marks}" "${key}"
+      if _nodemarks_contain "${marks}" "${key}"
       then
          return 0
       fi
@@ -413,15 +380,13 @@ r_nodemarks_sort()
    local result
    local i
 
+   RVAL=
    IFS=$'\n'
    for i in `tr ',' '\n' <<< "${marks}" | LC_ALL=C sort -u`
    do
-      r_comma_concat "${result}" "${i}"
-      result="${RVAL}"
+      r_comma_concat "${RVAL}" "${i}"
    done
    IFS="${DEFAULT_IFS}"
-
-   RVAL="${result}"
 }
 
 

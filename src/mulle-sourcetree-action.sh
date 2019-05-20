@@ -181,7 +181,7 @@ _do_fetch_operation()
    local _nodetype="$5"       # nodetype to use for this node
    local _marks="$6"          # marks on node
    local _fetchoptions="$7"   # options to use on _nodetype
-   local _userinfo="$8"       # unused
+   local _raw_userinfo="$8"   # unused
    local _uuid="$9"           # uuid of the node
 
    [ $# -eq 9 ] || internal_fail "fail"
@@ -271,6 +271,7 @@ update_actions_for_nodelines()
    local _nodetype
    local _tag
    local _url
+   local _raw_userinfo
    local _userinfo
    local _uuid
 
@@ -319,7 +320,7 @@ do_operation()
    local _nodetype="$5"       # nodetype to use for this node
 #   local _marks="$6"         # marks on node
    local _fetchoptions="$7"   # options to use on _nodetype
-#   local _userinfo="$8"      # userinfo
+#   local _raw_userinfo="$8"  # userinfo
 #   local _uuid="$9"          # uuid of the node
 
 
@@ -604,7 +605,7 @@ chickening out"
    then
       if ! [ "${_nodetype}" = "symlink" -a "${newnodetype}" = "git" ]
       then
-         log_fluff "Nodetype has changed from \"${_nodetype}\" to \
+         log_verbose "Nodetype has changed from \"${_nodetype}\" to \
 \"${newnodetype}\", need to fetch"
 
          # no-delete check here ?
@@ -652,7 +653,7 @@ old \"${previousfilename}\" exist. Looks like a manual move. Doing nothing."
          # Just old is there, so move it. We already checked
          # for the case where both are absent.
          #
-         log_fluff "Address changed from \"${_address}\" to \
+         log_verbose "Address changed from \"${_address}\" to \
 \"${newaddress}\", need to move"
          actions="move"
       fi
@@ -702,11 +703,11 @@ in URL related info."
       have_checkout="$(fgrep -s -x "checkout" <<< "${available}")" || :
       if [ ! -z "${have_checkout}" ]
       then
-         log_fluff "Branch has changed from \"${_branch}\" to \
+         log_verbose "Branch has changed from \"${_branch}\" to \
 \"${newbranch}\", need to checkout"
          actions="`add_line "${actions}" "checkout"`"
       else
-         log_fluff "Branch has changed from \"${_branch}\" to \
+         log_verbose "Branch has changed from \"${_branch}\" to \
 \"${newbranch}\", need to fetch"
          if [ "${previousexists}" = 'YES' ]
          then
@@ -722,11 +723,11 @@ in URL related info."
       have_checkout="$(fgrep -s -x "checkout" <<< "${available}")" || :
       if [ ! -z "${have_checkout}" ]
       then
-         log_fluff "Tag has changed from \"${_tag}\" to \"${newtag}\", need \
+         log_verbose "Tag has changed from \"${_tag}\" to \"${newtag}\", need \
 to checkout"
          actions="`add_line "${actions}" "checkout"`"
       else
-         log_fluff "Tag has changed from \"${_tag}\" to \"${newtag}\", need \
+         log_verbose "Tag has changed from \"${_tag}\" to \"${newtag}\", need \
 to fetch"
          if [ "${previousexists}" = 'YES' ]
          then
@@ -743,12 +744,12 @@ to fetch"
       have_set_url="$(fgrep -s -x "set-url" <<< "${available}")" || :
       if [ ! -z "${have_upgrade}" -a ! -z "${have_set_url}" ]
       then
-         log_fluff "URL has changed from \"${_url}\" to \"${newurl}\", need to \
+         log_verbose "URL has changed from \"${_url}\" to \"${newurl}\", need to \
 set remote _url and fetch"
          actions="`add_line "${actions}" "set-url"`"
          actions="`add_line "${actions}" "upgrade"`"
       else
-         log_fluff "URL has changed from \"${_url}\" to \"${newurl}\", need to \
+         log_verbose "URL has changed from \"${_url}\" to \"${newurl}\", need to \
 fetch"
          if [ "${previousexists}" = 'YES' ]
          then
@@ -783,7 +784,7 @@ __update_perform_item()
                                      "${_nodetype}" \
                                      "${_marks}" \
                                      "${_fetchoptions}" \
-                                     "${_userinfo}" \
+                                     "${_raw_userinfo}" \
                                      "${_uuid}"
          then
             # as these are shortcuts to remove/fetch, but the
@@ -805,7 +806,7 @@ __update_perform_item()
                               "${_nodetype}" \
                               "${_marks}" \
                               "${_fetchoptions}" \
-                              "${_userinfo}" \
+                              "${_raw_userinfo}" \
                               "${_uuid}"
 
          case "$?" in

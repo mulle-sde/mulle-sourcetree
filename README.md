@@ -107,12 +107,16 @@ Mark       | Description
 These are some marks, that are used by mulle-sde tools:
 
 
-Mark         | Description
--------------|---------------------------------------------
-`build`      | Will be built.
-`dependency` | This is a dependency
-`header`     | Will be used for header generation (_dependencies.h)
-`link`       | Will be linked against
+Mark           | Description
+---------------|---------------------------------------------
+`all-load`     | Will be linked "wholesale" for Objective-C
+`build`        | Will be built.
+`cmakeinherit` | Participates in cmake dependency inclusion scheme
+`dependency`   | This is a dependency
+`header`       | Will be used for header generation (_include-private.h)
+`import`       | Will use `#import` instead of `#include` for header
+`public`       | Is a public header (_include.h)
+`link`         | Will be linked against
 
 
 #### Sourcetree Modes
@@ -175,10 +179,10 @@ open pic.dot # view it with Graphviz (http://graphviz.org/)
 ![Picture](pic.png)
 
 
-#### `mulle-sourcetree buildorder` : retrieve projects to build
+#### `mulle-sourcetree craftorder` : retrieve projects to build
 
 ```
-$ mulle-sourcetree buildorder
+$ mulle-sourcetree craftorder
 /private/tmp/a/external/expat
 /private/tmp/a/external/zlib
 ```

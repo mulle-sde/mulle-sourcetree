@@ -67,11 +67,11 @@ EOF
 #
 walk_clean()
 {
-   log_entry "${C_RESET}walk_clean${C_DEBUG}" "${MULLE_FILENAME}" "${MULLE_MARKS}"
+   log_entry "${C_RESET}walk_clean${C_DEBUG}" "${NODE_FILENAME}" "${NODE_MARKS}"
 
-   case "${MULLE_NODETYPE}" in
+   case "${NODE_TYPE}" in
       none)
-         log_fluff "\"${MULLE_FILENAME}\" with nodetype none is ignored"
+         log_fluff "\"${NODE_FILENAME}\" with nodetype none is ignored"
          return
       ;;
    esac
@@ -79,16 +79,16 @@ walk_clean()
    local filename
    local marks
 
-   filename="`db_fetch_filename_for_uuid "${MULLE_DATASOURCE}" "${MULLE_UUID}" `"
+   filename="`db_fetch_filename_for_uuid "${WALK_DATASOURCE}" "${NODE_UUID}" `"
 
    if [ -z "${filename}" ]
    then
       # database has nothing for it
-      log_fluff "\"${MULLE_FILENAME}\" has no known update in \"${MULLE_DATASOURCE}\", so not cleaning it"
+      log_fluff "\"${NODE_FILENAME}\" has no known update in \"${WALK_DATASOURCE}\", so not cleaning it"
       return
    fi
 
-   marks="${MULLE_MARKS}"
+   marks="${NODE_MARKS}"
 
    #
    # the actual desired filename for a config file is pretty complicated though
@@ -151,12 +151,17 @@ sourcetree_clean()
    #
    local commands
 
+   # filternodetypes
+   # filterpermissions
+   # callbackqualifier
+   # descendqualifier
+   # mode
    commands="`walk_db_uuids "ALL" \
-                             "" \
-                             "" \
-                             "" \
-                             "${mode},no-dbcheck,no-trace,dedupe-filename" \
-                             "walk_clean" `"
+                            "descend-skip-symlink" \
+                            "" \
+                            "" \
+                            "${mode},no-dbcheck,no-trace,dedupe-filename" \
+                            "walk_clean" `"
 
 
    log_debug "COMMANDS: ${commands}"

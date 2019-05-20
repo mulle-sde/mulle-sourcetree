@@ -31,7 +31,7 @@ run_test_1()
    [ "${_nodetype}"     = "nodetype" ]     || fail "wrong nodetype \"${_nodetype}\""
    [ "${_marks}"        = "marks" ]        || fail "wrong marks \"${_marks}\""
    [ "${_fetchoptions}" = "fetchoptions" ] || fail "wrong nodetype \"${_fetchoptions}\""
-   [ "${_userinfo}"     = "userinfo" ]     || fail "wrong userinfo \"${_userinfo}\""
+   [ "${_raw_userinfo}" = "userinfo" ]     || fail "wrong userinfo \"${_raw_userinfo}\""
    [ "${_uuid}"         = "uuid" ]         || fail "wrong uuid \"${_uuid}\""
 
    local printed
@@ -66,7 +66,7 @@ run_test_2()
    [ "${_nodetype}" = "xyz"  ]        || fail "wrong nodetype \"${_nodetype}\""
    [ -z "${_marks}"        ]          || fail "wrong marks \"${_marks}\""
    [ -z "${_fetchoptions}" ]          || fail "wrong nodetype \"${_fetchoptions}\""
-   [ -z "${_userinfo}"     ]          || fail "wrong userinfo \"${_userinfo}\""
+   [ -z "${_raw_userinfo}" ]          || fail "wrong userinfo \"${_raw_userinfo}\""
    [ "${_uuid}" = "uuid-required" ]   || fail "wrong uuid \"${_uuid}\""
 }
 

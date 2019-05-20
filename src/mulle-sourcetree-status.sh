@@ -31,6 +31,7 @@
 #
 MULLE_SOURCETREE_STATUS_SH="included"
 
+
 sourcetree_dbstatus_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -58,14 +59,21 @@ sourcetree_status_usage()
 Usage:
    ${MULLE_USAGE_NAME} status [options]
 
-   Emit status of your sourcetree.
+   Emit status of your sourcetree. The nodes listed are your projects
+   sourcetree nodes and those nodes inherited by dependencies.
+
+   Status     - shows the state of the database if any.
+   Filesystem - shows the type of the dependency (directory or symlink)
+   Sourcetree - shows if that project has a sourcetree.
+   Database   - shows if that project has synced at least once.
 
 Options:
-   --all         : visit all nodes, even if they are unused due to sharing
-   --is-uptodate : return with 0 if sourcetree does not need to run update
-   -n <value>    : node types to walk (default: ALL)
-   -p <value>    : specify permissions (missing)
-   -m <value>    : specify marks to match (e.g. build)
+   --all             : visit all nodes, even if they are unused due to sharing
+   --is-uptodate     : return with 0 if sourcetree does not need to run update
+   --output-filename : add filename to output
+   -n <value>        : node types to walk (default: ALL)
+   -p <value>        : specify permissions (missing)
+   -m <value>        : specify marks to match (e.g. build)
 EOF
   exit 1
 }
@@ -100,7 +108,7 @@ sourcetree_is_uptodate()
 
    if [ "${configtimestamp}" -gt "${dbtimestamp:-0}" ]
    then
-      log_fluff "Config \"${datasource}\" is newer than the database"
+      log_fluff "Sourcetree \"${datasource}\" is newer than the database"
       return 1
    fi
 
@@ -170,17 +178,18 @@ r_emit_status()
    local mode="$5"
    local filename="$6"
 
-   local output_adress
+   local output_address
 
    r_filepath_concat "${datasource}" "${address}"
-   output_adress="${RVAL}"
+   output_address="${RVAL}"
 
    # emit root
    if [ -z "${directory}" ]
    then
       datasource="${SOURCETREE_START}"
       r_filepath_concat "${SOURCETREE_START}" "${address}"
-      output_adress="${RVAL}"
+      output_address="${RVAL}"
+
       directory="."
       r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${SOURCETREE_START}"
       filename="${RVAL}"
@@ -190,17 +199,17 @@ r_emit_status()
          datasource="${filename#${MULLE_VIRTUAL_ROOT}}"
          if [ -z "${datasource}" ]
          then
-            datasource="${MULLE_VIRTUAL_ADDRESS}"
+            datasource="${WALK_VIRTUAL_ADDRESS}"
          fi
       else
          datasource="${filename}"
       fi
    fi
 
-   if string_has_prefix "${output_adress}" "${MULLE_SOURCETREE_STASH_DIR}"
+   if string_has_prefix "${output_address}" "${MULLE_SOURCETREE_STASH_DIR}"
    then
-      output_adress="${output_adress#${MULLE_SOURCETREE_STASH_DIR}}"
-      output_adress="\${MULLE_SOURCETREE_STASH_DIR}${output_adress}"
+      output_address="${output_address#${MULLE_SOURCETREE_STASH_DIR}}"
+      output_address="\${MULLE_SOURCETREE_STASH_DIR}${output_address}"
    fi
 
    case "${datasource}" in
@@ -236,12 +245,13 @@ r_emit_status()
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
-      log_trace2 "address:    ${address}"
-      log_trace2 "directory:  ${directory}"
-      log_trace2 "datasource: ${datasource}"
-      log_trace2 "marks:      ${marks}"
-      log_trace2 "mode:       ${mode}"
-      log_trace2 "filename:   ${filename}"
+      log_trace2 "output_address: ${output_address}"
+      log_trace2 "address:        ${address}"
+      log_trace2 "directory:      ${directory}"
+      log_trace2 "datasource:     ${datasource}"
+      log_trace2 "marks:          ${marks}"
+      log_trace2 "mode:           ${mode}"
+      log_trace2 "filename:       ${filename}"
    fi
 
    if nodemarks_contain "${marks}" "fs"
@@ -285,7 +295,7 @@ r_emit_status()
             then
                return 0
             fi
-            RVAL="${output_adress};optional;${fs};${configexists};${dbexists}" #;${filename}"
+            RVAL="${output_address};optional;${fs};${configexists};${dbexists}" #;${filename}"
          else
             if [ -z "${_url}" ]
             then
@@ -296,7 +306,7 @@ r_emit_status()
                   log_fluff "exit with 2"
                   exit 2   # indicate brokenness
                fi
-               RVAL="${output_adress};absent;${fs};${configexists};${dbexists}" #;${filename}"
+               RVAL="${output_address};absent;${fs};${configexists};${dbexists}" #;${filename}"
                return 0
             fi
 
@@ -306,7 +316,7 @@ r_emit_status()
                log_fluff "exit with 1"
                exit 1
             fi
-            RVAL="${output_adress};absent;${fs};${configexists};${dbexists}" #;${filename}"
+            RVAL="${output_address};absent;${fs};${configexists};${dbexists}" #;${filename}"
          fi
          return
       else
@@ -333,7 +343,7 @@ r_emit_status()
             log_fluff "exit with 1"
             exit 1
          fi
-         RVAL="${output_adress};outdated;${fs};${configexists};${dbexists}" #;${filename}"
+         RVAL="${output_address};outdated;${fs};${configexists};${dbexists}" #;${filename}"
          return 0
       fi
 
@@ -347,7 +357,7 @@ r_emit_status()
             #
             # Config     | Database | Config > DB | Output
             # -----------|----------|-------------|----------
-            # not exists | *        | *           | n/a
+            # not exists | *        | *           | ok
             #
             if [ "${configexists}" = 'NO' ]
             then
@@ -359,7 +369,7 @@ ${SOURCETREE_CONFIG_FILENAME} ($PWD)"
                   return 0
                fi
 
-               RVAL="${output_adress};n/a;${fs};${configexists};${dbexists}" #;${filename}"
+               RVAL="${output_address};none;${fs};${configexists};${dbexists}" #;${filename}"
                return
             fi
 
@@ -387,7 +397,7 @@ ${SOURCETREE_CONFIG_FILENAME} ($PWD)"
                      exit 2  # only time we exit with 2 on IS_UPTODATE
                   fi
 
-                  RVAL="${output_adress};updating;${fs};\
+                  RVAL="${output_address};updating;${fs};\
 ${configexists};${dbexists}" #;${filename}"
                   return 0
                fi
@@ -418,7 +428,7 @@ ${configexists};${dbexists}" #;${filename}"
       status="ok"
    fi
 
-   RVAL="${output_adress};${status};${fs};${configexists};${dbexists}" # ;${filename}"
+   RVAL="${output_address};${status};${fs};${configexists};${dbexists}" # ;${filename}"
 }
 
 
@@ -426,29 +436,22 @@ walk_status()
 {
    log_entry "walk_status" "$@"
 
-   local filename
-   local name
-
-   local rval
-
-   filename="`__walk_get_db_filename`"
-
-   r_emit_status "${MULLE_ADDRESS}" \
-                 "${MULLE_VIRTUAL_ADDRESS}" \
-                 "${MULLE_DATASOURCE}" \
-                 "${MULLE_MARKS}" \
-                 "${MULLE_MODE}" \
-                 "${filename}"
+   r_emit_status "${NODE_ADDRESS}" \
+                 "${WALK_VIRTUAL_ADDRESS}" \
+                 "${WALK_DATASOURCE}" \
+                 "${NODE_MARKS}" \
+                 "${WALK_MODE}" \
+                 "${NODE_FILENAME}"
    rval=$?
    if [ ! -z "${RVAL}" ]
    then
       if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
       then
-         if [ -e "${filename}" ]
+         if [ -e "${NODE_FILENAME}" ]
          then
-            RVAL="${RVAL};${filename};YES"
+            RVAL="${RVAL};${NODE_FILENAME#${MULLE_USER_PWD}/};YES"
          else
-            RVAL="${RVAL};${filename};NO"
+            RVAL="${RVAL};${NODE_FILENAME#${MULLE_USER_PWD}/};NO"
          fi
       fi
       echo "${RVAL}"
@@ -500,7 +503,7 @@ sourcetree_status()
 
    case ",${mode}," in
       *,output-header,*)
-         header="Node;Status;Filesystem;Config;Database" # ;Filename"
+         header="Node;Status;Filesystem;Sourcetree;Database" # ;Filename"
          if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
          then
             header="${header};Filename;Fetched"
@@ -574,12 +577,31 @@ sourcetree_status_main()
             OPTION_OUTPUT_FILENAME='NO'
          ;;
 
-         --output-raw)
-            OPTION_OUTPUT_FORMAT='RAW'
-         ;;
+         --output-format)
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            shift
 
-         --no-output-raw|--output-no-raw)
-            OPTION_OUTPUT_FORMAT='FMT'
+            case "$1" in
+               formatted|fmt)
+                  OPTION_OUTPUT_FORMAT="FMT"
+               ;;
+
+               cmd|command)
+                  OPTION_OUTPUT_FORMAT="CMD"
+               ;;
+
+               cmd2|command2)
+                  OPTION_OUTPUT_FORMAT="CMD2"
+               ;;
+
+               raw|csv)
+                 OPTION_OUTPUT_FORMAT="RAW"
+               ;;
+
+               *)
+                  sourcetree_list_usage "Unknown output format \"$1\""
+               ;;
+            esac
          ;;
 
          --output-separator)

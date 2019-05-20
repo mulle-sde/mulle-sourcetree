@@ -43,7 +43,7 @@ r_sourcetree_guess_address()
 
    local evaledurl
 
-   evaledurl="`eval echo "${url}"`"
+   evaledurl="`eval "echo \"${url}\""`"
    if [ -z "${evaledurl}" ]
    then
       RVAL=
@@ -72,7 +72,7 @@ r_sourcetree_guess_nodetype()
 
    local evaledurl
 
-   evaledurl="`eval echo "${url}"`"
+   evaledurl="`eval "echo \"${url}\""`"
    if [ -z "${evaledurl}" ]
    then
       RVAL=
@@ -118,12 +118,35 @@ sourcetree_sync_operation()
    # we use evaluated values to then pass as "environment" into the
    # echo, this allows us to specify a URL as
    #
-   evaledtag="`eval echo "${tag}"`"
-   evaledbranch="`eval echo "${branch}"`"
-   evaledurl="`MULLE_BRANCH="${evaledbranch}" MULLE_TAG="${evaledtag}" eval echo "${url}"`"
+   evaledtag="`eval "echo \"${tag}\""`"
+   evaledbranch="`eval "echo \"${branch}\""`"
+   evaledurl="`MULLE_BRANCH="${evaledbranch}" MULLE_TAG="${evaledtag}" eval "echo \"${url}\""`"
    evaledfetchoptions="`MULLE_URL="${evaledurl}" MULLE_BRANCH="${evaledbranch}" MULLE_TAG="${evaledtag}" eval echo "${_fetchoptions}"`"
 
    [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
+
+   local cmdoptions
+
+   if [ ! -z "${nodetype}" ]
+   then
+      r_concat "${cmdoptions}" "--scm '${nodetype}'"
+      cmdoptions="${RVAL}"
+   fi
+   if [ ! -z "${evaledtag}" ]
+   then
+      r_concat "${cmdoptions}" "--tag '${evaledtag}'"
+      cmdoptions="${RVAL}"
+   fi
+   if [ ! -z "${evaledbranch}" ]
+   then
+      r_concat "${cmdoptions}" "--branch '${evaledbranch}'"
+      cmdoptions="${RVAL}"
+   fi
+   if [ ! -z "${evaledfetchoptions}" ]
+   then
+      r_concat "${cmdoptions}" "--cmdoptions '${evaledfetchoptions}'"
+      cmdoptions="${RVAL}"
+   fi
 
    case "${nodetype}" in
       file)
@@ -136,16 +159,20 @@ ${C_RESET_BOLD}${evaledurl}${C_INFO}"
 
          local localurl
          local localnodetype
+         local cmd2options
+
+         cmd2options="${cmdoptions}"
+         if [ ! -z "${evaledurl}" ]
+         then
+            r_concat "${cmdoptions}" "--url '${evaledurl}'"
+            cmd2options="${RVAL}"
+         fi
 
          localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
                                           "${MULLE_TECHNICAL_FLAGS}" \
                                           "${MULLE_FETCH_FLAGS}" \
                                        "search-local" \
-                                          --scm "'${nodetype}'" \
-                                          --tag "'${evaledtag}'" \
-                                          --branch "'${evaledbranch}'" \
-                                          --options "'${evaledfetchoptions}'" \
-                                          --url "'${evaledurl}'" \
+                                          "${cmd2options}" \
                                           "'${address}'" )"
          if [ ! -z "${localurl}" ]
          then
@@ -165,16 +192,21 @@ ${C_RESET_BOLD}${evaledurl}${C_INFO}"
       ;;
    esac
 
+   #
+   # evaledurl may have changed due to local lookup
+   #
+   if [ ! -z "${evaledurl}" ]
+   then
+      r_concat "${cmdoptions}" "--url '${evaledurl}'"
+      cmdoptions="${RVAL}"
+   fi
+
    eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
                        "${MULLE_TECHNICAL_FLAGS}" \
                        "${MULLE_FETCH_FLAGS}" \
                     "${opname}" \
-                       --scm "'${nodetype}'" \
-                       --tag "'${evaledtag}'" \
-                       --branch "'${evaledbranch}'" \
-                       --options "'${evaledfetchoptions}'" \
-                       --url "'${evaledurl}'" \
-                       ${options} \
+                       "${cmdoptions}" \
+                       "${options}" \
                        "'${address}'"
 }
 

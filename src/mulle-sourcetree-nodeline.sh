@@ -42,9 +42,15 @@ __nodeline_get_address()
 }
 
 
+r_nodeline_get_address()
+{
+   RVAL="${*%%;*}"
+}
+
+
 nodeline_get_address()
 {
-  cut '-d;' -f 1 <<< "$*"
+   cut '-d;' -f 1 <<< "$*"
 }
 
 
@@ -92,10 +98,21 @@ nodeline_get_url()
    cut '-d;' -f 5 <<< "$*"
 }
 
+r_nodeline_get_url()
+{
+   RVAL="`nodeline_get_url "$@"`"
+}
+
 
 nodeline_get_evaled_url()
 {
    eval echo "`cut '-d;' -f 5 <<< "$*"`"
+}
+
+
+r_nodeline_get_evaled_url()
+{
+   RVAL="`nodeline_get_evaled_url "$@"`"
 }
 
 
@@ -111,10 +128,10 @@ nodeline_get_evaled_url()
 #   local _nodetype
 #   local _marks
 #   local _raw_userinfo
+#   local _userinfo
 #   local _tag
 #   local _url
 #   local _uuid
-#   local _userinfo
 #
 # #   This is a bit faster but not by much
 # #   _address="${nodeline%%;*}"
@@ -141,7 +158,7 @@ nodeline_get_evaled_url()
 # #   _fetchoptions="${nodeline%%;*}"
 # #   nodeline="${nodeline#*;}"
 # #
-# #   _userinfo="${nodeline%%;*}"
+# #   _raw_userinfo="${nodeline%%;*}"
 # #   nodeline="${nodeline#*;}"
 
 nodeline_parse()
@@ -157,20 +174,12 @@ nodeline_parse()
               _url _branch _tag _fetchoptions \
               _raw_userinfo  <<< "${nodeline}"
 
+   # set this to empty, so we know raw is not converted yet
+
+   _userinfo=""
    [ -z "${_address}" ]   && internal_fail "_address is empty"
    [ -z "${_nodetype}" ]  && internal_fail "_nodetype is empty"
    [ -z "${_uuid}" ]      && internal_fail "_uuid is empty"
-
-   _userinfo="${_raw_userinfo}"
-   case "${_raw_userinfo}" in
-      base64:*)
-         _userinfo="`base64 --decode <<< "${_raw_userinfo:7}"`"
-         if [ "$?" -ne 0 ]
-         then
-            internal_fail "userinfo could not be base64 decoded."
-         fi
-      ;;
-   esac
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
@@ -182,10 +191,29 @@ nodeline_parse()
       log_trace2 "BRANCH:       \"${_branch}\""
       log_trace2 "TAG:          \"${_tag}\""
       log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
-      log_trace2 "USERINFO:     \"${_userinfo}\""
+      log_trace2 "USERINFO:     \"${_raw_userinfo}\""
    fi
 
    :
+}
+
+
+#   local _raw_userinfo
+#   local _userinfo
+nodeline_raw_userinfo_parse()
+{
+   log_entry "nodeline_raw_userinfo_parse" "$@"
+
+   _userinfo="$1"
+   case "${_userinfo}" in
+      base64:*)
+         _userinfo="`base64 --decode <<< "${_raw_userinfo:7}"`"
+         if [ "$?" -ne 0 ]
+         then
+            internal_fail "userinfo could not be base64 decoded."
+         fi
+      ;;
+   esac
 }
 
 
@@ -225,34 +253,58 @@ nodeline_remove()
 }
 
 
-_nodeline_find()
+_r_nodeline_find()
 {
-   log_entry "nodeline_find" "$@"
+   log_entry "_r_nodeline_find" "$@"
 
    local nodelines="$1"
    local value="$2"
    local lookup="$3"
+   local fuzzy="$4"
 
-   [ $# -ne 3 ] && internal_fail "API error"
+   [ $# -ne 4 ] && internal_fail "API error"
 
    local nodeline
    local other
+
+   if [ "${fuzzy}" = 'YES' ]
+   then
+      case "${value}" in
+         *[\$\|\<\>]*)
+            fail "Suspicious value \"${value}\" can't be matched"
+         ;;
+      esac
+   fi
 
    set -o noglob ; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob
 
-      other="`"${lookup}" "${nodeline}"`"
-      if [ "${value}" = "${other}" ]
+      "${lookup}" "${nodeline}"
+      other="${RVAL}"
+
+      if [ "${other}" = "${value}" ]
       then
          log_debug "Found \"${nodeline}\""
-         echo "${nodeline}"
+         RVAL="${nodeline}"
          return 0
+      fi
+
+      if [ "${fuzzy}" = 'YES' ]
+      then
+         case "${other}" in
+            ${value})
+               log_debug "Found \"${nodeline}\""
+               RVAL="${nodeline}"
+               return 0
+            ;;
+         esac
       fi
    done
    IFS="${DEFAULT_IFS}"; set +o noglob
 
+   RVAL=
    return 1
 }
 
@@ -263,10 +315,15 @@ nodeline_find()
 
    local nodelines="$1"
    local address="$2"
+   local fuzzy="${3:-NO}"
 
    [ -z "${address}" ] && internal_fail "address is empty"
 
-   _nodeline_find "${nodelines}" "${address}" nodeline_get_address
+   if ! _r_nodeline_find "${nodelines}" "${address}" r_nodeline_get_address "${fuzzy}"
+   then
+      return 1
+   fi
+   echo "${RVAL}"
 }
 
 
@@ -279,7 +336,11 @@ nodeline_find_by_url()
 
    [ -z "${url}" ] && internal_fail "url is empty"
 
-   _nodeline_find "${nodelines}" "${url}" nodeline_get_url
+   if ! _r_nodeline_find "${nodelines}" "${url}" r_nodeline_get_url NO
+   then
+      return 1
+   fi
+   echo "${RVAL}"
 }
 
 
@@ -292,7 +353,11 @@ nodeline_find_by_evaled_url()
 
    [ -z "${url}" ] && internal_fail "url is empty"
 
-   _nodeline_find "${nodelines}" "${url}" nodeline_get_evaled_url
+   if ! _r_nodeline_find "${nodelines}" "${url}" r_nodeline_get_evaled_url NO
+   then
+      return 1
+   fi
+   echo "${RVAL}"
 }
 
 
@@ -577,9 +642,9 @@ nodeline_printf()
    local _nodetype
    local _tag
    local _url
-   local _userinfo
    local _uuid
    local _raw_userinfo
+   local _userinfo
 
    nodeline_parse "${nodeline}"
 

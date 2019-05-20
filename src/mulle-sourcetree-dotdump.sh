@@ -279,7 +279,7 @@ print_node()
    case "${identifier}" in
       "")
          [ -z "${destination}" ] && \
-            internal_fail "destination and identifer are empty for \"${MULLE_NODE}\""
+            internal_fail "destination and identifer are empty for \"${WALK_NODE}\""
 
          identifier="\"${destination}\""
       ;;
@@ -405,18 +405,18 @@ walk_dotdump()
 {
    log_entry "walk_dotdump" "$@"
 
-   local url="${MULLE_URL}"
-   local address="${MULLE_ADDRESS}"
-   local branch="${MULLE_BRANCH}"
-   local tag="${MULLE_TAG}"
-   local nodetype="${MULLE_NODETYPE}"
-   local uuid="${MULLE_UUID}"
-   local marks="${MULLE_MARKS}"
-   local fetchoptions="${MULLE_FETCHOPTIONS}"
-   local userinfo="${MULLE_USERINFO}"
-   local destination="${MULLE_VIRTUAL_ADDRESS}"
-   local filename="${MULLE_FILENAME}"
-   local virtual="${MULLE_VIRTUAL}"
+   local url="${NODE_URL}"
+   local address="${NODE_ADDRESS}"
+   local branch="${NODE_BRANCH}"
+   local tag="${NODE_TAG}"
+   local nodetype="${NODE_TYPE}"
+   local uuid="${NODE_UUID}"
+   local marks="${NODE_MARKS}"
+   local fetchoptions="${NODE_FETCHOPTIONS}"
+   local userinfo="${NODE_USERINFO}"
+   local destination="${WALK_VIRTUAL_ADDRESS}"
+   local filename="${NODE_FILENAME}"
+   local virtual="${WALK_VIRTUAL}"
 
    local identifier
    local previdentifier
@@ -430,7 +430,7 @@ walk_dotdump()
 
    if [ "${OPTION_OUTPUT_EVAL}" = 'YES' ]
    then
-      url="`eval echo "${url}"`"
+      url="`eval "echo \"${url}\""`"
       branch="`eval echo "${branch}"`"
       tag="`eval echo "${tag}"`"
       fetchoptions="`eval echo "${fetchoptions}"`"
@@ -797,7 +797,7 @@ sourcetree_dotdump_main()
    mode="${SOURCETREE_MODE}"
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
-      r_comma_concat "${mode}" "in-order"
+      r_comma_concat "${mode}" "post-order"
       mode="${RVAL}"
    fi
 

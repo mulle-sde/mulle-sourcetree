@@ -52,7 +52,7 @@ print_commands()
 
    SHOWN_COMMANDS="\
    add            : add a node to the sourcetree
-   buildorder     : emit nodes that are buildable in proper dependency order
+   craftorder     : emit nodes that are buildable in proper dependency order
    clean          : remove files added by a sync
    list           : list nodes in the current sourcetree
    reuuid         : create new uuids for the sourcetree
@@ -148,14 +148,11 @@ EOF
 
    cat <<EOF
 Environment:
-   MULLE_SOURCETREE_STASH_DIR : place to store shared dependencies
+   MULLE_SOURCETREE_STASH_DIR : place to store shared dependencies (stash)
    MULLE_SOURCETREE_SYMLINK   : allow symlinks to be used
 EOF
    exit 1
 }
-
-
-
 
 
 __check_sane_stash_dir()
@@ -399,11 +396,11 @@ main()
    # dont' check if resetting
    #
    # for status it's debatable, but I don't like it
-   # for buildorder, we want to be fast so we don't check and dont get
+   # for craftorder, we want to be fast so we don't check and dont get
    # default mode
    #
    case "${cmd}" in
-      reset|buildorder|dbstatus)
+      reset|craftorder|dbstatus)
       ;;
 
       *)
@@ -439,7 +436,7 @@ main()
          sourcetree_${cmd}_main "$@"
       ;;
 
-      buildorder|clean|fix|list|reset|reuuid|status|walk)
+      craftorder|clean|fix|list|reset|reuuid|status|walk)
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-${cmd}.sh"
 
          sourcetree_${cmd}_main "$@"

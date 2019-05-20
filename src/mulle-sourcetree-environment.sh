@@ -127,6 +127,11 @@ _set_share_dir()
    if [ -z "${usershare_dir}" ]
    then
       #
+      # make stash the default, this is less painful when running
+      # mulle-sourcetree outside of the environment in most cases
+      #
+      MULLE_SOURCETREE_STASH_DIRNAME="${MULLE_SOURCETREE_STASH_DIRNAME:-stash}"
+      #
       # try to recover old user choice for shared directory
       # this will override the ENVIRONMENT for consistency
       # but only if the .db is not some trash w/o a config
@@ -141,6 +146,9 @@ _set_share_dir()
             then
                MULLE_SOURCETREE_STASH_DIR="`physicalpath "${share_dir}" `"
                log_fluff "Using database share directory \"${share_dir}\""
+
+               r_fast_basename "${MULLE_SOURCETREE_STASH_DIR}"
+               MULLE_SOURCETREE_STASH_DIRNAME="${RVAL}"
             fi
          fi
       fi

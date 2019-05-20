@@ -84,7 +84,7 @@ run_test1()
    local result
    local expected
 
-   result="`run_mulle_sourcetree --recurse status --output-raw --no-output-header`"
+   result="`run_mulle_sourcetree --recurse status --output-format raw --no-output-header`"
    if [ $? -ne 0 ] # > /dev/null 2>&1
    then
       fail "status failed unexpectedly"
