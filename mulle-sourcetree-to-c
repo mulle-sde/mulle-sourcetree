@@ -178,6 +178,8 @@ _emit_c_include()
       esac
    fi
 
+   echo "// library: remove with \`mark no-header\`, rename with \`set include\`"
+
    if [ ! -z "${marks}" ]
    then
    	r_osexclude_to_cpp_if "${marks}"
@@ -194,7 +196,7 @@ _emit_c_include()
    #       __has_include
    case ",${marks}," in
       *,no-require,*)
-         local name 
+         local name
 
          name="`tr -c 'a-zA-Z0-9' '_' <<< "${address}" | tr a-z A-Z`"
 

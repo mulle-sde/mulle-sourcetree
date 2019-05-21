@@ -1,3 +1,23 @@
+## 0.18.0
+
+* renamed buildorder to craftorder to keep this stringent
+* unified output format specification with --output-format `<fmt>` instead of many different switches
+* improved generation of header files
+* allow limited regexp with --match for mark unmark and set
+* improved command output
+* bugfixed list command quite a bit
+* majorly improved sourcetree walk facilities, like walk modes and deduping
+* add mark no-bequeath to allow local redefinition of marks without propagation
+* redid the sourcetree walker for greater readability and more speed
+* commit fix duplicate emission of comment, fix wrong setting name in comment
+* there is now a rename command
+* more options for listing
+* branch and tag are now evaled
+* branch and tag are available for expansion in url as `MULLE_BRANCH` and `MULLE_TAG`
+* similiarly fetchoption can be expanded with both and additionally `MULLE_URL`
+* major performance improvement in the sourcetree buildorder generator
+
+
 ### 0.17.7
 
 * improved clean code
