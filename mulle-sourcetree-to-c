@@ -194,11 +194,13 @@ _emit_c_include()
    #       __has_include
    case ",${marks}," in
       *,no-require,*)
+         local name 
+
          name="`tr -c 'a-zA-Z0-9' '_' <<< "${address}" | tr a-z A-Z`"
 
          echo "# if __has_include(<${header}>)"
          echo "#  ${indent}${include} <${header}>   // ${address}"
-         echo "#  define HAVE_LIB_${name}"
+         echo "#  define HAVE_LIB_${name%%_}"
          echo "# endif"
       ;;
 
