@@ -60,7 +60,7 @@ run_test()
    exekutor touch b/DONTDELETEME
 
    # lets make b a minion, it should not be clobbered by a
-   if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
+   if ! run_mulle_sourcetree add --nodetype git --marks no-share "file://${repos}/a"
    then
       internal_fail "#1 add internal_failed unexpectedly"
    fi
