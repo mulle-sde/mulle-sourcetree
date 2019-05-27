@@ -32,7 +32,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_C_SOURCETREE_UPDATE_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.18.0"
+MULLE_EXECUTABLE_VERSION="0.18.1"
 
 
 usage()
@@ -200,9 +200,11 @@ _emit_c_include()
 
          name="`tr -c 'a-zA-Z0-9' '_' <<< "${address}" | tr a-z A-Z`"
 
-         echo "# if __has_include(<${header}>)"
-         echo "#  ${indent}${include} <${header}>   // ${address}"
-         echo "#  define HAVE_LIB_${name%%_}"
+         echo "# ifdef __has_include"
+         echo "#  if __has_include(<${header}>)"
+         echo "#   ${indent}${include} <${header}>   // ${address}"
+         echo "#   define HAVE_LIB_${name%%_}"
+         echo "#  endif"
          echo "# endif"
       ;;
 

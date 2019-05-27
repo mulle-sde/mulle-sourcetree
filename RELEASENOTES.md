@@ -1,3 +1,7 @@
+### 0.18.1
+
+* mulle-sourcetree-to-c produced header code protects `__has_include` with #ifdef `__has_include`
+
 ## 0.18.0
 
 * renamed buildorder to craftorder to keep this stringent
