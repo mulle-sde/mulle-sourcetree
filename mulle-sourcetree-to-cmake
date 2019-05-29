@@ -33,7 +33,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_CMAKE_SOURCETREE_UPDATE_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.18.1"
+MULLE_EXECUTABLE_VERSION="0.19.0"
 
 
 usage()
@@ -371,8 +371,19 @@ _emit_cmake_find_library()
 #
 # this is getting unwieldy, should probably use a function
 #
+# Maybe need to use two find_library calls to first get things in
+# DEPENDENCY_DIR and ADDICTION_DIR, which will be in
+# CMAKE_LIBRARY_PATH and CMAKE_LIBRARY_PATH
+#
+# Seems to fix a problem when old libs are in /usr/local/lib
+# TODO: maybenot use CMAKE_LIBRARY_PATH and CMAKE_FRAMEWORK_PATH then ?
+
    cat <<EOF
 ${indent}if( NOT ${identifier}_LIBRARY)
+${indent}   find_library( ${identifier}_LIBRARY NAMES ${libraries}${findoptions}
+${indent}      PATHS \${CMAKE_LIBRARY_PATH} \${CMAKE_FRAMEWORK_PATH}
+${indent}      NO_DEFAULT_PATH
+${indent}   )
 ${indent}   find_library( ${identifier}_LIBRARY NAMES ${libraries}${findoptions})
 ${indent}   message( STATUS "${identifier}_LIBRARY is \${${identifier}_LIBRARY}")
 ${indent}   #

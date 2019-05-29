@@ -106,7 +106,7 @@ __call_callback()
    # WALK_VIRTUAL     : either ${MULLE_SOURECTREE_SHARE_DIR} or ${MULLE_VIRTUAL_ROOT}
    #
    #
-   log_debug "Calling callback: ${callback} $*"
+   log_debug "Calling callback: NODE_ADDRESS=${_address} NODE_FILENAME=${_filename} ${callback} "
 
    #
    # DO NOT WRAP THIS IN A SUBSHELL, BECAUSE THE CALLBACK LOSES STATE!

@@ -23,6 +23,7 @@ Assume your sourcetree was built like this
 
 A flat walk doesn't recurse, but stays in your project.
 
+
 ### Pre-order
 
 ![Pre order](walk-pre-order.png)
@@ -31,12 +32,22 @@ The pre-order walker visits each node first, before descending into child nodes.
 the most intuitive kind of recursion. Notice how **d** will be visited
 twice, as it is a child node of **b** and also of **c**.
 
+
+### In-order
+
+![In order](walk-in-order.png)
+
+The post-order walker descends into each nodes child nodes
+first before actually visiting the node.
+This is for example useful to list the craftorder of nodes.
+
+
 ### Post-order
 
 ![Post order](walk-post-order.png)
 
-The post-order walker descends into each nodes child nodes
-first before actually visiting the node. This is for example useful to list the craftorder of nodes.
+The post-order walker descends into each sibling nodes child nodes
+first before actually visiting the nodes.
 
 
 ### Breadth-first

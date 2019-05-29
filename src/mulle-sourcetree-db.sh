@@ -382,7 +382,13 @@ db_bury()
    r_simplified_absolutepath "${filename}"
    filename="${RVAL}"
 
-   r_relative_path_between "${filename}" "${project_dir}"
+   local phys_filename
+   local phys_project_dir
+
+   phys_filename="`physicalpath "${filename}"`"
+   phys_project_dir="`physicalpath "${project_dir}"`"
+
+   r_relative_path_between "${phys_filename}" "${phys_project_dir}"
    case "${RVAL}" in
       ../*)
          internal_fail "Bury path \"${filename#${MULLE_USER_PWD}/}\" escapes project \"${project_dir#${MULLE_USER_PWD}/}"

@@ -1,3 +1,10 @@
+## 0.19.0
+
+* use in-order walk instead of post-order for craftorder
+* try to get cmake to find dependency/lib first before searching system dirs (projects need update)
+* fix bury code for osx if symlinks are involved (aka /tmp -> /private/tmp)
+
+
 ### 0.18.1
 
 * mulle-sourcetree-to-c produced header code protects `__has_include` with #ifdef `__has_include`

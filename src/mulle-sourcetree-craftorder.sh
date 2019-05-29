@@ -102,7 +102,7 @@ collect_craftorder_line()
    r_create_craftorder_filename "${_filename}"
    filename="${RVAL}"
 
-   echo "${filename}"
+   rexekutor echo "${filename}"
 }
 
 
@@ -281,16 +281,16 @@ sourcetree_craftorder_main()
                                             "" \
                                             "${SOURCETREE_CRAFTORDER_QUALIFIER}" \
                                             "${SOURCETREE_CRAFTORDER_QUALIFIER}" \
-                                            "${mode},post-order" \
+                                            "${mode},in-order" \
                                             "collect_craftorder_line"`"
-
-   log_info "Craftorder"
 
    if [ -z "${_craftorder_collection}" ]
    then
-      log_verbose "Craftorder is empty"
+      log_info "Craftorder is empty"
       return 0
    fi
+
+   log_info "Craftorder"
 
    if [ "${OUTPUT_MARKS}" = 'NO' ]
    then

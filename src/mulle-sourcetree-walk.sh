@@ -100,9 +100,10 @@ Options:
    --cd             : change directory to node's working directory
    --lenient        : allow shell command to error
    --backwards      : walk tree nodes backwards [rarely useful]
+   --in-order       : walk tree depth first  (Root, Left, Right)
    --pre-order      : walk tree in pre-order  (Root, Left, Right)
    --breadth-first  : walk tree breadth first (first all top levels)
-   --post-order     : walk tree depth first (Left, Right, Root)
+   --post-order     : walk tree depth first for all siblings (Left, Right, Root)
    --walk-db        : walk over information contained in the database instead
 EOF
   exit 1
@@ -699,9 +700,9 @@ _visit_node()
       ;;
    esac
 
-   # don't dedupe post-flat and breadth-flat
+   # don't dedupe in-flat post-flat and breadth-flat
    case ",${mode}," in
-      *,post-flat,*|*,breadth-flat,*|*,flat,*|*,pre-order,*)
+      *,in-flat,*|*,post-flat,*|*,breadth-flat,*|*,flat,*|*,pre-order,*)
          r_walk_has_visited "${mode}"
          case $? in
             0) # has visited
@@ -716,9 +717,14 @@ _visit_node()
    esac
 
    case ",${mode}," in
-      *,flat,*|*,post-flat,*|*,breadth-flat,*)
+      *,flat,*|*,in-flat,*|*,post-flat,*|*,breadth-flat,*)
          log_debug "No descend"
          _visit_callback "$@"
+      ;;
+
+      *,in-order,*)
+         log_debug "In-order descend into ${next_datasource}"
+         _visit_descend "$@"
       ;;
 
       *,post-order,*)
@@ -1008,6 +1014,10 @@ _print_walk_info()
          log_debug "Flat ${direction} walk \"${datasource:-.}\""
       ;;
 
+      *,in-order,*)
+         log_debug "Recursive in-order ${direction} walk \"${datasource:-.}\""
+      ;;
+
       *,pre-order,*)
          log_debug "Recursive pre-order ${direction} walk \"${datasource:-.}\""
       ;;
@@ -1110,6 +1120,26 @@ _walk_nodelines()
                     "${descendqualifier}" \
                     "${mode}" \
                     "$@"
+
+      case ",${mode}," in
+         *,in-order,*)
+            local tmpmode
+
+            r_comma_concat "${mode}" 'post-flat'
+            tmpmode="${RVAL}"
+
+
+            walk_nodeline "${nodeline}" \
+                          "${datasource}" \
+                          "${virtual}" \
+                          "${filternodetypes}" \
+                          "${filterpermissions}" \
+                          "${callbackqualifier}" \
+                          "${descendqualifier}" \
+                          "${tmpmode}" \
+                          "$@"
+         ;;
+      esac
    done
    IFS="${DEFAULT_IFS}" ; set +o noglob
 
@@ -1402,7 +1432,7 @@ sourcetree_walk()
    case ",${mode}," in
       *,callroot,*)
          case ",${mode}," in
-            *,pre-order,breadth-order,*)
+            *,pre-order,*|*,breadth-order,*)
                _visit_root_callback "${mode}" "${callback}" "$@"
                rval=$?
             ;;
@@ -1430,7 +1460,7 @@ sourcetree_walk()
       case ",${mode}," in
          *,callroot,*)
             case ",${mode}," in
-               *,pre-order,*)
+               *,pre-order,*|*,breadth-order,*)
                ;;
 
                *)
@@ -1548,6 +1578,10 @@ sourcetree_walk_main()
 
          --flat)
             OPTION_TRAVERSE_STYLE="FLAT"
+         ;;
+
+         --in-order)
+            OPTION_TRAVERSE_STYLE="INORDER"
          ;;
 
          --pre-order)
@@ -1680,6 +1714,11 @@ as one string and use "
    case "${OPTION_TRAVERSE_STYLE}" in
       "FLAT")
          r_comma_concat "${mode}" "flat"
+         mode="${RVAL}"
+      ;;
+
+      "INORDER")
+         r_comma_concat "${mode}" "in-order"
          mode="${RVAL}"
       ;;
 
