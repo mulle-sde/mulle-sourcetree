@@ -33,7 +33,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_CMAKE_SOURCETREE_UPDATE_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.19.0"
+MULLE_EXECUTABLE_VERSION="0.19.1"
 
 
 usage()
@@ -364,10 +364,7 @@ _emit_cmake_find_library()
       ;;
    esac
 
-   if [ ! -z "${findoptions}" ]
-   then
-      findoptions=" ${findoptions}"
-   fi
+
 #
 # this is getting unwieldy, should probably use a function
 #
@@ -380,10 +377,6 @@ _emit_cmake_find_library()
 
    cat <<EOF
 ${indent}if( NOT ${identifier}_LIBRARY)
-${indent}   find_library( ${identifier}_LIBRARY NAMES ${libraries}${findoptions}
-${indent}      PATHS \${CMAKE_LIBRARY_PATH} \${CMAKE_FRAMEWORK_PATH}
-${indent}      NO_DEFAULT_PATH
-${indent}   )
 ${indent}   find_library( ${identifier}_LIBRARY NAMES ${libraries}${findoptions})
 ${indent}   message( STATUS "${identifier}_LIBRARY is \${${identifier}_LIBRARY}")
 ${indent}   #
@@ -461,7 +454,26 @@ _emit_cmake_dependency()
 {
    log_entry "_emit_cmake_dependency" "$@"
 
-   _emit_cmake_find_library "static" "NO_CMAKE_SYSTEM_PATH" "$@"
+   local marks="$4"
+   local indent="$5"
+
+   local findoptions
+
+   findoptions=" NO_CMAKE_SYSTEM_PATH"
+
+   case ",${marks}," in
+      *,no-suppress-system-path,*)
+         findoptions=""
+      ;;
+   esac
+
+# alternative
+#   findoptions="
+#${indent}      PATHS \${CMAKE_LIBRARY_PATH} \${CMAKE_FRAMEWORK_PATH}
+#${indent}      NO_DEFAULT_PATH
+#${indent}   )"
+
+   _emit_cmake_find_library "static" "${findoptions}" "$@"
 }
 
 

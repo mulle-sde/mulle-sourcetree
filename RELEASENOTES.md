@@ -1,3 +1,7 @@
+### 0.19.1
+
+* make `NO_CMAKE_SYSTEM_PATH` configurable with mark no-suppress-system-path
+
 ## 0.19.0
 
 * use in-order walk instead of post-order for craftorder
