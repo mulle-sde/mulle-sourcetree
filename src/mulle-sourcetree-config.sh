@@ -70,7 +70,7 @@ Usage:
 Options:
 EOF
    (
-      echo "${SOURCETREE_COMMON_OPTIONS}"
+      printf "%s\n" "${SOURCETREE_COMMON_OPTIONS}"
       echo "   --if-missing           : a duplicate node is not an error, do nothing"
    ) | sort >&2
    echo >&2
@@ -97,7 +97,7 @@ Usage:
 Options:
 EOF
    (
-      echo "${SOURCETREE_COMMON_OPTIONS}"
+      printf "%s\n" "${SOURCETREE_COMMON_OPTIONS}"
    ) | sort >&2
    echo >&2
    exit 1
@@ -465,7 +465,7 @@ _sourcetree_nameguess_node()
       fi
 
       r_sourcetree_guess_address "${_url}" "${_nodetype}"
-      _address="${RVAL}"
+      _address="`eval "echo \"${RVAL}\""`"
       log_debug "_url set to \"${_url}\""
       log_debug "_address set to \"${_address}\""
 
@@ -486,7 +486,7 @@ sourcetree_nameguess_node()
 
    _sourcetree_nameguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
 
-   echo "${_address}"
+   printf "%s\n" "${_address}"
 }
 
 
@@ -501,7 +501,7 @@ sourcetree_typeguess_node()
    local _nodetype
 
    r_sourcetree_typeguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
-   echo "${RVAL}"
+   printf "%s\n" "${RVAL}"
 }
 
 
@@ -616,8 +616,6 @@ in the sourcetree (${PWD#${MULLE_USER_PWD}/})"
    cfg_write "${SOURCETREE_START}" "${appended}"
    cfg_touch_parents "${SOURCETREE_START}"
 
-   local evaled_adress
-
    log_info "Added ${C_MAGENTA}${C_BOLD}${_address}"
 }
 
@@ -642,20 +640,6 @@ sourcetree_add_node()
    local _userinfo="${OPTION_USERINFO}"
    local _uuid
 
-   if [ ! -z "${_address}" -a ! -z "${_url}" ]
-   then
-      fail "Specifying --address and --url together conflicts with the main argument"
-   fi
-
-   local _nodetype
-
-   _sourcetree_nameguess_node "${input}" "${_nodetype}" "${_url}"
-
-   if [ -z "${_address}" ]
-   then
-      _address="${input}"
-   fi
-
    if [ "${_nodetype}" = "local" ]
    then
       r_comma_concat "${_marks}" "no-delete,no-update,no-share"
@@ -670,6 +654,24 @@ sourcetree_add_node()
 
    r_sanitized_marks "${_marks}"
    _marks="${RVAL}" || exit 1
+
+
+   if [ ! -z "${_address}" -a ! -z "${_url}" ]
+   then
+      fail "Specifying --address and --url together conflicts with the main argument"
+   fi
+
+   #
+   # the following code is really poor and inscrutable
+   #
+   local _nodetype
+
+   _sourcetree_nameguess_node "${input}" "${_nodetype}" "${_url}"
+
+   if [ -z "${_address}" ]
+   then
+      _address="${input}"
+   fi
 
    if [ -z "${_url}" ]
    then
@@ -765,7 +767,7 @@ line_mover()
 
    case "${direction}" in
       top)
-         echo "${nodeline}"
+         printf "%s\n" "${nodeline}"
       ;;
       bottom|up|down)
       ;;
@@ -784,17 +786,17 @@ line_mover()
          top|bottom)
             if [ "${line}" != "${nodeline}" ]
             then
-               echo "${line}"
+               printf "%s\n" "${line}"
             fi
          ;;
 
          up)
             if [ "${line}" = "${nodeline}" ]
             then
-               echo "${line}"
+               printf "%s\n" "${line}"
                if [ ! -z "${prev}" ]
                then
-                  echo "${prev}"
+                  printf "%s\n" "${prev}"
                   prev=
                fi
                continue
@@ -802,7 +804,7 @@ line_mover()
 
             if [ ! -z "${prev}" ]
             then
-               echo "${prev}"
+               printf "%s\n" "${prev}"
             fi
             prev="${line}"
          ;;
@@ -810,10 +812,10 @@ line_mover()
          down)
             if [ "${line}" != "${nodeline}" ]
             then
-               echo "${line}"
+               printf "%s\n" "${line}"
                if [ ! -z "${prev}" ]
                then
-                  echo "${prev}"
+                  printf "%s\n" "${prev}"
                   prev=
                fi
             else
@@ -828,12 +830,12 @@ line_mover()
       up|down)
          if [ ! -z "${prev}" ]
          then
-            echo "${prev}"
+            printf "%s\n" "${prev}"
          fi
       ;;
 
       bottom)
-         echo "${nodeline}"
+         printf "%s\n" "${nodeline}"
       ;;
    esac
 }
@@ -983,7 +985,7 @@ _matching_nodeline_url()
 
    if cfg_get_nodeline_by_url "${SOURCETREE_START}" "${url}" > /dev/null
    then
-      echo "${url}"
+      printf "%s\n" "${url}"
       return 0
    fi
 
@@ -1156,7 +1158,7 @@ _sourcetree_get_node()
 
    if [ "$#" -eq 0 ]
    then
-      exekutor echo "${_address}"
+      exekutor printf "%s\n" "${_address}"
       return
    fi
 
@@ -1168,12 +1170,12 @@ _sourcetree_get_node()
          ;;
 
          raw_userinfo)
-            exekutor echo "${_raw_userinfo}"
+            exekutor printf "%s\n" "${_raw_userinfo}"
          ;;
 
          userinfo)
             nodeline_raw_userinfo_parse "${_raw_userinfo}"
-            exekutor echo "${_userinfo}"
+            exekutor printf "%s\n" "${_userinfo}"
          ;;
 
          *)
@@ -1241,11 +1243,13 @@ no-defer
 no-delete
 no-dependency
 no-descend
+no-dynamic-link
 no-fs
 no-header
 no-include
 no-import
 no-inplace
+no-intermediate-link
 no-link
 no-os-mingw
 no-os-darwin
@@ -1274,7 +1278,7 @@ _sourcetree_add_mark_known_absent()
    then
       if ! fgrep -x -q -e "${mark}" <<< "${KNOWN_MARKS}"
       then
-         fail "mark \"${mark}\" is unknown. If this is not a type use --extended-mark"
+         fail "mark \"${mark}\" is unknown. If this is not a typo use \`${MULLE_EXECUTABLE_NAME} mark -e ...\`"
       fi
    fi
 
@@ -1303,7 +1307,7 @@ _sourcetree_remove_mark_known_present()
    then
       if ! fgrep -x -q -e "${mark}" <<< "${KNOWN_MARKS}"
       then
-         fail "mark \"${mark}\" is unknown. If this is not a typo use --extended-mark"
+         fail "mark \"${mark}\" is unknown. If this is not a typo use \`${MULLE_EXECUTABLE_NAME} unmark -e ...\`"
       fi
    fi
 
@@ -1836,7 +1840,7 @@ sourcetree_common_main()
       ;;
 
       knownmarks)
-         echo "${KNOWN_MARKS}"
+         printf "%s\n" "${KNOWN_MARKS}"
       ;;
 
       mark|unmark)

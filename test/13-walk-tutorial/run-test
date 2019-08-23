@@ -53,7 +53,7 @@ walk_test()
 
    local result
 
-   result="`run_mulle_sourcetree walk ${mode} 'echo "${NODE_ADDRESS}"' `"
+   result="`run_mulle_sourcetree walk ${mode} 'printf "%s\n" "${NODE_ADDRESS}"' `"
    [ "${expect}" = "${result}" ] || internal_fail "${mode#2} fail: \"${result}\" != \"${expect}\""
 
    log_verbose "----- #$testno PASSED -----"

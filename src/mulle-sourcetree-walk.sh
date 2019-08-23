@@ -52,7 +52,7 @@ Usage:
 
    This example dumps the names of each node with index and indentation:
 
-      mulle-sourcetree walk 'echo "${WALK_INDEX} ${WALK_INDENT}${NODE_ADDRESS}"'
+      mulle-sourcetree walk 'printf "%s\n" "${WALK_INDEX} ${WALK_INDENT}${NODE_ADDRESS}"'
 
    This example finds the location of a dependency named foo:
 
@@ -256,7 +256,18 @@ _callback_nodetypes()
 {
    log_entry "_callback_nodetypes" "$@"
 
-   nodetype_filter "$@"
+   local nodetype="$1"; shift
+
+   local evalednodetype
+
+   evalednodetype="${nodetype}"
+   case "$1" in
+      *\$*)
+         evalednodetype="`eval "echo \"${nodetype}\""`"
+      ;;
+   esac
+
+   nodetype_filter "${evalednodetype}" "$@"
 }
 
 
@@ -426,7 +437,7 @@ _visit_descend()
    then
       if ! _descend_filter "${_marks}" "${descendqualifier}"
       then
-         log_fluff "Node \"${_address}\" marks \"${_marks}\" don't jive with \"${descendqualifier}\""
+         log_debug "Node \"${_address}\" marks \"${_marks}\" don't jive with \"${descendqualifier}\""
          return 1 # the 1 indicates that the filter was the reason (can be reused by callback maybe)
       fi
    fi
@@ -895,21 +906,24 @@ walk_nodeline()
 
    nodeline_parse "${nodeline}"
 
-   if [ ${WALK_LEVEL} -gt 0 ]
-   then
-      case ",${mode}," in
-         *,ignore-bequeath,*)
-         ;;
-
-         *)
-            if nodemarks_contain "${_marks}" "no-bequeath"
+   #
+   # Assume you have a -> b -> c.
+   # By default c gets linked to a via b. If you mark c in b as no-bequeath
+   # it is invisble to a.
+   #
+   case ",${mode}," in
+      *,bequeath,*)
+         if [ ${WALK_LEVEL} -gt 0 ]
+         then
+            # node marked as no-bequeath   : ignore
+            if ! nodemarks_contain "${_marks}" "bequeath"
             then
                log_debug "Do not act on non-toplevel \"${virtual}/${_destination}\" with no-bequeath mark"
                return 0
             fi
-         ;;
-      esac
-   fi
+         fi
+      ;;
+   esac
 
    local _nodeline
 
@@ -1509,8 +1523,10 @@ sourcetree_walk_main()
    local OPTION_CALLBACK_TRACE='YES'
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_EVAL='YES'
+   local OPTION_BEQUEATH='DEFAULT'
    local OPTION_DIRECTION="FORWARD"
    local CONFIGURATION="Release"
+   local OPTION_WALK_LEVEL_ZERO=0
    local WALK_VISIT_CALLBACK=
    local WALK_DESCEND_CALLBACK=
    local OPTION_DEDUPE_MODE=''
@@ -1567,6 +1583,22 @@ sourcetree_walk_main()
 
          --no-dedupe)
             OPTION_DEDUPE_MODE="none"
+         ;;
+
+         --bequeath)
+            OPTION_BEQUEATH='YES'
+         ;;
+
+         --no-bequeath)
+            OPTION_BEQUEATH='NO'
+         ;;
+
+         --walk-level)
+            OPTION_WALK_LEVEL_ZERO=$((OPTION_WALK_LEVEL_ZERO - 1))
+         ;;
+
+         --no-bequeath)
+            OPTION_BEQUEATH='NO'
          ;;
 
          --dedupe|--dedupe-mode)
@@ -1696,7 +1728,7 @@ as one string and use "
 
    if [ $# -eq 0 ]
    then
-      callback='echo "${WALK_NODE}"'
+      callback='printf "%s\n" "${WALK_NODE}"'
    else
       callback="$1"
       shift

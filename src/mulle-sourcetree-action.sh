@@ -243,7 +243,7 @@ _do_fetch_operation()
 
    if [ ! -z "${UPTODATE_MIRRORS_FILE}" ]
    then
-      redirect_append_exekutor "${UPTODATE_MIRRORS_FILE}" echo "${_url}"
+      redirect_append_exekutor "${UPTODATE_MIRRORS_FILE}" printf "%s\n" "${_url}"
    fi
 
    return $rval
@@ -671,7 +671,7 @@ old \"${previousfilename}\" exist. Looks like a manual move. Doing nothing."
          then
             log_fluff "\"${newfilename}\" is symlink. Ignoring possible \
 differences in URL related info."
-            echo "${actions}"
+            printf "%s\n" "${actions}"
             return
          fi
       ;;
@@ -681,7 +681,7 @@ differences in URL related info."
    then
       log_fluff "\"${newfilename}\" has no URL. Ignoring possible differences \
 in URL related info."
-      echo "${actions}"
+      printf "%s\n" "${actions}"
       return
    fi
 
@@ -762,7 +762,7 @@ fetch"
 
    if [ ! -z "${actions}" ]
    then
-      echo "${actions}"
+      printf "%s\n" "${actions}"
    fi
 }
 
@@ -823,6 +823,21 @@ __update_perform_item()
             ;;
 
             *)
+               #
+               # if the fetch fails, it can be that we get a partial remnant
+               # here which can really mess up the next fetch. So we remove it
+               #
+               if [ -e "${filename}" ]
+               then
+                   if [ -L "${filename}" ]
+                   then
+                      log_verbose "Removing old symlink \"${filename}\""
+                      exekutor rm -f "${filename}" >&2
+                  else
+                     update_safe_clobber"${database}" "${filename}"
+                  fi
+               fi
+
                if ! nodemarks_contain "${_marks}" "require"
                then
                   log_info "${C_MAGENTA}${C_BOLD}${filename}${C_INFO} is not required."
@@ -932,10 +947,10 @@ _update_perform_actions()
    IFS="${DEFAULT_IFS}" ; set +o noglob
 
    echo "-- VfL Bochum 1848 --"
-   echo "${contentschanged}"
-   echo "${remember}"
-   echo "${skip}"
-   echo "${_nodetype}"
+   printf "%s\n" "${contentschanged}"
+   printf "%s\n" "${remember}"
+   printf "%s\n" "${skip}"
+   printf "%s\n" "${_nodetype}"
 }
 
 
@@ -970,7 +985,7 @@ _memorize_nodeline_in_db()
    local evaledurl
    r_node_to_nodeline
    nodeline="${RVAL}"
-   evaledurl="`eval echo "${_url}"`"
+   evaledurl="`eval "printf \"%s\\\\\\\\n\" \"${_url}\""`"
 
    _memorize_in_db "${nodeline}" "${evaledurl}" "$@"
 }
@@ -1005,7 +1020,7 @@ write_fix_info()
 ${nodeline}"
 
    r_mkdir_parent_if_missing "${output}"
-   redirect_exekutor "${output}" echo "${text}" || internal_fail "failed to write fixinfo \"${output}\""
+   redirect_exekutor "${output}" printf "%s\n" "${text}" || internal_fail "failed to write fixinfo \"${output}\""
 }
 
 

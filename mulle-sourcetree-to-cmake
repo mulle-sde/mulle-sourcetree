@@ -211,9 +211,11 @@ _emit_dependencies_loader_cmake_code()
 {
    log_entry "_emit_dependencies_loader_cmake_code" "$@"
 
-   local identifier="$1"
-   local quoted_names="$2"
-   local marks="$3"
+   local address="$1"
+   local identifier="$2"
+   local quoted_names="$3"
+   local marks="$4"
+   local indent="$5"
 
    if [ -z "${quoted_names}" ]
    then
@@ -228,7 +230,7 @@ _emit_dependencies_loader_cmake_code()
          cat <<EOF
 ${indent}      #
 ${indent}      # Search for "DependenciesAndLibraries.cmake" to include.
-${indent}      # Disable with: \`mark no-cmakedependency\`
+${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakedependency\`
 ${indent}      #
 ${indent}      foreach( _TMP_${identifier}_NAME ${quoted_names})
 ${indent}         set( _TMP_${identifier}_DIR "\${_TMP_${identifier}_ROOT}/include/\${_TMP_${identifier}_NAME}/cmake")
@@ -260,6 +262,7 @@ ${indent}            message( STATUS "\${_TMP_${identifier}_DIR}/DependenciesAnd
 ${indent}         endif()
 ${indent}      endforeach()
 EOF
+      ;;
    esac
 
    #
@@ -273,7 +276,7 @@ EOF
          cat <<EOF
 ${indent}      #
 ${indent}      # Search for "objc-loader.inc" in include directory.
-${indent}      # Disable with: \`mark no-cmakeloader\`
+${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakeloader\`
 ${indent}      #
 ${indent}      if( NOT NO_INHERIT_OBJC_LOADERS)
 ${indent}         foreach( _TMP_${identifier}_NAME ${quoted_names})
@@ -309,10 +312,11 @@ _emit_cmake_find_library()
    local findoptions="$1"; shift
 
    local names="$1"
-   local identifier="$2"
-   local containername="$3"
-   local marks="$4"
-   local indent="$5"
+   local address="$2"
+   local identifier="$3"
+   local containername="$4"
+   local marks="$5"
+   local indent="$6"
 
    local libraries
    local i
@@ -380,8 +384,9 @@ ${indent}if( NOT ${identifier}_LIBRARY)
 ${indent}   find_library( ${identifier}_LIBRARY NAMES ${libraries}${findoptions})
 ${indent}   message( STATUS "${identifier}_LIBRARY is \${${identifier}_LIBRARY}")
 ${indent}   #
-${indent}   # the order looks ascending, but due to the way this file is read
-${indent}   # it ends up being descending, which is what we need
+${indent}   # The order looks ascending, but due to the way this file is read
+${indent}   # it ends up being descending, which is what we need.
+${indent}   #
 ${indent}   if( ${identifier}_LIBRARY)
 EOF
    case ",${marks}," in
@@ -392,7 +397,7 @@ EOF
          cat <<EOF
 ${indent}      #
 ${indent}      # Add to ${identifier}_LIBRARY list.
-${indent}      # Disable with: \`mark no-cmakeadd\`
+${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakeadd\`
 ${indent}      #
 ${indent}      set( ${containername}
 ${indent}         \${${containername}}
@@ -414,7 +419,7 @@ EOF
          cat <<EOF
 ${indent}      #
 ${indent}      # Inherit ObjC loader and link dependency info.
-${indent}      # Disable with: \`mark no-cmakeinherit\`
+${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakeinherit\`
 ${indent}      #
 ${indent}      # // temporarily expand CMAKE_MODULE_PATH
 ${indent}      get_filename_component( _TMP_${identifier}_ROOT "\${${identifier}_LIBRARY}" DIRECTORY)
@@ -422,9 +427,11 @@ ${indent}      get_filename_component( _TMP_${identifier}_ROOT "\${_TMP_${identi
 ${indent}      #
 EOF
 
-         _emit_dependencies_loader_cmake_code "${identifier}" \
+         _emit_dependencies_loader_cmake_code "${address}" \
+                                              "${identifier}" \
                                               "${quoted_names}" \
-                                              "${marks}"
+                                              "${marks}" \
+                                              "${indent}"
       ;;
    esac
 
@@ -454,8 +461,8 @@ _emit_cmake_dependency()
 {
    log_entry "_emit_cmake_dependency" "$@"
 
-   local marks="$4"
-   local indent="$5"
+   local marks="$5"
+   local indent="$6"
 
    local findoptions
 
@@ -484,10 +491,11 @@ _emit_cmake_header_only()
    log_entry "_emit_cmake_header_only" "$@"
 
    local names="$1"
-   local identifier="$2"
-   local containername="$3"
-   local marks="$4"
-   local indent="$5"
+   local address="$2"
+   local identifier="$3"
+   local containername="$4"
+   local marks="$5"
+   local indent="$6"
 
    local headers
    local i
@@ -541,7 +549,7 @@ EOF
          cat <<EOF
 ${indent}   #
 ${indent}   # Add to list of header files.
-${indent}   # Disable with: \`mark no-cmakeadd\`
+${indent}   # Disable with: \`mulle-sourcetree mark ${address} no-cmakeadd\`
 ${indent}   #
 ${indent}   set( ${containername}
 ${indent}      \${${identifier}_HEADER}
@@ -568,7 +576,7 @@ EOF
          cat <<EOF
 ${indent}      #
 ${indent}      # Inherit ObjC loader and link dependency info.
-${indent}      # Disable with: \`mark no-cmakeinherit\`
+${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakeinherit\`
 ${indent}      #
 ${indent}      get_filename_component( _TMP_${identifier}_ROOT "\${${identifier}_HEADER}" DIRECTORY)
 ${indent}      get_filename_component( _TMP_${identifier}_NAME "\${_TMP_${identifier}_ROOT}" NAME)
@@ -580,9 +588,11 @@ EOF
          # this search for a header is useful for subprojects
          # MulleObjCOSFoundation
          #
-          _emit_dependencies_loader_cmake_code "${identifier}" \
+          _emit_dependencies_loader_cmake_code "${address}" \
+                                               "${identifier}" \
                                                "" \
-                                               "${marks}"
+                                               "${marks}" \
+                                               "${indent}"
       ;;
    esac
 
@@ -613,13 +623,14 @@ emit_cmake_dependency()
    local indent
    local ifstatement
    local endifstatement
-   local name
+   local actualcontainername
+
    #
    # ALL_LOAD_ is the default for Objective-C static libraries and is the
-   # default. "C" libraries are marked with no-all-load and remove the
-   # prefix
+   # default. "C" libraries are marked with no-all-load and will remove the
+   # prefix later
    #
-   name="ALL_LOAD_${containername}"
+   actualcontainername="ALL_LOAD_${containername}"
 
    if [ ! -z "${marks}" ]
    then
@@ -632,7 +643,13 @@ emit_cmake_dependency()
 
       case ",${marks}," in
          *,no-all-load,*)
-            name="${containername}"
+            actualcontainername="${containername}"
+         ;;
+      esac
+
+      case ",${marks}," in
+         *,no-intermediate-link,*)
+            actualcontainername="STARTUP_${actualcontainername}"
          ;;
       esac
    fi
@@ -667,16 +684,22 @@ emit_cmake_dependency()
       fail "Identifier derived from \"${names}\" is empty"
 
 
-   echo "# sourcetree: ${identifier};${marks};${aliases}"
+   cat <<EOF
+#
+# Generated from sourcetree: ${address};${marks};${aliases}
+# Disable with: \`mulle-sourcetree mark ${address} no-link\`
+#
+EOF
 
    if [ ! -z "${ifstatement}" ]
    then
-      echo "${ifstatement}"
+      printf "%s\n" "${ifstatement}"
    fi
 
    "${emitter}" "${names}" \
+                "${address}" \
                 "${identifier}" \
-                "${name}" \
+                "${actualcontainername}" \
                 "${marks}" \
                 "${indent}"
 
@@ -742,6 +765,7 @@ emit_dependency_subproject()
                            ${MULLE_TECHNICAL_FLAGS} \
                            ${MULLE_SOURCETREE_FLAGS} \
                            list \
+                              --bequeath \
                               --format '%a;%m;%i={aliases,,};%i={include,,}\n' \
                               --marks 'dependency,header,no-link' \
                               --output-format raw \
@@ -754,6 +778,7 @@ emit_dependency_subproject()
                            ${MULLE_TECHNICAL_FLAGS} \
                            ${MULLE_SOURCETREE_FLAGS} \
                            list \
+                              --bequeath \
                               --format '%a;%m;%i={aliases,,};%i={include,,}\n' \
                               --marks 'dependency,link' \
                               --output-format raw \
@@ -778,6 +803,7 @@ emit_library()
                         library list \
                            --marks header,no-link \
                            -- \
+                           --bequeath \
                            --output-format raw \
                            --output-no-header`" || return 1
    emit_cmake_dependencies "_emit_cmake_header_only" \
@@ -790,6 +816,7 @@ emit_library()
                         library list \
                            --marks link \
                            -- \
+                           --bequeath \
                            --output-format raw \
                            --output-no-header`" || return 1
    emit_cmake_dependencies "_emit_cmake_library" \
@@ -810,14 +837,14 @@ output_file()
    if [ "${filename}" = "-" ]
    then
       log_info "${title}"
-      rexekutor echo "${text}"
+      rexekutor printf "%s\n" "${text}"
    else
       log_verbose "Writing ${C_RESET_BOLD}${filename}"
       r_fast_dirname "${filename}"
       exekutor mkdir -p "${RVAL}" 2> /dev/null
       exekutor chmod a+w "${filename}"  2> /dev/null
       r_mkdir_parent_if_missing "${filename}"
-      redirect_exekutor "${filename}" echo "${text}"
+      redirect_exekutor "${filename}" printf "%s\n" "${text}"
       exekutor chmod a-w "${filename}"
    fi
 }
@@ -833,24 +860,33 @@ write_libraries_file()
 
    local text_lib
 
-   if [ "${MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE}" = "NONE" ]
-   then
-      MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE=""
+   case "${MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE}" in
+      NONE)
+         MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE=""
 
-      text_lib="# library generation turned off by MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE"
-   else
-      #
-      text_lib="`emit_library`" || return 1
-      if [ -z "${text_lib}" ]
-      then
-         text_lib="# there are no libraries in the sourcetree"
-      fi
-   fi
+         text_lib="# library generation turned off by MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE"
+      ;;
+
+      DISABLE*)
+         return
+      ;;
+
+      *)
+         #
+         text_lib="`emit_library`" || return 1
+         if [ -z "${text_lib}" ]
+         then
+            text_lib="# there are no libraries in the sourcetree"
+         fi
+      ;;
+   esac
    MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE="${MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE:-cmake/_Libraries.cmake}"
 
    text_lib="#
 # ${MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE} is generated by \`mulle-sde\`. Edits will be lost.
-#
+# Disable generation of this file with:
+#   mulle-sde environment  --global set MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE DISABLE
+
 if( MULLE_TRACE_INCLUDE)
    message( STATUS \"# Include \\\"\${CMAKE_CURRENT_LIST_FILE}\\\"\" )
 endif()
@@ -869,23 +905,31 @@ write_dependencies_file()
 
    local text_dep
 
-   if [ "${MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE}" = "NONE" ]
-   then
-      MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE=""
-      text_dep="# dependency generation turned off by MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE"
-   else
-      text_dep="`emit_dependency_subproject`"  || return 1
-      if [ -z "${text_dep}" ]
-      then
-         text_dep="# there are no applicable dependencies in the sourcetree"
-      fi
-   fi
+   case "${MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE}" in
+      NONE)
+         MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE=""
+         text_dep="# dependency generation turned off by MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE"
+      ;;
+
+      DISABLE)
+         return
+      ;;
+
+      *)
+         text_dep="`emit_dependency_subproject`"  || return 1
+         if [ -z "${text_dep}" ]
+         then
+            text_dep="# there are no applicable dependencies in the sourcetree"
+         fi
+      ;;
+   esac
 
    MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE="${MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE:-cmake/_Dependencies.cmake}"
 
    text_dep="#
 # ${MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE} is generated by \`mulle-sde\`. Edits will be lost.
-#
+# Disable generation of this file with:
+#   mulle-sde environment  --global set MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE DISABLE
 if( MULLE_TRACE_INCLUDE)
    message( STATUS \"# Include \\\"\${CMAKE_CURRENT_LIST_FILE}\\\"\" )
 endif()
@@ -960,7 +1004,7 @@ main()
          ;;
 
          --version)
-            echo "${MULLE_EXECUTABLE_VERSION}"
+            printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
             return 0
          ;;
 

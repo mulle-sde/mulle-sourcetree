@@ -235,7 +235,7 @@ nodeline_remove()
       IFS="${DEFAULT_IFS}"; set +o noglob
       case "${nodeline}" in
          ^#*)
-            echo "${nodeline}"
+            printf "%s\n" "${nodeline}"
             continue
          ;;
       esac
@@ -246,7 +246,7 @@ nodeline_remove()
 
       if [ "${_address}" != "${addresstoremove}" ]
       then
-         echo "${nodeline}"
+         printf "%s\n" "${nodeline}"
       fi
    done
    IFS="${DEFAULT_IFS}"; set +o noglob
@@ -323,7 +323,7 @@ nodeline_find()
    then
       return 1
    fi
-   echo "${RVAL}"
+   printf "%s\n" "${RVAL}"
 }
 
 
@@ -340,7 +340,7 @@ nodeline_find_by_url()
    then
       return 1
    fi
-   echo "${RVAL}"
+   printf "%s\n" "${RVAL}"
 }
 
 
@@ -357,7 +357,7 @@ nodeline_find_by_evaled_url()
    then
       return 1
    fi
-   echo "${RVAL}"
+   printf "%s\n" "${RVAL}"
 }
 
 
@@ -594,7 +594,7 @@ nodeline_printf_header()
 
          \\n)
             case ",${mode}," in
-               *,output_raw,*|*,output_cmd,*|*,output_cmd2,*)
+               *,output_cmd,*|*,output_cmd2,*)
                   name=""
                   dash=""
                ;;

@@ -167,6 +167,13 @@ external/expat  tar                        https://github.com/libexpat/libexpat/
 external/zlib   git                        https://github.com/madler/zlib.git
 ```
 
+Use custom format options to retrieve the information you want. This example
+lists all the URLs definitions used in your project:
+
+```
+mulle-sourcetree list -r --format "%u\n" --output-no-header --output-no-indent | sed -n 's/^\${\([A-Z_]*\):-\(.*\)}$/\1=\"\2\"/p' | sort -u
+```
+
 #### `mulle-sourcetree dotdump` : picture your sourcetree
 
 Get a graphical overview with **dotdump**:
@@ -186,6 +193,8 @@ $ mulle-sourcetree craftorder
 /private/tmp/a/external/expat
 /private/tmp/a/external/zlib
 ```
+
+### `mulle-sourcetree list` : retru
 
 
 

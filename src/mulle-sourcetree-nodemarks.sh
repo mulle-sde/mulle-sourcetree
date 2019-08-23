@@ -172,7 +172,7 @@ nodemarks_add()
 {
    r_nodemarks_add "$@"
 
-   [ ! -z "${RVAL}" ] && echo "${RVAL}"
+   [ ! -z "${RVAL}" ] && printf "%s\n" "${RVAL}"
 
    :
 }
@@ -182,13 +182,13 @@ nodemarks_remove()
 {
    r_nodemarks_remove "$@"
 
-   [ ! -z "${RVAL}" ] && echo "${RVAL}"
+   [ ! -z "${RVAL}" ] && printf "%s\n" "${RVAL}"
 
    :
 }
 
 #
-# check for existance of a no-key or an only-key
+# check for existence of a no-key or an only-key
 #
 _nodemarks_contain()
 {
@@ -278,7 +278,7 @@ nodemarks_version_match()
 
 
 #
-# The "clever" existance check:
+# The "clever" existence check:
 #
 # Input         | Matches
 #               | absent   | no-<key> | only-<key>
@@ -287,7 +287,7 @@ nodemarks_version_match()
 # no-<key>      | NO       | YES      | NO
 # only-<key>    | NO       | NO       | YES
 #
-# Note: The only-<key> needs to be queried explicitly for existance
+# Note: The only-<key> needs to be queried explicitly for existence
 #       It will not deny a no-<key>.In fact there must not be a
 #       no-<key> present if there is a only-<key>
 #
@@ -521,7 +521,6 @@ _nodemarks_filter_sexpr()
          operator="${_s%%[ )]*}"
          [ -z "${operator}" ] && fail "Missing operator after version key"
          _s="${_s#"${operator}"}"
-
 
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
          value="${_s%%[ )]*}"

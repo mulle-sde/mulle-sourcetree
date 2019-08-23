@@ -269,7 +269,7 @@ ${evaledurl}"
 
    log_debug "Remembering uuid \"${uuid}\" ($databasedir)"
 
-   redirect_exekutor "${dbfilepath}" echo "${content}"
+   redirect_exekutor "${dbfilepath}" printf "%s\n" "${content}"
 }
 
 
@@ -485,7 +485,7 @@ db_get_rootdir()
    local rootdir
 
    __db_common_rootdir "$1"
-   echo "${rootdir}"
+   printf "%s\n" "${rootdir}"
 }
 
 
@@ -663,7 +663,7 @@ db_fetch_uuid_for_evaledurl()
          evaledurl="`_db_evaledurl < "${candidate}" `"
          if [ "${searchurl}" = "${evaledurl}" ]
          then
-            echo "${candidate}"
+            printf "%s\n" "${candidate}"
             exit 0
          fi
       done
@@ -703,7 +703,7 @@ db_fetch_uuid_for_filename()
          filename="`_db_filename < "${candidate}" `"
          if [ "${searchfilename}" = "${filename}" ]
          then
-            echo "${candidate}"
+            printf "%s\n" "${candidate}"
             exit 0
          fi
       done
@@ -770,9 +770,9 @@ db_set_memo()
 
    local nodelines="$2"
 
-   redirect_exekutor "${filename}" echo "${nodelines}"
+   redirect_exekutor "${filename}" printf "%s\n" "${nodelines}"
 
-   echo "${filename}"
+   printf "%s\n" "${filename}"
 }
 
 
@@ -787,7 +787,7 @@ db_add_memo()
 
    local nodelines="$2"
 
-   redirect_append_exekutor "${databasedir}/.db_memo" echo "${nodelines}"
+   redirect_append_exekutor "${databasedir}/.db_memo" printf "%s\n" "${nodelines}"
 }
 
 
@@ -804,7 +804,7 @@ db_add_missing()
    local nodeline="$3"
 
    mkdir_if_missing "${databasedir}/.missing"
-   redirect_exekutor "${databasedir}/.missing/${uuid}" echo "${nodeline}"
+   redirect_exekutor "${databasedir}/.missing/${uuid}" printf "%s\n" "${nodeline}"
 }
 
 #
@@ -853,7 +853,7 @@ db_set_dbtype()
    [ -z "${dbtype}" ] && internal_fail "type is missing"
 
    mkdir_if_missing "${databasedir}"
-   redirect_exekutor "${databasedir}/.db_type"  echo "${dbtype}"
+   redirect_exekutor "${databasedir}/.db_type"  printf "%s\n" "${dbtype}"
 }
 
 
@@ -912,7 +912,7 @@ db_dir_exists()
 
 __db_environment()
 {
-   echo "${databasedir}
+   printf "%s\n" "${databasedir}
 ${MULLE_SOURCETREE_STASH_DIR}"
 }
 
@@ -926,7 +926,7 @@ db_environment()
 
    __db_common_databasedir "$@"
 
-   echo "${databasedir}
+   printf "%s\n" "${databasedir}
 ${MULLE_SOURCETREE_STASH_DIR}"
 }
 
@@ -1088,7 +1088,7 @@ db_set_shareddir()
    # empty is OK
 
    mkdir_if_missing "${databasedir}"
-   redirect_exekutor "${databasedir}/.db_stashdir"  echo "${shareddir}"
+   redirect_exekutor "${databasedir}/.db_stashdir"  printf "%s\n" "${shareddir}"
 }
 
 
@@ -1118,8 +1118,12 @@ db_get_shareddir()
 
    __db_common_databasedir "$@"
 
-   cat "${databasedir}/.db_stashdir" 2> /dev/null
+   if [ -f "${databasedir}/.db_stashdir" ]
+   then
+      rexekutor cat "${databasedir}/.db_stashdir"
+   fi
 }
+
 
 #
 # If a previous update crashed, we wan't to let the user know.
@@ -1269,13 +1273,13 @@ db_get_node_filename()
          ;;
 
          *)
-            echo "${MULLE_SOURCETREE_STASH_DIR}/${address##*/}"
+            printf "%s\n" "${MULLE_SOURCETREE_STASH_DIR}/${address##*/}"
             return
          ;;
       esac
    fi
 
-   echo "${filename}"
+   printf "%s\n" "${filename}"
 }
 
 
@@ -1302,7 +1306,7 @@ db_graveyard_dir()
 
    __db_common_databasedir "$@"
 
-   echo "${databasedir}/../graveyard"
+   printf "%s\n" "${databasedir}/../graveyard"
 }
 
 
@@ -1614,7 +1618,7 @@ db_state_description()
       fi
    fi
 
-   echo "${dbstate}"
+   printf "%s\n" "${dbstate}"
 }
 
 
@@ -1713,7 +1717,7 @@ Remedial action:${C_RESET_BOLD}
    if [ "${nodetype}" = "local" ]
    then
       log_debug "Use local minion node \"${address}\" as share"
-      echo "${address}"
+      printf "%s\n" "${address}"
       return 0
    fi
 
@@ -1721,12 +1725,13 @@ Remedial action:${C_RESET_BOLD}
 
    r_fast_basename "${address}"
    name="${RVAL}"
+
    r_filepath_concat "${MULLE_SOURCETREE_STASH_DIR}" "${name}"
    filename="${RVAL}"
 
-   log_debug "Set filename to share directory \"${filename}\""
+   log_debug "Set filename to share directory \"${filename}\" for \"${name}\""
 
-   echo "${filename}"
+   printf "%s\n" "${filename}"
    return 0
 }
 

@@ -431,9 +431,9 @@ walk_dotdump()
    if [ "${OPTION_OUTPUT_EVAL}" = 'YES' ]
    then
       url="`eval "echo \"${url}\""`"
-      branch="`eval echo "${branch}"`"
-      tag="`eval echo "${tag}"`"
-      fetchoptions="`eval echo "${fetchoptions}"`"
+      branch="`eval "printf \"%s\\\\\\\\n\" \"${branch}\""`"
+      tag="`eval "printf \"%s\\\\\\\\n\" \"${tag}\""`"
+      fetchoptions="`eval "printf \"%s\\\\\\\\n\" \"${fetchoptions}\""`"
    fi
 
    relative=""

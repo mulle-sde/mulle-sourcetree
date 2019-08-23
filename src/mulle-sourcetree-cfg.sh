@@ -152,7 +152,7 @@ cfg_rootdir()
    local rootdir
 
    __cfg_common_rootdir "$1"
-   echo "${rootdir}"
+   printf "%s\n" "${rootdir}"
 }
 
 
@@ -233,7 +233,7 @@ cfg_write()
    shift
 
    mkdir_if_missing "${MULLE_SOURCETREE_ETC_DIR}"
-   if ! redirect_exekutor "${configfile}" echo "$*"
+   if ! redirect_exekutor "${configfile}" printf "%s\n" "$*"
    then
       exit 1
    fi
@@ -342,6 +342,18 @@ cfg_remove_nodeline_by_url()
 }
 
 
+cfg_file_remove()
+{
+   log_entry "cfg_file_remove_if_empty" "$@"
+
+   local configfile
+
+   __cfg_common_configfile "$@"
+
+   remove_file_if_present "${configfile}"
+}
+
+
 cfg_file_remove_if_empty()
 {
    log_entry "cfg_file_remove_if_empty" "$@"
@@ -412,7 +424,7 @@ cfg_search_for_configfile()
 
    case "${physdirectory}" in
       ${physceiling})
-         echo "${physdirectory}"  # common cheap equality
+         printf "%s\n" "${physdirectory}"  # common cheap equality
          return 1
       ;;
 
@@ -445,7 +457,7 @@ from \"${physdirectory}\" to \"${physceiling}\""
       done &&
 
       log_debug "Found \"${PWD}\"" &&
-      echo "${PWD}"
+      printf "%s\n" "${PWD}"
    )
 }
 
@@ -532,7 +544,7 @@ cfg_determine_working_directory()
          if [ "${directory}" != "${physpwd}" ]
          then
             log_debug "Immediate parent found"
-            echo "${directory}"
+            printf "%s\n" "${directory}"
             return 0
          fi
 
@@ -575,7 +587,7 @@ cfg_determine_working_directory()
             fi
          done
 
-         echo "${found}"
+         printf "%s\n" "${found}"
          return 0
       ;;
 
@@ -586,7 +598,7 @@ cfg_determine_working_directory()
             log_debug "No config found in MULLE_VIRTUAL_ROOT ($MULLE_VIRTUAL_ROOT}"
             return 1
          fi
-         echo "${directory}"
+         printf "%s\n" "${directory}"
          return 0
       ;;
 
@@ -678,9 +690,9 @@ cfg_absolute_filename()
    #  "${style}" != "share" -a
    if [ "${config#${MULLE_SOURCETREE_STASH_DIR}}" != "${config}" ]
    then
-      echo "${config}${address}"
+      printf "%s\n" "${config}${address}"
    else
-      echo "${MULLE_VIRTUAL_ROOT}${config}${address}"
+      printf "%s\n" "${MULLE_VIRTUAL_ROOT}${config}${address}"
    fi
 }
 

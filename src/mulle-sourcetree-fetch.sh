@@ -50,11 +50,20 @@ r_sourcetree_guess_address()
       return 1
    fi
 
+   local evalednodetype
+
+   evalednodetype="`eval "echo \"${nodetype}\""`"
+   if [ "${evalednodetype}" = "none" ]
+   then
+      RVAL="${url}"
+      return 0
+   fi
+
    RVAL="`${MULLE_FETCH:-mulle-fetch} \
                ${MULLE_TECHNICAL_FLAGS} \
                ${MULLE_FETCH_FLAGS} \
             nameguess \
-               -s "${nodetype}" \
+               -s "${evalednodetype}" \
                "${evaledurl}"`"
 
    log_fluff "${MULLE_FETCH:-mulle-fetch} returned \"${RVAL}\" as \
@@ -118,20 +127,17 @@ sourcetree_sync_operation()
    # we use evaluated values to then pass as "environment" into the
    # echo, this allows us to specify a URL as
    #
+   evalednodetype="`eval "echo \"${nodetype}\""`"
    evaledtag="`eval "echo \"${tag}\""`"
    evaledbranch="`eval "echo \"${branch}\""`"
    evaledurl="`MULLE_BRANCH="${evaledbranch}" MULLE_TAG="${evaledtag}" eval "echo \"${url}\""`"
-   evaledfetchoptions="`MULLE_URL="${evaledurl}" MULLE_BRANCH="${evaledbranch}" MULLE_TAG="${evaledtag}" eval echo "${_fetchoptions}"`"
+   evaledfetchoptions="`MULLE_URL="${evaledurl}" MULLE_BRANCH="${evaledbranch}" MULLE_TAG="${evaledtag}" eval "printf \"%s\\\\\\\\n\" \"${_fetchoptions}\""`"
 
+   [ -z "${evalednodetype}" ] && fail "Nodetype \"${nodetype}\" evaluates to empty"
    [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
 
    local cmdoptions
 
-   if [ ! -z "${nodetype}" ]
-   then
-      r_concat "${cmdoptions}" "--scm '${nodetype}'"
-      cmdoptions="${RVAL}"
-   fi
    if [ ! -z "${evaledtag}" ]
    then
       r_concat "${cmdoptions}" "--tag '${evaledtag}'"
@@ -148,7 +154,7 @@ sourcetree_sync_operation()
       cmdoptions="${RVAL}"
    fi
 
-   case "${nodetype}" in
+   case "${evalednodetype}" in
       file)
          # does not implement local search
       ;;
@@ -184,7 +190,10 @@ ${C_RESET_BOLD}${evaledurl}${C_INFO}"
 
             if [ ! -z "${localnodetype}" -a "${localnodetype}" != "local" ]
             then
-               nodetype="${localnodetype}"
+               log_fluff "Local URL found ($localnodetype)"
+               # this doesn't work anymore
+               # evalednodetype="${localnodetype}"
+               :
             fi
          else
             log_fluff "No local URL found"
@@ -201,6 +210,14 @@ ${C_RESET_BOLD}${evaledurl}${C_INFO}"
       cmdoptions="${RVAL}"
    fi
 
+   #
+   # evalednodetype may have changed due to local lookup
+   #
+   if [ ! -z "${evalednodetype}" ]
+   then
+      r_concat "--source '${evalednodetype}'" "${cmdoptions}"
+      cmdoptions="${RVAL}"
+   fi
    eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
                        "${MULLE_TECHNICAL_FLAGS}" \
                        "${MULLE_FETCH_FLAGS}" \
@@ -225,9 +242,9 @@ sourcetree_list_operations()
 
 
 
-sourcetree_sync_initialize()
+sourcetree_fetch_initialize()
 {
-   log_entry "sourcetree_sync_initialize" "$@"
+   log_entry "sourcetree_fetch_initialize" "$@"
 
    if [ -z "${MULLE_SOURCETREE_NODELINE_SH}" ]
    then
@@ -237,6 +254,6 @@ sourcetree_sync_initialize()
 }
 
 
-sourcetree_sync_initialize
+sourcetree_fetch_initialize
 
 :

@@ -102,7 +102,7 @@ collect_craftorder_line()
    r_create_craftorder_filename "${_filename}"
    filename="${RVAL}"
 
-   rexekutor echo "${filename}"
+   rexekutor printf "%s\n" "${filename}"
 }
 
 
@@ -120,6 +120,8 @@ augment_craftorder_line()
    then
       return 0
    fi
+
+   # remove file from remainders
    _remainder_collection="`fgrep -x -v -e "${filename}" <<< "${_remainder_collection}"`"
 
    marks="${_marks}"
@@ -131,11 +133,13 @@ augment_craftorder_line()
       fi
    fi
 
+   log_fluff "Augmented ${filename} with marks from ${_datasource}${_address}"
+
    if [ "${OUTPUT_RAW_USERINFO}" = 'YES' ]
    then
-      rexekutor echo "${filename};${marks};${_raw_userinfo}"
+      rexekutor printf "%s\n" "${filename};${marks};${_raw_userinfo}"
    else
-      rexekutor echo "${filename};${marks}"
+      rexekutor printf "%s\n" "${filename};${marks}"
    fi
 
    if [ -z "${_remainder_collection}" ]
@@ -165,7 +169,7 @@ output_craftorder()
       done
       IFS="${DEFAULT_IFS}"; set +f
    else
-      echo "${collection}"
+      printf "%s\n" "${collection}"
    fi
 }
 
@@ -238,7 +242,7 @@ sourcetree_craftorder_main()
          ;;
 
          --print-qualifier)
-            echo "${SOURCETREE_CRAFTORDER_QUALIFIER}"
+            printf "%s\n" "${SOURCETREE_CRAFTORDER_QUALIFIER}"
             exit 0
          ;;
 
@@ -311,7 +315,7 @@ sourcetree_craftorder_main()
                                            "${mode},breadth-order" \
                                            "augment_craftorder_line"`"
 
-   local pattern
+   local filename
    local collection
    local lines
 

@@ -118,7 +118,8 @@ node_augment()
 
          if [ "${before}" != "${after}" ]
          then
-            fail "Node of nodetype \"${_nodetype}\" requires marks \"no-delete,no-update,no-share,require\""
+            log_warning "Node of nodetype \"${_nodetype}\" augmented with necessary marks \"no-delete,no-update,no-share,require\""
+            _marks="${after}"
          fi
 
          # local has no URL
@@ -325,7 +326,7 @@ node_to_nodeline()
    log_entry "node_to_nodeline" "$@"
 
    r_node_to_nodeline "$@"
-   [ ! -z "${RVAL}" ] && echo "${RVAL}"
+   [ ! -z "${RVAL}" ] && printf "%s\n" "${RVAL}"
 }
 
 
@@ -407,6 +408,7 @@ node_printf()
    formatstring="${RVAL}"
 
    local url="${_url}"
+   local nodetype="${_nodetype}"
    local branch="${_branch}"
    local tag="${_tag}"
    local fetchoptions="${_fetchoptions}"
@@ -419,14 +421,16 @@ node_printf()
 
    case ",${mode}," in
       *,output_eval,*)
+         nodetype="`eval "echo \"${nodetype}\""`"
          branch="`eval "echo \"${branch}\""`"
          tag="`eval "echo \"${tag}\""`"
          url="`MULLE_BRANCH="${branch}" MULLE_TAG="${tag}" eval "echo \"${url}\""`"
-         fetchoptions="`MULLE_BRANCH="${branch}" MULLE_TAG="${branch}" MULLE_URL="${url}"  eval echo "${fetchoptions}"`"
+         fetchoptions="`MULLE_BRANCH="${branch}" MULLE_TAG="${branch}" MULLE_URL="${url}" eval "printf \"%s\\\\\\\\n\" \"${fetchoptions}\""`"
       ;;
    esac
 
    local _url="${url}"
+   local _nodetype="${nodetype}"
    local _branch="${branch}"
    local _tag="${tag}"
    local _fetchoptions="${fetchoptions}"
@@ -633,11 +637,11 @@ node_printf()
 
    case ",${mode}," in
       *,output_cmd,*)
-         rexekutor echo "${cmdline}" "'${_address}'"
+         rexekutor printf "%s %s\n" "${cmdline}" "'${_address}'"
       ;;
 
       *,output_cmd2,*)
-         rexekutor echo "${cmdline}" "'${_url:-${_address}}'"
+         rexekutor printf "%s %s\n" "${cmdline}" "'${_url:-${_address}}'"
       ;;
 
       *,output_raw,*)

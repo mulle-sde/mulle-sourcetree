@@ -32,7 +32,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_SOURCETREE_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.19.1"
+MULLE_EXECUTABLE_VERSION="0.20.0"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -78,6 +78,7 @@ print_commands()
    rename         : rename a node in the sourcetree
    remove         : remove a node from the sourcetree
    reset          : clear the database, to force a sync
+   wrap           : wrap nodetypes,branches,URLs in environment variables
    touch          : mark sourcetree as dirty
    typeguess      : guess type of repository from URL
    uname          : ${MULLE_USAGE_NAME}'s simplified uname(1)
@@ -86,16 +87,16 @@ print_commands()
    walk           : visit all the sourcetree nodes with a callback"
 
 
-   echo "${SHOWN_COMMANDS}"
+   printf "%s\n" "${SHOWN_COMMANDS}"
 
    if [ "${MULLE_UNAME}" = 'darwin' ]
    then
-      echo "${DARWIN_COMMANDS}"
+      printf "%s\n" "${DARWIN_COMMANDS}"
    fi
 
    if [ "${show_all}" != 'NO' ]
    then
-      echo "${HIDDEN_COMMANDS}"
+      printf "%s\n" "${HIDDEN_COMMANDS}"
    fi
 }
 
@@ -173,9 +174,9 @@ __check_sane_stash_dir()
    fi
 
    #
-   # check that and absolute MULLE_SOURCETREE_STASH_DIR does not go outside
+   # check that an absolute MULLE_SOURCETREE_STASH_DIR does not go outside
    # MULLE_VIRTUAL_ROOT.
-   # MEMO: I thinks this is actually a cool feature.
+   # MEMO: I think this is actually a cool feature.
 
    case "${MULLE_SOURCETREE_STASH_DIR}" in
       *".."*)
@@ -342,7 +343,7 @@ main()
             FLAG_SOURCETREE_MODE="share"
          ;;
 
-         --share-dir)
+         --share-dir|--stash-dir)
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
@@ -350,7 +351,7 @@ main()
          ;;
 
          --version)
-            echo "${MULLE_EXECUTABLE_VERSION}"
+            printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
             exit 0
          ;;
 
@@ -436,7 +437,7 @@ main()
          sourcetree_${cmd}_main "$@"
       ;;
 
-      craftorder|clean|fix|list|reset|reuuid|status|walk)
+      craftorder|clean|fix|list|reset|reuuid|wrap|status|walk)
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-${cmd}.sh"
 
          sourcetree_${cmd}_main "$@"
@@ -468,11 +469,11 @@ main()
       ;;
 
       libexec-dir|library-path)
-         echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
+         printf "%s\n" "${MULLE_SOURCETREE_LIBEXEC_DIR}"
       ;;
 
       mode)
-         echo "${SOURCETREE_MODE}"
+         printf "%s\n" "${SOURCETREE_MODE}"
       ;;
 
       pwd|path)
@@ -480,12 +481,20 @@ main()
          pwd -P   # prefer physical path for our needs
       ;;
 
-      sourcetree-dir)
-         # we should be there now
-         if [ -d "${MULLE_SOURCETREE_PROJECT_DIR}" ]
-         then
-            echo "${MULLE_SOURCETREE_VAR_DIR}"
-         fi
+      etc-dir)
+         printf "%s\n" "${MULLE_SOURCETREE_ETC_DIR}"
+      ;;
+
+      project-dir)
+         printf "%s\n" "${MULLE_SOURCETREE_PROJECT_DIR}"
+      ;;
+
+      var-dir)
+         printf "%s\n" "${MULLE_SOURCETREE_VAR_DIR}"
+      ;;
+
+      share-dir|stash-dir)
+         printf "%s\n" "${MULLE_SOURCETREE_STASH_DIR}"
       ;;
 
       touch)
@@ -496,7 +505,7 @@ main()
       ;;
 
       uname)
-         echo "${MULLE_UNAME}"
+         printf "%s\n" "${MULLE_UNAME}"
       ;;
 
       sync|update)
@@ -507,7 +516,7 @@ main()
       ;;
 
       version)
-         echo "${MULLE_EXECUTABLE_VERSION}"
+         printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
          return 0
       ;;
 
@@ -534,7 +543,7 @@ _init()
    #
    if [ "$1" = "version" ]
    then
-      echo "${MULLE_EXECUTABLE_VERSION}"
+      printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
       exit 0
    fi
 
@@ -572,7 +581,7 @@ _init()
    #
    case "$1" in
       "libexec-dir"|"library-path")
-         echo "${MULLE_SOURCETREE_LIBEXEC_DIR}"
+         printf "%s\n" "${MULLE_SOURCETREE_LIBEXEC_DIR}"
          exit 0
       ;;
    esac

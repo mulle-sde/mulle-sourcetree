@@ -94,10 +94,10 @@ Now walk the project in various modes:
 
 
 ```
-mulle-sourcetree walk --flat 'echo "${NODE_ADDRESS}"'
-mulle-sourcetree walk --post-order 'echo "${NODE_ADDRESS}"'
-mulle-sourcetree walk --pre-order 'echo "${NODE_ADDRESS}"'
-mulle-sourcetree walk --breadth-first 'echo "${NODE_ADDRESS}"'
+mulle-sourcetree walk --flat 'printf "%s\n" "${NODE_ADDRESS}"'
+mulle-sourcetree walk --post-order 'printf "%s\n" "${NODE_ADDRESS}"'
+mulle-sourcetree walk --pre-order 'printf "%s\n" "${NODE_ADDRESS}"'
+mulle-sourcetree walk --breadth-first 'printf "%s\n" "${NODE_ADDRESS}"'
 ```
 
 ## Deduplication of nodes
@@ -109,7 +109,7 @@ this can slow the proceedings down immensely.
 Let's deduplicate based on the address:
 
 ```
-mulle-sourcetree walk --dedupe address --pre-order 'echo "${NODE_ADDRESS}"'
+mulle-sourcetree walk --dedupe address --pre-order 'printf "%s\n" "${NODE_ADDRESS}"'
 ```
 
 You will see that the second **d** has vanished from the output.
@@ -119,7 +119,7 @@ You will see that the second **d** has vanished from the output.
 
 To explain filtering we need some terminology.
 
-* callback     : at each node the walker may execute a callback. In the examples above the callback was the 'echo "${NODE_ADDRESS}'
+* callback     : at each node the walker may execute a callback. In the examples above the callback was the 'printf "%s\n" "${NODE_ADDRESS}'
 * descend      : the walker will read child nodes of a node, if it has a sourcetree
 * visit a node : the walker is contemplating a callback or a descend
 

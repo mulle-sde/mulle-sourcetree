@@ -454,7 +454,7 @@ walk_status()
             RVAL="${RVAL};${NODE_FILENAME#${MULLE_USER_PWD}/};NO"
          fi
       fi
-      echo "${RVAL}"
+      printf "%s\n" "${RVAL}"
    fi
    return $rval
 }
@@ -526,11 +526,11 @@ sourcetree_status()
 
    case ",${mode}," in
       *,output-formatted,*)
-         echo "${output}" | column -t -s';'
+         printf "%s\n" "${output}" | column -t -s';'
       ;;
 
       *)
-         echo "${output}"
+         printf "%s\n" "${output}"
       ;;
    esac
 }

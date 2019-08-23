@@ -225,6 +225,7 @@ sourcetree_clean_main()
    local OPTION_CLEAN_SHARE_DIR='DEFAULT'
    local OPTION_CLEAN_GRAVEYARD='DEFAULT'
    local OPTION_CLEAN_FS='DEFAULT'
+   local OPTION_CLEAN_CONFIG_FILE='NO'
 
    [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
 
@@ -233,6 +234,14 @@ sourcetree_clean_main()
       case "$1" in
          -h*|--help|help)
             sourcetree_clean_usage
+         ;;
+
+         --config)
+            OPTION_CLEAN_CONFIG_FILE='YES'
+            OPTION_CLEAN_FS='NO'
+            OPTION_CLEAN_GRAVEYARD='NO'
+            OPTION_CLEAN_SHARE_DIR='NO'
+            OPTION_WALK_DB='NO'
          ;;
 
          --share)
@@ -343,10 +352,6 @@ sourcetree_clean_main()
             mode="${RVAL}"
          fi
 
-         r_comma_concat "${mode}" "ignore-bequeath"
-         mode="${RVAL}"
-
-
          sourcetree_clean "${mode}"
       else
          log_verbose "Already clean"
@@ -359,7 +364,15 @@ sourcetree_clean_main()
       # if its outside probably not...
       rmdir_safer "${MULLE_SOURCETREE_STASH_DIR}"
    else
-      rmdir_if_empty "${MULLE_SOURCETREE_STASH_DIR}"
+      if [ "${OPTION_CLEAN_SHARE_DIR}" = 'DEFAULT' ]
+      then
+         rmdir_if_empty "${MULLE_SOURCETREE_STASH_DIR}"
+      fi
+   fi
+
+   if [ "${OPTION_CLEAN_CONFIG_FILE}" = 'YES' ]
+   then
+      cfg_file_remove "${SOURCETREE_START}"
    fi
 }
 

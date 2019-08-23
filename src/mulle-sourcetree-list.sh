@@ -60,6 +60,7 @@ Options:
    --output-eval            : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
    --output-full            : show url and various fetch options
    --output-no-header       : suppress header in raw and default lists
+   --output-no-indent       : suppress indentation on recursive list
    --output-no-marks <list> : suppress output of certain marks (comma sep)
    --output-no-separator    : suppress separator line if header is printed
 EOF
@@ -154,7 +155,17 @@ list_walk_callback()
       r_sourcetree_remove_marks "${_marks}" "${OPTION_NO_OUTPUT_MARKS}"
       _marks="${RVAL}"
    fi
-   node_printf "${_mode}" "${formatstring}" "${cmdline}" "${WALK_INDENT}"
+
+   if [ "${_nodetype}" != 'none' ] && find_line "${DUPLICATES}" "${_address}"
+   then
+      log_fluff "Duplicate: ${_nodeline}"
+      node_printf "${_mode}" "${formatstring}" "${cmdline}" "*${WALK_INDENT# }"
+   else
+      r_add_line "${DUPLICATES}" "${_address}"
+      DUPLICATES="${RVAL}"
+
+      node_printf "${_mode}" "${formatstring}" "${cmdline}" "${WALK_INDENT}"
+   fi
 }
 
 
@@ -170,6 +181,9 @@ _list_sourcetree()
 
    nodeline_printf_header "${mode}" "${formatstring}"
 
+   local DUPLICATES
+
+   DUPLICATES=""
    sourcetree_walk "${filternodetypes}" \
                    "" \
                    "${marksqualifier}" \
@@ -263,6 +277,12 @@ ${C_RESET}   address address-filename address-url filename nodeline
       ;;
    esac
 
+   # this is the default for listing, ignore the bequeath flags
+   if [ "${OPTION_BEQUEATH}" = 'YES' ]
+   then
+      r_comma_concat "${RVAL}" "bequeath"
+   fi
+
    if [ "${OPTION_OUTPUT_URL}" != 'NO' ]
    then
       r_comma_concat "${RVAL}" "output_url"
@@ -348,6 +368,7 @@ sourcetree_list_main()
    local OPTION_UNSAFE='NO'
    local OPTION_OUTPUT_CMDLINE="${MULLE_USAGE_NAME} -N add"
    local OPTION_NODETYPES
+   local OPTION_BEQUEATH='NO'
    local OPTION_MARKS
    local OPTION_MARKS_QUALIFIER
    local OPTION_FORMAT='DEFAULT'
@@ -447,16 +468,16 @@ sourcetree_list_main()
             OPTION_OUTPUT_HEADER='NO'
          ;;
 
+         --no-output-indent|--output-no-indent)
+            OPTION_OUTPUT_INDENT='NO'
+         ;;
+
          --output-separator)
             OPTION_OUTPUT_SEPARATOR='YES'
          ;;
 
          --no-output-separator|--output-no-separator)
             OPTION_OUTPUT_SEPARATOR='NO'
-         ;;
-
-         --no-output-indent)
-            OPTION_OUTPUT_INDENT='NO'
          ;;
 
          --no-dedupe)
@@ -473,6 +494,14 @@ sourcetree_list_main()
          #
          #
          #
+         -b|--bequeath)
+            OPTION_BEQUEATH='YES'
+         ;;
+
+         --no-bequeath)
+            OPTION_BEQUEATH='NO'
+         ;;
+
          -g|--output-git)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then

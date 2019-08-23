@@ -552,6 +552,10 @@ _sourcetree_sync_share()
 
    db_set_dbtype "${database}" "${style}"
    db_set_update "${database}"
+   #
+   # TODO: there is seemingly a bug here, were I believe share libraries
+   # overwrite the shared root
+   #
    db_set_shareddir "${database}" "${MULLE_SOURCETREE_STASH_DIR}"
 
    db_zombify_nodes "${database}"

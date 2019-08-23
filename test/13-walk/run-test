@@ -105,7 +105,7 @@ a/b
 a/b/c
 a/c"
 
-   results="`run_mulle_sourcetree walk --walk-db 'echo "${WALK_VIRTUAL_ADDRESS}"'`"
+   results="`run_mulle_sourcetree walk --walk-db 'printf "%s\n" "${WALK_VIRTUAL_ADDRESS}"'`"
    if [ $? -ne 0 ]
    then
       fail "db walk #1 failed unexpectedly"
@@ -123,7 +123,7 @@ a/c"
 
    results="`run_mulle_sourcetree walk --post-order \
                                        --walk-config \
-                                       'echo "${WALK_VIRTUAL_ADDRESS}"'`"
+                                       'printf "%s\n" "${WALK_VIRTUAL_ADDRESS}"'`"
    if [ $? -ne 0 ]
    then
       fail "config walk #2 failed unexpectedly"
@@ -149,7 +149,7 @@ a"
    results="`run_mulle_sourcetree walk --pre-order \
                                        --marks build \
                                        --walk-config \
-                                       'echo "${WALK_VIRTUAL_ADDRESS}"'`"
+                                       'printf "%s\n" "${WALK_VIRTUAL_ADDRESS}"'`"
    if [ $? -ne 0 ]
    then
       fail "config walk #3 failed unexpectedly"
@@ -174,7 +174,7 @@ a/c"
 b
 c"
 
-   results="`run_mulle_sourcetree --share walk 'echo "${WALK_VIRTUAL_ADDRESS}"'`"
+   results="`run_mulle_sourcetree --share walk 'printf "%s\n" "${WALK_VIRTUAL_ADDRESS}"'`"
    if [ $? -ne 0 ]
    then
       fail "config walk #3 failed unexpectedly"

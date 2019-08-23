@@ -64,7 +64,7 @@ locate_sourcetree()
    do
       if [ -d "${directory}/.mulle/etc/sourcetree" ] # has no share!
       then
-         echo "${directory}"
+         printf "%s\n" "${directory}"
          return 0
       fi
       if [ "${directory}" = "${MULLE_VIRTUAL_ROOT}" ]
