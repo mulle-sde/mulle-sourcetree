@@ -193,6 +193,7 @@ Usage:
 
    You can mark or unmark a node with this command. Only negative marks
    are actually stored in the node. All positive marks are implicit.
+   Marks are free-format, but there exist a number of predefined ones.
 
    Examine the nodes marks with
        \`${MULLE_EXECUTABLE_NAME} -N list\`.
@@ -204,9 +205,13 @@ Options:
    --extended-mark : allow the use of non-predefined marks
 
 Marks:
+   Some commonly used marks:
+
    [no-]build     : the node contains a buildable project (used by craftorder)
    [no-]delete    : the node may be deleted or moved
    [no-]descend   : the nodes sourcetree takes part in recursive operations
+   [no-]header    : the node produces one or more includable headers
+   [no-]link      : the node produces a linkable library
    [no-]require   : the node must exist
    [no-]set       : the nodes properies can be changed
    [no-]share     : the node may be shared with subtree nodes of the same url
@@ -220,7 +225,7 @@ EOF
    fi
 
    cat <<EOF >&2
-   [no]update    : the node takes part in the update
+   [no-]update    : the node takes part in the update
 
    Example:
       ${MULLE_EXECUTABLE_NAME} mark src/bar no-build

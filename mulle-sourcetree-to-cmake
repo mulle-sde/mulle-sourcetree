@@ -316,7 +316,8 @@ _emit_cmake_find_library()
    local identifier="$3"
    local containername="$4"
    local marks="$5"
-   local indent="$6"
+   local header="$6"
+   local indent="$7"
 
    local libraries
    local i
@@ -462,7 +463,8 @@ _emit_cmake_dependency()
    log_entry "_emit_cmake_dependency" "$@"
 
    local marks="$5"
-   local indent="$6"
+#   local header="$6"
+   local indent="$7"
 
    local findoptions
 
@@ -495,18 +497,36 @@ _emit_cmake_header_only()
    local identifier="$3"
    local containername="$4"
    local marks="$5"
-   local indent="$6"
+   local header="$6"
+   local indent="$7"
 
    local headers
+   local headername
    local i
+
+   if [ ! -z "${header}" ]
+   then
+      headers="${header}"
+      r_fast_basename "${header}"
+      headername="${RVAL}"
+   fi
 
    IFS=","; set -o noglob
    for i in ${names}
    do
-      r_concat "${headers}" "${i}/${i}.h"
-      r_concat "${RVAL}" "${i}.h"
+      if [ -z "${header}" ]
+      then
+         r_concat "${headers}" "${i}/${headername}"
+      else
+         r_concat "${headers}" "${i}/${i}.h"
+      fi
       headers="${RVAL}"
    done
+
+   if [ -z "${header}" ]
+   then
+      r_concat "${headers}" "${i}.h"
+   fi
 
    IFS="${DEFAULT_IFS}"; set +o noglob
 
@@ -615,6 +635,8 @@ emit_cmake_dependency()
    local address="$3"
    local marks="$4"
    local aliases="$5"
+   local header="$6"
+   local disabler="$7"
 
    [ -z "${emitter}" ] && internal_fail "emitter is empty"
    [ -z "${address}" ] && internal_fail "address is empty"
@@ -684,6 +706,15 @@ emit_cmake_dependency()
       fail "Identifier derived from \"${names}\" is empty"
 
 
+   if [ -z "${header}" ]
+   then
+      local name
+
+      r_fast_basename "${address%#*}"
+      name="${RVAL}"
+      header="${name}.h"
+   fi
+
    cat <<EOF
 #
 # Generated from sourcetree: ${address};${marks};${aliases}
@@ -701,6 +732,7 @@ EOF
                 "${identifier}" \
                 "${actualcontainername}" \
                 "${marks}" \
+                "${header}" \
                 "${indent}"
 
    if [ ! -z "${ifstatement}" ]
@@ -720,6 +752,7 @@ emit_cmake_dependencies()
    local emitter="$1"
    local containername="$2"
    local dependencies="$3"
+   local disabler="$4"
 
    local dependency
 
@@ -739,6 +772,7 @@ emit_cmake_dependencies()
       log_debug "address: ${address}"
       log_debug "marks:   ${marks}"
       log_debug "aliases: ${aliases}"
+      log_debug "include: ${include}"
 
       if [ ! -z "${address}" ]
       then
@@ -747,7 +781,9 @@ emit_cmake_dependencies()
                                "${containername}" \
                                "${address}" \
                                "${marks}" \
-                               "${aliases}"
+                               "${aliases}" \
+                               "${include}" \
+                               "${disabler}"
       fi
    done
    IFS="${DEFAULT_IFS}"; set +o noglob
@@ -772,7 +808,8 @@ emit_dependency_subproject()
                               --no-output-header`" || return 1
    emit_cmake_dependencies "_emit_cmake_header_only" \
                            "HEADER_ONLY_LIBRARIES" \
-                           "${header}"
+                           "${header}" \
+                           "no-header"
 
    dependency="`exekutor "${MULLE_SOURCETREE}" -V \
                            ${MULLE_TECHNICAL_FLAGS} \
@@ -786,7 +823,8 @@ emit_dependency_subproject()
 
    emit_cmake_dependencies "_emit_cmake_dependency" \
                            "DEPENDENCY_LIBRARIES" \
-                           "${dependency}"
+                           "${dependency}" \
+                           "no-header"
 }
 
 

@@ -497,9 +497,11 @@ objc_import()
          ;;
 
          *)
-            text_h="#include \"_${projectname}-include.h\"
+            # for mulle-objc its important that the #include is afterwards
+            text_h="${text_h}
 
-${text_h}"
+#include \"_${projectname}-include.h\"
+"
          ;;
       esac
 
