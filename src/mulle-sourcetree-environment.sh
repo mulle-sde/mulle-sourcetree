@@ -60,20 +60,29 @@ sourcetree_basic_environment()
    r_absolutepath "${directory}"
    MULLE_SOURCETREE_PROJECT_DIR="${RVAL}"
 
-   # no share in sourcetree operation
-   # MULLE_SOURCETREE_SHARE_DIR="${MULLE_SOURCETREE_PROJECT_DIR}/.mulle/share/sourcetree"
-   MULLE_SOURCETREE_ETC_DIR="${MULLE_SOURCETREE_PROJECT_DIR}/.mulle/etc/sourcetree"
-   MULLE_SOURCETREE_VAR_DIR="${MULLE_SOURCETREE_PROJECT_DIR}/.mulle/var/${MULLE_HOSTNAME}/sourcetree"
-
    if [ -z "${MULLE_VIRTUAL_ROOT}" ]
    then
       MULLE_VIRTUAL_ROOT="${MULLE_SOURCETREE_PROJECT_DIR}"
    fi
 
-   SOURCETREE_CONFIG_FILENAME=".mulle/etc/sourcetree/config"
+   # no share in sourcetree operation
+   # MULLE_SOURCETREE_SHARE_DIR="${MULLE_SOURCETREE_PROJECT_DIR}/.mulle/share/sourcetree"
+
+   eval `( cd "${MULLE_SOURCETREE_PROJECT_DIR}" ; mulle-env mulle-tool-env sourcetree )`
+
+
+   SOURCETREE_CONFIG_FILENAME="${MULLE_SOURCETREE_ETC_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
    if [ -z "${SOURCETREE_FIX_FILENAME}" ]
    then
-      SOURCETREE_FIX_FILENAME=".mulle/var/${MULLE_HOSTNAME}/sourcetree/fix"
+      case "${MULLE_UNAME}" in 
+         windows)
+            SOURCETREE_FIX_FILENAME=".mulle/var/${MULLE_HOSTNAME}.fix"
+         ;;
+
+         *)
+            SOURCETREE_FIX_FILENAME="${MULLE_SOURCETREE_VAR_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}fix"
+         ;;
+      esac
    fi
 }
 
