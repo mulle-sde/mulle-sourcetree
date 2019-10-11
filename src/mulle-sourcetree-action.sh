@@ -149,7 +149,7 @@ _has_system_include()
 
    local i
 
-   set -o noglob ; IFS=":"
+   set -o noglob ; IFS=':'
    for i in ${include_search_path}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
