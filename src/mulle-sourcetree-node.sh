@@ -201,7 +201,7 @@ _r_node_to_nodeline()
       if [ "${convert}" = "YES" ]
       then
          case "${MULLE_UNAME}" in
-            linux)
+            linux|windows)
                _raw_userinfo="base64:`base64 -w 0 <<< "${_userinfo}"`"
             ;;
 

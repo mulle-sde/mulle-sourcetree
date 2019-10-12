@@ -68,7 +68,7 @@ sourcetree_basic_environment()
    # no share in sourcetree operation
    # MULLE_SOURCETREE_SHARE_DIR="${MULLE_SOURCETREE_PROJECT_DIR}/.mulle/share/sourcetree"
 
-   eval `( cd "${MULLE_SOURCETREE_PROJECT_DIR}" ; mulle-env mulle-tool-env sourcetree )`
+   eval `( cd "${MULLE_SOURCETREE_PROJECT_DIR}" ; mulle-env mulle-tool-env sourcetree )` || exit 1
 
 
    SOURCETREE_CONFIG_FILENAME="${MULLE_SOURCETREE_ETC_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
