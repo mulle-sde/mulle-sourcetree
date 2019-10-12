@@ -183,13 +183,13 @@ r_osexclude_configuration_to_cmake_if()
          ;;
 
          only-configuration-*)
-            r_capitalize_string "${mark:19}"
+            r_capitalize "${mark:19}"
             r_concat "${onlys}" "(\${CMAKE_BUILD_TYPE} MATCHES \"${RVAL}*\")" " OR "
             onlys="${RVAL}"
          ;;
 
          no-configuration-*)
-            r_capitalize_string "${mark:17}"
+            r_capitalize "${mark:17}"
             r_concat "${excludes}" "(\${CMAKE_BUILD_TYPE} MATCHES \"${RVAL}*\")" " OR "
             excludes="${RVAL}"
          ;;
