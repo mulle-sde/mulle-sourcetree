@@ -239,7 +239,7 @@ emit_c_include_library()
    then
       local name
 
-      r_fast_basename "${address%#*}"
+      r_basename "${address%#*}"
       name="${RVAL}"
       header="${name}.h"
    fi
@@ -264,7 +264,7 @@ emit_c_include_dependency()
    then
       local name
 
-      r_fast_basename "${address%#*}"
+      r_basename "${address%#*}"
       name="${RVAL}"
       header="${name}/${name}.h"
    fi
@@ -759,7 +759,7 @@ main()
 
    if [ -z "${PROJECT_NAME}" ]
    then
-   	r_fast_basename "${PWD}"
+   	r_basename "${PWD}"
       PROJECT_NAME="${RVAL}" # could be nicer
    fi
 

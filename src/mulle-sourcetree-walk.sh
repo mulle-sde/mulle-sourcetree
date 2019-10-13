@@ -786,7 +786,7 @@ _walk_share_node()
    local _filename
    local _virtual_address
 
-   _destination="${_address##*/}" # like fast_basename
+   _destination="${_address##*/}" # like basename --
    # get rid of duplicate marker
    _destination="${_destination%#*}"
 
@@ -968,7 +968,6 @@ walk_nodeline()
 
    local next_virtual
 
-   # must be fast cant use concat
    if [ -z "${virtual}" ]
    then
       next_virtual="${_destination}"

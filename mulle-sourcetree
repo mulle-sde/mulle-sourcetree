@@ -570,11 +570,8 @@ _init()
    # shellcheck source=../mulle-bashfunctions/src/mulle-file.sh
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"             || exit 1
 
-   local _libexec_dir
-
-   _get_libexec_dir "$0" "mulle-sourcetree" "mulle-sourcetree-config.sh"
-
-   MULLE_SOURCETREE_LIBEXEC_DIR="${_libexec_dir}"
+   r_get_libexec_dir "$0" "mulle-sourcetree" "mulle-sourcetree-config.sh"
+   MULLE_SOURCETREE_LIBEXEC_DIR="${RVAL}"
 
    #
    # minimal setup exit

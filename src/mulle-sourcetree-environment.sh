@@ -74,7 +74,7 @@ sourcetree_basic_environment()
    SOURCETREE_CONFIG_FILENAME="${MULLE_SOURCETREE_ETC_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
    if [ -z "${SOURCETREE_FIX_FILENAME}" ]
    then
-      case "${MULLE_UNAME}" in 
+      case "${MULLE_UNAME}" in
          windows)
             SOURCETREE_FIX_FILENAME=".mulle/var/${MULLE_HOSTNAME}.fix"
          ;;
@@ -156,7 +156,7 @@ _set_share_dir()
                MULLE_SOURCETREE_STASH_DIR="`physicalpath "${share_dir}" `"
                log_fluff "Using database share directory \"${share_dir}\""
 
-               r_fast_basename "${MULLE_SOURCETREE_STASH_DIR}"
+               r_basename "${MULLE_SOURCETREE_STASH_DIR}"
                MULLE_SOURCETREE_STASH_DIRNAME="${RVAL}"
             fi
          fi

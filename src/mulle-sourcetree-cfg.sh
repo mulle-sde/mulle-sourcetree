@@ -548,7 +548,7 @@ cfg_determine_working_directory()
             return 0
          fi
 
-         r_fast_dirname "${directory}"
+         r_dirname "${directory}"
          parent="${RVAL}"
 
          cfg_search_for_configfile "${parent}" "/"
@@ -573,7 +573,7 @@ cfg_determine_working_directory()
          while :
          do
             found="${directory}"
-            r_fast_dirname "${directory}"
+            r_dirname "${directory}"
             parent="${RVAL}"
             if [ "${parent}" = "${SOURCETREE_START}" ]
             then

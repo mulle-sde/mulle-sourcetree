@@ -338,7 +338,7 @@ db_bury()
    local gravepath
    local graveyard
 
-   r_fast_dirname "${databasedir}"
+   r_dirname "${databasedir}"
    graveyard="${RVAL}/graveyard"
    gravepath="${graveyard}/${uuid}"
 
@@ -1687,7 +1687,7 @@ db_update_determine_share_filename()
       then
          if [ "${database}" != "/" ]
          then
-            r_fast_basename "${database}"
+            r_basename "${database}"
             fail "\"${address}\" is not in root but in ($database).
 ${C_INFO}This probably means that \"${address}\" is used in two project
 but shares the same UUIDs in the mulle-sourcetree configuration.
@@ -1723,7 +1723,7 @@ Remedial action:${C_RESET_BOLD}
 
    local name
 
-   r_fast_basename "${address}"
+   r_basename "${address}"
    name="${RVAL}"
 
    r_filepath_concat "${MULLE_SOURCETREE_STASH_DIR}" "${name}"

@@ -507,7 +507,7 @@ _emit_cmake_header_only()
    if [ ! -z "${header}" ]
    then
       headers="${header}"
-      r_fast_basename "${header}"
+      r_basename "${header}"
       headername="${RVAL}"
    fi
 
@@ -684,12 +684,12 @@ emit_cmake_dependency()
    names="${aliases}"
    if [ -z "${names}" ]
    then
-      r_fast_basename "${address%#*}"
+      r_basename "${address%#*}"
       names="${RVAL}"
    fi
 
    # first of the names determines the identifier
-   r_fast_basename "${names%%,*}"
+   r_basename "${names%%,*}"
    addressname="${RVAL}"
 
    if [ -z "${MULLE_CASE_SH}" ]
@@ -710,7 +710,7 @@ emit_cmake_dependency()
    then
       local name
 
-      r_fast_basename "${address%#*}"
+      r_basename "${address%#*}"
       name="${RVAL}"
       header="${name}.h"
    fi
@@ -878,7 +878,7 @@ output_file()
       rexekutor printf "%s\n" "${text}"
    else
       log_verbose "Writing ${C_RESET_BOLD}${filename}"
-      r_fast_dirname "${filename}"
+      r_dirname "${filename}"
       exekutor mkdir -p "${RVAL}" 2> /dev/null
       exekutor chmod a+w "${filename}"  2> /dev/null
       r_mkdir_parent_if_missing "${filename}"

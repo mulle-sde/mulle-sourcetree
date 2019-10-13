@@ -62,10 +62,9 @@ html_print_title()
 {
    log_entry "html_print_title" "$@"
 
-   local html="$1"
-   local title="$2"
-   local fontcolor="$3"
-   local bgcolor="$4"
+   local title="$1"
+   local fontcolor="$2"
+   local bgcolor="$3"
 
    title="`html_escape "${title}"`"
    fontcolor="`html_escape "${fontcolor}"`"
@@ -153,26 +152,29 @@ html_print_node()
       ;;
    esac
 
-   html="<TABLE>"
 
-   # admittedly this is a bit ungainly coded...
-   title="`fast_basename "${destination}"`"
-   html="$(concat "${html}" "`html_print_title "${html}" "${title}" "${fontcolor}" "${bgcolor}"`")"
-   html="$(concat "${html}" "`html_print_row "address" "${address}"`")"
-   html="$(concat "${html}" "`html_print_row "nodetype" "${nodetype}"`")"
-   html="$(concat "${html}" "`html_print_row "userinfo" "${userinfo}"`")"
-   html="$(concat "${html}" "`html_print_row "marks" "${marks}"`")"
-   html="$(concat "${html}" "`html_print_row "url" "${url}"`")"
-   html="$(concat "${html}" "`html_print_row "branch" "${branch}"`")"
-   html="$(concat "${html}" "`html_print_row "tag" "${tag}"`")"
+   # admittedly this is still a bit ungainly coded...
+   r_basename "${destination}"
+   title="${RVAL}"
+
+   RVAL="<TABLE>"
+   r_concat "${RVAL}" "`html_print_title "${title}" "${fontcolor}" "${bgcolor}"`"
+   r_concat "${RVAL}" "`html_print_row "address" "${address}"`"
+   r_concat "${RVAL}" "`html_print_row "nodetype" "${nodetype}"`"
+   r_concat "${RVAL}" "`html_print_row "userinfo" "${userinfo}"`"
+   r_concat "${RVAL}" "`html_print_row "marks" "${marks}"`"
+   r_concat "${RVAL}" "`html_print_row "url" "${url}"`"
+   r_concat "${RVAL}" "`html_print_row "branch" "${branch}"`"
+   r_concat "${RVAL}" "`html_print_row "tag" "${tag}"`"
    #      html="$(add_line "${html}" "`html_print_row "uuid" "${uuid}"`"")"
-   html="$(concat "${html}" "`html_print_row "fetchoptions" "${fetchoptions}"`")"
+   r_concat "${RVAL}" "`html_print_row "fetchoptions" "${fetchoptions}"`"
    if [ ! -z "${MULLE_ORIGINATOR}" ]
    then
-      html="$(concat "${html}" "`html_print_row "original" "${MULLE_ORIGINATOR}"`")"
+      r_concat "${RVAL}" "`html_print_row "original" "${MULLE_ORIGINATOR}"`"
    fi
-   html="$(concat "${html}" "</TABLE>")"
+   r_concat "${RVAL}" "</TABLE>"
 
+   html="${RVAL}"
    exekutor echo "   ${identifier} [ label=<${html}>, shape=\"${shape}\", URL=\"${url}\" ]"
 }
 
@@ -392,7 +394,7 @@ print_node()
       ;;
    esac
 
-   r_fast_basename "${address}"
+   r_basename "${address}"
    exekutor echo "   ${identifier} [ shape=\"${shape}\", \
 penwidth=\"${penwidth}\", \
 color=\"${color}\", \
@@ -596,7 +598,7 @@ emit_root()
                            "" \
                            "root"
    else
-      r_fast_basename "${PWD}"
+      r_basename "${PWD}"
       print_node "root" \
                  "." \
                  "${ROOT_IDENTIFIER}" \
@@ -644,7 +646,7 @@ sourcetree_dotdump_body()
    local ALL_RELATIONSHIPS=
    local ALL_DIRECTORIES=
    local TOEMIT_DIRECTORIES=
-   local ROOT_IDENTIFIER="\"`fast_basename "${PWD}"`\""
+   local ROOT_IDENTIFIER="\"`basename -- "${PWD}"`\""
 
    log_debug "[*] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
    log_debug "[*] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"

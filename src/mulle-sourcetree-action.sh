@@ -853,7 +853,7 @@ __update_perform_item()
 
          if [ -f "${filename}/.mulle-sourcetree/config" -a ! -f "${filename}/.mulle/etc/sourcetree/config" ]
          then
-            log_warning "\"`fast_basename "${filename}"`\" contains an old-fashioned sourcetree \
+            log_warning "\"`basename -- "${filename}"`\" contains an old-fashioned sourcetree \
 which must be upgraded to be usable."
          fi
 

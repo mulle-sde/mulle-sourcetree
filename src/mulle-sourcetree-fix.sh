@@ -71,7 +71,7 @@ locate_sourcetree()
       then
          return 1
       fi
-      r_fast_dirname "${directory}"
+      r_dirname "${directory}"
       directory="${RVAL}"
    done
 }
@@ -91,12 +91,12 @@ r_locate_fix_file()
    local match
    local name
 
-   r_fast_basename "${address}"
+   r_basename "${address}"
    name="${RVAL}"
 
    local fixname
 
-   r_fast_basename "${SOURCETREE_FIX_FILENAME}"
+   r_basename "${SOURCETREE_FIX_FILENAME}"
    fixname=${RVAL}
 
    IFS=$'\n'
@@ -128,7 +128,7 @@ r_locate_fix_file()
 
       local fixname
 
-      r_fast_basename "${fix}"
+      r_basename "${fix}"
       fixname="${RVAL}"
       if [ -z "${match}" ] && [ "${fixname}" = "${name}" ]
       then
@@ -161,7 +161,7 @@ _fixup_address_change()
 
    local fixaddress
 
-   r_fast_dirname "${fixfile}"
+   r_dirname "${fixfile}"
    fixaddress="${RVAL#${MULLE_VIRTUAL_ROOT}}"
    fixaddress="${fixaddress#${datasource}}"
 
