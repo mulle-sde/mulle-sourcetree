@@ -111,11 +111,15 @@ sourcetree_remove_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} remove <address>
+   ${MULLE_EXECUTABLE_NAME} remove [options] <address>
 
    Remove a nodes with the given url.
 
    This command only affects the local sourcetree.
+
+Options:
+   --if-present : don't complain if address is missing
+
 EOF
   exit 1
 }
@@ -896,7 +900,10 @@ sourcetree_remove_node()
 
    if ! cfg_get_nodeline "${SOURCETREE_START}" "${address}" > /dev/null
    then
-      log_warning "A node \"${address}\" does not exist"
+      if [ "${OPTION_IF_PRESENT}" = 'NO' ]
+      then
+         log_warning "A node \"${address}\" does not exist"
+      fi
       return 2  # also return non 0 , but lets's not be dramatic about it
    fi
 
@@ -922,7 +929,10 @@ sourcetree_remove_node_by_url()
 
    if [ ! -z "${url}" ]
    then
-      log_warning "A node with URL \"${url}\" does not exist"
+      if [ "${OPTION_IF_PRESENT}" = 'NO' ]
+      then
+         log_warning "A node with URL \"${url}\" does not exist"
+      fi
       return 2  # also return non 0 , but lets's not be dramatic about it
    fi
 
@@ -1595,6 +1605,7 @@ sourcetree_common_main()
    local OPTION_OUTPUT_EVAL='NO'
    local OPTION_OUTPUT_FULL='NO'
    local OPTION_IF_MISSING='NO'
+   local OPTION_IF_PRESENT='NO'
    local OPTION_MATCH='NO'
 
    local suffix
@@ -1654,6 +1665,11 @@ sourcetree_common_main()
          #
          --if-missing)
             OPTION_IF_MISSING='YES'
+         ;;
+
+         # just for remove
+         --if-present)
+            OPTION_IF_PRESENT='YES'
          ;;
 
          --guess-nodetype)
