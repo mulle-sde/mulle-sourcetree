@@ -349,13 +349,18 @@ output_file()
    then
       log_info "${title}"
       rexekutor printf "%s\n" "${text}"
-   else
-      log_verbose "Writing ${C_RESET_BOLD}${filename}"
-      r_mkdir_parent_if_missing "${filename}"
-      exekutor chmod a+w "${filename}"  2> /dev/null
-      redirect_exekutor "${filename}" printf "%s\n" "${text}"
-      exekutor chmod a-w "${filename}"  2> /dev/null
+      return $?
    fi
+   log_verbose "Writing ${C_RESET_BOLD}${filename}"
+   r_mkdir_parent_if_missing "${filename}"
+   exekutor chmod a+w "${filename}"  2> /dev/null
+   if redirect_exekutor "${filename}" printf "%s\n" "${text}"
+   then
+      exekutor chmod a-w "${filename}"
+      return 0
+   fi
+
+   return 1
 }
 
 
@@ -787,6 +792,8 @@ main()
       objc_import "${PROJECT_NAME}" "${PROJECT_DOWNCASE_IDENTIFIER}" || exit 1
       objc_import_private "${PROJECT_NAME}" "${PROJECT_DOWNCASE_IDENTIFIER}" || exit 1
    fi
+
+   :
 }
 
 
@@ -804,5 +811,17 @@ _init()
 }
 
 _init "$@"
-main "$@"
 
+
+quote="'"
+args=""
+for arg in "$@"
+do
+   arg="${arg//${quote}/${quote}\"${quote}\"${quote}}"
+   args="${args} '${arg}'"
+done
+
+unset quote
+unset arg
+
+eval main "${MULLE_SOURCETREE_TO_C_FLAGS}" "${args}"

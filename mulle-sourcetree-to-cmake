@@ -799,7 +799,6 @@ emit_dependency_subproject()
 
    header="`exekutor "${MULLE_SOURCETREE}" -V \
                            ${MULLE_TECHNICAL_FLAGS} \
-                           ${MULLE_SOURCETREE_FLAGS} \
                            list \
                               --bequeath \
                               --format '%a;%m;%i={aliases,,};%i={include,,}\n' \
@@ -813,7 +812,6 @@ emit_dependency_subproject()
 
    dependency="`exekutor "${MULLE_SOURCETREE}" -V \
                            ${MULLE_TECHNICAL_FLAGS} \
-                           ${MULLE_SOURCETREE_FLAGS} \
                            list \
                               --bequeath \
                               --format '%a;%m;%i={aliases,,};%i={include,,}\n' \
@@ -837,7 +835,6 @@ emit_library()
 
    header="`exekutor "${MULLE_SDE}" \
                         ${MULLE_TECHNICAL_FLAGS} \
-                        ${MULLE_SDE_FLAGS} \
                         library list \
                            --marks header,no-link \
                            -- \
@@ -850,7 +847,6 @@ emit_library()
 
    library="`exekutor "${MULLE_SDE}" \
                         ${MULLE_TECHNICAL_FLAGS} \
-                        ${MULLE_SDE_FLAGS} \
                         library list \
                            --marks link \
                            -- \
@@ -876,15 +872,20 @@ output_file()
    then
       log_info "${title}"
       rexekutor printf "%s\n" "${text}"
-   else
-      log_verbose "Writing ${C_RESET_BOLD}${filename}"
-      r_dirname "${filename}"
-      exekutor mkdir -p "${RVAL}" 2> /dev/null
-      exekutor chmod a+w "${filename}"  2> /dev/null
-      r_mkdir_parent_if_missing "${filename}"
-      redirect_exekutor "${filename}" printf "%s\n" "${text}"
-      exekutor chmod a-w "${filename}"
+      return $?
    fi
+
+   log_verbose "Writing ${C_RESET_BOLD}${filename}"
+   r_dirname "${filename}"
+   exekutor mkdir -p "${RVAL}" 2> /dev/null
+   exekutor chmod a+w "${filename}"  2> /dev/null
+   r_mkdir_parent_if_missing "${filename}"
+   if redirect_exekutor "${filename}" printf "%s\n" "${text}"
+   then
+      exekutor chmod a-w "${filename}"
+      return 0
+   fi
+   return 1
 }
 
 
@@ -1095,4 +1096,17 @@ _init()
 }
 
 _init "$@"
-main "$@"
+
+
+quote="'"
+args=""
+for arg in "$@"
+do
+   arg="${arg//${quote}/${quote}\"${quote}\"${quote}}"
+   args="${args} '${arg}'"
+done
+
+unset quote
+unset arg
+
+eval main "${MULLE_SOURCETREE_TO_CMAKE_FLAGS}" "${args}"

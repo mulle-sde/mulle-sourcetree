@@ -1173,7 +1173,7 @@ _sourcetree_get_node()
 
    if [ "$#" -eq 0 ]
    then
-      exekutor printf "%s\n" "${_address}"
+      rexekutor printf "%s\n" "${_address}"
       return
    fi
 
@@ -1181,16 +1181,16 @@ _sourcetree_get_node()
    do
       case "$1" in
          branch|address|fetchoptions|marks|nodetype|tag|url|uuid)
-            exekutor eval echo \$"_${1}"
+            rexekutor eval echo \$"_${1}"
          ;;
 
          raw_userinfo)
-            exekutor printf "%s\n" "${_raw_userinfo}"
+            rexekutor printf "%s\n" "${_raw_userinfo}"
          ;;
 
          userinfo)
             nodeline_raw_userinfo_parse "${_raw_userinfo}"
-            exekutor printf "%s\n" "${_userinfo}"
+            rexekutor printf "%s\n" "${_userinfo}"
          ;;
 
          *)

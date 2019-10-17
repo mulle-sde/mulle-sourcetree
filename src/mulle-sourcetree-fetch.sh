@@ -61,7 +61,6 @@ r_sourcetree_guess_address()
 
    RVAL="`${MULLE_FETCH:-mulle-fetch} \
                ${MULLE_TECHNICAL_FLAGS} \
-               ${MULLE_FETCH_FLAGS} \
             nameguess \
                -s "${evalednodetype}" \
                "${evaledurl}"`"
@@ -90,7 +89,6 @@ r_sourcetree_guess_nodetype()
 
    RVAL="`${MULLE_FETCH:-mulle-fetch} \
                   ${MULLE_TECHNICAL_FLAGS} \
-                  ${MULLE_FETCH_FLAGS} \
                typeguess \
                   "${evaledurl}"`" || return 1
 
@@ -174,9 +172,8 @@ ${C_RESET_BOLD}${evaledurl}${C_INFO}"
             cmd2options="${RVAL}"
          fi
 
-         localurl="$( eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
+         localurl="$( eval_exekutor "'${MULLE_FETCH:-mulle-fetch}'" \
                                           "${MULLE_TECHNICAL_FLAGS}" \
-                                          "${MULLE_FETCH_FLAGS}" \
                                        "search-local" \
                                           "${cmd2options}" \
                                           "'${address}'" )"
@@ -220,7 +217,6 @@ ${C_RESET_BOLD}${evaledurl}${C_INFO}"
    fi
    eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
                        "${MULLE_TECHNICAL_FLAGS}" \
-                       "${MULLE_FETCH_FLAGS}" \
                     "${opname}" \
                        "${cmdoptions}" \
                        "${options}" \
@@ -236,7 +232,7 @@ sourcetree_list_operations()
 
    ${MULLE_FETCH:-mulle-fetch} \
          ${MULLE_TECHNICAL_FLAGS} \
-         ${MULLE_FETCH_FLAGS} -s \
+         -s \
       operation -s "${nodetype}" list
 }
 

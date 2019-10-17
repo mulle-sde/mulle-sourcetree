@@ -51,6 +51,7 @@ Options:
    -r                       : recursive list
    -g                       : output branch/tag information (use -G for raw output)
    -u                       : output URL information  (use -U for raw output)
+   --config-file <file>     : list a specific config file (no recursion)
    --nodetypes <value>      : node types to list (default: ALL)
    --marks <value>          : specify marks to match (e.g. build)
    --qualifier <value>      : specify marks qualifier
@@ -205,7 +206,7 @@ sourcetree_list_sourcetree()
       then
          log_verbose "There is no sourcetree here (${PWD})"
       fi
-      return
+      return 0
    fi
 
    if [ "${OPTION_OUTPUT_BANNER}" = 'YES' ]
@@ -354,17 +355,17 @@ sourcetree_list_main()
    ROOT_DIR="`pwd -P`"
 
    # must be empty initially for set
-   local OPTION_OUTPUT_BANNER="DEFAULT"
-   local OPTION_OUTPUT_COLOR="DEFAULT"
-   local OPTION_OUTPUT_FORMAT="DEFAULT"
-   local OPTION_OUTPUT_EVAL="DEFAULT"
-   local OPTION_OUTPUT_FULL="DEFAULT"
+   local OPTION_OUTPUT_BANNER='DEFAULT'
+   local OPTION_OUTPUT_COLOR='DEFAULT'
+   local OPTION_OUTPUT_FORMAT='DEFAULT'
+   local OPTION_OUTPUT_EVAL='DEFAULT'
+   local OPTION_OUTPUT_FULL='DEFAULT'
    local OPTION_OUTPUT_HEADER="" # empty more convenient default
-   local OPTION_OUTPUT_INDENT="DEFAULT"
-   local OPTION_OUTPUT_SEPARATOR="DEFAULT"
-   local OPTION_OUTPUT_COLUMN="DEFAULT"
-   local OPTION_OUTPUT_UUID="DEFAULT"
-   local OPTION_OUTPUT_URL="DEFAULT"
+   local OPTION_OUTPUT_INDENT='DEFAULT'
+   local OPTION_OUTPUT_SEPARATOR='DEFAULT'
+   local OPTION_OUTPUT_COLUMN='DEFAULT'
+   local OPTION_OUTPUT_UUID='DEFAULT'
+   local OPTION_OUTPUT_URL='DEFAULT'
    local OPTION_UNSAFE='NO'
    local OPTION_OUTPUT_CMDLINE="${MULLE_USAGE_NAME} -N add"
    local OPTION_NODETYPES
@@ -373,6 +374,7 @@ sourcetree_list_main()
    local OPTION_MARKS_QUALIFIER
    local OPTION_FORMAT='DEFAULT'
    local OPTION_DEDUPE_MODE='nodeline-no-uuid'
+   local OPTION_CONFIG_FILE='DEFAULT'
 
    while [ $# -ne 0 ]
    do
@@ -606,6 +608,13 @@ sourcetree_list_main()
             OPTION_OUTPUT_CMDLINE="$1"
          ;;
 
+         --config-file)
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            shift
+
+            OPTION_CONFIG_FILE="$1"
+         ;;
+
          -*)
             sourcetree_list_usage "Unknown option \"$1\""
          ;;
@@ -630,6 +639,18 @@ sourcetree_list_main()
 
    [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && sourcetree_list_usage
 
+
+   if [ "${OPTION_CONFIG_FILE}" != 'DEFAULT' ]
+   then
+      # hack hack hacky hack
+      r_basename "${OPTION_CONFIG_FILE}"
+      SOURCETREE_CONFIG_FILENAME="${RVAL}"
+
+      r_dirname "${OPTION_CONFIG_FILE}"
+      MULLE_VIRTUAL_ROOT="${RVAL}"
+
+      FLAG_SOURCETREE_MODE="flat"
+   fi
 
    # if mode is not flat, we use output-banner by default
    if [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" ]

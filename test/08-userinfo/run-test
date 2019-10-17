@@ -75,16 +75,10 @@ _sourcetree_get_userinfo_field()
    local address="$1"
    local field="$2"
 
-
    local userinfo
 
-   userinfo="`exekutor run_mulle_sourcetree ${MULLE_SOURCETREE_FLAGS}  \
+   userinfo="`exekutor run_mulle_sourcetree  \
                  get "${address}" "userinfo" `" || return 1
-
-   if [ -z "${MULLE_ARRAY_SH}" ]
-   then
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || exit 1
-   fi
 
    r_assoc_array_get "${userinfo}" "${field}"
    printf "%s" "${RVAL}"
@@ -103,13 +97,8 @@ _sourcetree_set_userinfo_field()
 
    local userinfo
 
-   userinfo="`exekutor run_mulle_sourcetree ${MULLE_SOURCETREE_FLAGS}  \
+   userinfo="`exekutor run_mulle_sourcetree  \
                  get "${address}" "userinfo" `" || return 1
-
-   if [ -z "${MULLE_ARRAY_SH}" ]
-   then
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || exit 1
-   fi
 
    local list
 
@@ -117,6 +106,7 @@ _sourcetree_set_userinfo_field()
    then
       r_assoc_array_get "${userinfo}" "${field}"
       list="${RVAL}"
+
       r_commalist_add "${list}" "${value}"
       value="${RVAL}"
    fi
@@ -124,7 +114,7 @@ _sourcetree_set_userinfo_field()
    r_assoc_array_set "${userinfo}" "${field}" "${value}"
    userinfo="${RVAL}"
 
-   exekutor run_mulle_sourcetree ${MULLE_SOURCETREE_FLAGS} \
+   exekutor run_mulle_sourcetree \
       set "${address}" "userinfo" "${userinfo}"
 }
 
@@ -135,6 +125,11 @@ main()
    MULLE_SOURCETREE_FLAGS="$@"
 
    _options_mini_main "$@"
+
+   if [ -z "${MULLE_ARRAY_SH}" ]
+   then
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || exit 1
+   fi
 
    set -e
 
@@ -186,7 +181,6 @@ main()
    run_mulle_sourcetree -N list
 
    log_verbose "----- #2 PASSED -----"
-
 
    _sourcetree_set_userinfo_field "a" "foobar" "bar" "YES" || exit 1
    run_mulle_sourcetree -N list

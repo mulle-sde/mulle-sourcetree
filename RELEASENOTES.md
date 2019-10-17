@@ -1,3 +1,20 @@
+## 0.20.0
+
+* changed to mulle-bashfunctions 2 call convention
+* moved to mulle-bashfunctions v2
+* ask mulle-env for the location of ETC SHARE and VAR directories
+* New marks no-bequeath, no-intermediate-link, no-dynamic-link
+* Change echo pervasively to printf as to circumvent surprises if variables start with a minus
+* Added wrap command to wrap nodetypes branches and URLs in environment variables
+* -—stash-dir is now a synonym for —share-dir, which is deprecated
+* Added commands etc-dir, project-dir, var-dir, stash-dir
+* Improved cleaning again, added option —config
+* Allow nodetype to be wrapped in an environment variable
+* mulle-sourcetree-to-c: improved generated info text in headers
+* mulle-sourcetree-to-cmake: improved generated info text in headers
+* mulle-sourcetree-to-cmake: is now aware of the new no-bequeath mark
+
+
 ### 0.19.1
 
 * make `NO_CMAKE_SYSTEM_PATH` configurable with mark no-suppress-system-path
