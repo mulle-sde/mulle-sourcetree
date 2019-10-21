@@ -1,3 +1,7 @@
+### 0.20.1
+
+* make marks behave additive/subtractive when given as --marks to the add command
+
 ## 0.20.0
 
 * changed to mulle-bashfunctions 2 call convention

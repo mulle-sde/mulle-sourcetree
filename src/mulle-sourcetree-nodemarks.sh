@@ -118,6 +118,8 @@ _r_nodemarks_remove()
 #
 r_nodemarks_add()
 {
+   log_entry "r_nodemarks_add" "$@"
+
    local marks="$1"
    local key="$2"
 
@@ -137,7 +139,6 @@ r_nodemarks_add()
          if _r_nodemarks_find_prefix "${marks}" "${key%-*}"
          then
             _r_nodemarks_remove "${marks}" "${RVAL}"
-            marks="${RVAL}"
          fi
          _r_nodemarks_add "${RVAL}" "${key}"
       ;;
@@ -147,6 +148,8 @@ r_nodemarks_add()
          _r_nodemarks_remove "${RVAL}" "only-${key}"
       ;;
    esac
+
+   log_debug "marks: ${RVAL}"
 }
 
 

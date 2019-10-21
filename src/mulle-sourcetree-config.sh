@@ -561,7 +561,7 @@ r_sanitized_marks()
             fail "mark \"${mark}\" may only contain a-z 0-9 . and _"
          ;;
 
-         no-*|only-*|version-*)
+         *)
             r_nodemarks_add "${result}" "${mark}"
             result="${RVAL}"
          ;;
