@@ -38,14 +38,15 @@ sourcetree_basic_environment()
 
    local directory="$1"
 
-   if [ -z "${directory}" ]
+   if [ -z "${directory}" -a ! -z "${MULLE_VIRTUAL_ROOT}" ]
    then
       directory="${MULLE_VIRTUAL_ROOT}"
-      log_fluff "Sourcetree uses MULLE_VIRTUAL_ROOT ($directory)"
+      log_fluff "Sourcetree uses MULLE_VIRTUAL_ROOT ($MULLE_VIRTUAL_ROOT)"
    fi
+
    if [ -z "${directory}" ]
    then
-      directory="`pwd -P`"
+      directory="${PWD}"
       log_fluff "Sourcetree uses PWD ($directory)"
    fi
 
@@ -58,11 +59,12 @@ sourcetree_basic_environment()
    fi
 
    r_absolutepath "${directory}"
-   MULLE_SOURCETREE_PROJECT_DIR="${RVAL}"
+   MULLE_SOURCETREE_PROJECT_DIR="`physicalpath "${RVAL}"`"
 
    if [ -z "${MULLE_VIRTUAL_ROOT}" ]
    then
       MULLE_VIRTUAL_ROOT="${MULLE_SOURCETREE_PROJECT_DIR}"
+      log_fluff "Sourcetree sets MULLE_VIRTUAL_ROOT to \"MULLE_VIRTUAL_ROOT\""
    fi
 
    # no share in sourcetree operation

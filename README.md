@@ -32,9 +32,9 @@ It is not meant to manage individual source files.
 * avoid duplicate edits in shared projects
 
 
-Executable                      | Description
---------------------------------|--------------------------------
-`mulle-sourcetree`              | Maintain sources and dependencies
+Executable          | Description
+--------------------|--------------------------------
+`mulle-sourcetree`  | Maintain sources and dependencies
 
 
 ## Install
@@ -67,10 +67,40 @@ Field          | Required | Description
 `fetchoptions` | NO       | The node is not shareable with other sourcetrees
 `marks`        | NO       | marks of the node
 `nodetype`     | YES      | type of node
-`tag`          | NO       | repository tag (git)
+`tag`          | NO       | tag (git/github archive)
 `url`          | NO       | URL of node.
 `userinfo`     | NO       | userinfo of node. can be binary.
-`uuid`         | NO       | internal node identifier. Don't touch.
+`uuid`         | NO       | internal node identifier. Don't touch, don't copy!
+
+
+The fields "nodetype", "branch", tag", "url", "fetchinfo" are expandable.
+Which means that environment variables can affect their contents. The expansion
+order is "branch" and "tag", then "url" and finally "fetchinfo". The expanded
+contents are available through the following environment variables:
+
+Variable                  | Description
+--------------------------|-------------------------------------
+`MULLE_BRANCH`            | expanded contents of "branch"
+`MULLE_TAG`               | expanded contents of "tag"
+`MULLE_TAG_OR_BRANCH`     | expanded contents of "tag" or if empty of "branch"
+`MULLE_URL`               | expanded contents of "url"
+
+You can thus override project versions and URLs of inherited dependencies, if
+they participate in this scheme. This allows you to substitute github release
+URLs with some intermediate testing ones for instance.
+
+
+This is the canonical way to specify a sourcetree dependency in mulle-sde.
+It allows you to override the version (ZLIB_TAG) and the host of the archive
+(ZLIB_URL) to download the desired archive.
+
+```
+mulle-sourcetree add \
+   --nodetype tar \
+   --tag '${ZLIB_TAG:-2.0.0}' \
+   --url '${ZLIB_URL:-https://github.com/madler/zlib/archive/${MULLE_TAG}.tar.gz}' \
+   external/zlib
+```
 
 
 ## Sourcetree Nodetypes
@@ -84,8 +114,11 @@ Nodetype  | Url | Branch | Tag | Fetchoptions | Description
 `local`   | NO  | NO     | NO  | NO           | used for subprojects
 `svn`     | YES | YES    | NO  | YES          | svn repository
 `symlink` | YES | NO     | NO  | NO           | symbolic link
-`tar`     | YES | NO     | NO  | YES          | tar archive. fetchoptions enable check shasum integrity
-`zip`     | YES | NO     | NO  | YES          | zip archive. fetchoptions enable check shasum integrity
+`tar`     | YES | NO     | YES | YES          | tar archive. fetchoptions enable check shasum integrity
+`zip`     | YES | NO     | YES | YES          | zip archive. fetchoptions enable check shasum integrity
+
+> `zip` and `tar` use the tag through expansion (see above). If the URL isn't
+> properly fashioned, setting the tag will have no affect.
 
 
 ## Sourcetree Marks
@@ -126,6 +159,8 @@ Mode         | Description
 `--flat`     | Only the local sourcetree nodes are updated
 `--recurse`  | Subtrees of nodes are also updated
 `--share`    | Like recurse, but nodes with identical URLs are only fetched once
+
+Generally you will use the `--share` - the default - for minimal hassle.
 
 
 ## Commands

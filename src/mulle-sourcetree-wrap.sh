@@ -39,7 +39,7 @@ Usage:
    ${MULLE_USAGE_NAME} wrap [options]
 
    Wrap tar and git nodetypes in environment variable.
-   Wrap branches in environment variable.
+   Wrap branches and tags in environment variable.
 
 EOF
   exit 1
@@ -72,6 +72,7 @@ sourcetree_wrap_config()
    local branch_identifier
    local nodetype_identifier
    local url_identifier
+   local tag_identifier
 
    set -o noglob ; IFS=$'\n'
    for nodeline in ${nodelines}
@@ -96,31 +97,71 @@ sourcetree_wrap_config()
          ;;
       esac
 
-      branch_identifier="${identifier}_BRANCH"
-      case "${_branch}" in
+      tag_identifier="${identifier}_TAG"
+      case "${_tag}" in
          "")
             case "${_url}" in
-               *${branch_identifier}:-*)
-                  _branch="`sed -n -e "s/^.*\\\${${branch_identifier}:-\\([^}]*\\)}.*/\\1/p" <<< "${_url}"`"
+               *${tag_identifier}:-*)
+                  _tag="`sed -n -e "s/^.*\\\${${tag_identifier}:-\\([^}]*\\)}.*/\\1/p" <<< "${_url}"`"
                ;;
             esac
          ;;
       esac
 
-      case "${_branch}" in
+      case "${_tag}" in
          "")
-            _url="${_url//${branch_identifier}/MULLE_BRANCH}"
+            _url="${_url//${tag_identifier}/MULLE_TAG}"
 
-            _branch="\${${branch_identifier}}"
+            _tag="\${${tag_identifier}}"
             # rewrite url if needed
-            log_debug "Changed branch to \"${_branch}\""
+            log_debug "Changed tag to \"${_tag}\""
          ;;
 
          [A-Za-z0-9]*)
-            _url="${_url//${branch_identifier}:-${_branch}/MULLE_BRANCH}"
-            _branch="\${${branch_identifier}:-${_branch}}"
+            _url="${_url//${tag_identifier}:-${_tag}/MULLE_TAG}"
+            _tag="\${${tag_identifier}:-${_tag}}"
             # rewrite url if needed
-            log_debug "Changed branch to \"${_branch}\""
+            log_debug "Changed tag to \"${_tag}\""
+         ;;
+      esac
+
+      #
+      # clear branch for archives and zips as it makes no sense there
+      #
+      case "${nodetype}" in
+         tar|zip)
+            log_debug "Cleared branch for archive \"${_branch}\""
+            _branch=""
+         ;;
+
+         *)
+            branch_identifier="${identifier}_BRANCH"
+            case "${_branch}" in
+               "")
+                  case "${_url}" in
+                     *${branch_identifier}:-*)
+                        _branch="`sed -n -e "s/^.*\\\${${branch_identifier}:-\\([^}]*\\)}.*/\\1/p" <<< "${_url}"`"
+                     ;;
+                  esac
+               ;;
+            esac
+
+            case "${_branch}" in
+               "")
+                  _url="${_url//${branch_identifier}/MULLE_BRANCH}"
+
+                  _branch="\${${branch_identifier}}"
+                  # rewrite url if needed
+                  log_debug "Changed branch to \"${_branch}\""
+               ;;
+
+               [A-Za-z0-9]*)
+                  _url="${_url//${branch_identifier}:-${_branch}/MULLE_BRANCH}"
+                  _branch="\${${branch_identifier}:-${_branch}}"
+                  # rewrite url if needed
+                  log_debug "Changed branch to \"${_branch}\""
+               ;;
+            esac
          ;;
       esac
 

@@ -44,14 +44,14 @@ r_mulle_fetch_eval_options()
       ;;
 
       'YES')
-         r_concat "${options}" "--symlink-returns-2"
+         r_concat "${options}" "--symlink-returns-4"
          options="${RVAL}"
       ;;
 
       "DEFAULT")
          if [ "${MULLE_SOURCETREE_SYMLINK}" = 'YES' ]
          then
-            r_concat "${options}" "--symlink-returns-2"
+            r_concat "${options}" "--symlink-returns-4"
             options="${RVAL}"
          fi
       ;;
@@ -170,6 +170,31 @@ _has_system_include()
 }
 
 
+_is_embedded()
+{
+   local marks="$1"
+
+   case ",${marks}," in
+      *,no-build,*)
+      ;;
+
+      *)
+         return 1
+      ;;
+   esac
+
+   case ",${marks}," in
+      *,no-share,*)
+      ;;
+
+      *)
+         return 1
+      ;;
+   esac
+   return 0
+}
+
+
 _do_fetch_operation()
 {
    log_entry "_do_fetch_operation" "$@"
@@ -183,6 +208,8 @@ _do_fetch_operation()
    local _fetchoptions="$7"   # options to use on _nodetype
    local _raw_userinfo="$8"   # unused
    local _uuid="$9"           # uuid of the node
+
+   [ -z "${_address}" ] && internal_fail "address is empty"
 
    [ $# -eq 9 ] || internal_fail "fail"
 
@@ -222,14 +249,12 @@ _do_fetch_operation()
                                           "${_tag}" \
                                           "${_nodetype}" \
                                           "${_fetchoptions}"
-
-
    rval="$?"
    case $rval in
       0)
       ;;
 
-      2)
+      4)
       ;;
 
       111)
@@ -284,18 +309,20 @@ update_actions_for_nodelines()
    previousfilename="`nodeline_get_address "${previousnodeline}"`"
 
    # just _address as filename ?
-   update_actions_for_node "${style}" \
-                           "${nodeline}" \
-                           "${filename}" \
-                           "${previousnodeline}" \
-                           "${previousfilename}" \
-                           "${_address}" \
-                           "${_nodetype}" \
-                           "${_marks}" \
-                           "${_uuid}" \
-                           "${_url}" \
-                           "${_branch}" \
-                           "${_tag}"
+   r_update_actions_for_node "${style}" \
+                            "${nodeline}" \
+                            "${filename}" \
+                            "${previousnodeline}" \
+                            "${previousfilename}" \
+                            "/" \
+                            "${_address}" \
+                            "${_nodetype}" \
+                            "${_marks}" \
+                            "${_uuid}" \
+                            "${_url}" \
+                            "${_branch}" \
+                            "${_tag}"
+   echo "${RVAL}"
 }
 
 
@@ -323,6 +350,7 @@ do_operation()
 #   local _raw_userinfo="$8"  # userinfo
 #   local _uuid="$9"          # uuid of the node
 
+   [ -z "${destination}" ] && internal_fail "Destination is empty"
 
    if [ ! -z "${OPTION_OVERRIDE_BRANCH}" ]
    then
@@ -333,7 +361,6 @@ do_operation()
 
    r_mulle_fetch_eval_options
    options="${RVAL}"
-
 
    sourcetree_sync_operation "${opname}" "${options}" \
                                           "${_url}" \
@@ -382,7 +409,7 @@ update_safe_remove_node()
    local database="$4"
 
    [ -z "${filename}" ] && internal_fail "empty filename"
-   [ -z "${_uuid}" ]     && internal_fail "empty _uuid"
+   [ -z "${_uuid}" ]    && internal_fail "empty _uuid"
 
    if ! nodemarks_contain "${_marks}" "delete"
    then
@@ -410,15 +437,16 @@ update_safe_clobber()
 ##
 ## this produces actions, does not care about _marks
 ##
-update_actions_for_node()
+r_update_actions_for_node()
 {
-   log_entry "update_actions_for_node" "$@"
+   log_entry "r_update_actions_for_node" "$@"
 
    local style="$1"; shift
    local newnodeline="$1" ; shift
    local newfilename="$1"; shift
    local previousnodeline="$1" ; shift
    local previousfilename="$1"; shift
+   local database="$1"; shift
 
    local newaddress="$1"    # address of this node
    local newnodetype="$2"   # nodetype to use for this node
@@ -427,6 +455,8 @@ update_actions_for_node()
    local newurl="$5"        # URL of the node
    local newbranch="$6"     # branch of the node
    local newtag="$7"        # tag to checkout of the node
+
+   local ACTIONS
 
    #
    # sanitize here because of paranoia and shit happes
@@ -458,7 +488,7 @@ chickening out"
 \"${newfilename}\". Clobbering it"
          remove_file_if_present "${newfilename}"
       else
-         log_debug "\"${newfilename}\" is just not there"
+         log_debug "\"${newfilename}\" is not there"
       fi
    fi
 
@@ -502,7 +532,8 @@ As node is marked \"no-delete\" just remember it."
                ;;
             esac
 
-            echo "remember"
+            ACTIONS="remember"
+            RVAL="${ACTIONS}"
             return
          fi
 
@@ -514,12 +545,15 @@ As node is marked \"no-delete\" just remember it."
             if [ "${oldnodeline}" = "${nodeline}" ]
             then
                log_fluff "Fix info was written by identical config, so it looks ok"
-               echo "remember"
+               ACTIONS="remember"
+               RVAL="${ACTIONS}"
                return
             fi
          fi
+
          log_fluff "Node is new, but \"${newfilename}\" exists. Clobber it."
-         echo "clobber"
+         update_safe_clobber "${newfilename}" "${database}"
+         ACTIONS="remember"
       else
          if [ -z "${_url}" ]
          then
@@ -529,7 +563,7 @@ As node is marked \"no-delete\" just remember it."
          log_fluff "Node \"${newfilename}\" is missing, so fetch"
       fi
 
-      echo "fetch"
+      r_add_line "${ACTIONS}" "fetch"
       return
    fi
 
@@ -552,11 +586,12 @@ As node is marked \"no-delete\" just remember it."
 
       if [ "${newexists}" = 'YES' ]
       then
+         RVAL="${ACTIONS}"
          return
       fi
 
       # someone removed it, fetch again
-      echo "fetch"
+      RVAL="fetch"
       return
    fi
 
@@ -611,9 +646,9 @@ chickening out"
          # no-delete check here ?
          if [ "${previousexists}" = 'YES' ]
          then
-            echo "remove"
+            ACTIONS="remove"
          fi
-         echo "fetch"
+         r_add_line "${ACTIONS}" "fetch"
          return
       fi
    fi
@@ -629,9 +664,6 @@ current destination \"${newfilename}\" do not exist."
       return
    fi
 
-   local actions
-
-   actions=
    #
    # Handle positional changes
    #
@@ -647,7 +679,7 @@ old \"${previousfilename}\" exist. Doing nothing."
             log_fluff "Destinations new \"${newfilename}\" and \
 old \"${previousfilename}\" exist. Looks like a manual move. Doing nothing."
          fi
-         actions="remember"
+         ACTIONS="remember"
       else
          #
          # Just old is there, so move it. We already checked
@@ -655,7 +687,7 @@ old \"${previousfilename}\" exist. Looks like a manual move. Doing nothing."
          #
          log_verbose "Address changed from \"${_address}\" to \
 \"${newaddress}\", need to move"
-         actions="move"
+         ACTIONS="move"
       fi
    fi
 
@@ -671,7 +703,7 @@ old \"${previousfilename}\" exist. Looks like a manual move. Doing nothing."
          then
             log_fluff "\"${newfilename}\" is symlink. Ignoring possible \
 differences in URL related info."
-            printf "%s\n" "${actions}"
+            RVAL="${ACTIONS}"
             return
          fi
       ;;
@@ -681,7 +713,7 @@ differences in URL related info."
    then
       log_fluff "\"${newfilename}\" has no URL. Ignoring possible differences \
 in URL related info."
-      printf "%s\n" "${actions}"
+      RVAL="${ACTIONS}"
       return
    fi
 
@@ -695,75 +727,82 @@ in URL related info."
         "${_tag}" != "${newtag}" -o \
         "${_url}" != "${newurl}" ]
    then
-      available="`sourcetree_list_operations "${_nodetype}"`" || return 1
+      # need to eval it...
+      local evalednodetype
+
+      eval printf -v evalednodetype "%s" "${_nodetype}"
+      r_sourcetree_list_operations "${evalednodetype}"
+      available="${RVAL}" || return 1
    fi
 
    if [ "${_branch}" != "${newbranch}" ]
    then
-      have_checkout="$(fgrep -s -x "checkout" <<< "${available}")" || :
-      if [ ! -z "${have_checkout}" ]
+      if find_line "${available}" "checkout"
       then
          log_verbose "Branch has changed from \"${_branch}\" to \
 \"${newbranch}\", need to checkout"
-         actions="`add_line "${actions}" "checkout"`"
+         r_add_line "${ACTIONS}" "checkout"
+         ACTIONS="${RVAL}"
       else
          log_verbose "Branch has changed from \"${_branch}\" to \
 \"${newbranch}\", need to fetch"
          if [ "${previousexists}" = 'YES' ]
          then
-            echo "remove"
+            r_add_line "${ACTIONS}" "remove"
+            ACTIONS="${RVAL}"
          fi
-         echo "fetch"
+
+         r_add_line "${ACTIONS}" "fetch"
          return
       fi
    fi
 
    if [ "${_tag}" != "${newtag}" ]
    then
-      have_checkout="$(fgrep -s -x "checkout" <<< "${available}")" || :
-      if [ ! -z "${have_checkout}" ]
+      if find_line "${available}" "checkout"
       then
          log_verbose "Tag has changed from \"${_tag}\" to \"${newtag}\", need \
 to checkout"
-         actions="`add_line "${actions}" "checkout"`"
+         r_add_line "${ACTIONS}" "checkout"
+         ACTIONS="${RVAL}"
       else
          log_verbose "Tag has changed from \"${_tag}\" to \"${newtag}\", need \
 to fetch"
          if [ "${previousexists}" = 'YES' ]
          then
-            echo "remove"
+            r_add_line "${ACTIONS}" "remove"
+            ACTIONS="${RVAL}"
          fi
-         echo "fetch"
+
+         r_add_line "${ACTIONS}" "fetch"
          return
       fi
    fi
 
    if [ "${_url}" != "${newurl}" ]
    then
-      have_upgrade="$(fgrep -s -x "upgrade" <<< "${available}")" || :
-      have_set_url="$(fgrep -s -x "set-url" <<< "${available}")" || :
-      if [ ! -z "${have_upgrade}" -a ! -z "${have_set_url}" ]
+      if find_line "${available}" "upgrade" && find_line "${available}" "set-url"
       then
          log_verbose "URL has changed from \"${_url}\" to \"${newurl}\", need to \
 set remote _url and fetch"
-         actions="`add_line "${actions}" "set-url"`"
-         actions="`add_line "${actions}" "upgrade"`"
+         r_add_line "${ACTIONS}" "set-url"
+         r_add_line "${RVAL}" "upgrade"
+         ACTIONS="${RVAL}"
       else
          log_verbose "URL has changed from \"${_url}\" to \"${newurl}\", need to \
 fetch"
          if [ "${previousexists}" = 'YES' ]
          then
-            echo "remove"
+            r_add_line "${ACTIONS}" "remove"
+            ACTIONS="${RVAL}"
          fi
-         echo "fetch"
+
+         r_add_line "${ACTIONS}" "fetch"
          return
       fi
    fi
 
-   if [ ! -z "${actions}" ]
-   then
-      printf "%s\n" "${actions}"
-   fi
+   RVAL="${ACTIONS}"
 }
 
 
@@ -774,6 +813,8 @@ fetch"
 __update_perform_item()
 {
    log_entry "__update_perform_item"
+
+   [ -z "${filename}" ] && internal_fail "filename is empty"
 
    case "${item}" in
       "checkout"|"upgrade"|"set-url")
@@ -794,8 +835,8 @@ __update_perform_item()
             log_fluff "Failed to ${item} ${_url}" # operation should have errored already
             exit 1
          fi
-         contentschanged='YES'
-         remember='YES'
+         _contentschanged='YES'
+         _remember='YES'
       ;;
 
       "fetch")
@@ -811,15 +852,15 @@ __update_perform_item()
 
          case "$?" in
             0)
-               contentschanged='YES'
+               _contentschanged='YES'
             ;;
 
-            2)
+            4)
                # if we used a symlink, we want to memorize that
                _nodetype="symlink"
 
                # we don't really want to update that
-               contentschanged='NO'
+               _contentschanged='NO'
             ;;
 
             *)
@@ -834,7 +875,7 @@ __update_perform_item()
                       log_verbose "Removing old symlink \"${filename}\""
                       exekutor rm -f "${filename}" >&2
                   else
-                     update_safe_clobber"${database}" "${filename}"
+                     update_safe_clobber "${database}" "${filename}"
                   fi
                fi
 
@@ -843,7 +884,7 @@ __update_perform_item()
                   log_info "${C_MAGENTA}${C_BOLD}${filename}${C_INFO} is not required."
 
                   db_add_missing "${database}" "${_uuid}" "${nodeline}"
-                  skip='YES'
+                  _skip='YES'
                   return 1
                fi
 
@@ -857,16 +898,16 @@ __update_perform_item()
 which must be upgraded to be usable."
          fi
 
-         remember='YES'
+         _remember='YES'
       ;;
 
       "remember")
-         remember='YES'
+         _remember='YES'
       ;;
 
       "move")
          update_safe_move_node "${previousfilename}" "${filename}" "${_marks}"
-         remember='YES'
+         _remember='YES'
       ;;
 
       "clobber")
@@ -884,9 +925,17 @@ which must be upgraded to be usable."
 }
 
 
-_update_perform_actions()
+#
+# these are the return values (outside of RVAL)
+#
+# _contentschanged
+# _remember
+# _skip
+# _nodetype
+
+__update_perform_actions()
 {
-   log_entry "_update_perform_actions" "$@"
+   log_entry "__update_perform_actions" "$@"
 
    local style="$1"
    local nodeline="$2"
@@ -899,7 +948,7 @@ _update_perform_actions()
    local _address
    local _fetchoptions
    local _marks
-   local _nodetype
+#   local _nodetype
    local _tag
    local _url
    local _userinfo
@@ -909,48 +958,42 @@ _update_perform_actions()
    nodeline_parse "${nodeline}"
 
    local actionitems
-
-   local filename
    local dbfilename
 
-   actionitems="`update_actions_for_node "${style}" \
-                                         "${nodeline}" \
-                                         "${filename}" \
-                                         "${previousnodeline}" \
-                                         "${previousfilename}" \
-                                         "${_address}" \
-                                         "${_nodetype}" \
-                                         "${_marks}" \
-                                         "${_uuid}" \
-                                         "${_url}" \
-                                         "${_branch}" \
-                                         "${_tag}"`" || exit 1
+   r_update_actions_for_node "${style}" \
+                             "${nodeline}" \
+                             "${filename}" \
+                             "${previousnodeline}" \
+                             "${previousfilename}" \
+                             "${database}" \
+                             "${_address}" \
+                             "${_nodetype}" \
+                             "${_marks}" \
+                             "${_uuid}" \
+                             "${_url}" \
+                             "${_branch}" \
+                             "${_tag}"
+   actionitems="${RVAL}"
 
    log_debug "${C_INFO}Actions for \"${_address}\": ${actionitems:-none}"
 
-   local contentschanged='NO'
-   local remember='NO'
-   local skip='NO'
+   _contentschanged='NO'
+   _remember='NO'
+   _skip='NO'
 
    local item
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob
    for item in ${actionitems}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      set +o noglob
 
-      if ! __update_perform_item >&2
+      if ! __update_perform_item
       then
          break
       fi
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
-
-   echo "-- VfL Bochum 1848 --"
-   printf "%s\n" "${contentschanged}"
-   printf "%s\n" "${remember}"
-   printf "%s\n" "${skip}"
-   printf "%s\n" "${_nodetype}"
+   set +o noglob
 }
 
 
@@ -981,12 +1024,18 @@ _memorize_nodeline_in_db()
 {
    log_entry "_memorize_nodeline_in_db" "$@"
 
+#
+#   config="$1"
+#   database="$2"
+#   filename="$3"
+#
    local nodeline
    local evaledurl
+
    r_node_to_nodeline
    nodeline="${RVAL}"
-   evaledurl="`eval "printf \"%s\\\\\\\\n\" \"${_url}\""`"
 
+   eval printf -v evaledurl "$%s" "${_url}"
    _memorize_in_db "${nodeline}" "${evaledurl}" "$@"
 }
 
@@ -1010,7 +1059,8 @@ write_fix_info()
    # filename="`physicalpath "${filename}" `"
 
    [ -z "${SOURCETREE_FIX_FILENAME}" ] && internal_fail "SOURCETREE_FIX_FILENAME is empty"
-   output="`filepath_concat "${filename}" "${SOURCETREE_FIX_FILENAME}"`"
+   r_filepath_concat "${filename}" "${SOURCETREE_FIX_FILENAME}"
+   output="${RVAL}"
 
    log_fluff "Writing fix info into \"${output}\""
 
@@ -1079,8 +1129,13 @@ do_actions_with_nodeline()
             exit 1
          ;;
 
-         2)
+         3)
             return
+         ;;
+         #
+
+         *)
+            internal_fail "unknown code"
          ;;
       esac
       database="/"   # see only-share if you're tempted to change this
@@ -1090,6 +1145,9 @@ do_actions_with_nodeline()
 
    r_simplified_absolutepath "${filename}"
    filename="${RVAL}"
+
+   [ -z "${filename}" ] && internal_fail "Filename is empty for \"${_address}\""
+
    log_fluff "Filename for node \"${_address}\" is \"${filename}\""
 
    [ -z "${database}" ] && internal_fail "A share-only update gone wrong"
@@ -1189,23 +1247,22 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    else
       if [ -L "${filename}" ]
       then
-         log_verbose "Removing old symlink \"${filename}\""
+         log_verbose "Removing an old symlink \"${filename}\" for safety"
          exekutor rm -f "${filename}" || exit 1
-      else
-         if [ -e "${filename}" ]
-         then
-            log_fluff "${filename} not there"
-         fi
+#      else
+#         if [ -e "${filename}" ]
+#         then
+#            log_fluff "${filename} is present"
+#         fi
       fi
    fi
-
 
    #
    # For symlinks, we only care if the filename changes
    #
    if [ "${filename}" = "${previousfilename}" -a -L "${filename}" ]
    then
-      log_debug "Skip update of \"${filename}\" since its a symlink."
+      log_debug "Skip update of \"${filename}\" since it's a symlink."
 
       _memorize_nodeline_in_db "${config}" "${database}" "${filename}"
 
@@ -1217,47 +1274,30 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    #
    # candidate for parallelization
    #
-   local results
+   local _contentschanged
+   local _remember
+   local _skip
 
-   results="`_update_perform_actions "${style}" \
-                                     "${nodeline}" \
-                                     "${filename}" \
-                                     "${previousnodeline}" \
-                                     "${previousfilename}" \
-                                     "${database}"`"
-   if [ $? -ne 0 ]
-   then
-      exit 1
-   fi
-
-   local magic
-
-   magic="$(sed -n '1p' <<< "${results}")"
-   [ "${magic}" = "-- VfL Bochum 1848 --" ]|| internal_fail "stdout was polluted with \"magic\""
-
-   local contentschanged
-   local remember
-   local skip
-   local nodetype
-
-   contentschanged="$(sed -n '2p' <<< "${results}")"
-   remember="$(sed -n '3p' <<< "${results}")"
-   skip="$(sed -n '4p' <<< "${results}")"
-   nodetype="$(sed -n '5p' <<< "${results}")"
+   __update_perform_actions "${style}" \
+                            "${nodeline}" \
+                            "${filename}" \
+                            "${previousnodeline}" \
+                            "${previousfilename}" \
+                            "${database}"
 
    log_debug "\
-contentschanged : ${contentschanged}
-remember        : ${remember}
-skip            : ${skip}
-nodetype        : ${nodetype}"
+contentschanged : ${_contentschanged}
+remember        : ${_remember}
+skip            : ${_skip}
+nodetype        : ${_nodetype}"
 
-   if [ "${skip}" = 'YES' ]
+   if [ "${_skip}" = 'YES' ]
    then
       log_debug "Skipping to next nodeline as indicated..."
       return 0
    fi
 
-   if [ "${remember}" = 'YES' ]
+   if [ "${_remember}" = 'YES' ]
    then
       if ! is_absolutepath "${filename}"
       then

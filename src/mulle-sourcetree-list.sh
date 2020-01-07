@@ -44,6 +44,23 @@ Usage:
    nodetype and marks. The output can be formatted in printf like fashion.
 
    This command only reads config files.
+EOF
+
+   if [ "${MULLE_FLAG_LOG_VERBOSE}" = 'YES' ]
+   then
+      cat <<EOF >&2
+
+Formatting:
+EOF
+      node_printf_format_help >&2
+   else
+      cat <<EOF >&2
+
+   See -v help for a list of format characters.
+EOF
+   fi
+
+   cat <<EOF >&2
 
 Options:
    -l                       : output long information
@@ -52,18 +69,19 @@ Options:
    -g                       : output branch/tag information (use -G for raw output)
    -u                       : output URL information  (use -U for raw output)
    --config-file <file>     : list a specific config file (no recursion)
-   --nodetypes <value>      : node types to list (default: ALL)
-   --marks <value>          : specify marks to match (e.g. build)
-   --qualifier <value>      : specify marks qualifier
    --format <format>        : supply a custom format (abfimntu_)
+   --marks <value>          : specify marks to match (e.g. build)
+   --no-dedupe              : don't remove what are considered duplicates
+   --nodetypes <value>      : node types to list (default: ALL)
    --output-banner          : print a banner with config information
-   --output-format          : possible values (formatted, command, cmd2, raw)
    --output-eval            : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
+   --output-format          : possible values (formatted, command, cmd2, raw)
    --output-full            : show url and various fetch options
    --output-no-header       : suppress header in raw and default lists
    --output-no-indent       : suppress indentation on recursive list
    --output-no-marks <list> : suppress output of certain marks (comma sep)
    --output-no-separator    : suppress separator line if header is printed
+   --qualifier <value>      : specify marks qualifier
 EOF
   exit 1
 }
@@ -504,6 +522,16 @@ sourcetree_list_main()
             OPTION_BEQUEATH='NO'
          ;;
 
+         -_|--output-uuid)
+            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+            then
+               OPTION_FORMAT="%a;%_\\n"
+            else
+               OPTION_FORMAT="${OPTION_FORMAT%??}"
+               OPTION_FORMAT="${OPTION_FORMAT};%u\\n"
+            fi
+         ;;
+
          -g|--output-git)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
@@ -647,7 +675,9 @@ sourcetree_list_main()
       SOURCETREE_CONFIG_FILENAME="${RVAL}"
 
       r_dirname "${OPTION_CONFIG_FILE}"
-      MULLE_VIRTUAL_ROOT="${RVAL}"
+
+      MULLE_VIRTUAL_ROOT="`physicalpath "${RVAL}"`"
+      log_fluff "mulle-sourcetree (list) sets MULLE_VIRTUAL_ROOT to \"${MULLE_VIRTUAL_ROOT}\""
 
       FLAG_SOURCETREE_MODE="flat"
    fi

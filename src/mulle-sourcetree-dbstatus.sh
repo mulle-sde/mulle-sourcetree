@@ -68,11 +68,17 @@ sourcetree_dbstatus_main()
 
    dbdonefile="${databasedir}/.db_done"
 
+   if [ ! -e "${configfile}" ]
+   then
+      log_info "No sourcetree here"
+      return 1
+   fi
+
    if [ "${configfile}" -nt "${dbdonefile}" ] || \
       ! db_is_ready "${SOURCETREE_START}"
    then
       log_info "Needs update"
-      return 2
+      return 4
    fi
 
    log_info "Is up-to-date"

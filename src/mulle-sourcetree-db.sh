@@ -447,7 +447,7 @@ __db_parse_dbentry()
       return 1
    fi
 
-   while read nodeline
+   while read -r nodeline
    do
       read owner
       read filename
@@ -972,7 +972,7 @@ db_is_ready()
       log_debug "\"${database}\" was made in a different environment. Needs reset"
       log_debug "Current environment : ${environment}"
       log_debug "Old environment     : ${oldenvironment}"
-      return 2
+      return 4
    fi
 
    return 0
@@ -1455,6 +1455,59 @@ db_zombify_nodes()
 }
 
 
+db_zombify_nodelines()
+{
+   log_entry "db_zombify_nodelines" "$@"
+
+   local database
+   local databasedir
+
+   __db_common_databasedir "$@"
+
+   log_fluff "Marking nodelines as zombies for now (${databasedir})"
+
+   local zombiedir
+
+   __db_zombiedir "${databasedir}"
+   rmdir_safer "${zombiedir}"
+
+   if [ -z "${nodelines}" ]
+   then
+      return
+   fi
+
+   mkdir_if_missing "${zombiedir}"
+
+   local _branch
+   local _address
+   local _fetchoptions
+   local _nodetype
+   local _marks
+   local _raw_userinfo
+   local _tag
+   local _url
+   local _userinfo
+   local _uuid
+
+   set -o noglob ; IFS=$'\n'
+   for nodeline in ${nodelines}
+   do
+      IFS="${DEFAULT_IFS}"; set +o noglob
+
+      if [ ! -z "${nodeline}" ]
+      then
+         nodeline_parse "${nodeline}"
+
+         if __db_common_dbfilepath "${databasedir}" "${_uuid}"
+         then
+            exekutor cp ${OPTION_COPYMOVEFLAGS} "${dbfilepath}" "${zombiedir}/"
+         fi
+      fi
+   done
+   IFS="${DEFAULT_IFS}"; set +o noglob
+}
+
+
 _db_bury_zombiefile()
 {
    log_entry "_db_bury_zombiefile" "$@"
@@ -1470,7 +1523,7 @@ _db_bury_zombiefile()
    local entry
    local filename
 
-   entry="`cat "${zombiefile}"`"
+   entry="`cat "${zombiefile}"`" || exit 1
 
    __db_parse_dbentry "${entry}"
 
@@ -1580,6 +1633,56 @@ db_bury_zombies()
 }
 
 
+db_bury_zombie_nodelines()
+{
+   log_entry "db_bury_zombie_nodelines" "$@"
+
+   local database
+   local databasedir
+
+   __db_common_databasedir "$@"
+
+   local zombiedir
+
+   __db_zombiedir "${databasedir}"
+
+   local zombiefile
+
+   local _branch
+   local _address
+   local _fetchoptions
+   local _nodetype
+   local _marks
+   local _raw_userinfo
+   local _tag
+   local _url
+   local _userinfo
+   local _uuid
+
+   local zombiefile
+
+   set -o noglob ; IFS=$'\n'
+   for nodeline in ${nodelines}
+   do
+      IFS="${DEFAULT_IFS}"; set +o noglob
+
+      if [ ! -z "${nodeline}" ]
+      then
+         nodeline_parse "${nodeline}"
+
+         zombiefile="${zombiedir}/${_uuid}"
+         if [ -e "${zombiefile}" ]
+         then
+            _db_bury_zombiefile "${database}" "${zombiefile}"
+         fi
+      fi
+   done
+
+   # will be done later
+   # rmdir_if_empty "${zombiedir}"
+}
+
+
 db_state_description()
 {
    log_entry "db_state_description" "$@"
@@ -1601,8 +1704,12 @@ db_state_description()
             dbstate="incomplete"
          ;;
 
-         2)
+         4)
             dbstate="incompatible"
+         ;;
+
+         *)
+            internal_error "wrong code"
          ;;
       esac
 
@@ -1650,7 +1757,7 @@ db_fetch_uuid_for_url()
 # return values:
 #  0: go ahead with update, use return value as filename
 #  1: error
-#  2: skip this node
+#  3: skip this node
 #
 db_update_determine_share_filename()
 {
@@ -1666,7 +1773,7 @@ db_update_determine_share_filename()
    local filename
    local evaledurl
 
-   evaledurl="`eval "echo \"${url}\""`"
+   eval printf -v evaledurl "%s" "${url}"
    if [ -z "${evaledurl}" ]
    then
       fail "URL \"${url}\" evaluates to empty"
@@ -1689,10 +1796,15 @@ db_update_determine_share_filename()
          then
             r_basename "${database}"
             fail "\"${address}\" is not in root but in ($database).
-${C_INFO}This probably means that \"${address}\" is used in two project
+${C_INFO}This could mean that \"${address}\" is used in two project
 but shares the same UUIDs in the mulle-sourcetree configuration.
+Check your uuids with:
 
-Remedial action:${C_RESET_BOLD}
+   ${C_RESET_BOLD}mulle-sourcetree list -r --format \"%a;%_;%v={WALK_DATASOURCE}\\\\n\" \\
+      --output-no-indent --output-no-header --no-dedupe | sort -u${C_ERROR}
+
+Try ${C_RESET_BOLD}mulle-sde clean tidy${C_ERROR} first (as always). Otherwise
+try this remedial action:${C_RESET_BOLD}
    cd \"${MULLE_SOURCETREE_STASH_DIR}/${RVAL}\"
    mulle-sourcetree -N reuuid
    mulle-sourcetree -N reset"
@@ -1704,7 +1816,7 @@ Remedial action:${C_RESET_BOLD}
 #But uuids differ \"${uuid}\" vs \"${otheruuid}\""
 
          log_fluff "The \"${url}\" is already used in root. So skip it."
-         return 2
+         return 3
       fi
    fi
    log_debug "Use root database for share node \"${address}\""

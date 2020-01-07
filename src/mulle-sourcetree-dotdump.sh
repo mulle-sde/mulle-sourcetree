@@ -190,23 +190,23 @@ html_print_node()
 #  ready
 #  reset
 #
-_get_fs_status()
+r_get_fs_status()
 {
-   log_entry "_get_fs_status" "$@"
+   log_entry "r_get_fs_status" "$@"
 
    local destination="$1"
 
    if [ ! -e "${destination}" ]
    then
       log_debug "${destination} does not exist"
-      echo "missing"
+      RVAL="missing"
       return
    fi
 
    if [ ! -d "${destination}" ]
    then
      log_debug "${destination} is a file (not a folder)"
-     echo "file"
+     RVAL="file"
      return
    fi
 
@@ -236,35 +236,35 @@ _get_fs_status()
 
    if ! cfg_exists "${datasource}"
    then
-     log_debug "${destination} has no cfg (is a folder)"
-     echo "folder"
-     return
+      log_debug "${destination} has no cfg (is a folder)"
+      RVAL="folder"
+      return
    fi
 
    if ! db_dir_exists "${datasource}"
    then
-     log_debug "${datasource} has no db (but is a sourcetree)"
-     echo "config"
-     return
+      log_debug "${datasource} has no db (but is a sourcetree)"
+      RVAL="config"
+      return
    fi
 
    db_is_ready "${datasource}"
    case $? in
       1)
          log_debug "\"${datasource}\" db not ready"
-         echo "database"
+         RVAL="database"
          return 0
       ;;
 
       2)
          log_debug "\"${datasource}\" db needs reset"
-         echo "reset"
+         RVAL="reset"
          return 0
       ;;
    esac
 
    log_debug "${datasource} db ready"
-   echo "ready"
+   RVAL="ready"
 }
 
 
@@ -298,7 +298,8 @@ print_node()
    local color
    local state
 
-   state="`_get_fs_status "${destination}" `"
+   r_get_fs_status "${destination}"
+   state="${RVAL}"
 
    if [ "${isshared}" = 'NO' ]
    then

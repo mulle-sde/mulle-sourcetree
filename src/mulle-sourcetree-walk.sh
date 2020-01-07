@@ -263,7 +263,7 @@ _callback_nodetypes()
    evalednodetype="${nodetype}"
    case "$1" in
       *\$*)
-         evalednodetype="`eval "echo \"${nodetype}\""`"
+         eval printf -v evalednodetype "${nodetype}"
       ;;
    esac
 
@@ -637,7 +637,7 @@ r_walk_has_visited()
    fi
 
    RVAL="${lineid}"
-   return 2
+   return 4
 }
 
 
@@ -662,9 +662,8 @@ walk_remove_from_visited()
       return
    fi
 
-   lineid="${RVAL}"
-   r_escaped_sed_pattern "${lineid}"
-   VISITED="`sed -e "/^${RVAL}\$/d" <<< "${VISITED}"`"
+   r_remove_line "${VISITED}" "${RVAL}"
+   VISITED="${RVAL}"
 }
 
 
@@ -720,7 +719,7 @@ _visit_node()
                return
             ;;
 
-            2) # dedupe
+            4) # dedupe
                walk_remember_visit "${RVAL}"
             ;;
          esac
@@ -1051,6 +1050,7 @@ _print_walk_info()
    return 0
 }
 
+
 #
 # Mode        | Description
 # ------------|---------------------------------------------------------
@@ -1214,8 +1214,8 @@ walk_remove_from_deduped()
 {
    local datasource="$1"
 
-   r_escaped_sed_pattern "${datasource}"
-   WALKED="`sed -e "/^${RVAL}\$/d" <<< "${WALKED}"`"
+   r_remove_line "${WALKED}" "${datasource}"
+   WALKED="${RVAL}"
 }
 
 
@@ -1485,7 +1485,7 @@ sourcetree_walk()
       esac
    fi
 
-   if [ $rval -eq 2 ]
+   if [ $rval -eq 4 ]
    then
       return 0
    fi

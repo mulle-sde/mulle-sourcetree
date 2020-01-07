@@ -114,6 +114,7 @@ sourcetree_sync_operation()
    local nodetype="$7"
    local fetchoptions="$8"
 
+   [ -z "${address}" ] && fail "Address is empty"
    [ -z "${url}" ] && fail "URL is empty"
 
    local rval
@@ -122,17 +123,54 @@ sourcetree_sync_operation()
    local evaledtag
    local evaledfetchoptions
 
-   # we use evaluated values to then pass as "environment" into the
-   # echo, this allows us to specify a URL as
    #
-   evalednodetype="`eval "echo \"${nodetype}\""`"
-   evaledtag="`eval "echo \"${tag}\""`"
-   evaledbranch="`eval "echo \"${branch}\""`"
-   evaledurl="`MULLE_BRANCH="${evaledbranch}" MULLE_TAG="${evaledtag}" eval "echo \"${url}\""`"
-   evaledfetchoptions="`MULLE_URL="${evaledurl}" MULLE_BRANCH="${evaledbranch}" MULLE_TAG="${evaledtag}" eval "printf \"%s\\\\\\\\n\" \"${_fetchoptions}\""`"
+   # we use evaluated values
+   #
+   eval printf -v evalednodetype "%s" "${nodetype}"
+   eval printf -v evaledtag      "%s" "${tag}"
+   eval printf -v evaledbranch   "%s" "${branch}"
 
    [ -z "${evalednodetype}" ] && fail "Nodetype \"${nodetype}\" evaluates to empty"
+
+   MULLE_BRANCH="${evaledbranch}" \
+   MULLE_TAG="${evaledtag}"\
+   MULLE_TAG_OR_BRANCH="${evaledtag:-${evaledbranch}}" \
+      eval printf -v evaledurl "%s" "${url}"
+
    [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
+
+   #
+   # If a tag is specified, we can - for some hosts - do filtering
+   # like >= 1.0.5. This is done by mulle-fetch though. We also use
+   # it to "compose" the url from the tag
+   #
+   if [ ! -z "${evaledtag}" ]
+   then
+      evaledurl="`exekutor "${MULLE_FETCH:-mulle-fetch}" \
+                          ${MULLE_TECHNICAL_FLAGS} \
+                    "filter" \
+                        --scm "${evalednodetype}" \
+                        "${evaledtag}" \
+                        "${evaledurl}" `" || exit 1
+
+      [ -z "${evaledurl}" ] && internal_fail "URL \"${url}\" returned as empty"
+
+      #
+      # hackish, used for git scm really
+      #
+      case "${evaledurl}" in
+         *'##'*)
+            evaledtag="${evaledurl#*##}"
+            evaledurl="${evaledurl%##*}"
+         ;;
+      esac
+   fi
+
+   MULLE_BRANCH="${evaledbranch}" \
+   MULLE_TAG="${evaledtag}" \
+   MULLE_TAG_OR_BRANCH="${evaledtag:-${evaledbranch}}" \
+   MULLE_URL="${evaledurl}" \
+      eval  printf -v evaledfetchoptions "%s" "${fetchoptions}"
 
    local cmdoptions
 
@@ -215,25 +253,56 @@ ${C_RESET_BOLD}${evaledurl}${C_INFO}"
       r_concat "--source '${evalednodetype}'" "${cmdoptions}"
       cmdoptions="${RVAL}"
    fi
+
    eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
                        "${MULLE_TECHNICAL_FLAGS}" \
-                    "${opname}" \
+                       "${opname}" \
                        "${cmdoptions}" \
                        "${options}" \
                        "'${address}'"
 }
 
 
-sourcetree_list_operations()
+r_sourcetree_list_operations()
 {
-   log_entry "sourcetree_list_operations" "$@"
+   log_entry "r_sourcetree_list_operations" "$@"
 
    local nodetype="$1"
 
-   ${MULLE_FETCH:-mulle-fetch} \
-         ${MULLE_TECHNICAL_FLAGS} \
-         -s \
-      operation -s "${nodetype}" list
+   local cachekey
+
+   r_uppercase "${nodetype}"
+   cachekey="_SOURCETREE_OPERATIONS_${RVAL}"
+
+   if [ -z "${!cachekey}" ]
+   then
+      if ! value="`${MULLE_FETCH:-mulle-fetch} \
+                  ${MULLE_TECHNICAL_FLAGS} \
+                  -s \
+               operation -s "${nodetype}" list`"
+      then
+         value="ERROR"
+      fi
+      if [ -z "${value}" ]
+      then
+         value="EMPTY"
+      fi
+      printf -v "${cachekey}" "%s" "${value}"
+   fi
+
+   RVAL=${!cachekey}
+   case "${value}" in
+      ERROR)
+         RVAL=""
+         return 1
+      ;;
+
+      EMPTY)
+         RVAL=""
+      ;;
+   esac
+
+   return 0
 }
 
 

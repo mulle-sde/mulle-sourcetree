@@ -382,6 +382,7 @@ cfg_change_nodeline()
 
    local oldescaped
    local newescaped
+
    r_escaped_sed_pattern "${oldnodeline}"
    oldescaped="${RVAL}"
    r_escaped_sed_replacement "${newnodeline}"

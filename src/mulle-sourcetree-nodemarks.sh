@@ -498,7 +498,8 @@ _nodemarks_filter_sexpr()
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
          key="${_s%%[ )]*}"
          _s="${_s#"${key}"}"
-         value="`eval echo \$\{__DEFINE__${key}\}`"
+         key="__DEFINE__${key}"
+         value="${!key}"
          [ ! -z "${value}" ]
          return $?
       ;;

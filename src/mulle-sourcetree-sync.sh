@@ -128,7 +128,7 @@ _check_descend_nodeline()
       # database into it.
       #
       log_fluff "\"${filename}\" is a symlink, so don't descend"
-      return 2
+      return 4
    fi
 
    if [ ! -d "${filename}" ]
@@ -380,7 +380,7 @@ _style_for_only_share()
    _style="only_share"
 
    case $rval in
-      0|2)
+      0|4)
          return 0
       ;;
    esac
@@ -446,7 +446,7 @@ _sourcetree_sync_only_share()
    if ! nodelines="`cfg_read "${config}" `"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
-      return 2
+      return 4
    fi
 
    local nodeline
@@ -502,7 +502,7 @@ _style_for_share()
          return 0
       ;;
 
-      2)
+      4)
          _style="only_share"
          return 0
       ;;
@@ -552,13 +552,14 @@ _sourcetree_sync_share()
 
    db_set_dbtype "${database}" "${style}"
    db_set_update "${database}"
+
    #
    # TODO: there is seemingly a bug here, were I believe share libraries
    # overwrite the shared root
    #
    db_set_shareddir "${database}" "${MULLE_SOURCETREE_STASH_DIR}"
 
-   db_zombify_nodes "${database}"
+   db_zombify_nodelines "${database}" "${nodelines}"
 
    do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}" || return 1
 
@@ -686,14 +687,20 @@ _sourcetree_sync_recurse()
    db_set_update "${database}"
 
    db_clear_shareddir "${database}"
+
+   # zombify everything
    db_zombify_nodes "${database}"
 
    do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}" || return 1
 
-   db_bury_zombies "${database}"
+   db_bury_zombie_nodelines "${database}" "${nodelines}"
+
    # until now, it was just like flat. Now recurse through nodelines.
 
    _descend_db_nodelines "recurse" "${config}" "${database}"  || return 1
+
+   # bury rest of zombies
+   db_bury_zombies "${database}"
 
    db_clear_update "${database}"
    db_set_ready "${database}"
@@ -751,7 +758,7 @@ _sourcetree_sync_flat()
    db_set_update "${database}"
 
    db_clear_shareddir "${database}"
-   db_zombify_nodes "${database}"
+   db_zombify_nodelines "${database}" "${nodelines}"
 
    do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}" || return 1
 

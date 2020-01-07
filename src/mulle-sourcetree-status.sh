@@ -99,7 +99,7 @@ sourcetree_is_uptodate()
    if [ -z "${configtimestamp}" ]
    then
       log_fluff "No timestamp available for \"${datasource}\""
-      return 2
+      return 4
    fi
 
    dbtimestamp="`db_get_timestamp "${datasource}"`"

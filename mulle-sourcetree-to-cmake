@@ -30,7 +30,7 @@
 #   POSSIBILITY OF SUCH DAMAGE.
 #
 
-[ "${TRACE}" = 'YES' -o "${MULLE_CMAKE_SOURCETREE_UPDATE_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+[ "${TRACE}" = 'YES' -o "${MULLE_CMAKE_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
 MULLE_EXECUTABLE_VERSION="0.20.1"
@@ -319,31 +319,57 @@ _emit_cmake_find_library()
    local header="$6"
    local indent="$7"
 
-   local libraries
+   local Release_libraries # sic
+   local Debug_libraries   # sic
    local i
    local quoted_names
+   local type
+   local name
+   local library_key
+   local types
 
    IFS=","; set -o noglob
    for i in ${names}
    do
-      r_concat "${quoted_names}" "\"${i}\""
+      # Split Release:curl into Release (type) and curl (name)
+      name=""
+      type=""
+
+      case "${i}" in
+         *:*)
+            name="${i#*:}"
+            type="${i%%:*}"
+         ;;
+      esac
+
+      name="${name:-$i}"
+      type="${type:-Release}"
+
+      r_add_unique_line "${types}" "${type}"
+      types="${RVAL}"
+
+      r_concat "${quoted_names}" "\"${name}\""
       quoted_names="${RVAL}"
+
+      # get appropriate libraries into local variable libraries
+      library_key="${type}_libraries"
+      libraries="${!library_key}"
 
       case "${preference}" in
          "static")
-            r_concat "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${i}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            r_concat "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
             libraries="${RVAL}"
          ;;
 
          "shared")
-            r_concat "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${i}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
+            r_concat "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${name}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
             libraries="${RVAL}"
          ;;
       esac
 
       # fallback to whatever linkage
-      r_concat "${libraries}" "${i}"
-      libraries="${RVAL}"
+      r_concat "${libraries}" "${name}"
+      printf -v "${library_key}" "%s" "${RVAL}"
    done
    IFS="${DEFAULT_IFS}"; set -o noglob
 
@@ -380,9 +406,48 @@ _emit_cmake_find_library()
 # Seems to fix a problem when old libs are in /usr/local/lib
 # TODO: maybenot use CMAKE_LIBRARY_PATH and CMAKE_FRAMEWORK_PATH then ?
 
-   cat <<EOF
+      cat  <<EOF
 ${indent}if( NOT ${identifier}_LIBRARY)
-${indent}   find_library( ${identifier}_LIBRARY NAMES ${libraries}${findoptions})
+EOF
+   # if ir's just the default emit a simple line
+   if [ "${types}" = "Release" ]
+   then
+      cat  <<EOF
+${indent}   find_library( ${identifier}_LIBRARY NAMES ${Release_libraries}${findoptions})
+EOF
+   else
+      local clause
+      #
+      # we have multiple lines for build types, so we produce a more elaborate
+      # find_library call sequence. But Release is always a fallback option!
+      #
+      set -o noglob
+      for type in ${types}
+      do
+         if [ "${type}" != "Release" ]
+         then
+            library_key="${type}_libraries"
+            libraries="${!library_key}"
+
+            cat  <<EOF
+${indent}   if(${clause} "\${CMAKE_BUILD_TYPE}" STREQUAL "${type}")
+${indent}      find_library( ${identifier}_LIBRARY NAMES ${libraries}${findoptions})
+${indent}   endif()
+EOF
+            clause=" NOT ${identifier}_LIBRARY AND"
+         fi
+      done
+      set +o noglob
+
+      # fallback Reelase
+      cat  <<EOF
+${indent}   if( NOT ${identifier}_LIBRARY)
+${indent}      find_library( ${identifier}_LIBRARY NAMES ${Release_libraries}${findoptions})
+${indent}   endif()
+EOF
+   fi
+
+      cat  <<EOF
 ${indent}   message( STATUS "${identifier}_LIBRARY is \${${identifier}_LIBRARY}")
 ${indent}   #
 ${indent}   # The order looks ascending, but due to the way this file is read
@@ -676,7 +741,7 @@ emit_cmake_dependency()
       esac
    fi
 
-   local addressname
+   local identifiername
    local identifier
    local filename
    local names
@@ -690,7 +755,7 @@ emit_cmake_dependency()
 
    # first of the names determines the identifier
    r_basename "${names%%,*}"
-   addressname="${RVAL}"
+   identifiername="${RVAL#*:}"
 
    if [ -z "${MULLE_CASE_SH}" ]
    then
@@ -698,7 +763,7 @@ emit_cmake_dependency()
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-case.sh" || return 1
    fi
 
-   r_tweaked_de_camel_case "${addressname}"
+   r_tweaked_de_camel_case "${identifiername}"
    identifier="`printf "%s" "${RVAL}" | tr -c 'a-zA-Z0-9' '_'`"
    identifier="`tr 'a-z' 'A-Z' <<< "${identifier}"`"
 
@@ -875,7 +940,8 @@ output_file()
       return $?
    fi
 
-   log_verbose "Writing ${C_RESET_BOLD}${filename}"
+   log_verbose "mulle-sourcetree-to-cmake writes ${C_RESET_BOLD}${filename}"
+
    r_dirname "${filename}"
    exekutor mkdir -p "${RVAL}" 2> /dev/null
    exekutor chmod a+w "${filename}"  2> /dev/null

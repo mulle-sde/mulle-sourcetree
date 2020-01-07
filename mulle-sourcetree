@@ -32,7 +32,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_SOURCETREE_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.20.1"
+MULLE_EXECUTABLE_VERSION="0.21.0"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -169,7 +169,8 @@ __check_sane_stash_dir()
    then
       if [ "${physical}" != "${MULLE_SOURCETREE_STASH_DIR}" ]
       then
-         fail "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) is traversing symlinks. Use \"${physical}\""
+         log_warning "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) is traversing symlinks. Will use \"${physical}\""
+         MULLE_SOURCETREE_STASH_DIR="${physical}"
       fi
    fi
 

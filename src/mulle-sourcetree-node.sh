@@ -390,6 +390,37 @@ _r_get_format_key()
    _formatstring="XX${remainder}" ## XX is used for skipping first two chars
 }
 
+#
+# specify indentfor ':' with parameter
+# use sed to shift the output to right or left
+#
+node_printf_format_help()
+{
+   local i="$1"
+
+   cat <<EOF
+   a        ${i}: address
+   b        ${i}: branch
+   b!       ${i}: evaluated branch
+   f        ${i}: fetchoptions
+   f!       ${i}: evaluated fetchoptions
+   i        ${i}: userinfo (e.g. aliases). You can influence the formatting
+            ${i}  with i={header,seperators}
+   m        ${i}: marks
+   n        ${i}: nodetype
+   n!       ${i}: evaluated nodetype
+   t        ${i}: tag
+   t!       ${i}: evaluated tag
+   u        ${i}: url
+   u!       ${i}: evaluated url
+   U        ${i}: url or address, if url is missing
+   U!       ${i}: evaluated url or address, if url is missing
+   v={name} ${i}: contents of environment variable
+   _        ${i}: uuid
+   \\n       ${i}: linefeed
+EOF
+}
+
 
 node_printf()
 {
@@ -419,21 +450,48 @@ node_printf()
       ;;
    esac
 
+   local evaledurl
+   local evalednodetype
+   local evaledbranch
+   local evaledtag
+   local evaledfetchoptions
+
+   eval printf -v evalednodetype "%s" "${nodetype}"
+   eval printf -v evaledbranch "%s" "${branch}"
+   eval printf -v evaledtag "%s" "${tag}"
+
+   MULLE_BRANCH="${evaledbranch}" \
+   MULLE_TAG="${evaledtag}"
+      eval printf -v evaledurl "%s" "${url}"
+
+   MULLE_BRANCH="${evaledbranch}" \
+   MULLE_TAG="${evaledtag}" \
+   MULLE_URL="${evaledurl}" \
+      eval  printf -v evaledfetchoptions "%s" "${fetchoptions}"
+
+   local _url
+   local _nodetype
+   local _branch
+   local _tag
+   local _fetchoptions
+
    case ",${mode}," in
       *,output_eval,*)
-         nodetype="`eval "echo \"${nodetype}\""`"
-         branch="`eval "echo \"${branch}\""`"
-         tag="`eval "echo \"${tag}\""`"
-         url="`MULLE_BRANCH="${branch}" MULLE_TAG="${tag}" eval "echo \"${url}\""`"
-         fetchoptions="`MULLE_BRANCH="${branch}" MULLE_TAG="${branch}" MULLE_URL="${url}" eval "printf \"%s\\\\\\\\n\" \"${fetchoptions}\""`"
+         _url="${evaledurl}"
+         _nodetype="${evalednodetype}"
+         _branch="${evaledbranch}"
+         _tag="${evaledtag}"
+         _fetchoptions="${evaledfetchoptions}"
+      ;;
+
+      *)
+         _url="${url}"
+         _nodetype="${nodetype}"
+         _branch="${branch}"
+         _tag="${tag}"
+         _fetchoptions="${fetchoptions}"
       ;;
    esac
-
-   local _url="${url}"
-   local _nodetype="${nodetype}"
-   local _branch="${branch}"
-   local _tag="${tag}"
-   local _fetchoptions="${fetchoptions}"
 
    local line
    local lf=$'\n'
@@ -457,10 +515,11 @@ node_printf()
             value="${_address}"
          ;;
 
+         # memP: ! before non ! for case order
          %b!*)
             switch="--branch"
-            value="`eval "echo \"${_branch}\""`"
-            formatstring="${formatstring:1}"
+            value="${evaledbranch}"
+            formatstring="${formatstring:1}" # for '!'
          ;;
 
          %b*)
@@ -470,7 +529,7 @@ node_printf()
 
          %f!*)
             switch="--fetchoptions"
-            value="`eval "echo \"${_fetchoptions}\""`"
+            value="${evaledfetchoptions}"
             formatstring="${formatstring:1}"
          ;;
 
@@ -523,6 +582,11 @@ node_printf()
             value="${_marks}"
          ;;
 
+         %n!)
+            switch="--nodetype"
+            value="${evalednodetype}"
+         ;;
+
          %n*)
             switch="--nodetype"
             value="${_nodetype}"
@@ -530,7 +594,7 @@ node_printf()
 
          %t!*)
             switch="--tag"
-            value="`eval "echo \"${_tag}\""`"
+            value="${evaledtag}"
             formatstring="${formatstring:1}"
          ;;
 
@@ -541,7 +605,7 @@ node_printf()
 
          %u!*)
             switch="--url"
-            value="`MULLE_BRANCH=$(eval "echo \"${_branch}\"") MULLE_TAG=$(eval "echo \"${_tag}\"") eval "echo \"${_url}\""`"
+            value="${evaledurl}"
             formatstring="${formatstring:1}"
          ;;
 
@@ -556,7 +620,7 @@ node_printf()
             then
                value="${_address}"
             else
-               value="`eval "echo \"${_url}\""`"
+               value="${evaledurl}"
             fi
             formatstring="${formatstring:1}"
          ;;
@@ -581,7 +645,7 @@ node_printf()
                formatstring="${_formatstring}"
                switch=""
 
-               value="`eval echo \$\{${key}\}`"
+               value="${!key}"
             else
                value="failed format"
             fi

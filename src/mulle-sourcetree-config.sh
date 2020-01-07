@@ -405,6 +405,9 @@ r_sourcetree_typeguess_node()
 
 
 #
+# enters
+#   _address: parameter given on cmdline as --address
+#
 # returns
 #
 #   _nodetype
@@ -419,6 +422,10 @@ _sourcetree_nameguess_node()
    local nodetype="$2"
    local url="$3"
 
+   local original_address
+
+   original_address="${_address}"
+
    r_sourcetree_typeguess_node "${input}" "${nodetype}" "${url}"
    _nodetype="${RVAL}"
 
@@ -428,8 +435,8 @@ _sourcetree_nameguess_node()
    fi
    _url="${url}"
 
-   log_debug "_url set to \"${_url}\""
-   log_debug "_address set to \"${_address}\""
+   log_debug "1) _url set to \"${_url}\""
+   log_debug "1) _address set to \"${_address}\""
 
    #
    # try to figure out if input is an _url
@@ -452,10 +459,10 @@ _sourcetree_nameguess_node()
       # must be an_url then
 
       _url="${input}"
-      _address=
+      _address="${original_address}"
 
-      log_debug "_url set to \"${_url}\""
-      log_debug "_address set to \"${_address}\""
+      log_debug "2) _url set to \"${_url}\""
+      log_debug "2) _address set to \"${_address}\""
    fi
 
    # url is set
@@ -466,23 +473,24 @@ _sourcetree_nameguess_node()
          _address="${_url}"
          _url=""
 
-         log_debug "_url set to \"${_url}\""
-         log_debug "_address set to \"${_address}\""
+         log_debug "3) _url set to \"${_url}\""
+         log_debug "3) _address set to \"${_address}\""
 
          log_fluff "Taken address \"${_address}\" from \"${_url}\""
          return
       fi
 
       r_sourcetree_guess_address "${_url}" "${_nodetype}"
-      _address="`eval "echo \"${RVAL}\""`"
-      log_debug "_url set to \"${_url}\""
-      log_debug "_address set to \"${_address}\""
+      # evaled
+      eval printf -v _address "%s" "${RVAL}"
+      log_debug "4) _url set to \"${_url}\""
+      log_debug "4) _address set to \"${_address}\""
 
       log_fluff "Guessed address \"${_address}\" from \"${_url}\""
    fi
 }
 
-
+# cmd
 sourcetree_nameguess_node()
 {
    log_entry "sourcetree_nameguess_node" "$@"
@@ -904,7 +912,7 @@ sourcetree_remove_node()
       then
          log_warning "A node \"${address}\" does not exist"
       fi
-      return 2  # also return non 0 , but lets's not be dramatic about it
+      return 4  # also return non 0 , but lets's not be dramatic about it
    fi
 
    cfg_remove_nodeline "${SOURCETREE_START}" "${address}"
@@ -933,7 +941,7 @@ sourcetree_remove_node_by_url()
       then
          log_warning "A node with URL \"${url}\" does not exist"
       fi
-      return 2  # also return non 0 , but lets's not be dramatic about it
+      return 4  # also return non 0 , but lets's not be dramatic about it
    fi
 
    cfg_remove_nodeline_by_url "${SOURCETREE_START}" "${url}"
@@ -1083,8 +1091,8 @@ _sourcetree_set_node()
 
       case "${key}" in
          branch|address|fetchoptions|marks|nodetype|tag|url|userinfo)
-            eval "_${key}"="'${value}'"
-            log_debug "Set ${key} to \"`eval echo \\\$_${key}`\""
+            printf -v "_${key}" "%s" "${value}"
+            log_debug "Set ${key} to \"${value}"
          ;;
 
          *)
@@ -1248,6 +1256,11 @@ sourcetree_get_node_by_url()
    _sourcetree_get_node "${nodeline}" "$@"
 }
 
+
+#
+# TODO: make this stringent no-- vs no-os-
+#       so we can scope this nicer
+#
 KNOWN_MARKS="\
 no-all-load
 no-build
@@ -1270,6 +1283,7 @@ no-os-mingw
 no-os-darwin
 no-os-freebsd
 no-os-linux
+no-os-windows
 no-public
 no-require
 no-set

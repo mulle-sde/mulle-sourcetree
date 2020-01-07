@@ -137,7 +137,7 @@ setup_demo_repos()
 run_dump()
 {
    local mode="$1"
-   local directory="$2"
+   local testdir="$2"
    local output="${3:-${mode}.dot}"
 
    run_mulle_sourcetree --${mode} dotdump > "${output}"
@@ -146,7 +146,7 @@ run_dump()
       fail "dotdump failed unexpectedly"
    fi
 
-   expect_content "${output}" "${directory}/${output}"
+   expect_content "${output}" "${testdir}/${output}"
    log_verbose "----- #${runs} PASSED -----"
    runs=$((runs + 1))
 }
@@ -154,18 +154,20 @@ run_dump()
 
 run_test1()
 {
+   local testdir="$1"
+
    if ! run_mulle_sourcetree -s add --nodetype git --url "file://${repos}/a" "root/a"
    then
       fail "add failed unexpectedly"
    fi
 
+   MULLE_SOURCETREE_STASH_DIRNAME="stashes"
+   export MULLE_SOURCETREE_STASH_DIRNAME
+
    if ! run_mulle_sourcetree -s --recurse update  # > /dev/null 2>&1
    then
       fail "update failed unexpectedly"
    fi
-
-   MULLE_SOURCETREE_STASH_DIRNAME="stashes"
-   export MULLE_SOURCETREE_STASH_DIRNAME
 
    run_mulle_sourcetree dotdump --output-html > /dev/null
    if [ $? -ne 0 ]
@@ -211,7 +213,7 @@ main()
       export MULLE_VIRTUAL_ROOT
 
       cd "${project}" &&
-      run_test1
+      run_test1 "${testdir}"
    ) || exit 1
 
    log_info "----- ALL PASSED -----"
