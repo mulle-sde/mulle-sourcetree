@@ -1796,15 +1796,15 @@ db_update_determine_share_filename()
          then
             r_basename "${database}"
             fail "\"${address}\" is not in root but in ($database).
-${C_INFO}This could mean that \"${address}\" is used in two project
-but shares the same UUIDs in the mulle-sourcetree configuration.
+${C_INFO}Try ${C_RESET_BOLD}mulle-sde clean tidy${C_INFO} first.
+If this doesn't help, it could mean that \"${address}\" is used in two projects
+but they use the same UUIDs in their mulle-sourcetree configurations.
 Check your uuids with:
 
    ${C_RESET_BOLD}mulle-sourcetree list -r --format \"%a;%_;%v={WALK_DATASOURCE}\\\\n\" \\
-      --output-no-indent --output-no-header --no-dedupe | sort -u${C_ERROR}
+      --output-no-indent --output-no-header --no-dedupe | sort -u${C_INFO}
 
-Try ${C_RESET_BOLD}mulle-sde clean tidy${C_ERROR} first (as always). Otherwise
-try this remedial action:${C_RESET_BOLD}
+Then try this remedial action:${C_RESET_BOLD}
    cd \"${MULLE_SOURCETREE_STASH_DIR}/${RVAL}\"
    mulle-sourcetree -N reuuid
    mulle-sourcetree -N reset"

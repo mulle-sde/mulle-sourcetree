@@ -256,7 +256,7 @@ ${C_RESET_BOLD}${evaledurl}${C_INFO}"
 
    eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
                        "${MULLE_TECHNICAL_FLAGS}" \
-                       "${opname}" \
+                    "${opname}" \
                        "${cmdoptions}" \
                        "${options}" \
                        "'${address}'"

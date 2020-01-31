@@ -242,6 +242,33 @@ _do_fetch_operation()
    r_mulle_fetch_eval_options
    options="${RVAL}"
 
+   #
+   # To inhibit the fetch of no-require dependencies, we check for
+   # an environment variable MULLE_SOURCETREE_<identifier>_FETCH
+   # Because of the no-require, this shoudln't abort the sync
+   # The net effect will be that this will not be part of the craft
+   #
+   local envvar
+
+   if [ -z "${MULLE_CASE_SH}" ]
+   then
+      # shellcheck source=mulle-case.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-case.sh"      || return 1
+   fi
+
+   r_basename "${_address}"
+   r_tweaked_de_camel_case "${RVAL}"
+   r_identifier "${RVAL}"
+   r_uppercase "${RVAL}"
+   envvar="MULLE_SOURCETREE_FETCH_${RVAL}"
+
+   log_fluff "Check \"${envvar}\" for \"${_address}\""
+   if [ "${!envvar}" = 'NO' ]
+   then
+      log_warning "${_address} not fetched as \"${envvar}\" is NO"
+      return 1
+   fi
+
    sourcetree_sync_operation "${opname}" "${options}" \
                                           "${_url}" \
                                           "${_address}" \
@@ -660,7 +687,7 @@ chickening out"
    then
       log_fluff "Previous destination \"${previousfilename}\" and \
 current destination \"${newfilename}\" do not exist."
-      echo "fetch"
+      r_add_line "${ACTIONS}" "fetch"
       return
    fi
 

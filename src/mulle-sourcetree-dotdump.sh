@@ -70,7 +70,7 @@ html_print_title()
    fontcolor="`html_escape "${fontcolor}"`"
    bgcolor="`html_escape "${bgcolor}"`"
 
-   echo "<TR><TD BGCOLOR=\"${bgcolor}\" COLSPAN=\"2\"><FONT COLOR=\"${fontcolor}\">${title}</FONT></TD></TR>"
+   echo "<TR><TD BGCOLOR=\"${bgcolor}\" COLSPAN=\"2\"><FONT COLOR=\"${fontcolor}\">${title:-&nbsp;}</FONT></TD></TR>"
 }
 
 
@@ -97,6 +97,7 @@ html_print_node()
 
    local identifier="$1"; shift
    local isshared="$1"; shift
+   local title="$1"; shift
 
    local url="$1"
    local address="$2"
@@ -123,7 +124,7 @@ html_print_node()
 
    bgcolor="lightgray"
    fontcolor="black"
-   shape="local"
+   shape="none"
 
    case "${nodetype}" in
       script)
@@ -152,10 +153,6 @@ html_print_node()
       ;;
    esac
 
-
-   # admittedly this is still a bit ungainly coded...
-   r_basename "${destination}"
-   title="${RVAL}"
 
    RVAL="<TABLE>"
    r_concat "${RVAL}" "`html_print_title "${title}" "${fontcolor}" "${bgcolor}"`"
@@ -458,7 +455,8 @@ walk_dotdump()
          then
             isglobalshared='YES'
             tmp="${destination#${MULLE_SOURCETREE_STASH_DIR}}"
-            destination="`filepath_concat '${MULLE_SOURCETREE_STASH_DIR}' "${tmp}"`"
+            r_filepath_concat '${MULLE_SOURCETREE_STASH_DIR}' "${tmp}"
+            destination="${RVAL}"
          fi
       fi
    fi
@@ -496,7 +494,7 @@ walk_dotdump()
          fi
       fi
 
-      # this if makes no sense but fixes a bug
+      # this seems to make no sense but fixes a bug
       if [ "${previdentifier}" != "${identifier}" ]
       then
          local relidentifier
@@ -504,10 +502,10 @@ walk_dotdump()
          relidentifier=
          if [ -z "${previdentifier}" ]
          then
-            if [ "${isglobalshared}" = 'NO' ]
-            then
+            # if [ "${isglobalshared}" = 'NO' ]
+            # then
                relidentifier="${ROOT_IDENTIFIER} -> ${identifier}"
-            fi
+            #fi
          else
             relidentifier="${previdentifier} -> ${identifier}"
          fi
@@ -549,8 +547,12 @@ walk_dotdump()
 
    if [ "${OPTION_OUTPUT_HTML}" = 'YES' ]
    then
+      r_basename "${destination}"
+      title="${RVAL}"
+
       html_print_node "${identifier}" \
                       "${isshared}"   \
+                      "${title}" \
                          "${url}" \
                          "${address}" \
                          "${branch}" \
@@ -587,12 +589,15 @@ emit_root()
 {
    log_entry "emit_root" "$@"
 
-   local name
+   local title
 
    if [ "${OPTION_OUTPUT_HTML}" = 'YES' ]
    then
+      title="${ROOT_IDENTIFIER#\"}"
+      title="${title%\"}"
       html_print_node "${ROOT_IDENTIFIER}" \
                       'NO' \
+                      "${title}" \
                            "${url}" \
                            "${PWD}" \
                            "" \
@@ -647,8 +652,12 @@ sourcetree_dotdump_body()
    local ALL_RELATIONSHIPS=
    local ALL_DIRECTORIES=
    local TOEMIT_DIRECTORIES=
-   local ROOT_IDENTIFIER="\"`basename -- "${PWD}"`\""
+   local ROOT_IDENTIFIER
 
+   r_basename "${PWD}"
+   ROOT_IDENTIFIER="\"${RVAL}\""
+
+   log_debug "[*] ROOT_IDENTIFIER='${ROOT_IDENTIFIER}'"
    log_debug "[*] ALL_DIRECTORIES='${ALL_DIRECTORIES}'"
    log_debug "[*] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
 

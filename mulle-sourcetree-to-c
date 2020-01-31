@@ -204,7 +204,8 @@ EOF
       *,no-require,*)
          local name
 
-         r_identifier "${address}"
+         r_tweaked_de_camel_case "${address}"
+         r_identifier "${RVAL}"
          r_uppercase "${RVAL}"
          name="${RVAL}"
 

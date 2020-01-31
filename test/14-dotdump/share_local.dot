@@ -2,6 +2,7 @@ digraph sourcetree
 {
    node [ shape="box"; style="filled" ]
 
+   "project" -> "${MULLE_SOURCETREE_STASH_DIR}" [ style="", label="" ]
    "${MULLE_SOURCETREE_STASH_DIR}" -> "${MULLE_SOURCETREE_STASH_DIR}/b" [ style="", label="" ]
    "${MULLE_SOURCETREE_STASH_DIR}/b" [ shape="folder", penwidth="2", color="maroon", style="" label="b"]
    "${MULLE_SOURCETREE_STASH_DIR}" -> "${MULLE_SOURCETREE_STASH_DIR}/d" [ style="", label="" ]
