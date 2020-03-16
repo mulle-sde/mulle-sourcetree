@@ -405,7 +405,7 @@ node_printf_format_help()
    f        ${i}: fetchoptions
    f!       ${i}: evaluated fetchoptions
    i        ${i}: userinfo (e.g. aliases). You can influence the formatting
-            ${i}  with i={header,seperators}
+            ${i}  with i={header,separators}
    m        ${i}: marks
    n        ${i}: nodetype
    n!       ${i}: evaluated nodetype
@@ -582,9 +582,10 @@ node_printf()
             value="${_marks}"
          ;;
 
-         %n!)
+         %n!*)
             switch="--nodetype"
             value="${evalednodetype}"
+            formatstring="${formatstring:1}"
          ;;
 
          %n*)

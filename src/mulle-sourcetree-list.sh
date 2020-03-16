@@ -42,6 +42,8 @@ Usage:
 
    List nodes in the sourcetree. You can restrict the nodes listed by
    nodetype and marks. The output can be formatted in printf like fashion.
+   You can also list as mulle-sourcetree shell commands, to copy parts of
+   the sourcetree to another project.
 
    This command only reads config files.
 EOF
@@ -72,10 +74,10 @@ Options:
    --format <format>        : supply a custom format (abfimntu_)
    --marks <value>          : specify marks to match (e.g. build)
    --no-dedupe              : don't remove what are considered duplicates
-   --nodetypes <value>      : node types to list (default: ALL)
+   --nodetype <value>       : node type to list, can be used multiple times
    --output-banner          : print a banner with config information
    --output-eval            : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
-   --output-format          : possible values (formatted, command, cmd2, raw)
+   --output-format <value>  : possible values (fmt, cmd, raw)
    --output-full            : show url and various fetch options
    --output-no-header       : suppress header in raw and default lists
    --output-no-indent       : suppress indentation on recursive list
@@ -284,12 +286,14 @@ r_sourcetree_augment_mode_with_output_options()
    esac
 
    case "${OPTION_DEDUPE_MODE}" in
-      address|address-filename|address-url|filename|nodeline|nodeline-no-uuid|none|url|url-filename)
+      address|address-filename|address-marks-filename|address-url|filename|\
+hacked-marks-nodeline-no-uuid|\
+linkorder|nodeline|nodeline-no-uuid|none|url|url-filename)
          r_comma_concat "${RVAL}" "dedupe-${OPTION_DEDUPE_MODE}"
       ;;
 
       *)
-         fail "Unknown dedupe mode.
+         fail "Unknown dedupe mode \"${OPTION_DEDUPE_MODE}\".
 ${C_INFO}Choose one of:
 ${C_RESET}   address address-filename address-url filename nodeline
              nodeline-no-uuid none url url-filename"
@@ -391,8 +395,9 @@ sourcetree_list_main()
    local OPTION_MARKS
    local OPTION_MARKS_QUALIFIER
    local OPTION_FORMAT='DEFAULT'
-   local OPTION_DEDUPE_MODE='nodeline-no-uuid'
+   local OPTION_DEDUPE_MODE='hacked-marks-nodeline-no-uuid'
    local OPTION_CONFIG_FILE='DEFAULT'
+   local OPTION_NO_OUTPUT_MARKS
 
    while [ $# -ne 0 ]
    do

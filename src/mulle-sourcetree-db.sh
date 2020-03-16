@@ -370,12 +370,23 @@ db_bury()
       return
    fi
 
-   [ -z "${SOURCETREE_DB_FILENAME_RELATIVE}" ] && internal_fail "SOURCETREE_DB_FILENAME_RELATIVE is empty"
+   if [ "${MULLE_SOURCETREE_GRAVEYARD_ENABLED:-YES}" = 'NO' ]
+   then
+      if [ -d "${filename}" ]
+      then
+         rmdir_safer  "${filename}"
+      else
+         remove_file_if_present "${filename}"
+      fi
+      return $?
+   fi
 
    #
    # protect from catastrophies
    #
    local project_dir
+
+   [ -z "${SOURCETREE_DB_FILENAME_RELATIVE}" ] && internal_fail "SOURCETREE_DB_FILENAME_RELATIVE is empty"
 
    r_simplified_absolutepath "${databasedir}/${SOURCETREE_DB_FILENAME_RELATIVE}"
    project_dir="${RVAL}"

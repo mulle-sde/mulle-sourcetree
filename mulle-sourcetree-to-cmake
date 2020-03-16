@@ -462,7 +462,7 @@ EOF
       *)
          cat <<EOF
 ${indent}      #
-${indent}      # Add to ${identifier}_LIBRARY list.
+${indent}      # Add to ${identifier}_LIBRARY to ${containername} list.
 ${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakeadd\`
 ${indent}      #
 ${indent}      set( ${containername}
@@ -943,7 +943,7 @@ output_file()
    log_verbose "mulle-sourcetree-to-cmake writes ${C_RESET_BOLD}${filename}"
 
    r_dirname "${filename}"
-   exekutor mkdir -p "${RVAL}" 2> /dev/null
+   mkdir_if_missing"${RVAL}"
    exekutor chmod a+w "${filename}"  2> /dev/null
    r_mkdir_parent_if_missing "${filename}"
    if redirect_exekutor "${filename}" printf "%s\n" "${text}"

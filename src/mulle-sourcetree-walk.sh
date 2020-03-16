@@ -260,12 +260,7 @@ _callback_nodetypes()
 
    local evalednodetype
 
-   evalednodetype="${nodetype}"
-   case "$1" in
-      *\$*)
-         eval printf -v evalednodetype "${nodetype}"
-      ;;
-   esac
+   eval printf -v evalednodetype "%s" "${nodetype}"
 
    nodetype_filter "${evalednodetype}" "$@"
 }
@@ -517,6 +512,8 @@ doesn't jive with permissions \"${filterpermissions}\""
 }
 
 
+
+
 #
 # 1 must visit
 # 0 check lineid
@@ -545,6 +542,17 @@ r_get_dedupe_lineid_from_node()
 
       *,dedupe-nodeline-no-uuid,*)
          RVAL="${_address};${_nodetype};${_marks};\
+${_url};${_branch};${_tag};${_fetchoptions};\
+${_raw_userinfo}"
+         return 0
+      ;;
+
+      *,dedupe-hacked-marks-nodeline-no-uuid,*)
+         #
+         # remove some marks which are inessential for dupes
+         #
+         r_sourcetree_remove_marks "${_marks}" "no-require"
+         RVAL="${_address};${_nodetype};${RVAL};\
 ${_url};${_branch};${_tag};${_fetchoptions};\
 ${_raw_userinfo}"
          return 0
@@ -1777,6 +1785,7 @@ as one string and use "
 
    case "${OPTION_DEDUPE_MODE}" in
       address|address-filename|address-marks-filename|address-url|filename|\
+hacked-marks-nodeline-no-uuid|\
 linkorder|nodeline|nodeline-no-uuid|none|url|url-filename)
          r_comma_concat "${mode}" "dedupe-${OPTION_DEDUPE_MODE}"
          mode="${RVAL}"

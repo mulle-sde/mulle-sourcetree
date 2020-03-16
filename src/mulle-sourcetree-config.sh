@@ -1258,11 +1258,12 @@ sourcetree_get_node_by_url()
 
 
 #
-# TODO: make this stringent no-- vs no-os-
+# TODO: make this more stringent maybe no-- vs no-os-
 #       so we can scope this nicer
-#
+#       no-static-link -> no-link-static
 KNOWN_MARKS="\
 no-all-load
+no-bequeath
 no-build
 no-cmakeadd
 no-cmakeinherit
@@ -1285,6 +1286,7 @@ no-os-freebsd
 no-os-linux
 no-os-windows
 no-public
+no-recurse
 no-require
 no-set
 no-singlephase

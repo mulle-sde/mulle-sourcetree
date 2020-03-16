@@ -43,7 +43,7 @@ r_sourcetree_guess_address()
 
    local evaledurl
 
-   evaledurl="`eval "echo \"${url}\""`"
+   eval printf -v evaledurl "%s" "${url}"
    if [ -z "${evaledurl}" ]
    then
       RVAL=
@@ -52,7 +52,7 @@ r_sourcetree_guess_address()
 
    local evalednodetype
 
-   evalednodetype="`eval "echo \"${nodetype}\""`"
+   eval printf -v evalednodetype "%s" "${nodetype}"
    if [ "${evalednodetype}" = "none" ]
    then
       RVAL="${url}"
@@ -80,7 +80,7 @@ r_sourcetree_guess_nodetype()
 
    local evaledurl
 
-   evaledurl="`eval "echo \"${url}\""`"
+   eval printf -v evaledurl "%s" "${url}"
    if [ -z "${evaledurl}" ]
    then
       RVAL=
@@ -122,6 +122,9 @@ sourcetree_sync_operation()
    local evaledbranch
    local evaledtag
    local evaledfetchoptions
+   local original_nodetype
+   local original_tag
+   local original_branch
 
    #
    # we use evaluated values
@@ -130,7 +133,35 @@ sourcetree_sync_operation()
    eval printf -v evaledtag      "%s" "${tag}"
    eval printf -v evaledbranch   "%s" "${branch}"
 
-   [ -z "${evalednodetype}" ] && fail "Nodetype \"${nodetype}\" evaluates to empty"
+
+   # we check how the values would be, if there are no variables
+   # replaced. to get the default value.
+
+   # original_nodetype="`eval env -i printf "%s" "${nodetype}"`"
+   original_tag="`env -i sh -c 'eval printf \"%s\" \"${tag}\"' `"
+   original_branch="`env -i sh -c 'eval printf \"%s\" \"${branch}\"' `"
+
+   # branch "suddenly" set ? then ignore tag
+   if [ -z "${original_branch}" -a ! -z "${evaledbranch}" ]
+   then
+      evaledtag=""
+   fi
+
+   # tag "suddenly" set ? then ignore branch
+   if [ -z "${original_tag}" -a ! -z "${evaledtag}" ]
+   then
+      evaledbranch=""
+   fi
+
+   #
+   # if the nodetype changes, we check that branch/tag are still useful
+   # archives prefer tag, git prefers branch/tag combination
+   #
+   case "${evalednodetype}" in
+      "")
+         fail "Nodetype \"${nodetype}\" evaluates to empty"
+      ;;
+   esac
 
    MULLE_BRANCH="${evaledbranch}" \
    MULLE_TAG="${evaledtag}"\

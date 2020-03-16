@@ -1,3 +1,13 @@
+## 0.21.0
+
+* improved dotdump command
+* fix share repositories being put to the graveyard too soon, which made syncs slower
+* rewrote wrapping code to also wrap the tag, which will be more used than the branch wrap, which still exists
+* sped up the walk a little
+* you can now use `MULLE_TAG_OR_BRANCH` to evaluate URLs
+* improved cmake `find_library` code emitter
+
+
 ### 0.20.1
 
 * make marks behave additive/subtractive when given as --marks to the add command

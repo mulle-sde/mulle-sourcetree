@@ -499,7 +499,7 @@ sourcetree_status()
    output="${RVAL}"
 
    local header
-   local seperator
+   local separator
 
    case ",${mode}," in
       *,output-header,*)
@@ -510,12 +510,12 @@ sourcetree_status()
          fi
          case ",${mode}," in
             *,output-separator,*)
-               seperator="-------;------;----------;------;--------"
+               separator="-------;------;----------;------;--------"
                if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
                then
-                  seperator="${seperator};--------;-------"
+                  separator="${separator};--------;-------"
                fi
-               r_add_line "${header}" "${seperator}"
+               r_add_line "${header}" "${separator}"
                header="${RVAL}"
             ;;
          esac
