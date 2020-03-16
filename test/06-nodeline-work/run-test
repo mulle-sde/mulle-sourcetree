@@ -64,10 +64,10 @@ run_test()
    log_verbose "----- #2 PASSED -----"
 
    (
-      do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;unknown" "flat" "/" "/"
+      do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;not_there" "flat" "/" "/"
    ) && fail "worked unexpectedly"
 
-   [ -f "ringo/star/VERSION" ]    && fail "_branch unknown should have wiped ringo/star/VERSION"
+   [ -f "ringo/star/VERSION" ]    && fail "branch not_there should have wiped ringo/star/VERSION"
    log_verbose "----- #3 PASSED -----"
 
    (

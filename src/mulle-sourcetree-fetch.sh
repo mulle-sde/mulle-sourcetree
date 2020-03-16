@@ -138,8 +138,8 @@ sourcetree_sync_operation()
    # replaced. to get the default value.
 
    # original_nodetype="`eval env -i printf "%s" "${nodetype}"`"
-   original_tag="`env -i sh -c 'eval printf \"%s\" \"${tag}\"' `"
-   original_branch="`env -i sh -c 'eval printf \"%s\" \"${branch}\"' `"
+   original_tag="`env -i sh -c "eval printf \"%s\" \"${tag}\"" `"
+   original_branch="`env -i sh -c "eval printf \"%s\" \"${branch}\"" `"
 
    # branch "suddenly" set ? then ignore tag
    if [ -z "${original_branch}" -a ! -z "${evaledbranch}" ]
