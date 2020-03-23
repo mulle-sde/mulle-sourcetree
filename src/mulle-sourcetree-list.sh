@@ -133,17 +133,17 @@ r_sourcetree_remove_marks()
    local nomarks="$2"
 
    RVAL=
-   set +f; IFS=","
+   set -o noglob; IFS=","
    for mark in ${marks}
    do
-      set +f; IFS="${DEFAULT_IFS}"
+      set +o noglob; IFS="${DEFAULT_IFS}"
 
       if ! nodemarks_contain "${nomarks}" "${mark}"
       then
          r_comma_concat "${RVAL}" "${mark}"
       fi
    done
-   set +f; IFS="${DEFAULT_IFS}"
+   set +o noglob; IFS="${DEFAULT_IFS}"
 }
 
 

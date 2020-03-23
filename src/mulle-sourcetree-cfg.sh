@@ -463,7 +463,6 @@ from \"${physdirectory}\" to \"${physceiling}\""
 }
 
 
-
 #
 # Return the directory, that we should be using for the following defer
 # possibilities. The returned directory is always a physical path
@@ -513,7 +512,7 @@ cfg_determine_working_directory()
    local found
 
    case "${defer}" in
-      NONE)
+      'NONE')
          if cfg_exists "${SOURCETREE_START}"
          then
             pwd -P
@@ -524,7 +523,7 @@ cfg_determine_working_directory()
          return 1
       ;;
 
-      NEAREST)
+      'NEAREST')
          if ! cfg_search_for_configfile "${physpwd}" "${ceiling}"
          then
             log_debug "No nearest config found or db found"
@@ -534,7 +533,7 @@ cfg_determine_working_directory()
       ;;
 
       # used for touching parent configs in a sourcetree
-      PARENT)
+      'PARENT')
          directory="`cfg_search_for_configfile "${physpwd}" "/"`"
          if [ $? -ne 0 ]
          then
@@ -563,7 +562,7 @@ cfg_determine_working_directory()
          return 1
       ;;
 
-      ROOT)
+      'ROOT')
          directory="`cfg_search_for_configfile "${physpwd}" "${ceiling}"`"
          if [ $? -ne 0 ]
          then
@@ -592,7 +591,7 @@ cfg_determine_working_directory()
          return 0
       ;;
 
-      VIRTUAL)
+      'VIRTUAL')
          directory="`cfg_search_for_configfile "/" "${ceiling}" `"
          if [ $? -ne 0 ]
          then
@@ -664,9 +663,9 @@ cfg_defer_if_needed()
 }
 
 
-cfg_absolute_filename()
+r_cfg_absolute_filename()
 {
-   log_entry "cfg_absolute_filename" "$@"
+   log_entry "r_cfg_absolute_filename" "$@"
 
    local config="$1"
    local address="$2"
@@ -691,9 +690,9 @@ cfg_absolute_filename()
    #  "${style}" != "share" -a
    if [ "${config#${MULLE_SOURCETREE_STASH_DIR}}" != "${config}" ]
    then
-      printf "%s\n" "${config}${address}"
+      RVAL="${config}${address}"
    else
-      printf "%s\n" "${MULLE_VIRTUAL_ROOT}${config}${address}"
+      RVAL="${MULLE_VIRTUAL_ROOT}${config}${address}"
    fi
 }
 
@@ -712,7 +711,7 @@ cfg_reuuid()
 
    [ -z "${nodelines}" ] && return 0
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob

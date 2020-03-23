@@ -422,6 +422,30 @@ EOF
 }
 
 
+#  local _evaledurl
+#  local _evalednodetype
+#  local _evaledbranch
+#  local _evaledtag
+#  local _evaledfetchoptions
+node_evaluate_values()
+{
+   log_entry "node_evaluate_values" "$@"
+
+   eval printf -v _evalednodetype "\"%s\"" "\"${_nodetype}\""
+   eval printf -v _evaledbranch   "\"%s\"" "\"${_branch}\""
+   eval printf -v _evaledtag      "\"%s\"" "\"${_tag}\""
+
+   MULLE_BRANCH="${_evaledbranch}" \
+   MULLE_TAG="${_evaledtag}"
+      eval printf -v _evaledurl "\"%s\"" "\"${_url}\""
+
+   MULLE_BRANCH="${_evaledbranch}" \
+   MULLE_TAG="${_evaledtag}" \
+   MULLE_URL="${_evaledurl}" \
+      eval  printf -v _evaledfetchoptions "\"%s\"" "\"${_fetchoptions}\""
+}
+
+
 node_printf()
 {
    log_entry "node_printf" "$@"
@@ -438,58 +462,33 @@ node_printf()
    r_get_formatstring "${mode}" "${formatstring}" "${sep}"
    formatstring="${RVAL}"
 
-   local url="${_url}"
-   local nodetype="${_nodetype}"
-   local branch="${_branch}"
-   local tag="${_tag}"
-   local fetchoptions="${_fetchoptions}"
-
    case ",${mode}," in
       *,no-indent,*)
          indent=""
       ;;
    esac
 
-   local evaledurl
-   local evalednodetype
-   local evaledbranch
-   local evaledtag
-   local evaledfetchoptions
+   local _evaledurl
+   local _evalednodetype
+   local _evaledbranch
+   local _evaledtag
+   local _evaledfetchoptions
 
-   eval printf -v evalednodetype "%s" "${nodetype}"
-   eval printf -v evaledbranch "%s" "${branch}"
-   eval printf -v evaledtag "%s" "${tag}"
+   node_evaluate_values
 
-   MULLE_BRANCH="${evaledbranch}" \
-   MULLE_TAG="${evaledtag}"
-      eval printf -v evaledurl "%s" "${url}"
-
-   MULLE_BRANCH="${evaledbranch}" \
-   MULLE_TAG="${evaledtag}" \
-   MULLE_URL="${evaledurl}" \
-      eval  printf -v evaledfetchoptions "%s" "${fetchoptions}"
-
-   local _url
-   local _nodetype
-   local _branch
-   local _tag
-   local _fetchoptions
+   local _url="${_url}"
+   local _nodetype="${_nodetype}"
+   local _branch="${_branch}"
+   local _tag="${_tag}"
+   local _fetchoptions="${_fetchoptions}"
 
    case ",${mode}," in
       *,output_eval,*)
-         _url="${evaledurl}"
-         _nodetype="${evalednodetype}"
-         _branch="${evaledbranch}"
-         _tag="${evaledtag}"
-         _fetchoptions="${evaledfetchoptions}"
-      ;;
-
-      *)
-         _url="${url}"
-         _nodetype="${nodetype}"
-         _branch="${branch}"
-         _tag="${tag}"
-         _fetchoptions="${fetchoptions}"
+         _url="${_evaledurl}"
+         _nodetype="${_evalednodetype}"
+         _branch="${_evaledbranch}"
+         _tag="${_evaledtag}"
+         _fetchoptions="${_evaledfetchoptions}"
       ;;
    esac
 
@@ -518,7 +517,7 @@ node_printf()
          # memP: ! before non ! for case order
          %b!*)
             switch="--branch"
-            value="${evaledbranch}"
+            value="${_evaledbranch}"
             formatstring="${formatstring:1}" # for '!'
          ;;
 
@@ -529,7 +528,7 @@ node_printf()
 
          %f!*)
             switch="--fetchoptions"
-            value="${evaledfetchoptions}"
+            value="${_evaledfetchoptions}"
             formatstring="${formatstring:1}"
          ;;
 
@@ -584,7 +583,7 @@ node_printf()
 
          %n!*)
             switch="--nodetype"
-            value="${evalednodetype}"
+            value="${_evalednodetype}"
             formatstring="${formatstring:1}"
          ;;
 
@@ -595,7 +594,7 @@ node_printf()
 
          %t!*)
             switch="--tag"
-            value="${evaledtag}"
+            value="${_evaledtag}"
             formatstring="${formatstring:1}"
          ;;
 
@@ -606,7 +605,7 @@ node_printf()
 
          %u!*)
             switch="--url"
-            value="${evaledurl}"
+            value="${_evaledurl}"
             formatstring="${formatstring:1}"
          ;;
 
@@ -621,7 +620,7 @@ node_printf()
             then
                value="${_address}"
             else
-               value="${evaledurl}"
+               value="${_evaledurl}"
             fi
             formatstring="${formatstring:1}"
          ;;

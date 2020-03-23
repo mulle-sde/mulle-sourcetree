@@ -64,7 +64,7 @@ sourcetree_basic_environment()
    if [ -z "${MULLE_VIRTUAL_ROOT}" ]
    then
       MULLE_VIRTUAL_ROOT="${MULLE_SOURCETREE_PROJECT_DIR}"
-      log_fluff "Sourcetree sets MULLE_VIRTUAL_ROOT to \"MULLE_VIRTUAL_ROOT\""
+      log_fluff "Sourcetree sets MULLE_VIRTUAL_ROOT to \"${MULLE_VIRTUAL_ROOT}\""
    fi
 
    # no share in sourcetree operation

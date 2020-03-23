@@ -260,7 +260,7 @@ _callback_nodetypes()
 
    local evalednodetype
 
-   eval printf -v evalednodetype "%s" "${nodetype}"
+   eval printf -v evalednodetype "\"%s\"" "\"${nodetype}\""
 
    nodetype_filter "${evalednodetype}" "$@"
 }
@@ -549,9 +549,9 @@ ${_raw_userinfo}"
 
       *,dedupe-hacked-marks-nodeline-no-uuid,*)
          #
-         # remove some marks which are inessential for dupes
-         #
-         r_sourcetree_remove_marks "${_marks}" "no-require"
+         # remove some marks which are inessential for link dupe detection
+         # with the '*' on the left side
+         r_sourcetree_remove_marks "${_marks}" "no-require,no-public,no-header"
          RVAL="${_address};${_nodetype};${RVAL};\
 ${_url};${_branch};${_tag};${_fetchoptions};\
 ${_raw_userinfo}"
@@ -1104,7 +1104,7 @@ _walk_nodelines()
          r_comma_concat "${mode}" 'breadth-flat'
          tmpmode="${RVAL}"
 
-         set -o noglob ; IFS=$'\n'
+         set -o noglob; IFS=$'\n'
          for nodeline in ${nodelines}
          do
             IFS="${DEFAULT_IFS}" ; set +o noglob
@@ -1121,11 +1121,12 @@ _walk_nodelines()
                           "${tmpmode}" \
                           "$@"
          done
+         IFS="${DEFAULT_IFS}" ; set +o noglob
       ;;
    esac
 
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
@@ -1171,7 +1172,7 @@ _walk_nodelines()
          r_comma_concat "${mode}" 'post-flat'
          tmpmode="${RVAL}"
 
-         set -o noglob ; IFS=$'\n'
+         set -o noglob; IFS=$'\n'
          for nodeline in ${nodelines}
          do
             IFS="${DEFAULT_IFS}" ; set +o noglob
@@ -1351,12 +1352,7 @@ yet, can not proceed"
 
    local nodelines
 
-   if ! nodelines="`db_fetch_all_nodelines "${datasource}" `"
-   then
-      log_warning "Database \"${datasource}\" does not exist"
-      return 0
-   fi
-
+   nodelines="`db_fetch_all_nodelines "${datasource}" `"  || exit 1
    if [ -z "${nodelines}" ]
    then
       log_fluff "Database \"${datasource}\" has no nodes"

@@ -468,7 +468,15 @@ _sourcetree_nameguess_node()
    # url is set
    if [ -z "${_address}" ]
    then
-      if [ "${_nodetype}" = "local" -o "${_nodetype}" = "none" ]
+      local _evaledurl
+      local _evalednodetype
+      local _evaledbranch
+      local _evaledtag
+      local _evaledfetchoptions
+
+      node_evaluate_values
+
+      if [ "${_evalednodetype}" = "local" -o "${_evalednodetype}" = "none" ]
       then
          _address="${_url}"
          _url=""
@@ -480,9 +488,9 @@ _sourcetree_nameguess_node()
          return
       fi
 
-      r_sourcetree_guess_address "${_url}" "${_nodetype}"
-      # evaled
-      eval printf -v _address "%s" "${RVAL}"
+      r_sourcetree_guess_address "${_evaledurl}" "${_evalednodetype}"
+      _address="${RVAL}"
+
       log_debug "4) _url set to \"${_url}\""
       log_debug "4) _address set to \"${_address}\""
 
@@ -1092,7 +1100,7 @@ _sourcetree_set_node()
       case "${key}" in
          branch|address|fetchoptions|marks|nodetype|tag|url|userinfo)
             printf -v "_${key}" "%s" "${value}"
-            log_debug "Set ${key} to \"${value}"
+            log_verbose "Setting ${key} to \"${value}\"  for \"${_address}\""
          ;;
 
          *)

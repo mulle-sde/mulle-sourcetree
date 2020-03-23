@@ -307,7 +307,7 @@ emit_c_header()
 
    local dependency
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for header in ${headers}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob

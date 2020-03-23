@@ -623,7 +623,7 @@ emit_remaining_directories()
    local identifier
    local name
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for identifier in ${directories}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob

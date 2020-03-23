@@ -229,7 +229,7 @@ nodeline_remove()
 
    local nodeline
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob
@@ -276,7 +276,7 @@ _r_nodeline_find()
       esac
    fi
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob
@@ -369,7 +369,7 @@ nodeline_has_duplicate()
    local address="$2"
    local uuid="$3"
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob

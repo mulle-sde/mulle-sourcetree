@@ -162,12 +162,12 @@ output_craftorder()
    then
       local line
 
-      IFS=$'\n'; set -f
+      set -o noglob; IFS=$'\n'
       for line in ${collection}
       do
          eval "echo \"${line}\""
       done
-      IFS="${DEFAULT_IFS}"; set +f
+      set +o noglob; IFS="${DEFAULT_IFS}"
    else
       printf "%s\n" "${collection}"
    fi
@@ -319,7 +319,7 @@ sourcetree_craftorder_main()
    local collection
    local lines
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for filename in ${_craftorder_collection}
    do
       r_escaped_sed_pattern "${filename}"

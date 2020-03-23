@@ -36,26 +36,14 @@ r_sourcetree_guess_address()
 {
    log_entry "r_sourcetree_guess_address" "$@"
 
-   local url="$1"
-   local nodetype="${2:-local}"
+   local evaledurl="$1"
+   local evalednodetype="${2:-local}"
 
-   [ -z "${url}" ] && fail "URL is empty"
+   [ -z "${evaledurl}" ] && fail "URL is empty"
 
-   local evaledurl
-
-   eval printf -v evaledurl "%s" "${url}"
-   if [ -z "${evaledurl}" ]
-   then
-      RVAL=
-      return 1
-   fi
-
-   local evalednodetype
-
-   eval printf -v evalednodetype "%s" "${nodetype}"
    if [ "${evalednodetype}" = "none" ]
    then
-      RVAL="${url}"
+      RVAL="${evaledurl}"
       return 0
    fi
 
@@ -78,10 +66,10 @@ r_sourcetree_guess_nodetype()
 
    [ -z "${url}" ] && fail "URL is empty"
 
-   local evaledurl
+   local _evaledurl
 
-   eval printf -v evaledurl "%s" "${url}"
-   if [ -z "${evaledurl}" ]
+   eval printf -v _evaledurl "\"%s\"" "\"${url}\""
+   if [ -z "${_evaledurl}" ]
    then
       RVAL=
       return 1
@@ -90,10 +78,10 @@ r_sourcetree_guess_nodetype()
    RVAL="`${MULLE_FETCH:-mulle-fetch} \
                   ${MULLE_TECHNICAL_FLAGS} \
                typeguess \
-                  "${evaledurl}"`" || return 1
+                  "${_evaledurl}"`" || return 1
 
    log_fluff "${MULLE_FETCH:-mulle-fetch} determined \"${RVAL}\" as \
-nodetype from url ($evaledurl)"
+nodetype from url ($_evaledurl)"
    return 0
 }
 
@@ -107,137 +95,134 @@ sourcetree_sync_operation()
 
    [ -z "${opname}" ] && internal_fail "opname is empty"
 
-   local url="$3"
-   local address="$4"
-   local branch="$5"
-   local tag="$6"
-   local nodetype="$7"
-   local fetchoptions="$8"
+   local _url="$3"
+   local _address="$4"
+   local _branch="$5"
+   local _tag="$6"
+   local _nodetype="$7"
+   local _fetchoptions="$8"
 
-   [ -z "${address}" ] && fail "Address is empty"
-   [ -z "${url}" ] && fail "URL is empty"
+   [ -z "${_address}" ] && fail "Address is empty"
+   [ -z "${_url}" ] && fail "URL is empty"
 
    local rval
-   local evaledurl
-   local evaledbranch
-   local evaledtag
-   local evaledfetchoptions
    local original_nodetype
    local original_tag
    local original_branch
 
-   #
-   # we use evaluated values
-   #
-   eval printf -v evalednodetype "%s" "${nodetype}"
-   eval printf -v evaledtag      "%s" "${tag}"
-   eval printf -v evaledbranch   "%s" "${branch}"
+   local _evaledurl
+   local _evalednodetype
+   local _evaledbranch
+   local _evaledtag
+   local _evaledfetchoptions
+
+   node_evaluate_values
 
 
    # we check how the values would be, if there are no variables
    # replaced. to get the default value.
 
-   # original_nodetype="`eval env -i printf "%s" "${nodetype}"`"
-   original_tag="`env -i sh -c "eval printf \"%s\" \"${tag}\"" `"
-   original_branch="`env -i sh -c "eval printf \"%s\" \"${branch}\"" `"
+   # original_nodetype="`eval env -i printf "%s" "${_nodetype}"`"
+   original_tag="`env -i sh -c "eval printf \"%s\" \"${_tag}\"" `"
+   original_branch="`env -i sh -c "eval printf \"%s\" \"${_branch}\"" `"
 
    # branch "suddenly" set ? then ignore tag
-   if [ -z "${original_branch}" -a ! -z "${evaledbranch}" ]
+   if [ -z "${original_branch}" -a ! -z "${_evaledbranch}" ]
    then
-      evaledtag=""
+      _evaledtag=""
    fi
 
    # tag "suddenly" set ? then ignore branch
-   if [ -z "${original_tag}" -a ! -z "${evaledtag}" ]
+   if [ -z "${original_tag}" -a ! -z "${_evaledtag}" ]
    then
-      evaledbranch=""
+      _evaledbranch=""
    fi
 
    #
    # if the nodetype changes, we check that branch/tag are still useful
    # archives prefer tag, git prefers branch/tag combination
    #
-   case "${evalednodetype}" in
+   case "${_evalednodetype}" in
       "")
-         fail "Nodetype \"${nodetype}\" evaluates to empty"
+         fail "Nodetype \"${_nodetype}\" evaluates to empty"
       ;;
    esac
 
-   MULLE_BRANCH="${evaledbranch}" \
-   MULLE_TAG="${evaledtag}"\
-   MULLE_TAG_OR_BRANCH="${evaledtag:-${evaledbranch}}" \
-      eval printf -v evaledurl "%s" "${url}"
+   MULLE_BRANCH="${_evaledbranch}" \
+   MULLE_TAG="${_evaledtag}"\
+   MULLE_TAG_OR_BRANCH="${_evaledtag:-${_evaledbranch}}" \
+      eval printf -v _evaledurl "\"%s\"" "\"${_url}\""
 
-   [ -z "${evaledurl}" ] && fail "URL \"${url}\" evaluates to empty"
+   [ -z "${_evaledurl}" ] && fail "URL \"${_url}\" evaluates to empty"
 
    #
    # If a tag is specified, we can - for some hosts - do filtering
    # like >= 1.0.5. This is done by mulle-fetch though. We also use
    # it to "compose" the url from the tag
    #
-   if [ ! -z "${evaledtag}" ]
+   if [ ! -z "${_evaledtag}" ]
    then
-      evaledurl="`exekutor "${MULLE_FETCH:-mulle-fetch}" \
+      _evaledurl="`exekutor "${MULLE_FETCH:-mulle-fetch}" \
                           ${MULLE_TECHNICAL_FLAGS} \
                     "filter" \
-                        --scm "${evalednodetype}" \
-                        "${evaledtag}" \
-                        "${evaledurl}" `" || exit 1
+                        --scm "${_evalednodetype}" \
+                        "${_evaledtag}" \
+                        "${_evaledurl}" `" || exit 1
 
-      [ -z "${evaledurl}" ] && internal_fail "URL \"${url}\" returned as empty"
+      [ -z "${_evaledurl}" ] && internal_fail "URL \"${_url}\" returned as empty"
 
       #
       # hackish, used for git scm really
       #
-      case "${evaledurl}" in
+      case "${_evaledurl}" in
          *'##'*)
-            evaledtag="${evaledurl#*##}"
-            evaledurl="${evaledurl%##*}"
+            _evaledtag="${_evaledurl#*##}"
+            _evaledurl="${_evaledurl%##*}"
          ;;
       esac
    fi
 
-   MULLE_BRANCH="${evaledbranch}" \
-   MULLE_TAG="${evaledtag}" \
-   MULLE_TAG_OR_BRANCH="${evaledtag:-${evaledbranch}}" \
-   MULLE_URL="${evaledurl}" \
-      eval  printf -v evaledfetchoptions "%s" "${fetchoptions}"
+   MULLE_BRANCH="${_evaledbranch}" \
+   MULLE_TAG="${_evaledtag}" \
+   MULLE_TAG_OR_BRANCH="${_evaledtag:-${_evaledbranch}}" \
+   MULLE_URL="${_evaledurl}" \
+      eval  printf -v _evaledfetchoptions "%s" "${_fetchoptions}"
 
    local cmdoptions
 
-   if [ ! -z "${evaledtag}" ]
+   if [ ! -z "${_evaledtag}" ]
    then
-      r_concat "${cmdoptions}" "--tag '${evaledtag}'"
+      r_concat "${cmdoptions}" "--tag '${_evaledtag}'"
       cmdoptions="${RVAL}"
    fi
-   if [ ! -z "${evaledbranch}" ]
+   if [ ! -z "${_evaledbranch}" ]
    then
-      r_concat "${cmdoptions}" "--branch '${evaledbranch}'"
+      r_concat "${cmdoptions}" "--branch '${_evaledbranch}'"
       cmdoptions="${RVAL}"
    fi
-   if [ ! -z "${evaledfetchoptions}" ]
+   if [ ! -z "${_evaledfetchoptions}" ]
    then
-      r_concat "${cmdoptions}" "--cmdoptions '${evaledfetchoptions}'"
+      r_concat "${cmdoptions}" "--cmdoptions '${_evaledfetchoptions}'"
       cmdoptions="${RVAL}"
    fi
 
-   case "${evalednodetype}" in
+   case "${_evalednodetype}" in
       file)
          # does not implement local search
       ;;
 
       *)
          log_fluff "Looking for local copy of \
-${C_RESET_BOLD}${evaledurl}${C_INFO}"
+${C_RESET_BOLD}${_evaledurl}${C_INFO}"
 
          local localurl
          local localnodetype
          local cmd2options
 
          cmd2options="${cmdoptions}"
-         if [ ! -z "${evaledurl}" ]
+         if [ ! -z "${_evaledurl}" ]
          then
-            r_concat "${cmdoptions}" "--url '${evaledurl}'"
+            r_concat "${cmdoptions}" "--url '${_evaledurl}'"
             cmd2options="${RVAL}"
          fi
 
@@ -245,10 +230,10 @@ ${C_RESET_BOLD}${evaledurl}${C_INFO}"
                                           "${MULLE_TECHNICAL_FLAGS}" \
                                        "search-local" \
                                           "${cmd2options}" \
-                                          "'${address}'" )"
+                                          "'${_address}'" )"
          if [ ! -z "${localurl}" ]
          then
-            evaledurl="${localurl}"
+            _evaledurl="${localurl}"
             log_verbose "Local URL found \"${localurl}\""
 
             r_sourcetree_guess_nodetype "${localurl}"
@@ -268,20 +253,20 @@ ${C_RESET_BOLD}${evaledurl}${C_INFO}"
    esac
 
    #
-   # evaledurl may have changed due to local lookup
+   # _evaledurl may have changed due to local lookup
    #
-   if [ ! -z "${evaledurl}" ]
+   if [ ! -z "${_evaledurl}" ]
    then
-      r_concat "${cmdoptions}" "--url '${evaledurl}'"
+      r_concat "${cmdoptions}" "--url '${_evaledurl}'"
       cmdoptions="${RVAL}"
    fi
 
    #
    # evalednodetype may have changed due to local lookup
    #
-   if [ ! -z "${evalednodetype}" ]
+   if [ ! -z "${_evalednodetype}" ]
    then
-      r_concat "--source '${evalednodetype}'" "${cmdoptions}"
+      r_concat "--source '${_evalednodetype}'" "${cmdoptions}"
       cmdoptions="${RVAL}"
    fi
 
@@ -290,7 +275,7 @@ ${C_RESET_BOLD}${evaledurl}${C_INFO}"
                     "${opname}" \
                        "${cmdoptions}" \
                        "${options}" \
-                       "'${address}'"
+                       "'${_address}'"
 }
 
 
@@ -341,6 +326,12 @@ r_sourcetree_list_operations()
 sourcetree_fetch_initialize()
 {
    log_entry "sourcetree_fetch_initialize" "$@"
+
+   if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-node.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
+   fi
 
    if [ -z "${MULLE_SOURCETREE_NODELINE_SH}" ]
    then

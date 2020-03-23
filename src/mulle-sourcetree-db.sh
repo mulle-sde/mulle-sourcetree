@@ -447,6 +447,9 @@ db_bury()
 }
 
 
+#
+# the owner is unused it seems
+#
 __db_parse_dbentry()
 {
    log_entry "__db_parse_dbentry" "$@"
@@ -477,18 +480,18 @@ evaledurl : ${evaledurl}"
 }
 
 
-__db_recall_dbentry()
-{
-   log_entry "__db_recall_dbentry" "$@"
-
-   local database="$1"
-   local uuid="$2"
-
-   local dbentry
-
-   dbentry="`db_recall "${database}" "${uuid}"`"
-   __db_parse_dbentry "${dbentry}"
-}
+# __db_recall_dbentry()
+# {
+#    log_entry "__db_recall_dbentry" "$@"
+#
+#    local database="$1"
+#    local uuid="$2"
+#
+#    local dbentry
+#
+#    dbentry="`db_recall "${database}" "${uuid}"`"
+#    __db_parse_dbentry "${dbentry}"
+# }
 
 
 db_get_rootdir()
@@ -521,25 +524,25 @@ db_fetch_nodeline_for_uuid()
 }
 
 
-db_fetch_owner_for_uuid()
-{
-   log_entry "db_fetch_owner_for_uuid" "$@"
-
-   local database
-   local databasedir
-   local uuid
-
-   __db_common_databasedir_uuid "$@"
-
-   local dbfilepath
-
-   if ! __db_common_dbfilepath "${databasedir}" "${uuid}"
-   then
-      return 1
-   fi
-
-   _db_owner < "${dbfilepath}"
-}
+#db_fetch_owner_for_uuid()
+#{
+#   log_entry "db_fetch_owner_for_uuid" "$@"
+#
+#   local database
+#   local databasedir
+#   local uuid
+#
+#   __db_common_databasedir_uuid "$@"
+#
+#   local dbfilepath
+#
+#   if ! __db_common_dbfilepath "${databasedir}" "${uuid}"
+#   then
+#      return 1
+#   fi
+#
+#   _db_owner < "${dbfilepath}"
+#}
 
 
 db_fetch_filename_for_uuid()
@@ -606,16 +609,19 @@ db_fetch_all_nodelines()
 
    __db_common_databasedir "$@"
 
-   (
-      shopt -s nullglob
+   local i
 
-      local i
+#   if shopt -poq noglob
+#   then
+#      internal_fail "noglob should be off"
+#   fi
 
-      for i in "${databasedir}"/*
-      do
-         head -1 "${i}"
-      done
-   )
+   shopt -s nullglob
+   for i in "${databasedir}"/*
+   do
+      head -1 "${i}" || internal_fail "malformed file $i"
+   done
+   shopt -u nullglob
 }
 
 
@@ -1269,32 +1275,6 @@ _db_set_default_mode()
 }
 
 
-db_get_node_filename()
-{
-   local address="$1"
-   local nodetype="$2"
-   local marks="$3"
-
-   # in share mode, modify address by prepending MULLE_SOURCETREE_STASH_DIR
-   # to basename
-   if [ "${SOURCETREE_MODE}" = "share" ]
-   then
-      case ",${marks}," in
-         *,no-share,*)
-         ;;
-
-         *)
-            printf "%s\n" "${MULLE_SOURCETREE_STASH_DIR}/${address##*/}"
-            return
-         ;;
-      esac
-   fi
-
-   printf "%s\n" "${filename}"
-}
-
-
-
 db_has_graveyard()
 {
    log_entry "db_has_graveyard" "$@"
@@ -1441,6 +1421,9 @@ db_is_filename_inuse()
 }
 
 
+#
+# you pass in the owner (database) for the nodes to zombify
+#
 db_zombify_nodes()
 {
    log_entry "db_zombify_nodes" "$@"
@@ -1450,19 +1433,35 @@ db_zombify_nodes()
 
    __db_common_databasedir "$@"
 
-   log_fluff "Marking all nodes as zombies for now (${databasedir})"
+   local owner="$2"
+
+   log_fluff "Marking nodes of owner "${owner:-all}" as zombies for now (${databasedir})"
 
    local zombiedir
 
    __db_zombiedir "${databasedir}"
    rmdir_safer "${zombiedir}"
 
-   if dir_has_files "${databasedir}" f
-   then
-      mkdir_if_missing "${zombiedir}"
+   local filename
+   local set
 
-      exekutor cp ${OPTION_COPYMOVEFLAGS} "${databasedir}/"* "${zombiedir}/" >&2
-   fi
+   shopt -s nullglob
+   for filename in "${databasedir}"/*
+   do
+      if [ ! -z "${owner}" -a "`_db_owner < "${filename}"`" != "${owner}" ]
+      then
+         continue
+      fi
+
+      if [ -z "${set}" ]
+      then
+         mkdir_if_missing "${zombiedir}"
+         set='YES'
+      fi
+
+      exekutor cp ${OPTION_COPYMOVEFLAGS} "${filename}" "${zombiedir}/"  || exit 1
+   done
+   shopt -u nullglob
 }
 
 
@@ -1500,7 +1499,7 @@ db_zombify_nodelines()
    local _userinfo
    local _uuid
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob
@@ -1672,7 +1671,7 @@ db_bury_zombie_nodelines()
 
    local zombiefile
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob
@@ -1688,6 +1687,7 @@ db_bury_zombie_nodelines()
          fi
       fi
    done
+   IFS="${DEFAULT_IFS}"; set +o noglob
 
    # will be done later
    # rmdir_if_empty "${zombiedir}"
@@ -1739,26 +1739,6 @@ db_state_description()
    printf "%s\n" "${dbstate}"
 }
 
-
-db_fetch_uuid_for_url()
-{
-   log_entry "db_fetch_uuid_for_url" "$@"
-
-   local database="$1"
-   local url="$2"
-
-   local evaledurl
-
-   evaledurl="`eval "echo \"${url}\""`"
-   if [ -z "${evaledurl}" ]
-   then
-      fail "URL \"${url}\" evaluates to empty"
-   fi
-
-   db_fetch_uuid_for_evaledurl "${database}" "${evaledurl}"
-}
-
-
 #
 # Figure out the filename for a node marked share (which is the default)
 # It is assumed, that this particular node is not in the database yet.
@@ -1770,30 +1750,26 @@ db_fetch_uuid_for_url()
 #  1: error
 #  3: skip this node
 #
-db_update_determine_share_filename()
+r_db_update_determine_share_filename()
 {
-   log_entry "db_update_determine_share_filename" "$@"
+   log_entry "r_db_update_determine_share_filename" "$@"
 
    local database="$1"
    local address="$2"
-   local url="$3"
-   local nodetype="$4"
+   local evaledurl="$3"
+   local evalednodetype="$4"
    local marks="$5"
    local uuid="$6"
 
    local filename
-   local evaledurl
 
-   eval printf -v evaledurl "%s" "${url}"
-   if [ -z "${evaledurl}" ]
-   then
-      fail "URL \"${url}\" evaluates to empty"
-   fi
+   [ -z "${evaledurl}" ] && internal_fail "URL \"${evaledurl}\" is empty"
 
    #
    # Check root database if there is not the same URL in there already.
    #
    local otheruuid
+   local check
 
    otheruuid="`db_fetch_uuid_for_evaledurl "/" "${evaledurl}"`"
    if [ ! -z "${otheruuid}" ]
@@ -1805,31 +1781,56 @@ db_update_determine_share_filename()
       then
          if [ "${database}" != "/" ]
          then
-            r_basename "${database}"
-            fail "\"${address}\" is not in root but in ($database).
-${C_INFO}Try ${C_RESET_BOLD}mulle-sde clean tidy${C_INFO} first.
-If this doesn't help, it could mean that \"${address}\" is used in two projects
-but they use the same UUIDs in their mulle-sourcetree configurations.
-Check your uuids with:
+            # we don't know if we got here because of a db actually being
+            # read or just from a config, in which case this would be ok
+            check="`db_fetch_uuid_for_evaledurl "${database}" "${evaledurl}"`"
+            if [ ! -z "${check}" ]  # kosher
+            then
+               if [ "${check}" != "${uuid}" ]
+               then
+                  internal_fail "Database corrupted. mulle-sde clean tidy everything."
+               fi
 
-   ${C_RESET_BOLD}mulle-sourcetree list -r --format \"%a;%_;%v={WALK_DATASOURCE}\\\\n\" \\
+               r_basename "${database}"
+               log_error "Shared \"${address}\" is not in the root database but in database ($database).
+${C_INFO}This can sometimes happen, if you added a dependency, that depends on
+a dependency that a previous dependency also depends on. This can trip up the
+database order, so try ${C_RESET_BOLD}mulle-sde clean tidy${C_INFO} first.
+
+This could also mean, that \"${address}\" is simultaneously marked as 'share'
+and 'no-share' by two projects. And then it could also mean that
+\"${address}\" is used by two projects, but they reuse the same UUIDs in their
+mulle-sourcetree configurations.
+
+Check your uuids and marks with:
+
+   ${C_RESET_BOLD}mulle-sourcetree list -r --format \"%a;%_;%v={WALK_DATASOURCE};%m\\\\n\" \\
       --output-no-indent --output-no-header --no-dedupe | sort -u${C_INFO}
 
-Then try this remedial action:${C_RESET_BOLD}
+If you see a project using a 'no-share' marked  \"${address}\" and another
+without the mark, mark the second one 'no-share' (if possible).
+
+If you see duplicate UUIDs try this remedial action in the problematic
+project:${C_RESET_BOLD}
    cd \"${MULLE_SOURCETREE_STASH_DIR}/${RVAL}\"
    mulle-sourcetree -N reuuid
    mulle-sourcetree -N reset"
-         # ok
+               return 1
+            fi
          fi
       else
 #         [ "${database}" = "/" ] &&
 #            internal_fail "Unexpected root database for \"${address}\". \
 #But uuids differ \"${uuid}\" vs \"${otheruuid}\""
 
-         log_fluff "The \"${url}\" is already used in root. So skip it."
-         return 3
+         if [ "${database}" != "/" ]
+         then
+            log_fluff "The \"${evaledurl}\" is already used in root. So skip it."
+            return 3
+         fi
       fi
    fi
+
    log_debug "Use root database for share node \"${address}\""
 
    #
@@ -1837,10 +1838,10 @@ Then try this remedial action:${C_RESET_BOLD}
    # marked "local". We do not check the whole tree for another local node
    # though.
    #
-   if [ "${nodetype}" = "local" ]
+   if [ "${evalednodetype}" = "local" ]
    then
       log_debug "Use local minion node \"${address}\" as share"
-      printf "%s\n" "${address}"
+      RVAL="${address}"
       return 0
    fi
 
@@ -1854,7 +1855,7 @@ Then try this remedial action:${C_RESET_BOLD}
 
    log_debug "Set filename to share directory \"${filename}\" for \"${name}\""
 
-   printf "%s\n" "${filename}"
+   RVAL="${filename}"
    return 0
 }
 

@@ -171,7 +171,7 @@ sourcetree_clean()
 
    local protected
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for line in ${commands}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob
@@ -187,7 +187,7 @@ sourcetree_clean()
 
    local uuid
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for line in ${commands}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob

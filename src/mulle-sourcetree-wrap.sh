@@ -74,7 +74,7 @@ sourcetree_wrap_config()
    local url_identifier
    local tag_identifier
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob

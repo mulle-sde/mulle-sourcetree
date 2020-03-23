@@ -123,7 +123,7 @@ _check_descend_nodeline()
    #
    if [ -L "${filename}" ]
    then
-      # it's a symlink. We assume that the this project is setup itself
+      # it's a symlink. We assume that this project has set up itself
       # properly, we also don't really want to write our .mulle-sourcetree
       # database into it.
       #
@@ -149,6 +149,9 @@ a directory"
 
       return 1
    fi
+
+   log_debug "Recurse as its a directory"
+   return 0
 }
 
 
@@ -200,9 +203,12 @@ _descend_db_nodeline()
    fi
 
    local _style
+   local rval
 
    _check_descend_nodeline "${_filename}"
-   if _style_for_${style} $?
+   rval=$?
+
+   if _style_for_${style} ${rval}
    then
       _sourcetree_sync_${_style} "${_config}" "${_database}"
    fi
@@ -275,13 +281,14 @@ _descend_db_nodelines()
    local database="$2"
 
    local nodelines
-   nodelines="`db_fetch_all_nodelines "${database}" `"
 
-   log_fluff "Continuing with a \"${style}\" update \"${nodelines}\" of db \"${database:-ROOT}\" ($PWD)"
+   nodelines="`db_fetch_all_nodelines "${database}" `" || exit 1
+
+   log_fluff "Continuing with a \"${style}\" update nodelines  \"${nodelines}\" of db \"${database:-ROOT}\" ($PWD)"
 
    local nodeline
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
@@ -332,11 +339,11 @@ _descend_config_nodelines()
       return
    fi
 
-   log_fluff "Continuing with a \"${style}\" update \"${nodelines}\" of config \"${config:-ROOT}\" ($PWD)"
+   log_fluff "Continuing with a \"${style}\" update nodelines \"${nodelines}\" of config \"${config:-ROOT}\" ($PWD)"
 
    local nodeline
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
@@ -451,7 +458,7 @@ _sourcetree_sync_only_share()
 
    local nodeline
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
@@ -523,6 +530,7 @@ _sourcetree_sync_share()
    local database="$2"
 
    local style
+
    style="share"
 
    if ! find_line "${UPDATED}" "${config}"
@@ -553,13 +561,12 @@ _sourcetree_sync_share()
    db_set_dbtype "${database}" "${style}"
    db_set_update "${database}"
 
-   #
-   # TODO: there is seemingly a bug here, were I believe share libraries
-   # overwrite the shared root
-   #
    db_set_shareddir "${database}" "${MULLE_SOURCETREE_STASH_DIR}"
 
-   db_zombify_nodelines "${database}" "${nodelines}"
+   #
+   # do a flat update first and remove what we don't have
+   #
+   db_zombify_nodes "${database}"
 
    do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}" || return 1
 
@@ -578,13 +585,15 @@ _sourcetree_sync_share()
    then
       local before
 
-      before="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`"
+      log_fluff "Root updates additions if any"
+
+      before="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`"  || exit 1
 
       _descend_db_nodelines "share" "${config}" "${database}" || return 1
 
       while :
       do
-         nodelines="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`"
+         nodelines="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`" || exit 1
          if [ "${nodelines}" = "${before}" ]
          then
             break
@@ -758,7 +767,7 @@ _sourcetree_sync_flat()
    db_set_update "${database}"
 
    db_clear_shareddir "${database}"
-   db_zombify_nodelines "${database}" "${nodelines}"
+   db_zombify_nodes "${database}"
 
    do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}" || return 1
 

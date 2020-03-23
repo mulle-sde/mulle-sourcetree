@@ -1024,46 +1024,36 @@ __update_perform_actions()
 }
 
 
-_memorize_in_db()
+_memorize_node_in_db()
 {
-   log_entry "_memorize_in_db" "$@"
+   log_entry "_memorize_node_in_db" "$@"
 
-   local nodeline="$1"
-   local evaledurl="$2"
-   local config="$3"
-   local database="$4"
-   local filename="$5"
+   local config="$1"
+   local database="$2"
+   local filename="$3"
+   local filename="$3"
+#
+   local nodeline
 
-   [ -z "${filename}" ] && internal_fail "Memorizing non existing file"
+   r_node_to_nodeline
+   nodeline="${RVAL}"
 
-   log_debug "${C_INFO}Remembering ${nodeline} located at \"${filename}\"..."
+   local _evaledurl
+   local _evalednodetype
+   local _evaledbranch
+   local _evaledtag
+   local _evaledfetchoptions
+
+   node_evaluate_values
+
+   log_debug "${C_INFO}Remembering ${_address} located at \"${filename}\"..."
 
    db_memorize "${database}" \
                "${_uuid}" \
                "${nodeline}" \
                "${config}" \
                "${filename}" \
-               "${evaledurl}"
-}
-
-
-_memorize_nodeline_in_db()
-{
-   log_entry "_memorize_nodeline_in_db" "$@"
-
-#
-#   config="$1"
-#   database="$2"
-#   filename="$3"
-#
-   local nodeline
-   local evaledurl
-
-   r_node_to_nodeline
-   nodeline="${RVAL}"
-
-   eval printf -v evaledurl "$%s" "${_url}"
-   _memorize_in_db "${nodeline}" "${evaledurl}" "$@"
+               "${_evaledurl}"
 }
 
 
@@ -1142,14 +1132,23 @@ do_actions_with_nodeline()
 
    if [ ! -z "${_url}" -a "${style}" = "share" ] && nodemarks_contain "${_marks}" "share"
    then
-      filename="`db_update_determine_share_filename "${database}" \
-                                                    "${_address%#*}" \
-                                                    "${_url}" \
-                                                    "${_nodetype}" \
-                                                    "${_marks}" \
-                                                    "${_uuid}" `"
+      local _evaledurl
+      local _evalednodetype
+      local _evaledbranch
+      local _evaledtag
+      local _evaledfetchoptions
+
+      node_evaluate_values
+
+      r_db_update_determine_share_filename "${database}" \
+                                           "${_address%#*}" \
+                                           "${_evaledurl}" \
+                                           "${_evalednodetype}" \
+                                           "${_marks}" \
+                                           "${_uuid}"
       case $? in
          0)
+            filename="${RVAL}"
          ;;
 
          1)
@@ -1167,7 +1166,8 @@ do_actions_with_nodeline()
       esac
       database="/"   # see only-share if you're tempted to change this
    else
-      filename="`cfg_absolute_filename "${config}" "${_address%#*}" "${style}"`"
+      r_cfg_absolute_filename "${config}" "${_address%#*}" "${style}"
+      filename="${RVAL}"
    fi
 
    r_simplified_absolutepath "${filename}"
@@ -1216,7 +1216,7 @@ but it is not required"
          filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${filename}" `"
       fi
 
-      _memorize_nodeline_in_db "${config}" "${database}" "${filename}"
+      _memorize_node_in_db "${config}" "${database}" "${filename}"
       return
    fi
 
@@ -1228,7 +1228,7 @@ but it is not required"
    # due to symlinking is unpredictable.
    #
    # If we are in share mode, then the database is "/" here, so no worries
-   # We don't have to check the owner, because the _uuid will be different
+   # We don't have to check the owner, because the uuid will be different
    # to ours. (since it's coming from a different config)
    # Search for absolute path, as that is what gets stored into the DB
    #
@@ -1248,7 +1248,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
          fi
          log_debug "Filename \"${filename}\" belongs to this node"
       else
-         log_debug "Zombie filename \"${filename}\" gets usurped"
+         log_debug "Prepare zombie \"${filename}\" for resurrection"
       fi
    else
       log_debug "Filename \"${filename}\" is not yet in \"${database}\""
@@ -1291,7 +1291,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    then
       log_debug "Skip update of \"${filename}\" since it's a symlink."
 
-      _memorize_nodeline_in_db "${config}" "${database}" "${filename}"
+      _memorize_node_in_db "${config}" "${database}" "${filename}"
 
       db_set_uuid_alive "${database}" "${_uuid}"
 
@@ -1332,7 +1332,7 @@ nodetype        : ${_nodetype}"
          filename="${RVAL}"
       fi
 
-      _memorize_nodeline_in_db "${config}" "${database}" "${filename}"
+      _memorize_node_in_db "${config}" "${database}" "${filename}"
 
       if [ "${OPTION_FIX}" != 'NO' ] && [ -d "${filename}" ]
       then
@@ -1369,7 +1369,7 @@ do_actions_with_nodelines()
 
    local nodeline
 
-   set -o noglob ; IFS=$'\n'
+   set -o noglob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
@@ -1394,6 +1394,11 @@ sourcetree_action_initialize()
    then
       # shellcheck source=mulle-sourcetree-db.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
+   fi
+   if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-node.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
    fi
    if [ -z "${MULLE_SOURCETREE_FETCH_SH}" ]
    then
