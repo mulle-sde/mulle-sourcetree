@@ -556,6 +556,12 @@ nodeline_printf_header()
             dash="-----"
          ;;
 
+         %n!*)
+            name="nodetype"
+            dash="--------"
+            formatstring="${formatstring:1}"
+         ;;
+
          %n*)
             name="nodetype"
             dash="--------"

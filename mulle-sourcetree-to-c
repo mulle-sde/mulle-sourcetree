@@ -182,6 +182,7 @@ _emit_c_include()
 // How to tweak the following ${address} #$include
 //    remove:          \`mulle-sourcetree mark ${address} no-header\`
 //    rename:          \`mulle-sourcetree mark ${address} set include whatever.h\`
+//    toggle #import:  \`mulle-sourcetree mark ${address} [no-]import\`
 //    toggle public:   \`mulle-sourcetree mark ${address} [no-]public\`
 //    toggle optional: \`mulle-sourcetree mark ${address} [no-]require\`
 //    remove for os:   \`mulle-sourcetree mark ${address} no-os-<osname>\`
