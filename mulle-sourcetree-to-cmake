@@ -355,6 +355,12 @@ _emit_cmake_find_library()
       library_key="${type}_libraries"
       libraries="${!library_key}"
 
+      #
+      # /usr/local/lib is apparently NOT part of system path, and therefore
+      # can not be easily excluded with NO_CMAKE_SYSTEM_PATH. Which is bad,
+      # if we are searching for static first, but the test really wants the
+      # dynamic local one
+      #
       case "${preference}" in
          "static")
             r_concat "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
@@ -533,7 +539,11 @@ _emit_cmake_dependency()
 
    local findoptions
 
-   findoptions=" NO_CMAKE_SYSTEM_PATH"
+   #
+   # w/o NO_SYSTEM_ENVIRONMENT_PATH, cmake picks up libraries from
+   # /usr/local/lib
+   #
+   findoptions=" NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH"
 
    case ",${marks}," in
       *,no-suppress-system-path,*)
