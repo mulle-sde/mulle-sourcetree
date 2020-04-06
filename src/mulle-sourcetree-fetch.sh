@@ -68,7 +68,8 @@ r_sourcetree_guess_nodetype()
 
    local _evaledurl
 
-   eval printf -v _evaledurl "\"%s\"" "\"${url}\""
+   r_expanded_string "${url}"
+   _evaledurl="${RVAL}"
    if [ -z "${_evaledurl}" ]
    then
       RVAL=
@@ -151,7 +152,8 @@ sourcetree_sync_operation()
    MULLE_BRANCH="${_evaledbranch}" \
    MULLE_TAG="${_evaledtag}"\
    MULLE_TAG_OR_BRANCH="${_evaledtag:-${_evaledbranch}}" \
-      eval printf -v _evaledurl "\"%s\"" "\"${_url}\""
+      r_expanded_string "${_url}"
+      _evaledurl="${RVAL}"
 
    [ -z "${_evaledurl}" ] && fail "URL \"${_url}\" evaluates to empty"
 
@@ -186,7 +188,8 @@ sourcetree_sync_operation()
    MULLE_TAG="${_evaledtag}" \
    MULLE_TAG_OR_BRANCH="${_evaledtag:-${_evaledbranch}}" \
    MULLE_URL="${_evaledurl}" \
-      eval  printf -v _evaledfetchoptions "%s" "${_fetchoptions}"
+      r_expanded_string "${_fetchoptions}"
+      _evaledfetchoptions="${RVAL}"
 
    local cmdoptions
 

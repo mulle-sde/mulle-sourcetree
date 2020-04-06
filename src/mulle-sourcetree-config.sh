@@ -37,7 +37,7 @@ MULLE_SOURCETREE_COMMANDS_SH="included"
 #
 
 SOURCETREE_COMMON_OPTIONS="\
-   --branch <value>       : branch to use instead of the default (git)
+   --branch <value>       : branch to use instead of the default for git
    --address <dir>        : address of the node in the project
    --fetchoptions <value> : options for mulle-fetch --options
    --marks <value>        : sourcetree marks of the node like no-require

@@ -757,7 +757,8 @@ in URL related info."
       # need to eval it...
       local evalednodetype
 
-      eval printf -v evalednodetype "%s" "${_nodetype}"
+      r_expanded_string "${_nodetype}"
+      evalednodetype="${RVAL}"
       r_sourcetree_list_operations "${evalednodetype}"
       available="${RVAL}" || return 1
    fi

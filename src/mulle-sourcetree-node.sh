@@ -431,18 +431,23 @@ node_evaluate_values()
 {
    log_entry "node_evaluate_values" "$@"
 
-   eval printf -v _evalednodetype "\"%s\"" "\"${_nodetype}\""
-   eval printf -v _evaledbranch   "\"%s\"" "\"${_branch}\""
-   eval printf -v _evaledtag      "\"%s\"" "\"${_tag}\""
+   r_expanded_string "${_nodetype}"
+   _evalednodetype="${RVAL}"
+   r_expanded_string "${_branch}"
+   _evaledbranch="${RVAL}"
+   r_expanded_string "${_tag}"
+   _evaledtag="${RVAL}"
 
    MULLE_BRANCH="${_evaledbranch}" \
    MULLE_TAG="${_evaledtag}"
-      eval printf -v _evaledurl "\"%s\"" "\"${_url}\""
+      r_expanded_string "${_url}"
+      _evaledurl="${RVAL}"
 
    MULLE_BRANCH="${_evaledbranch}" \
    MULLE_TAG="${_evaledtag}" \
    MULLE_URL="${_evaledurl}" \
-      eval  printf -v _evaledfetchoptions "\"%s\"" "\"${_fetchoptions}\""
+      r_expanded_string "${_fetchoptions}"
+      _evaledfetchoptions="${RVAL}"
 }
 
 

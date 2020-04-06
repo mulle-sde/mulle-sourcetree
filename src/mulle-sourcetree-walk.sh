@@ -260,7 +260,8 @@ _callback_nodetypes()
 
    local evalednodetype
 
-   eval printf -v evalednodetype "\"%s\"" "\"${nodetype}\""
+   r_expanded_string "${nodetype}"
+   evalednodetype="${RVAL}"
 
    nodetype_filter "${evalednodetype}" "$@"
 }
