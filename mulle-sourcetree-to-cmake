@@ -275,7 +275,7 @@ EOF
       *)
          cat <<EOF
 ${indent}      #
-${indent}      # Search for "objc-loader.inc" in include directory.
+${indent}      # Search for "MulleObjCLoader+<name>.h" in include directory.
 ${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakeloader\`
 ${indent}      #
 ${indent}      if( NOT NO_INHERIT_OBJC_LOADERS)
