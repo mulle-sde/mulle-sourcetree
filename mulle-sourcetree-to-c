@@ -32,7 +32,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_C_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.21.1"
+MULLE_EXECUTABLE_VERSION="0.22.0"
 
 
 usage()
@@ -430,7 +430,7 @@ c_include()
       ;;
 
       "")
-         MULLE_SOURCETREE_TO_C_INCLUDE_FILE="${PROJECT_SOURCE_DIR}/_${projectname}-include.h"
+         MULLE_SOURCETREE_TO_C_INCLUDE_FILE="${PROJECT_SOURCE_DIR}/reflect/_${projectname}-include.h"
       ;;
    esac
 
@@ -493,7 +493,7 @@ objc_import()
       ;;
 
       "")
-         MULLE_SOURCETREE_TO_C_IMPORT_FILE="${PROJECT_SOURCE_DIR}/_${projectname}-import.h"
+         MULLE_SOURCETREE_TO_C_IMPORT_FILE="${PROJECT_SOURCE_DIR}/reflect/_${projectname}-import.h"
       ;;
    esac
 
@@ -561,7 +561,7 @@ c_include_private()
       ;;
 
       "")
-         MULLE_SOURCETREE_TO_C_PRIVATEINCLUDE_FILE="${PROJECT_SOURCE_DIR}/_${projectname}-include-private.h"
+         MULLE_SOURCETREE_TO_C_PRIVATEINCLUDE_FILE="${PROJECT_SOURCE_DIR}/reflect/_${projectname}-include-private.h"
       ;;
    esac
 
@@ -625,7 +625,7 @@ objc_import_private()
 
 
       "")
-         MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE="${PROJECT_SOURCE_DIR}/_${projectname}-import-private.h"
+         MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE="${PROJECT_SOURCE_DIR}/reflect/_${projectname}-import-private.h"
       ;;
    esac
 

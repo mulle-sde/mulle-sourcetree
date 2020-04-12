@@ -1,3 +1,8 @@
+## 0.22.0
+
+* **the default reflection output directory is now cmake/reflect and src/reflect instead of cmake/ and src/**
+
+
 ## 0.21.0
 
 * improved dotdump command
