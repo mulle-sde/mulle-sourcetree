@@ -70,8 +70,11 @@ sourcetree_basic_environment()
    # no share in sourcetree operation
    # MULLE_SOURCETREE_SHARE_DIR="${MULLE_SOURCETREE_PROJECT_DIR}/.mulle/share/sourcetree"
 
-   eval `( cd "${MULLE_SOURCETREE_PROJECT_DIR}" && mulle-env --search-as-is mulle-tool-env sourcetree )` || exit 1
-
+   #
+   # we don't want to "climb out" of MULLE_SOURCETREE_PROJECT_DIR so
+   # use --search-here
+   #
+   eval `( cd "${MULLE_SOURCETREE_PROJECT_DIR}" && mulle-env ${MULLE_TECHNICAL_FLAGS} --search-here mulle-tool-env sourcetree )` || exit 1
 
    SOURCETREE_CONFIG_FILENAME="${MULLE_SOURCETREE_ETC_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
    if [ -z "${SOURCETREE_FIX_FILENAME}" ]
@@ -85,6 +88,15 @@ sourcetree_basic_environment()
             SOURCETREE_FIX_FILENAME="${MULLE_SOURCETREE_VAR_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}fix"
          ;;
       esac
+   fi
+
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
+   then
+      log_trace2 "MULLE_SOURCETREE_PROJECT_DIR: ${MULLE_SOURCETREE_PROJECT_DIR}"
+      log_trace2 "SOURCETREE_CONFIG_FILENAME:   ${SOURCETREE_CONFIG_FILENAME}"
+      log_trace2 "MULLE_SOURCETREE_ETC_DIR:     ${MULLE_SOURCETREE_ETC_DIR}"
+      log_trace2 "MULLE_SOURCETREE_VAR_DIR:     ${MULLE_SOURCETREE_VAR_DIR}"
+      log_trace2 "MULLE_SOURCETREE_SHARE_DIR:   ${MULLE_SOURCETREE_SHARE_DIR}"
    fi
 }
 
@@ -113,8 +125,6 @@ Use -e if this is desired."
    #
    # our db is specific to a host
    #
-
-
    [ -z "${MULLE_SOURCETREE_PROJECT_DIR}" ] && internal_fail "MULLE_SOURCETREE_PROJECT_DIR is empty"
 
    # for testing let it be overrideable

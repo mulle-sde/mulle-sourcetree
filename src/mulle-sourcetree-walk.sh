@@ -1601,10 +1601,6 @@ sourcetree_walk_main()
             OPTION_WALK_LEVEL_ZERO=$((OPTION_WALK_LEVEL_ZERO - 1))
          ;;
 
-         --no-bequeath)
-            OPTION_BEQUEATH='NO'
-         ;;
-
          --dedupe|--dedupe-mode)
             [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
             shift
@@ -1798,6 +1794,12 @@ ${C_RESET}   address address-filename address-marks-filename address-url
 ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
    esac
 
+   # this usually adhere to the no-bequeath flags unless set
+   if [ "${OPTION_BEQUEATH}" = 'YES' ]
+   then
+      r_comma_concat "${mode}" "bequeath"
+      mode="${RVAL}"
+   fi
    if [ "${OPTION_LENIENT}" = 'YES' ]
    then
       r_comma_concat "${mode}" "lenient"
