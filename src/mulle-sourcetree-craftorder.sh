@@ -181,6 +181,7 @@ sourcetree_craftorder_main()
    local OPTION_PRINT_ENV='YES'
    local OPTION_CALLBACK
    local OPTION_ABSOLUTE='NO'
+   local OUTPUT_BEQUEATH='NO'
    local OUTPUT_MARKS='YES'
    local OUTPUT_DIRECTION='FORWARD'
    local OUTPUT_RAW_USERINFO='NO'
@@ -223,6 +224,14 @@ sourcetree_craftorder_main()
             callbackscript="_cb_${randomstring}_${input#function}"
             OPTION_CALLBACK="`echo ${callbackscript%%(*}`"
             eval "function ${callbackscript}" || fail "Callback \"${input}\" could not be parsed"
+         ;;
+
+         --bequeath)
+            OPTION_BEQUEATH="YES"
+         ;;
+
+         --no-bequeath)
+            OPTION_BEQUEATH="NO"
          ;;
 
          --no-print-env)
@@ -277,7 +286,11 @@ sourcetree_craftorder_main()
       r_comma_concat "${mode}" "backwards"
       mode="${RVAL}"
    fi
-
+   if [ "${OPTION_BEQUEATH}" = 'NO' ]
+   then
+      r_comma_concat "${mode}" "no-bequeath"
+      mode="${RVAL}"
+   fi
 
    local _craftorder_collection
 

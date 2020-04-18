@@ -1,3 +1,9 @@
+### 0.22.1
+
+* add bequeath/no-bequeath to craftorder
+* actually use bequeath mode in the walker code
+* **the default reflection output directory is now cmake/reflect and src/reflect instead of cmake/ and src/**
+
 ## 0.22.0
 
 * **the default reflection output directory is now cmake/reflect and src/reflect instead of cmake/ and src/**
