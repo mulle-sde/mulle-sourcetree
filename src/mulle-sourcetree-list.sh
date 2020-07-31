@@ -83,7 +83,7 @@ Options:
    --output-no-indent       : suppress indentation on recursive list
    --output-no-marks <list> : suppress output of certain marks (comma sep)
    --output-no-separator    : suppress separator line if header is printed
-   --qualifier <value>      : specify marks qualifier
+   --qualifier <value>      : specify marks qualifier (see \`walk\` command)
 EOF
   exit 1
 }
@@ -177,15 +177,35 @@ list_walk_callback()
       _marks="${RVAL}"
    fi
 
-   if [ "${_nodetype}" != 'none' ] && find_line "${DUPLICATES}" "${_address}"
-   then
-      log_fluff "Duplicate: ${_nodeline}"
-      node_printf "${_mode}" "${formatstring}" "${cmdline}" "*${WALK_INDENT# }"
-   else
-      r_add_line "${DUPLICATES}" "${_address}"
-      DUPLICATES="${RVAL}"
+   local indent
 
-      node_printf "${_mode}" "${formatstring}" "${cmdline}" "${WALK_INDENT}"
+   if [ "${OPTION_OUTPUT_INDENT}" != 'NO' ]
+   then
+      indent="${WALK_INDENT}"
+   fi
+
+   if nodemarks_contain "${_marks}" "no-bequeath"
+   then
+      if [ "${OPTION_OUTPUT_INDENT}" != 'NO' ]
+      then
+         indent="-${WALK_INDENT# }"
+      fi
+      node_printf "${_mode}" "${formatstring}" "${cmdline}" "${indent}"
+   else
+      if [ "${_nodetype}" != 'none' ] && find_line "${DUPLICATES}" "${_address}"
+      then
+         if [ "${OPTION_OUTPUT_INDENT}" != 'NO' ]
+         then
+            indent="*${WALK_INDENT# }"
+         fi
+         log_fluff "Duplicate: ${_nodeline}"
+         node_printf "${_mode}" "${formatstring}" "${cmdline}" "${indent}"
+      else
+         r_add_line "${DUPLICATES}" "${_address}"
+         DUPLICATES="${RVAL}"
+
+         node_printf "${_mode}" "${formatstring}" "${cmdline}" "${indent}"
+      fi
    fi
 }
 
@@ -452,15 +472,18 @@ sourcetree_list_main()
                cmd|command)
                   OPTION_OUTPUT_FULL='YES'
                   OPTION_OUTPUT_FORMAT="CMD"
-               ;;
+                  OPTION_OUTPUT_INDENT='NO'
+            ;;
 
                cmd2|command2)
                   OPTION_OUTPUT_FULL='YES'
                   OPTION_OUTPUT_FORMAT="CMD2"
+                  OPTION_OUTPUT_INDENT='NO'
                ;;
 
                raw|csv)
                  OPTION_OUTPUT_FORMAT="RAW"
+                 OPTION_OUTPUT_INDENT='NO'
                ;;
 
                *)

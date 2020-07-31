@@ -714,11 +714,11 @@ node_printf()
       ;;
 
       *,output_raw,*)
-         rexekutor printf "${indent}%s" "${line}" | sed 's/;$//g'
+         rexekutor printf "%s%s" "${indent}" "${line}" | sed 's/;$//g'
       ;;
 
       *)
-         rexekutor printf "${indent}%s" "${line}"
+         rexekutor printf "%s%s" "${indent}" "${line}"
       ;;
    esac
 }

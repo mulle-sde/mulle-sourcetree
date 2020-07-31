@@ -429,7 +429,7 @@ c_include()
          text_h="${RVAL}"
       ;;
 
-      "")
+      *)
          MULLE_SOURCETREE_TO_C_INCLUDE_FILE="${PROJECT_SOURCE_DIR}/reflect/_${projectname}-include.h"
       ;;
    esac
@@ -492,7 +492,7 @@ objc_import()
          text_h="${RVAL}"
       ;;
 
-      "")
+      *)
          MULLE_SOURCETREE_TO_C_IMPORT_FILE="${PROJECT_SOURCE_DIR}/reflect/_${projectname}-import.h"
       ;;
    esac
@@ -560,7 +560,7 @@ c_include_private()
          text_h="${RVAL}"
       ;;
 
-      "")
+      *)
          MULLE_SOURCETREE_TO_C_PRIVATEINCLUDE_FILE="${PROJECT_SOURCE_DIR}/reflect/_${projectname}-include-private.h"
       ;;
    esac
@@ -624,7 +624,7 @@ objc_import_private()
       ;;
 
 
-      "")
+      *)
          MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE="${PROJECT_SOURCE_DIR}/reflect/_${projectname}-import-private.h"
       ;;
    esac

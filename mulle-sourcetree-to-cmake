@@ -869,19 +869,28 @@ emit_cmake_dependencies()
 }
 
 
-emit_dependency_subproject()
+emit_dependency_or_subproject()
 {
-   log_entry "emit_dependency_subproject" "$@"
+   log_entry "emit_dependency_or_subproject" "$@"
 
    local dependency
    local header
+   local qualifier
+
+   qualifier="\
+MATCHES dependency AND \
+MATCHES header AND \
+( \
+   MATCHES no-link OR \
+   MATCHES no-actual-link \
+)"
 
    header="`exekutor "${MULLE_SOURCETREE}" -V \
                            ${MULLE_TECHNICAL_FLAGS} \
-                           list \
+                        list \
                               --bequeath \
                               --format '%a;%m;%i={aliases,,};%i={include,,}\n' \
-                              --marks 'dependency,header,no-link' \
+                              --qualifier "${qualifier}" \
                               --output-format raw \
                               --no-output-header`" || return 1
    emit_cmake_dependencies "_emit_cmake_header_only" \
@@ -889,12 +898,18 @@ emit_dependency_subproject()
                            "${header}" \
                            "no-header"
 
+   qualifier="\
+MATCHES dependency AND \
+MATCHES link AND \
+MATCHES actual-link \
+"
+
    dependency="`exekutor "${MULLE_SOURCETREE}" -V \
-                           ${MULLE_TECHNICAL_FLAGS} \
+                              ${MULLE_TECHNICAL_FLAGS} \
                            list \
                               --bequeath \
                               --format '%a;%m;%i={aliases,,};%i={include,,}\n' \
-                              --marks 'dependency,link' \
+                              --qualifier "${qualifier}" \
                               --output-format raw \
                               --no-output-header`" || return 1
 
@@ -912,31 +927,50 @@ emit_library()
    local library
    local header
 
-   header="`exekutor "${MULLE_SDE}" \
-                        ${MULLE_TECHNICAL_FLAGS} \
-                        library list \
-                           --marks header,no-link \
-                           -- \
+   local qualifier
+
+   qualifier="\
+MATCHES header AND \
+MATCHES no-dependency AND \
+MATCHES no-fs AND \
+( \
+   MATCHES no-link OR \
+   MATCHES no-actual-link \
+)"
+
+   header="`exekutor "${MULLE_SOURCETREE}" -V \
+                           ${MULLE_TECHNICAL_FLAGS} \
+                        list \
                            --bequeath \
+                           --format '%a;%m;%i={aliases,,};%i={include,,}\n' \
+                           --qualifier "${qualifier}" \
                            --output-format raw \
-                           --output-no-header`" || return 1
+                           --no-output-header`" || return 1
+
    emit_cmake_dependencies "_emit_cmake_header_only" \
                            "HEADER_ONLY_LIBRARIES" \
                            "${header}"
 
-   library="`exekutor "${MULLE_SDE}" \
-                        ${MULLE_TECHNICAL_FLAGS} \
-                        library list \
-                           --marks link \
-                           -- \
+   qualifier="\
+MATCHES no-dependency AND \
+MATCHES no-fs AND \
+MATCHES link AND \
+MATCHES actual-link
+"
+
+   library="`exekutor "${MULLE_SOURCETREE}" -V \
+                           ${MULLE_TECHNICAL_FLAGS} \
+                        list \
                            --bequeath \
+                           --format '%a;%m;%i={aliases,,};%i={include,,}\n' \
+                           --qualifier "${qualifier}" \
                            --output-format raw \
-                           --output-no-header`" || return 1
+                           --no-output-header`" || return 1
+
    emit_cmake_dependencies "_emit_cmake_library" \
                            "OS_SPECIFIC_LIBRARIES" \
                            "${library}"
 }
-
 
 
 output_file()
@@ -1035,7 +1069,7 @@ write_dependencies_file()
       ;;
 
       *)
-         text_dep="`emit_dependency_subproject`"  || return 1
+         text_dep="`emit_dependency_or_subproject`"  || return 1
          if [ -z "${text_dep}" ]
          then
             text_dep="# there are no applicable dependencies in the sourcetree"
