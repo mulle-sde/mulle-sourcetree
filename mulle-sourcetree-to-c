@@ -65,7 +65,7 @@ Flags:
    --no-import   : Don't emit import files
 
 Environment:
-   MULLE_SOURCETREE_TO_C_INCLUDE_FILE        | Use DISABLE to turn of
+   MULLE_SOURCETREE_TO_C_INCLUDE_FILE        | Use DISABLE to turn off
    MULLE_SOURCETREE_TO_C_IMPORT_FILE         | file generation. NONE to emit an
    MULLE_SOURCETREE_TO_C_PRIVATEINCLUDE_FILE | empty file. - outputs to stdout.
    MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE  | Otherwise specify the filename.
@@ -201,6 +201,9 @@ EOF
 
    # TODO: remove support __has_include for C ? Not all C compilers have
    #       __has_include
+   # but if we check for __has_include and it's not there, then we are
+   # not loading a required header... hmm
+   #
    case ",${marks}," in
       *,no-require,*)
          local name
@@ -481,7 +484,9 @@ objc_import()
    local projectidentifier="$2"
 
    local text_h
+   local marks
 
+   marks="import,public"
    case "${MULLE_SOURCETREE_TO_C_IMPORT_FILE}" in
       DISABLE*)
          return
@@ -493,20 +498,23 @@ objc_import()
       ;;
 
       *)
+         case "${MULLE_SOURCETREE_TO_C_INCLUDE_FILE}" in
+            DISABLE*)
+               marks="public"
+            ;;
+         esac
          MULLE_SOURCETREE_TO_C_IMPORT_FILE="${PROJECT_SOURCE_DIR}/reflect/_${projectname}-import.h"
       ;;
    esac
 
    if [ -z "${text_h}" ]
    then
-      text_h="`emit_c_header "import,public"`" || exit 1
+      text_h="`emit_c_header "${marks}"`" || exit 1
 
       if [ -z "${text_h}" ]
       then
          text_h="/* no headers */"
       fi
-
-      r_text_info_on 'MULLE_SOURCETREE_TO_C_IMPORT_FILE'
 
       #
       # if we generate an include file, we want that
@@ -519,11 +527,16 @@ objc_import()
             # for mulle-objc its important that the #include is afterwards
             text_h="${text_h}
 
-#include \"_${projectname}-include.h\"
+#ifdef __has_include
+# if __has_include( \"_${projectname}-include.h\")
+#  include \"_${projectname}-include.h\"
+# endif
+#endif
 "
          ;;
       esac
 
+      r_text_info_on 'MULLE_SOURCETREE_TO_C_IMPORT_FILE'
       text_h="${RVAL}
 
 #ifndef _${projectidentifier}_import_h__
@@ -612,7 +625,9 @@ objc_import_private()
    local projectidentifier="$2"
 
    local text_h
+   local marks
 
+   marks="import,no-public"
    case "${MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE}" in
       DISABLE*)
          return
@@ -623,15 +638,20 @@ objc_import_private()
          text_h="${RVAL}"
       ;;
 
-
       *)
+         case "${MULLE_SOURCETREE_TO_C_PRIVATEINCLUDE_FILE}" in
+            DISABLE*)
+               marks="no-public"
+            ;;
+         esac
+
          MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE="${PROJECT_SOURCE_DIR}/reflect/_${projectname}-import-private.h"
       ;;
    esac
 
    if [ -z "${text_h}" ]
    then
-      text_h="`emit_c_header "import,no-public"`" || exit 1
+      text_h="`emit_c_header "${marks}"`" || exit 1
 
       if [ -z "${text_h}" ]
       then
@@ -646,9 +666,14 @@ objc_import_private()
          ;;
 
          *)
-            text_h="#include \"_${projectname}-include-private.h\"
+            text_h="${text_h}
 
-${text_h}"
+#ifdef __has_include
+# if __has_include( \"_${projectname}-include.h\")
+#  include \"_${projectname}-include-private.h\"
+# endif
+#endif"
+
          ;;
       esac
 
