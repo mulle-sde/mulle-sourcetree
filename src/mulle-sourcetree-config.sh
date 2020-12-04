@@ -1294,6 +1294,7 @@ no-os-freebsd
 no-os-linux
 no-os-windows
 no-public
+no-readwrite
 no-recurse
 no-require
 no-set

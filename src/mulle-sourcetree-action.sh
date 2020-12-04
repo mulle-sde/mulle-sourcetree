@@ -270,12 +270,12 @@ _do_fetch_operation()
    fi
 
    sourcetree_sync_operation "${opname}" "${options}" \
-                                          "${_url}" \
-                                          "${_address}" \
-                                          "${_branch}" \
-                                          "${_tag}" \
-                                          "${_nodetype}" \
-                                          "${_fetchoptions}"
+                                         "${_url}" \
+                                         "${_address}" \
+                                         "${_branch}" \
+                                         "${_tag}" \
+                                         "${_nodetype}" \
+                                         "${_fetchoptions}"
    rval="$?"
    case $rval in
       0)
@@ -292,6 +292,12 @@ _do_fetch_operation()
          return $rval
       ;;
    esac
+
+   if ! nodemarks_contain "${_marks}" "readwrite"
+   then
+      log_verbose "Write protecting \"${_address}\""
+      exekutor chmod -R -w "${_address}"
+   fi
 
    if [ ! -z "${UPTODATE_MIRRORS_FILE}" ]
    then

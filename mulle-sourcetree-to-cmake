@@ -797,7 +797,7 @@ emit_cmake_dependency()
    cat <<EOF
 #
 # Generated from sourcetree: ${address};${marks};${aliases}
-# Disable with: \`mulle-sourcetree mark ${address} no-link\`
+# Disable with: \`mulle-sourcetree mark ${address} ${disabler}\`
 #
 EOF
 

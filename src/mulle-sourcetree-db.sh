@@ -1143,7 +1143,7 @@ db_get_shareddir()
 
 
 #
-# If a previous update crashed, we wan't to let the user know.
+# If a previous update crashed, we want to let the user know.
 #
 db_ensure_consistency()
 {

@@ -443,11 +443,11 @@ c_include()
 
       case "${PROJECT_DIALECT}" in
          'objc')
-            marks="no-import,public"
+            marks="public,no-import,include,header"
          ;;
 
          *)
-            marks="public"
+            marks="public,include,header"
          ;;
       esac
 
@@ -486,7 +486,7 @@ objc_import()
    local text_h
    local marks
 
-   marks="import,public"
+   marks="public,import,header"
    case "${MULLE_SOURCETREE_TO_C_IMPORT_FILE}" in
       DISABLE*)
          return
@@ -499,8 +499,8 @@ objc_import()
 
       *)
          case "${MULLE_SOURCETREE_TO_C_INCLUDE_FILE}" in
-            DISABLE*)
-               marks="public"
+            DISABLE)  # no star is intentional
+               marks="public,header"
             ;;
          esac
          MULLE_SOURCETREE_TO_C_IMPORT_FILE="${PROJECT_SOURCE_DIR}/reflect/_${projectname}-import.h"
@@ -584,11 +584,11 @@ c_include_private()
 
       case "${PROJECT_DIALECT}" in
          'objc')
-            marks="no-import,no-public"
+            marks="no-public,no-import,include,header"
          ;;
 
          *)
-            marks="no-public"
+            marks="no-public,include,header"
          ;;
       esac
 
@@ -627,7 +627,7 @@ objc_import_private()
    local text_h
    local marks
 
-   marks="import,no-public"
+   marks="no-public,import,header"
    case "${MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE}" in
       DISABLE*)
          return
@@ -640,8 +640,8 @@ objc_import_private()
 
       *)
          case "${MULLE_SOURCETREE_TO_C_PRIVATEINCLUDE_FILE}" in
-            DISABLE*)
-               marks="no-public"
+            DISABLE) # no star is intentional
+               marks="no-public,import,include,header"
             ;;
          esac
 
