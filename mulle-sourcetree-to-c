@@ -32,7 +32,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_C_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.22.1"
+MULLE_EXECUTABLE_VERSION="0.23.0"
 
 
 usage()
@@ -180,12 +180,13 @@ _emit_c_include()
 
    cat <<EOF
 // How to tweak the following ${address} #$include
-//    remove:          \`mulle-sourcetree mark ${address} no-header\`
-//    rename:          \`mulle-sde dependency|library set ${address} include whatever.h\`
-//    toggle #import:  \`mulle-sourcetree mark ${address} [no-]import\`
-//    toggle public:   \`mulle-sourcetree mark ${address} [no-]public\`
-//    toggle optional: \`mulle-sourcetree mark ${address} [no-]require\`
-//    remove for os:   \`mulle-sourcetree mark ${address} no-os-<osname>\`
+//    remove:             \`mulle-sourcetree mark ${address} no-header\`
+//    rename:             \`mulle-sde dependency|library set ${address} include whatever.h\`
+//    toggle #import:     \`mulle-sourcetree mark ${address} [no-]import\`
+//    toggle localheader: \`mulle-sourcetree mark ${address} [no-]localheader\`
+//    toggle public:      \`mulle-sourcetree mark ${address} [no-]public\`
+//    toggle optional:    \`mulle-sourcetree mark ${address} [no-]require\`
+//    remove for os:      \`mulle-sourcetree mark ${address} no-os-<osname>\`
 EOF
    if [ ! -z "${marks}" ]
    then
@@ -223,8 +224,23 @@ EOF
 EOF
       ;;
 
-      *)
+      *,no-localheader,*)
          echo "# ${indent}${include} <${header}>   // ${address}"
+      ;;
+
+      *)
+         local headerfile
+
+         r_basename "${header}"
+         headerfile="${RVAL}"
+
+         cat <<EOF
+# if defined( __has_include) && __has_include("${headerfile}")
+#   ${indent}${include} "${headerfile}"   // ${address}
+# else
+#   ${indent}${include} <${header}>   // ${address}
+#endif
+EOF
       ;;
    esac
 

@@ -1,3 +1,10 @@
+## 0.23.0
+
+* support a local header overriding the dependency header for stealing sources
+* added readwrite flag for writing protecting fetched content
+* if `MULLE_SOURCETREE_TO_C_INCLUDE_FILE` is set to DISABLED then #include statements will appear in the #import file. Sames with private.
+
+
 ### 0.22.1
 
 * add bequeath/no-bequeath to craftorder

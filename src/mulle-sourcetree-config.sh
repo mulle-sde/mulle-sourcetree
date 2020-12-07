@@ -37,14 +37,36 @@ MULLE_SOURCETREE_COMMANDS_SH="included"
 #
 
 SOURCETREE_COMMON_OPTIONS="\
-   --branch <value>       : branch to use instead of the default for git
-   --address <dir>        : address of the node in the project
-   --fetchoptions <value> : options for mulle-fetch --options
-   --marks <value>        : sourcetree marks of the node like no-require
-   --tag <value>          : tag to checkout for git
-   --nodetype <value>     : the node type
-   --url <url>            : url of the node
-   --userinfo <value>     : userinfo for node"
+--branch <value>       : branch to use instead of the default for git
+--address <dir>        : address of the node in the project
+--fetchoptions <value> : options for mulle-fetch --options
+--marks <value>        : sourcetree marks of the node like no-require
+--tag <value>          : tag to checkout for git
+--nodetype <value>     : the node type
+--url <url>            : url of the node
+--userinfo <value>     : userinfo for node"
+
+SOURCETREE_COMMON_KEYS="\
+branch       : branch to use instead of the default for git
+address      : address of the node in the project
+fetchoptions : options for mulle-fetch --options
+marks        : sourcetree marks of the node like no-require
+tag          : tag to checkout for git
+nodetype     : the node type
+url          : url of the node
+userinfo     : userinfo for node"
+
+
+sourcetree_print_common_keys()
+{
+   printf "%s\n" "${SOURCETREE_COMMON_KEYS}" | sed "s|^|$*|" | sort
+}
+
+
+sourcetree_print_common_options()
+{
+   printf "%s\n" "${SOURCETREE_COMMON_OPTIONS}" | sed "s|^|$*|" | sort
+}
 
 
 sourcetree_add_usage()
@@ -69,10 +91,7 @@ Usage:
 
 Options:
 EOF
-   (
-      printf "%s\n" "${SOURCETREE_COMMON_OPTIONS}"
-      echo "   --if-missing           : a duplicate node is not an error, do nothing"
-   ) | sort >&2
+   sourcetree_print_common_options "   " >&2
    echo >&2
    exit 1
 }
@@ -96,12 +115,11 @@ Usage:
 
 Options:
 EOF
-   (
-      printf "%s\n" "${SOURCETREE_COMMON_OPTIONS}"
-   ) | sort >&2
+   sourcetree_print_common_options "   " >&2
    echo >&2
    exit 1
 }
+
 
 
 
@@ -303,7 +321,7 @@ Usage:
 
 Keys:
 EOF
-  sed 's/--//' <<< "${SOURCETREE_COMMON_OPTIONS}" >&2
+  sourcetree_print_common_keys "   " >&2
   echo >&2
 
   exit 1
@@ -1640,6 +1658,17 @@ sourcetree_common_main()
       case "$1" in
          -h*|--help|help)
             ${USAGE}
+         ;;
+
+         --print-common-keys)
+            shift
+            sourcetree_print_common_keys "$@"
+            exit 0
+         ;;
+         --print-common-options)
+            shift
+            sourcetree_print_common_options "$@"
+            exit 0
          ;;
 
          --output-format)
