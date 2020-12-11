@@ -32,7 +32,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_C_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.23.0"
+MULLE_EXECUTABLE_VERSION="0.23.1"
 
 
 usage()
@@ -86,7 +86,7 @@ r_uname_to_cpp()
       ;;
 
       'freebsd')
-         RVAL="BSD4_3"  # guess
+         RVAL="__FreeBSD__"  # guess
       ;;
 
       'mingw'*)
@@ -162,6 +162,7 @@ _emit_c_include()
    local include
    local mark
 
+
    #
    # so objc can reuse this, make a provision for import with --objc flag
    # but allow #include if the mark no-objc is set
@@ -215,12 +216,12 @@ EOF
          name="${RVAL}"
 
          cat <<EOF
-# ifdef __has_include
-#  if __has_include(<${header}>)
-#   ${indent}${include} <${header}>   // ${address}
-#   define HAVE_LIB_${name%%_}
-#  endif
-# endif
+#${indent} ifdef __has_include
+#${indent}  if __has_include(<${header}>)
+#${indent}   ${indent}${include} <${header}>   // ${address}
+#${indent}   define HAVE_LIB_${name%%_}
+#${indent}  endif
+#${indent} endif
 EOF
       ;;
 
@@ -235,11 +236,11 @@ EOF
          headerfile="${RVAL}"
 
          cat <<EOF
-# if defined( __has_include) && __has_include("${headerfile}")
-#   ${indent}${include} "${headerfile}"   // ${address}
-# else
-#   ${indent}${include} <${header}>   // ${address}
-#endif
+#${indent} if defined( __has_include) && __has_include("${headerfile}")
+#${indent}   ${indent}${include} "${headerfile}"   // ${address}
+#${indent} else
+#${indent}   ${indent}${include} <${header}>   // ${address}
+#${indent} endif
 EOF
       ;;
    esac

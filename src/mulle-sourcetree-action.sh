@@ -296,7 +296,7 @@ _do_fetch_operation()
    if ! nodemarks_contain "${_marks}" "readwrite"
    then
       log_verbose "Write protecting \"${_address}\""
-      exekutor chmod -R -w "${_address}"
+      exekutor find "${_address}" -type f -exec chmod a-w {} \;
    fi
 
    if [ ! -z "${UPTODATE_MIRRORS_FILE}" ]

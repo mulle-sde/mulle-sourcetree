@@ -33,7 +33,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_CMAKE_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.23.0"
+MULLE_EXECUTABLE_VERSION="0.23.1"
 
 
 usage()

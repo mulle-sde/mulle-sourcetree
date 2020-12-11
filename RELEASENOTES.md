@@ -1,3 +1,8 @@
+### 0.23.1
+
+* fix indent for includes
+* fix FreeBSD ifdef from `BSD4_3` to `__FreeBSD__` `(BSD4_3` now defined by Apple)
+
 ## 0.23.0
 
 * support a local header overriding the dependency header for stealing sources
