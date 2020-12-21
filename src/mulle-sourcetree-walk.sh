@@ -50,9 +50,11 @@ Usage:
 
    The working directory will be the node (if it's a directory).
 
-   This example dumps the names of each node with index and indentation:
+   This example dumps the names of each node, that needs to be built in
+   "singlephase" mode with index and indentation:
 
-      mulle-sourcetree walk 'printf "%s\n" "${WALK_INDEX} ${WALK_INDENT}${NODE_ADDRESS}"'
+      mulle-sourcetree walk --qualifier 'MATCHES singlephase' \\
+         printf "%s\n" "\${WALK_INDEX} \${WALK_INDENT}\${NODE_ADDRESS}"'
 
    This example finds the location of a dependency named foo:
 

@@ -58,7 +58,7 @@ EOF
    else
       cat <<EOF >&2
 
-   See -v help for a list of format characters.
+   Use \`mulle-sourcetree -v list help\` to see a list of format characters.
 EOF
    fi
 
@@ -79,6 +79,7 @@ Options:
    --output-eval            : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
    --output-format <value>  : possible values (fmt, cmd, raw)
    --output-full            : show url and various fetch options
+   --output-no-column       : don't columnize output
    --output-no-header       : suppress header in raw and default lists
    --output-no-indent       : suppress indentation on recursive list
    --output-no-marks <list> : suppress output of certain marks (comma sep)

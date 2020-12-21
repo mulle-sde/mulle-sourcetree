@@ -15,21 +15,16 @@ It is not meant to manage individual source files.
 #### Capabilities
 
 * maintains local (file, folder) or external tree nodes (archive, repository)
-* can decorate tree nodes with marks (flags), which can be queried later
-* can store an arbitrary binary blob with each node as userinfo
-* can deal with sourcetrees within sourcetrees (recursive operation)
-* can share common dependendies of sourcetrees (share operation)
-* can walk the sourcetree with qualifiers
+* can inherit sourcetrees from dependencies
+* can override external dependencies with symlinks to local projects
 * supports the repair of the sourcetree after manual filesystem changes
-* can symlink other local projects
-
 
 #### What this enables you to do
 
 * build sub-projects in the correct order
 * build platform specifica without #ifdef or complicated Makefiles
 * acquire dependencies unique to each platform
-* avoid duplicate edits in shared projects
+* maintain complex dependency trees
 
 
 Executable          | Description
