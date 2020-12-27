@@ -184,7 +184,6 @@ _emit_c_include()
 //    remove:             \`mulle-sourcetree mark ${address} no-header\`
 //    rename:             \`mulle-sde dependency|library set ${address} include whatever.h\`
 //    toggle #import:     \`mulle-sourcetree mark ${address} [no-]import\`
-//    toggle localheader: \`mulle-sourcetree mark ${address} [no-]localheader\`
 //    toggle public:      \`mulle-sourcetree mark ${address} [no-]public\`
 //    toggle optional:    \`mulle-sourcetree mark ${address} [no-]require\`
 //    remove for os:      \`mulle-sourcetree mark ${address} no-os-<osname>\`
@@ -225,23 +224,8 @@ EOF
 EOF
       ;;
 
-      *,no-localheader,*)
-         echo "# ${indent}${include} <${header}>   // ${address}"
-      ;;
-
       *)
-         local headerfile
-
-         r_basename "${header}"
-         headerfile="${RVAL}"
-
-         cat <<EOF
-#${indent} if defined( __has_include) && __has_include("${headerfile}")
-#${indent}   ${indent}${include} "${headerfile}"   // ${address}
-#${indent} else
-#${indent}   ${indent}${include} <${header}>   // ${address}
-#${indent} endif
-EOF
+         echo "# ${indent}${include} <${header}>   // ${address}"
       ;;
    esac
 

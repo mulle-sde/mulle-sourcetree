@@ -683,17 +683,19 @@ sourcetree_add_node()
    local _userinfo="${OPTION_USERINFO}"
    local _uuid
 
-   if [ "${_nodetype}" = "local" ]
-   then
-      r_comma_concat "${_marks}" "no-delete,no-update,no-share"
-      _marks="${RVAL}"
-   fi
+   # local is just used for subprojects,
+   # none is used for closed-source libraries ( like -ldl)
+   case "${_nodetype}" in
+      'local')
+         r_comma_concat "${_marks}" "no-delete,no-update,no-share"
+         _marks="${RVAL}"
+      ;;
 
-   if [ "${_nodetype}" = "none" ]
-   then
-      r_comma_concat "${_marks}" "no-delete,no-fs,no-update,no-share"
-      _marks="${RVAL}"
-   fi
+      'none')
+         r_comma_concat "${_marks}" "no-delete,no-fs,no-update,no-share"
+         _marks="${RVAL}"
+      ;;
+   esac
 
    r_sanitized_marks "${_marks}"
    _marks="${RVAL}" || exit 1
