@@ -324,16 +324,16 @@ _visit_callback()
 {
    log_entry "_visit_callback" "$@"
 
-   local datasource="$1"; shift
-   local virtual="$1"; shift
-   local next_datasource="$1"; shift
-   local next_virtual="$1"; shift
-
-   local filternodetypes="$1"; shift
-   local filterpermissions="$1"; shift
-   local callbackqualifier="$1"; shift
-   local descendqualifier="$1"; shift
-   local mode="$1" ; shift
+   local datasource="$1"
+   local virtual="$2"
+   local next_datasource="$3"
+   local next_virtual="$4"
+   local filternodetypes="$5"
+   local filterpermissions="$6"
+   local callbackqualifier="$7"
+   local descendqualifier="$8"
+   local mode="$9"
+   shift 9
 
    local callback="$1"; shift
 
@@ -414,16 +414,18 @@ _visit_descend()
 {
    log_entry "_visit_descend" "$@"
 
-   local datasource="$1"; shift
-   local virtual="$1"; shift
-   local next_datasource="$1" ; shift
-   local next_virtual="$1" ; shift
+   local datasource="$1"
+   local virtual="$2"
+   shift 2
 
-   local filternodetypes="$1"; shift
-   local filterpermissions="$1"; shift
-   local callbackqualifier="$1"; shift
-   local descendqualifier="$1"; shift
-   local mode="$1" ; shift
+#   local next_datasource="$1"
+#   local next_virtual="$2"
+#
+#   local filternodetypes="$3"
+   local filterpermissions="$4"
+#   local callbackqualifier="$5"
+   local descendqualifier="$6"
+   local mode="$7"
 
    if nodemarks_contain "${_marks}" "no-descend"
    then
@@ -452,14 +454,7 @@ doesn't jive with permissions \"${filterpermissions}\""
 
    if [ ! -z "${WILL_DESCEND_CALLBACK}" ]
    then
-      if ! "${WILL_DESCEND_CALLBACK}" "${next_datasource}" \
-                                      "${next_virtual}" \
-                                      "${filternodetypes}" \
-                                      "${filterpermissions}" \
-                                      "${callbackqualifier}" \
-                                      "${descendqualifier}" \
-                                      "${mode}" \
-                                      "$@"
+      if ! "${WILL_DESCEND_CALLBACK}" "$@"
       then
          log_debug "Do not visit on \"${virtual}/${_destination}\" due to WILL_DESCEND_CALLBACK"
          return 0
@@ -474,25 +469,11 @@ doesn't jive with permissions \"${filterpermissions}\""
 
    case ",${mode}," in
       *,walkdb,*)
-         _walk_db_uuids "${next_datasource}" \
-                        "${next_virtual}" \
-                        "${filternodetypes}" \
-                        "${filterpermissions}" \
-                        "${callbackqualifier}" \
-                        "${descendqualifier}" \
-                        "${mode}" \
-                        "$@"
+         _walk_db_uuids "$@"
       ;;
 
       *)
-         _walk_config_uuids "${next_datasource}" \
-                            "${next_virtual}" \
-                            "${filternodetypes}" \
-                            "${filterpermissions}" \
-                            "${callbackqualifier}" \
-                            "${descendqualifier}" \
-                            "${mode}" \
-                            "$@"
+         _walk_config_uuids "$@"
       ;;
    esac
 
@@ -501,14 +482,7 @@ doesn't jive with permissions \"${filterpermissions}\""
 
    if [ ! -z "${DID_DESCEND_CALLBACK}" ]
    then
-      "${DID_DESCEND_CALLBACK}" "${next_datasource}" \
-                                "${next_virtual}" \
-                                "${filternodetypes}" \
-                                "${filterpermissions}" \
-                                "${callbackqualifier}" \
-                                "${descendqualifier}" \
-                                "${mode}" \
-                                "$@"
+      "${DID_DESCEND_CALLBACK}" "$@"
    fi
 
    return 0
@@ -778,13 +752,14 @@ _walk_share_node()
 {
    log_entry "_walk_share_node" "$2/${_address}"
 
-   local datasource="$1"; shift
-   local virtual="$1"; shift
-   local filternodetypes="$1"; shift
-   local filterpermissions="$1"; shift
-   local callbackqualifier="$1"; shift
-   local descendqualifier="$1"; shift
-   local mode="$1" ; shift
+   local datasource="$1"
+   local virtual="$2"
+   local filternodetypes="$3"
+   local filterpermissions="$4"
+   local callbackqualifier="$5"
+   local descendqualifier="$6"
+   local mode="$7"
+   shift 7
 
 #   [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
 
@@ -877,7 +852,6 @@ doesn't exist yet"
 }
 
 
-
 #
 # datasource          // place of the config/db where we read the nodeline from
 # virtual             // same but relative to project and possibly remapped
@@ -960,13 +934,14 @@ walk_nodeline()
       ;;
    esac
 
-   local datasource="$1"; shift
-   local virtual="$1"; shift
-   local filternodetypes="$1" ; shift
-   local filterpermissions="$1"; shift
-   local callbackqualifier="$1"; shift
-   local descendqualifier="$1"; shift
-   local mode="$1"; shift
+   local datasource="$1"
+   local virtual="$2"
+   local filternodetypes="$3"
+   local filterpermissions="$4"
+   local callbackqualifier="$5"
+   local descendqualifier="$6"
+   local mode="$7"
+   shift 7
 
    # "value addition" of a quasi global
 

@@ -831,7 +831,7 @@ sourcetree_dotdump_main()
 
    if ! db_is_ready "${SOURCETREE_START}"
    then
-      log_warning "Update has not run yet (mode=${SOURCETREE_MODE})"
+      log_warning "Sync has not run yet (mode=${SOURCETREE_MODE})"
    fi
 
    sourcetree_dotdump "${mode}"

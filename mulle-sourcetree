@@ -32,7 +32,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_SOURCETREE_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.23.1"
+MULLE_EXECUTABLE_VERSION="0.24.0"
 
 #
 # This is the main user interface to mulle-sourcetree
@@ -69,7 +69,6 @@ print_commands()
    filter         : test a filter with user supplied marks
    fix            : support to track user modifications in the filesystem
    get            : get a node's properties from the sourcetree
-   nameguess      : guess name of repository from URL
    libexec-dir    : print path to ${MULLE_USAGE_NAME} libexec
    knownmarks     : list known marks
    mark           : add or remove a mark from a node in the sourcetree
@@ -80,7 +79,6 @@ print_commands()
    reset          : clear the database, to force a sync
    wrap           : wrap nodetypes,branches,URLs in environment variables
    touch          : mark sourcetree as dirty
-   typeguess      : guess type of repository from URL
    uname          : ${MULLE_USAGE_NAME}'s simplified uname(1)
    unmark         : remove marks from a node in the sourcetree
    version        : print ${MULLE_USAGE_NAME} version
@@ -431,7 +429,7 @@ main()
    fi
 
    case "${cmd}" in
-      add|get|duplicate|info|knownmarks|mark|move|nameguess|rename|remove|set|typeguess|unmark)
+      add|get|duplicate|info|knownmarks|mark|move|rename|remove|set|unmark)
          # shellcheck source=src/mulle-sourcetree-config.sh
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
 
@@ -496,6 +494,11 @@ main()
 
       share-dir|stash-dir)
          printf "%s\n" "${MULLE_SOURCETREE_STASH_DIR}"
+      ;;
+
+      tool-env)
+         printf "MULLE_SOURCETREE_PROJECT_DIR='%s'\n" "${MULLE_SOURCETREE_PROJECT_DIR}"
+         printf "MULLE_SOURCETREE_STASH_DIR='%s'\n" "${MULLE_SOURCETREE_STASH_DIR}"
       ;;
 
       touch)

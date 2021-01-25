@@ -159,34 +159,6 @@ EOF
 }
 
 
-sourcetree_nameguess_usage()
-{
-   [ $# -ne 0 ] && log_error "$1"
-
-    cat <<EOF >&2
-Usage:
-   ${MULLE_EXECUTABLE_NAME} nameguess <url>
-
-   Guess the project name of the given url.
-EOF
-  exit 1
-}
-
-
-sourcetree_typeguess_usage()
-{
-   [ $# -ne 0 ] && log_error "$1"
-
-    cat <<EOF >&2
-Usage:
-   ${MULLE_EXECUTABLE_NAME} typeguess <url>
-
-   Guess the nodetype of the given url.
-EOF
-  exit 1
-}
-
-
 sourcetree_info_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -1296,6 +1268,7 @@ no-build
 no-cmakeadd
 no-cmakeinherit
 no-cmakeloader
+no-cmakesearchpath
 no-defer
 no-delete
 no-dependency
@@ -1892,7 +1865,7 @@ sourcetree_common_main()
    [ -z "${SOURCETREE_CONFIG_FILENAME}" ] && fail "config file empty name"
 
    case "${COMMAND}" in
-      add|duplicate|nameguess|typeguess)
+      add|duplicate)
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          argument="$1"
          [ -z "${argument}" ] && log_error "empty argument" && ${USAGE}
@@ -2057,26 +2030,6 @@ sourcetree_move_main()
 
    USAGE="sourcetree_move_usage"
    COMMAND="move"
-   sourcetree_common_main "$@"
-}
-
-
-sourcetree_nameguess_main()
-{
-   log_entry "sourcetree_nameguess_main" "$@"
-
-   USAGE="sourcetree_nameguess_usage"
-   COMMAND="nameguess"
-   sourcetree_common_main "$@"
-}
-
-
-sourcetree_typeguess_main()
-{
-   log_entry "sourcetree_typeguess_main" "$@"
-
-   USAGE="sourcetree_typeguess_usage"
-   COMMAND="typeguess"
    sourcetree_common_main "$@"
 }
 

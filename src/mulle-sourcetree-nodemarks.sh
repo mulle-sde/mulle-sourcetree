@@ -192,15 +192,15 @@ nodemarks_remove()
 
 #
 # check for existence of a no-key or an only-key
+# case is a bit faster than IFS=, parsing but not much
 #
 _nodemarks_contain()
 {
-   local marks="$1"
-   local key="$2"
+#   local marks="$1"
+#   local key="$2"
 
-   # this is a bit faster than IFS=, parsing but not much
-   case ",${marks}," in
-      *",${key},"*)
+   case ",${1}," in
+      *",${2},"*)
          return 0
       ;;
    esac
@@ -227,6 +227,7 @@ nodemarks_version_match()
    local result
    local i
    local markvalue
+
    set -o noglob ; IFS=","
    for i in ${marks}
    do
@@ -234,6 +235,11 @@ nodemarks_version_match()
 
       case "$i" in
          "${key}"-*)
+            if [ -z "${MULLE_VERSION_SH}" ]
+            then
+               . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-version.sh" || exit 1
+            fi
+
             markvalue="${i##*-}"
             r_version_distance "${value}" "${markvalue}"
             case "${operator}" in

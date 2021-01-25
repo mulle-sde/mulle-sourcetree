@@ -32,6 +32,24 @@
 MULLE_SOURCETREE_LIST_SH="included"
 
 
+sourcetree_dedupe_mode_help()
+{
+   cat <<EOF
+   address                       : address
+   address-filename              : combination of address and filename
+   address-marks-filename        : combination of address marks url
+   address-url                   : combination of address and url
+   filename                      : name where sync will place it
+   hacked-marks-nodeline-no-uuid : the default
+   linkorder                     : used by linkorder
+   nodeline                      : all fields
+   nodeline-no-uuid              : all fields except uuid
+   none                          : no dedupe
+   url-filename                  : combination of url and filename
+EOF
+}
+
+
 sourcetree_list_usage()
 {
    [ "$#" -ne 0 ] && log_error "$*"
@@ -55,6 +73,11 @@ EOF
 Formatting:
 EOF
       node_printf_format_help >&2
+      cat <<EOF >&2
+
+Deduping:
+EOF
+      sourcetree_dedupe_mode_help >&2
    else
       cat <<EOF >&2
 
@@ -71,6 +94,7 @@ Options:
    -g                       : output branch/tag information (use -G for raw output)
    -u                       : output URL information  (use -U for raw output)
    --config-file <file>     : list a specific config file (no recursion)
+   --dedupe-mode <mode>     : change the way duplicates are detected
    --format <format>        : supply a custom format (abfimntu_)
    --marks <value>          : specify marks to match (e.g. build)
    --no-dedupe              : don't remove what are considered duplicates

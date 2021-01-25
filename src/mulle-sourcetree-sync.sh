@@ -59,6 +59,10 @@ Options:
    --no-refresh  --no-symlinks --no-absolute-symlinks
 
    See the ${MULLE_FETCH:-mulle-fetch} usage for information.
+
+Environment:
+   MULLE_SOURCETREE_RESOLVE_TAG : resolve tags using mulle-fetch resolve (YES)
+
 EOF
   exit 1
 }
@@ -880,6 +884,9 @@ sourcetree_sync_main()
    local OPTION_LENIENT='YES'
    local OPTION_QUICK='NO'
 
+   # default is YES, but environment can override
+   MULLE_SOURCETREE_RESOLVE_TAG="${MULLE_SOURCETREE_RESOLVE_TAG:-YES}"
+
    while [ $# -ne 0 ]
    do
       case "$1" in
@@ -925,6 +932,14 @@ sourcetree_sync_main()
 
          --no-absolute-symlinks)
             OPTION_FETCH_ABSOLUTE_SYMLINK='NO'
+         ;;
+
+         --resolve-tag)
+            MULLE_SOURCETREE_RESOLVE_TAG='YES'
+         ;;
+
+         --no-fixup)
+            MULLE_SOURCETREE_RESOLVE_TAG='NO'
          ;;
 
          --cache-dir)

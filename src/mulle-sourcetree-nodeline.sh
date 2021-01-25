@@ -161,6 +161,14 @@ r_nodeline_get_evaled_url()
 # #   _raw_userinfo="${nodeline%%;*}"
 # #   nodeline="${nodeline#*;}"
 
+#
+# MEMO: if we change the format from CSV to evaluatable shell script
+# _address='';_nodetype='';
+#
+# We gain expandability and also its 3 times as fast as read -r from
+# a string. Minimally would have to guard against unescaped $ and backticks
+# i believe.
+#
 nodeline_parse()
 {
    log_entry "nodeline_parse" "$@"
@@ -181,18 +189,21 @@ nodeline_parse()
    [ -z "${_nodetype}" ]  && internal_fail "_nodetype is empty"
    [ -z "${_uuid}" ]      && internal_fail "_uuid is empty"
 
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
+   # early escape here
+   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'NO' ]
    then
-      log_trace2 "ADDRESS:      \"${_address}\""
-      log_trace2 "NODETYPE:     \"${_nodetype}\""
-      log_trace2 "MARKS:        \"${_marks}\""
-      log_trace2 "UUID:         \"${_uuid}\""
-      log_trace2 "URL:          \"${_url}\""
-      log_trace2 "BRANCH:       \"${_branch}\""
-      log_trace2 "TAG:          \"${_tag}\""
-      log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
-      log_trace2 "USERINFO:     \"${_raw_userinfo}\""
+      return
    fi
+
+   log_trace2 "ADDRESS:      \"${_address}\""
+   log_trace2 "NODETYPE:     \"${_nodetype}\""
+   log_trace2 "MARKS:        \"${_marks}\""
+   log_trace2 "UUID:         \"${_uuid}\""
+   log_trace2 "URL:          \"${_url}\""
+   log_trace2 "BRANCH:       \"${_branch}\""
+   log_trace2 "TAG:          \"${_tag}\""
+   log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
+   log_trace2 "USERINFO:     \"${_raw_userinfo}\""
 
    :
 }
@@ -394,7 +405,7 @@ nodeline_has_duplicate()
    return 1
 }
 
-
+# TODO: this needs to die
 nodeline_read_file()
 {
    log_entry "nodeline_read_file" "$@"

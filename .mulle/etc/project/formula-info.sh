@@ -12,5 +12,5 @@ DEPENDENCIES='${MULLE_SDE_TAP}mulle-fetch'
 #
 # bsdmainutils are for "column"
 #
-DEBIAN_DEPENDENCIES="mulle-fetch"
+DEBIAN_DEPENDENCIES="mulle-fetch, mulle-domain"
 DEBIAN_RECOMMENDATIONS="bsdmainutils"

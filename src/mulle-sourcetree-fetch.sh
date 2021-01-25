@@ -47,13 +47,13 @@ r_sourcetree_guess_address()
       return 0
    fi
 
-   RVAL="`${MULLE_FETCH:-mulle-fetch} \
+   RVAL="`rexekutor "${MULLE_DOMAIN:-mulle-domain}" \
                ${MULLE_TECHNICAL_FLAGS} \
             nameguess \
                -s "${evalednodetype}" \
                "${evaledurl}"`"
 
-   log_fluff "${MULLE_FETCH:-mulle-fetch} returned \"${RVAL}\" as \
+   log_fluff "${MULLE_DOMAIN:-mulle-domain} returned \"${RVAL}\" as \
 default address for url ($url)"
 }
 
@@ -76,14 +76,36 @@ r_sourcetree_guess_nodetype()
       return 1
    fi
 
-   RVAL="`${MULLE_FETCH:-mulle-fetch} \
+   RVAL="`rexekutor "${MULLE_DOMAIN:-mulle-domain}" \
                   ${MULLE_TECHNICAL_FLAGS} \
                typeguess \
                   "${_evaledurl}"`" || return 1
 
-   log_fluff "${MULLE_FETCH:-mulle-fetch} determined \"${RVAL}\" as \
+   log_fluff "${MULLE_DOMAIN:-mulle-domain} determined \"${RVAL}\" as \
 nodetype from url ($_evaledurl)"
    return 0
+}
+
+
+#
+# resolves the url actually
+#
+r_sourcetree_resolve_url_with_tag()
+{
+   log_entry "r_sourcetree_resolve_url_with_tag" "$@"
+
+   local url="$1"
+   local tag="$2"
+   local scm="$3"
+
+   RVAL="`rexekutor "${MULLE_DOMAIN:-mulle-domain}" \
+                         ${MULLE_TECHNICAL_FLAGS} \
+                      "resolve" \
+                         --scm "${scm}" \
+                         --latest \
+                         "${url}" \
+                         "${tag}" `"
+   return $?
 }
 
 
@@ -119,21 +141,24 @@ sourcetree_sync_operation()
 
    node_evaluate_values
 
-
    # we check how the values would be, if there are no variables
    # replaced. to get the default value.
 
    # original_nodetype="`eval env -i printf "%s" "${_nodetype}"`"
-   original_tag="`env -i sh -c "eval printf \"%s\" \"${_tag}\"" `"
-   original_branch="`env -i sh -c "eval printf \"%s\" \"${_branch}\"" `"
 
    # branch "suddenly" set ? then ignore tag
+   r_expanded_string "${_branch}" "NO" # get default value
+   original_branch="${RVAL}"
+
    if [ -z "${original_branch}" -a ! -z "${_evaledbranch}" ]
    then
       _evaledtag=""
    fi
 
    # tag "suddenly" set ? then ignore branch
+   r_expanded_string "${_tag}" "NO"  # get default value
+   original_tag="${RVAL}"
+
    if [ -z "${original_tag}" -a ! -z "${_evaledtag}" ]
    then
       _evaledbranch=""
@@ -150,39 +175,49 @@ sourcetree_sync_operation()
    esac
 
    MULLE_BRANCH="${_evaledbranch}" \
-   MULLE_TAG="${_evaledtag}"\
+   MULLE_TAG="${_evaledtag}" \
    MULLE_TAG_OR_BRANCH="${_evaledtag:-${_evaledbranch}}" \
       r_expanded_string "${_url}"
       _evaledurl="${RVAL}"
 
-   [ -z "${_evaledurl}" ] && fail "URL \"${_url}\" evaluates to empty"
 
    #
    # If a tag is specified, we can - for some hosts - do filtering
-   # like >= 1.0.5. This is done by mulle-fetch though. We also use
-   # it to "compose" the url from the tag
+   # like >=1.0.5. This is done by mulle-fetch though. We also use
+   # it to "compose" the url from the tag. We also treat latest
+   # in a special way. This can "hammer" github though, so we have
+   # a way to turn it off
    #
-   if [ ! -z "${_evaledtag}" ]
+   if [ ! -z "${_evaledtag}" -a "${MULLE_SOURCETREE_RESOLVE_TAG}" = 'YES' ]
    then
-      _evaledurl="`exekutor "${MULLE_FETCH:-mulle-fetch}" \
-                          ${MULLE_TECHNICAL_FLAGS} \
-                    "filter" \
-                        --scm "${_evalednodetype}" \
-                        "${_evaledtag}" \
-                        "${_evaledurl}" `" || exit 1
+      if r_sourcetree_resolve_url_with_tag "${_evaledurl}" \
+                                           "${_evaledtag}" \
+                                           "${_evalednodetype}"
+      then
+         _evaledurl="${RVAL}"
+      else
+         case "${_evaledurl}" in
+            *"${_evaledtag}"*)
+            ;;
 
-      [ -z "${_evaledurl}" ] && internal_fail "URL \"${_url}\" returned as empty"
-
-      #
-      # hackish, used for git scm really
-      #
-      case "${_evaledurl}" in
-         *'##'*)
-            _evaledtag="${_evaledurl#*##}"
-            _evaledurl="${_evaledurl%##*}"
-         ;;
-      esac
+            *)
+               log_warning "Don't know how to modify ${_evaledurl} for ${_evaledtag}. Hope for symlink."
+            ;;
+         esac
+      fi
    fi
+
+   #
+   # hackish, used for git scm really
+   #
+   case "${_evaledurl}" in
+      *'##'*)
+         _evaledtag="${_evaledurl#*##}"
+         _evaledurl="${_evaledurl%##*}"
+      ;;
+   esac
+
+   [ -z "${_evaledurl}" ] && internal_fail "URL \"${_url}\" returned as empty"
 
    MULLE_BRANCH="${_evaledbranch}" \
    MULLE_TAG="${_evaledtag}" \

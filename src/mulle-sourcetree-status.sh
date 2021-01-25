@@ -644,7 +644,7 @@ sourcetree_status_main()
          exit 1
       fi
 
-      log_fluff "Update has not run yet (mode=${SOURCETREE_MODE})"
+      log_fluff "Sync has not run yet (mode=${SOURCETREE_MODE})"
    fi
 
    mode="${SOURCETREE_MODE}"
