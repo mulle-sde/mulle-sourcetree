@@ -90,8 +90,8 @@ run_test1()
       fail "status failed unexpectedly"
    fi
 
-   expected="/;unready;directory;YES;NO
-/root/a;absent;missing;NO;NO" # ;`physicalpath "${project}"`/root/a
+   expected="/;dirty;directory;YES;NO
+/root/a;absent;missing;NO;-" # ;`physicalpath "${project}"`/root/a
 
    if [ "${result}" != "${expected}" ]
    then
@@ -127,7 +127,11 @@ run_test1()
       fi
    ) || exit 1
 
-   if run_mulle_sourcetree status --is-uptodate
+   local rval 
+
+   run_mulle_sourcetree status --is-uptodate
+   rval=$?
+   if [ $rval -eq 0 ] 
    then
       fail "--is-uptodate #3 says ok unexpectedly"
    fi

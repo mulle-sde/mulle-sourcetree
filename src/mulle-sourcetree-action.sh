@@ -170,29 +170,29 @@ _has_system_include()
 }
 
 
-_is_embedded()
-{
-   local marks="$1"
-
-   case ",${marks}," in
-      *,no-build,*)
-      ;;
-
-      *)
-         return 1
-      ;;
-   esac
-
-   case ",${marks}," in
-      *,no-share,*)
-      ;;
-
-      *)
-         return 1
-      ;;
-   esac
-   return 0
-}
+# _is_embedded()
+# {
+#    local marks="$1"
+#
+#    case ",${marks}," in
+#       *,no-build,*)
+#       ;;
+#
+#       *)
+#          return 1
+#       ;;
+#    esac
+#
+#    case ",${marks}," in
+#       *,no-share,*)
+#       ;;
+#
+#       *)
+#          return 1
+#       ;;
+#    esac
+#    return 0
+# }
 
 
 _do_fetch_operation()
@@ -245,8 +245,8 @@ _do_fetch_operation()
    #
    # To inhibit the fetch of no-require dependencies, we check for
    # an environment variable MULLE_SOURCETREE_<identifier>_FETCH
-   # Because of the no-require, this shoudln't abort the sync
-   # The net effect will be that this will not be part of the craft
+   # Because of the no-require, this shouldn't abort the whole sync.
+   # The net effect will be that this will not be part of the craft.
    #
    local envvar
 
@@ -267,6 +267,19 @@ _do_fetch_operation()
    then
       log_warning "${_address} not fetched as \"${envvar}\" is NO"
       return 1
+   fi
+
+   # if this variable is set to 'YES' then we use the
+   # only-platform- and no-platform- marks (if present) to possibly inhibit
+   # the fetch. That's not 100% but can be very nice for example on macOS
+   # to not fetch any X11 dependencies, which are unneeded
+   if [ "${MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH}" = 'YES' ]
+   then
+      if nodemarks_disable "${_marks}" "platform-${MULLE_UNAME}"
+      then
+         log_warning "${C_RESET_BOLD}${_address#${MULLE_USER_PWD}/}${C_WARNING} not fetched as ${C_MAGENTA}${C_BOLD}platform-${MULLE_UNAME}${C_WARNING} is disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
+         return
+      fi
    fi
 
    sourcetree_sync_operation "${opname}" "${options}" \
@@ -293,7 +306,7 @@ _do_fetch_operation()
       ;;
    esac
 
-   if ! nodemarks_contain "${_marks}" "readwrite"
+   if nodemarks_disable "${_marks}" "readwrite"
    then
       log_verbose "Write protecting \"${_address}\""
       exekutor find "${_address}" -type f -exec chmod a-w {} \;
@@ -333,7 +346,7 @@ update_actions_for_nodelines()
    local _userinfo
    local _uuid
 
-   nodeline_parse "${nodeline}"
+   nodeline_parse "${nodeline}" # !!
 
    local previousfilename
    local filename
@@ -396,12 +409,12 @@ do_operation()
    options="${RVAL}"
 
    sourcetree_sync_operation "${opname}" "${options}" \
-                                          "${_url}" \
-                                          "${destination}" \
-                                          "${_branch}" \
-                                          "${_tag}" \
-                                          "${_nodetype}" \
-                                          "${_fetchoptions}"
+                                         "${_url}" \
+                                         "${destination}" \
+                                         "${_branch}" \
+                                         "${_tag}" \
+                                         "${_nodetype}" \
+                                         "${_fetchoptions}"
 }
 
 
@@ -416,7 +429,7 @@ update_safe_move_node()
    [ -z "${previousfilename}" ] && internal_fail "empty previousfilename"
    [ -z "${filename}" ]         && internal_fail "empty filename"
 
-   if ! nodemarks_contain "${_marks}" "delete"
+   if nodemarks_disable "${_marks}" "delete"
    then
       fail "Can't move node ${_url} from to \"${previousfilename}\" \
 to \"${filename}\" as it is marked no-delete"
@@ -444,7 +457,7 @@ update_safe_remove_node()
    [ -z "${filename}" ] && internal_fail "empty filename"
    [ -z "${_uuid}" ]    && internal_fail "empty _uuid"
 
-   if ! nodemarks_contain "${_marks}" "delete"
+   if nodemarks_disable "${_marks}" "delete"
    then
       fail "Can't remove \"${filename}\" as it is marked no-delete"
    fi
@@ -551,7 +564,7 @@ chickening out"
          #    at this point in time, that should have already been checked
          #    against
 
-         if ! nodemarks_contain "${newmarks}" "delete"
+         if nodemarks_disable "${newmarks}" "delete"
          then
             case "${newnodetype}" in
                local)
@@ -639,7 +652,7 @@ As node is marked \"no-delete\" just remember it."
    local _raw_userinfo
    local _uuid
 
-   nodeline_parse "${previousnodeline}"
+   nodeline_parse "${previousnodeline}"  # memo: _marks not used
 
    if [ "${_uuid}" != "${newuuid}" ]
    then
@@ -913,7 +926,8 @@ __update_perform_item()
                   fi
                fi
 
-               if ! nodemarks_contain "${_marks}" "require"
+               if nodemarks_disable "${_marks}" "require" ||
+                  nodemarks_disable "${_marks}" "require-os-${MULLE_UNAME}"
                then
                   log_info "${C_MAGENTA}${C_BOLD}${filename}${C_INFO} is not required."
 
@@ -989,7 +1003,7 @@ __update_perform_actions()
    local _raw_userinfo
    local _uuid
 
-   nodeline_parse "${nodeline}"
+   nodeline_parse "${nodeline}"     # !!
 
    local actionitems
    local dbfilename
@@ -1123,9 +1137,9 @@ do_actions_with_nodeline()
    local _raw_userinfo
    local _uuid
 
-   nodeline_parse "${nodeline}"
+   nodeline_parse "${nodeline}"  # !!
 
-   if ! nodemarks_contain "${_marks}" "fs"
+   if nodemarks_disable "${_marks}" "fs"
    then
       log_fluff "\"${_address}\" is marked as no-fs, so there is nothing to update"
       return
@@ -1137,7 +1151,7 @@ do_actions_with_nodeline()
    #
    local filename
 
-   if [ ! -z "${_url}" -a "${style}" = "share" ] && nodemarks_contain "${_marks}" "share"
+   if [ ! -z "${_url}" -a "${style}" = "share" ] && nodemarks_enable "${_marks}" "share"
    then
       local _evaledurl
       local _evalednodetype
@@ -1186,29 +1200,15 @@ do_actions_with_nodeline()
 
    [ -z "${database}" ] && internal_fail "A share-only update gone wrong"
 
-   if nodemarks_contain "${_marks}" "no-update" ||
-      nodemarks_contain "${_marks}" "no-os-${MULLE_UNAME}" ||
-      nodemarks_contain "${_marks}" "no-os-${MULLE_UNAME}-update"
+   if nodemarks_disable "${_marks}" "update"
    then
       if [ ! -e "${filename}"  ]
       then
-         if nodemarks_contain "${_marks}" "no-require" ||
-            nodemarks_contain "${_marks}" "no-os-${MULLE_UNAME}-require"
+         if nodemarks_disable "${_marks}" "require" ||
+            nodemarks_disable "${_marks}" "require-os-${MULLE_UNAME}"
          then
             log_fluff "\"${_address}\" is marked as no-update and doesn't exist, \
 but it is not required"
-            return
-         fi
-
-         if nodemarks_contain "${_marks}" "no-os-${MULLE_UNAME}"
-         then
-            log_fluff "\"${_address}\" is marked as no-os-${MULLE_UNAME} so its ignored"
-            return
-         fi
-
-         if nodemarks_contain "${_marks}" "no-os-${MULLE_UNAME}-update"
-         then
-            log_fluff "\"${_address}\" is marked as no-os-${MULLE_UNAME}-update, but its required"
             return
          fi
 
@@ -1220,7 +1220,8 @@ but it is not required"
 
       if ! is_absolutepath "${filename}"
       then
-         filename="`filepath_concat "${MULLE_VIRTUAL_ROOT}" "${filename}" `"
+         r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${filename}"
+         filename="${RVAL}"
       fi
 
       _memorize_node_in_db "${config}" "${database}" "${filename}"

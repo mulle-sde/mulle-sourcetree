@@ -47,14 +47,20 @@ r_sourcetree_guess_address()
       return 0
    fi
 
+   local rval
+
    RVAL="`rexekutor "${MULLE_DOMAIN:-mulle-domain}" \
                ${MULLE_TECHNICAL_FLAGS} \
+               ${MULLE_DOMAIN_FLAGS} \
             nameguess \
                -s "${evalednodetype}" \
                "${evaledurl}"`"
+   rval=$?
+   [ $rval -eq 127 ] && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
    log_fluff "${MULLE_DOMAIN:-mulle-domain} returned \"${RVAL}\" as \
 default address for url ($url)"
+   return $rval
 }
 
 
@@ -70,20 +76,41 @@ r_sourcetree_guess_nodetype()
 
    r_expanded_string "${url}"
    _evaledurl="${RVAL}"
-   if [ -z "${_evaledurl}" ]
-   then
-      RVAL=
-      return 1
-   fi
+
+   case "${_evaledurl}" in
+      "")
+         RVAL=
+         return 1
+      ;;
+
+      *:*)
+         # URL guess
+      ;;
+
+      # local filesystem guesses
+      /*|~/*|\.\./*|\./*)
+         if [ -e "${_evaledurl}" ]
+         then
+            log_fluff "\"${url}\" looks like a local nodetype url (${_evaledurl})"
+            RVAL="local"
+            return
+         fi
+      ;;
+   esac
+
+   local rval
 
    RVAL="`rexekutor "${MULLE_DOMAIN:-mulle-domain}" \
                   ${MULLE_TECHNICAL_FLAGS} \
+                  ${MULLE_DOMAIN_FLAGS} \
                typeguess \
                   "${_evaledurl}"`" || return 1
+   rval=$?
+   [ $rval -eq 127 ] && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
    log_fluff "${MULLE_DOMAIN:-mulle-domain} determined \"${RVAL}\" as \
 nodetype from url ($_evaledurl)"
-   return 0
+   return $rval
 }
 
 
@@ -98,6 +125,8 @@ r_sourcetree_resolve_url_with_tag()
    local tag="$2"
    local scm="$3"
 
+   local rval
+
    RVAL="`rexekutor "${MULLE_DOMAIN:-mulle-domain}" \
                          ${MULLE_TECHNICAL_FLAGS} \
                       "resolve" \
@@ -105,7 +134,10 @@ r_sourcetree_resolve_url_with_tag()
                          --latest \
                          "${url}" \
                          "${tag}" `"
-   return $?
+   rval=$?
+   [ $rval -eq 127 ] && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
+
+   return $rval
 }
 
 
@@ -180,7 +212,6 @@ sourcetree_sync_operation()
       r_expanded_string "${_url}"
       _evaledurl="${RVAL}"
 
-
    #
    # If a tag is specified, we can - for some hosts - do filtering
    # like >=1.0.5. This is done by mulle-fetch though. We also use
@@ -188,22 +219,28 @@ sourcetree_sync_operation()
    # in a special way. This can "hammer" github though, so we have
    # a way to turn it off
    #
-   if [ ! -z "${_evaledtag}" -a "${MULLE_SOURCETREE_RESOLVE_TAG}" = 'YES' ]
+   if [ ! -z "${_evaledtag}" ]
    then
-      if r_sourcetree_resolve_url_with_tag "${_evaledurl}" \
-                                           "${_evaledtag}" \
-                                           "${_evalednodetype}"
+      if [ "${MULLE_SOURCETREE_RESOLVE_TAG}" = 'YES' ]
       then
-         _evaledurl="${RVAL}"
-      else
-         case "${_evaledurl}" in
-            *"${_evaledtag}"*)
-            ;;
+         if r_sourcetree_resolve_url_with_tag "${_evaledurl}" \
+                                              "${_evaledtag}" \
+                                              "${_evalednodetype}"
+         then
+            _evaledurl="${RVAL}"
+         else
+            case "${_evaledurl}" in
+               *"${_evaledtag}"*)
+               ;;
 
-            *)
-               log_warning "Don't know how to modify ${_evaledurl} for ${_evaledtag}. Hope for symlink."
-            ;;
-         esac
+               *)
+                  log_warning "Don't know how to modify ${_evaledurl} for \
+${_evaledtag}. Hope for symlink."
+               ;;
+            esac
+         fi
+      else
+         log_fluff "Not resolving ${_evaledtag} as MULLE_SOURCETREE_RESOLVE_TAG is NO"
       fi
    fi
 
@@ -256,6 +293,7 @@ ${C_RESET_BOLD}${_evaledurl}${C_INFO}"
          local localurl
          local localnodetype
          local cmd2options
+         local rval
 
          cmd2options="${cmdoptions}"
          if [ ! -z "${_evaledurl}" ]
@@ -264,11 +302,15 @@ ${C_RESET_BOLD}${_evaledurl}${C_INFO}"
             cmd2options="${RVAL}"
          fi
 
+
          localurl="$( eval_exekutor "'${MULLE_FETCH:-mulle-fetch}'" \
                                           "${MULLE_TECHNICAL_FLAGS}" \
                                        "search-local" \
                                           "${cmd2options}" \
                                           "'${_address}'" )"
+         rval=$?
+         [ $rval -eq 127 ] && fail "mulle-fetch not found"
+
          if [ ! -z "${localurl}" ]
          then
             _evaledurl="${localurl}"
@@ -308,12 +350,18 @@ ${C_RESET_BOLD}${_evaledurl}${C_INFO}"
       cmdoptions="${RVAL}"
    fi
 
+   local rval
+
    eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
                        "${MULLE_TECHNICAL_FLAGS}" \
                     "${opname}" \
                        "${cmdoptions}" \
                        "${options}" \
                        "'${_address}'"
+   rval=$?
+   [ $rval -eq 127 ] && fail "mulle-fetch not found"
+
+   return $rval
 }
 
 

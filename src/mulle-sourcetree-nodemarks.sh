@@ -215,6 +215,10 @@ _nodemarks_contain()
 # like "version-darwin-min-0.12.0"
 # like "version-darwin-max-0.16.0"
 #
+# 0 yes
+# 1 no
+# 2 no mark found
+#
 nodemarks_version_match()
 {
    local marks="$1"
@@ -240,7 +244,7 @@ nodemarks_version_match()
                . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-version.sh" || exit 1
             fi
 
-            markvalue="${i##*-}"
+            markvalue="${i#${key}-}"
             r_version_distance "${value}" "${markvalue}"
             case "${operator}" in
                ""|"="|"==")
@@ -281,13 +285,14 @@ nodemarks_version_match()
    done
    IFS="${DEFAULT_IFS}" ; set +o noglob
 
-   return 0
+   return 2  # no match found
 }
 
 
 
 #
-# The "clever" existence check:
+# The "clever" existence check. (Not thaaaat clever though, use 
+# nodemarks_enable for that)
 #
 # Input         | Matches
 #               | absent   | no-<key> | only-<key>
@@ -299,7 +304,7 @@ nodemarks_version_match()
 # Note: The only-<key> needs to be queried explicitly for existence
 #       It will not deny a no-<key>.In fact there must not be a
 #       no-<key> present if there is a only-<key>
-#
+# 
 # The version keys are ignored
 #
 nodemarks_contain()
@@ -360,6 +365,86 @@ nodemarks_match()
 }
 
 
+nodemarks_enable()
+{
+   local marks="$1"
+   local key="$2"
+
+   case "${key}" in 
+      'only-'*|'no-'*)
+         internal_fail "key must not start with only or no"
+      ;;
+   esac
+
+   # if key is enabled with only- like only-platform-linux it's cool
+   if _nodemarks_contain "${marks}" "only-${key}"
+   then 
+      return 0
+   fi
+
+   # a no key disables
+   if _nodemarks_contain "${marks}" "no-${key}"
+   then
+      return 1
+   fi
+
+   # for platform-linux cut of last -linux and see if only-platform-* matches anything
+   # if yes we disable
+   ! nodemarks_match "${marks}" "only-${key%-*}-*"
+}
+
+
+nodemarks_disable()
+{
+   ! nodemarks_enable "$@"
+}
+
+
+nodemarks_compatible_with_nodemarks()
+{
+   local marks="$1"
+   local anymarks="$2"
+
+   local key
+
+   set -o noglob ; IFS=","
+   for key in ${anymarks}
+   do
+      IFS="${DEFAULT_IFS}" ; set +o noglob
+      case "${key}" in 
+         no-*)
+            key="${key:3}"
+         ;;
+
+         only-*)
+            key="${key:5}"
+         ;;
+
+        version-*)
+            continue
+         ;;
+      esac
+
+      if nodemarks_enable "${marks}" "${key}" 
+      then
+         if nodemarks_disable "${anymarks}" "${key}"
+         then
+            return 1
+         fi
+      else
+         if nodemarks_enable "${anymarks}" "${key}"
+         then
+            return 1
+         fi
+      fi
+   done
+   IFS="${DEFAULT_IFS}" ; set +o noglob
+
+   return 0
+}
+
+
+# this is low level
 nodemarks_intersect()
 {
    local marks="$1"
@@ -404,17 +489,17 @@ r_nodemarks_sort()
 #
 _nodemarks_filter_iexpr()
 {
-#  log_entry "_nodemarks_filter_iexpr" "${marks}" "${_s}" "${expr}"
+#   log_entry "_nodemarks_filter_iexpr" "$1" "$2" "(_s=${_s})"
 
    local marks="$1"
-   local qualifier="$2"
-   local expr=$3
+   local expr=$2
+   local error_hint="$3"
 
    _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
    case "${_s}" in
       AND*)
          _s="${_s:3}"
-         _nodemarks_filter_expr "${marks}" "${qualifier}"
+         _nodemarks_filter_expr "${marks}" "${error_hint}"
          if [ $? -eq 1  ]
          then
             return 1
@@ -424,7 +509,7 @@ _nodemarks_filter_iexpr()
 
       OR*)
          _s="${_s:2}"
-         _nodemarks_filter_expr "${marks}" "${qualifier}"
+         _nodemarks_filter_expr "${marks}" "${error_hint}"
          if [ $? -eq 0  ]
          then
             return 0
@@ -435,7 +520,7 @@ _nodemarks_filter_iexpr()
       ")")
          if [ "${expr}" = "" ]
          then
-            fail "Missing expression after marks qualifier \"${qualifier}\""
+            fail "Missing expression after marks qualifier \"${error_hint}\""
          fi
          return $expr
       ;;
@@ -443,22 +528,22 @@ _nodemarks_filter_iexpr()
       "")
          if [ "${expr}" = "" ]
          then
-            fail "Missing expression after marks qualifier \"${qualifier}\""
+            fail "Missing expression after marks qualifier \"${error_hint}\""
          fi
          return $expr
       ;;
    esac
 
-   fail "Unexpected expression at ${_s} of marks qualifier \"${qualifier}\""
+   fail "Unexpected expression at ${_s} of marks qualifier \"${error_hint}\""
 }
 
 
 _nodemarks_filter_sexpr()
 {
-#   log_entry "_nodemarks_filter_sexpr" "${marks}" "${_s}"
+#   log_entry "_nodemarks_filter_sexpr" "$1" "(_s=${_s})"
 
    local marks="$1"
-   local qualifier="$2"
+   local error_hint="$2"
 
    local expr
    local key
@@ -471,9 +556,9 @@ _nodemarks_filter_sexpr()
 
    _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
    case "${_s}" in
-      "("*)
+      '('*)
          _s="${_s:1}"
-         _nodemarks_filter_expr "${marks}" "${qualifier}"
+         _nodemarks_filter_expr "${marks}" "${error_hint}"
          expr=$?
 
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
@@ -481,7 +566,7 @@ _nodemarks_filter_sexpr()
          then
             if [ "${_s:0:1}" != ")" ]
             then
-               fail "Closing ) missing at \"${_s}\" of marks qualifier \"${qualifier}\""
+               fail "Closing ) missing at \"${_s}\" of marks qualifier \"${error_hint}\""
             fi
             _s="${_s:1}"
          fi
@@ -490,7 +575,7 @@ _nodemarks_filter_sexpr()
 
       NOT*)
          _s="${_s:3}"
-         _nodemarks_filter_sexpr "${marks}" "${qualifier}"
+         _nodemarks_filter_sexpr "${marks}" "${error_hint}"
          if [ $? -eq 0  ]
          then
             return 1
@@ -502,9 +587,8 @@ _nodemarks_filter_sexpr()
       IFDEF*)
          _s="${_s:5}"
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
-         key="${_s%%[ )]*}"
+         key="${_s%%[[:space:])]*}"
          _s="${_s#"${key}"}"
-         key="__DEFINE__${key}"
          value="${!key}"
          [ ! -z "${value}" ]
          return $?
@@ -513,54 +597,71 @@ _nodemarks_filter_sexpr()
       MATCHES*)
          _s="${_s:7}"
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
-         key="${_s%%[ )]*}"
+         key="${_s%%[[:space:])]*}"
          _s="${_s#"${key}"}"
          #log_entry nodemarks_match "${marks}" "${key}"
          nodemarks_match "${marks}" "${key}"
          return $?
       ;;
 
+      # check if a key is enabled or disabled by marks (only- and no-)
+      ENABLE*)
+         _s="${_s:6}"
+         _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
+         key="${_s%%[[:space:])]*}"
+         _s="${_s#"${key}"}"
+         #log_entry nodemarks_match "${marks}" "${key}"
+         nodemarks_enable "${marks}" "${key}"
+         return $?
+      ;;      
+
       VERSION*)
          _s="${_s:7}"
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
-         key="${_s%%[ )]*}"
+         key="${_s%%[[:space:])]*}"
          [ -z "${key}" ] && fail "Missing version key after VERSION"
          _s="${_s#"${key}"}"
 
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
-         operator="${_s%%[ )]*}"
+         operator="${_s%%[[:space:])]*}"
          [ -z "${operator}" ] && fail "Missing operator after version key"
          _s="${_s#"${operator}"}"
 
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
-         value="${_s%%[ )]*}"
+         value="${_s%%[[:space:])]*}"
          [ -z "${value}" ] && fail "Missing version value after operator"
          _s="${_s#"${value}"}"
 
          log_entry nodemarks_version_match "${marks}" "${key}"
          nodemarks_version_match "${marks}" "${key}" "${operator}" "${value}"
+         [ $? -ne 1 ]  # 0 ok, 2 also ok
          return $?
       ;;
 
       "")
-         fail "Missing expression after marks qualifier \"${qualifier}\""
+         fail "Missing expression after marks qualifier \"${error_hint}\""
       ;;
    esac
 
-   fail "Unknown command at \"${_s}\" of marks qualifier \"${qualifier}\""
+   fail "Unknown command at \"${_s}\" of marks qualifier \"${error_hint}\""
 }
 
 
+#
+# local _s
+#
+# _s contains the currently parsed qualifier
+#
 _nodemarks_filter_expr()
 {
-#  log_entry "_nodemarks_filter_expr" "${marks}" "${_s}"
+#   log_entry "_nodemarks_filter_expr" "$1" "(_s=${_s})"
 
    local marks="$1"
-   local qualifier="$2"
+   local error_hint="$2"
 
    local expr
 
-   _nodemarks_filter_sexpr "${marks}" "${qualifier}"
+   _nodemarks_filter_sexpr "${marks}" "${error_hint}"
    expr=$?
 
    while :
@@ -571,16 +672,17 @@ _nodemarks_filter_expr()
             break
          ;;
       esac
-      _nodemarks_filter_iexpr "${marks}" "${qualifier}" "${expr}"
+      _nodemarks_filter_iexpr "${marks}" "${expr}" "${error_hint}"
       expr=$?
    done
+
    return $expr
 }
 
 
 nodemarks_filter_with_qualifier()
 {
-#   log_entry "nodemarks_filter_with_qualifier" "$@"
+   log_entry "nodemarks_filter_with_qualifier" "$@"
 
    local marks="$1"
    local qualifier="$2"
@@ -625,3 +727,51 @@ nodemarks_walk()
    return $rval
 }
 
+
+is_sane_nodemark()
+{
+#   log_entry "is_sane_nodemark" "$@"
+
+   case "$1" in
+      "")
+         return 2
+      ;;
+
+      *[^a-z0-9._-]*)
+         return 1
+      ;;
+   esac
+}
+
+
+assert_sane_nodemark()
+{
+#   log_entry "assert_sane_nodemark" "$@"
+
+   if ! is_sane_nodemark "$1"
+   then
+      fail "mark \"$1\" must not contain characters other than a-z 0-9 . - _ \
+and not be empty"
+   fi
+}
+
+
+assert_sane_nodemarks()
+{
+   log_entry "assert_sane_nodemarks" "$@"
+
+   local marks="$1"
+
+   local mark
+
+   IFS=","; set -o noglob
+   for mark in ${marks}
+   do
+      IFS="${DEFAULT_IFS}"; set +o noglob
+
+      [ -z "${mark}" ] && continue
+ 
+      assert_sane_nodemark "${mark}"
+   done
+   IFS="${DEFAULT_IFS}"; set +o noglob
+}

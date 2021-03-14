@@ -10,7 +10,7 @@ main()
    local _marks
 
    nodemarks_contain  "${_marks}" "build"   || internal_fail "Did expect build as default"
-   nodemarks_contain  "${_marks}" "recurse" || internal_fail "Did expect recurse as default"
+   nodemarks_contain  "${_marks}" "descend" || internal_fail "Did expect descend as default"
    nodemarks_contain  "${_marks}" "delete"  || internal_fail "Did expect delete as default"
    nodemarks_contain  "${_marks}" "require" || internal_fail "Did expect require as default"
    nodemarks_contain  "${_marks}" "update"  || internal_fail "Did expect update as default"
@@ -19,7 +19,7 @@ main()
 
    nodemarks_contain  "${_marks}" "no-build"    && internal_fail "Did not expect no-build as default"
    nodemarks_contain  "${_marks}" "no-delete"   && internal_fail "Did not expect no-delete as default"
-   nodemarks_contain  "${_marks}" "no-recurse"  && internal_fail "Did not expect no-recurse as default"
+   nodemarks_contain  "${_marks}" "no-descend"  && internal_fail "Did not expect no-descend as default"
    nodemarks_contain  "${_marks}" "no-require"  && internal_fail "Did not expect no-require as default"
    nodemarks_contain  "${_marks}" "no-update"   && internal_fail "Did not expect no-update as default"
 
@@ -29,7 +29,7 @@ main()
 
    nodemarks_contain "${_marks}" "build"     && internal_fail "Did expect no-build ($_marks)"
    nodemarks_contain "${_marks}" "delete"    || internal_fail "Did not expect no-delete ($_marks)"
-   nodemarks_contain "${_marks}" "recurse"   || internal_fail "Did not expect no-recurse ($_marks)"
+   nodemarks_contain "${_marks}" "descend"   || internal_fail "Did not expect no-descend ($_marks)"
    nodemarks_contain "${_marks}" "require"   || internal_fail "Did not expect no-require ($_marks)"
    nodemarks_contain "${_marks}" "update"    || internal_fail "Did not expect no-update ($_marks)"
 
@@ -39,17 +39,17 @@ main()
 
    nodemarks_contain "${_marks}" "build"     && internal_fail "Did expect no-build ($_marks)"
    nodemarks_contain "${_marks}" "delete"    && internal_fail "Did expect no-delete ($_marks)"
-   nodemarks_contain "${_marks}" "recurse"   || internal_fail "Did not expect no-recurse ($_marks)"
+   nodemarks_contain "${_marks}" "descend"   || internal_fail "Did not expect no-descend ($_marks)"
    nodemarks_contain "${_marks}" "require"   || internal_fail "Did not expect no-require ($_marks)"
    nodemarks_contain "${_marks}" "update"    || internal_fail "Did not expect no-update ($_marks)"
 
    log_verbose "----- #4 PASSED -----"
 
-   _marks="`nodemarks_remove "${_marks}" "recurse"`"
+   _marks="`nodemarks_remove "${_marks}" "descend"`"
 
    nodemarks_contain "${_marks}" "build"     && internal_fail "Did expect no-build ($_marks)"
    nodemarks_contain "${_marks}" "delete"    && internal_fail "Did expect no-delete ($_marks)"
-   nodemarks_contain "${_marks}" "recurse"   && internal_fail "Did expect no-recurse ($_marks)"
+   nodemarks_contain "${_marks}" "descend"   && internal_fail "Did expect no-descend ($_marks)"
    nodemarks_contain "${_marks}" "require"   || internal_fail "Did not expect no-require ($_marks)"
    nodemarks_contain "${_marks}" "update"    || internal_fail "Did not expect no-update ($_marks)"
 
@@ -59,7 +59,7 @@ main()
 
    nodemarks_contain "${_marks}" "build"    && internal_fail "Did expect no-build ($_marks)"
    nodemarks_contain "${_marks}" "delete"   && internal_fail "Did expect no-delete ($_marks)"
-   nodemarks_contain "${_marks}" "recurse"  && internal_fail "Did expect no-recurse ($_marks)"
+   nodemarks_contain "${_marks}" "descend"  && internal_fail "Did expect no-descend ($_marks)"
    nodemarks_contain "${_marks}" "require"  && internal_fail "Did expect no-require ($_marks)"
    nodemarks_contain "${_marks}" "update"   || internal_fail "Did not expect no-update ($_marks)"
 
@@ -69,7 +69,7 @@ main()
 
    nodemarks_contain "${_marks}" "build"   && internal_fail "Did expect no-build ($_marks)"
    nodemarks_contain "${_marks}" "delete"  && internal_fail "Did expect no-delete ($_marks)"
-   nodemarks_contain "${_marks}" "recurse" && internal_fail "Did expect no-recurse ($_marks)"
+   nodemarks_contain "${_marks}" "descend" && internal_fail "Did expect no-descend ($_marks)"
    nodemarks_contain "${_marks}" "require" && internal_fail "Did expect no-require ($_marks)"
    nodemarks_contain "${_marks}" "update"  && internal_fail "Did expect no-update ($_marks)"
 
@@ -81,7 +81,7 @@ main()
 
    nodemarks_contain "${_marks}" "build"    || internal_fail "Did not expect no-build ($_marks)"
    nodemarks_contain "${_marks}" "delete"   && internal_fail "Did expect no-delete ($_marks)"
-   nodemarks_contain "${_marks}" "recurse"  && internal_fail "Did expect no-recurse ($_marks)"
+   nodemarks_contain "${_marks}" "descend"  && internal_fail "Did expect no-descend ($_marks)"
    nodemarks_contain "${_marks}" "require"  && internal_fail "Did expect no-require ($_marks)"
    nodemarks_contain "${_marks}" "update"   && internal_fail "Did expect no-update ($_marks)"
 
@@ -91,17 +91,17 @@ main()
 
    nodemarks_contain "${_marks}" "build"    || internal_fail "Did not expect no-build ($_marks)"
    nodemarks_contain "${_marks}" "delete"   || internal_fail "Did not expect no-delete ($_marks)"
-   nodemarks_contain "${_marks}" "recurse"  && internal_fail "Did expect no-recurse ($_marks)"
+   nodemarks_contain "${_marks}" "descend"  && internal_fail "Did expect no-descend ($_marks)"
    nodemarks_contain "${_marks}" "require"  && internal_fail "Did expect no-require ($_marks)"
    nodemarks_contain "${_marks}" "update"   && internal_fail "Did expect no-update ($_marks)"
 
    log_verbose "----- #9 PASSED -----"
 
-   _marks="`nodemarks_add "${_marks}" "recurse"`"
+   _marks="`nodemarks_add "${_marks}" "descend"`"
 
    nodemarks_contain "${_marks}" "build"    || internal_fail "Did not expect no-build ($_marks)"
    nodemarks_contain "${_marks}" "delete"   || internal_fail "Did not expect no-delete ($_marks)"
-   nodemarks_contain "${_marks}" "recurse"  || internal_fail "Did not expect no-recurse ($_marks)"
+   nodemarks_contain "${_marks}" "descend"  || internal_fail "Did not expect no-descend ($_marks)"
    nodemarks_contain "${_marks}" "require"  && internal_fail "Did expect no-require ($_marks)"
    nodemarks_contain "${_marks}" "update"   && internal_fail "Did expect no-update ($_marks)"
 
@@ -111,7 +111,7 @@ main()
 
    nodemarks_contain "${_marks}" "build"   || internal_fail "Did not expect no-build ($_marks)"
    nodemarks_contain "${_marks}" "delete"  || internal_fail "Did not expect no-delete ($_marks)"
-   nodemarks_contain "${_marks}" "recurse" || internal_fail "Did not expect no-recurse ($_marks)"
+   nodemarks_contain "${_marks}" "descend" || internal_fail "Did not expect no-descend ($_marks)"
    nodemarks_contain "${_marks}" "require" || internal_fail "Did not expect no-require ($_marks)"
    nodemarks_contain "${_marks}" "update"  && internal_fail "Did expect no-update ($_marks)"
 
@@ -121,7 +121,7 @@ main()
 
    nodemarks_contain "${_marks}" "build"    || internal_fail "Did not expect no-build ($_marks)"
    nodemarks_contain "${_marks}" "delete"   || internal_fail "Did not expect no-delete ($_marks)"
-   nodemarks_contain "${_marks}" "recurse"  || internal_fail "Did not expect no-recurse ($_marks)"
+   nodemarks_contain "${_marks}" "descend"  || internal_fail "Did not expect no-descend ($_marks)"
    nodemarks_contain "${_marks}" "require"  || internal_fail "Did not expect no-require ($_marks)"
    nodemarks_contain "${_marks}" "update"   || internal_fail "Did not expect no-update ($_marks)"
 

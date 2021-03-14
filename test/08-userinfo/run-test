@@ -68,9 +68,9 @@ r_commalist_add()
 }
 
 
-_sourcetree_get_userinfo_field()
+_sde_get_sourcetree_userinfo_field()
 {
-   log_entry "_sourcetree_get_userinfo_field" "$@"
+   log_entry "_sde_get_sourcetree_userinfo_field" "$@"
 
    local address="$1"
    local field="$2"
@@ -85,9 +85,9 @@ _sourcetree_get_userinfo_field()
 }
 
 
-_sourcetree_set_userinfo_field()
+_sde_set_sourcetree_userinfo_field()
 {
-   log_entry "_sourcetree_set_userinfo_field" "$@"
+   log_entry "_sde_set_sourcetree_userinfo_field" "$@"
 
    local address="$1"
    local field="$2"
@@ -147,15 +147,15 @@ main()
       internal_fail "add internal_failed unexpectedly"
    fi
 
-   _sourcetree_set_userinfo_field "a" "foo" "bar" "NO" || exit 1
-   value="`_sourcetree_get_userinfo_field "a" "foo"`"
+   _sde_set_sourcetree_userinfo_field "a" "foo" "bar" "NO" || exit 1
+   value="`_sde_get_sourcetree_userinfo_field "a" "foo"`"
    if [ "${value}" != "bar" ]
   	then
       internal_fail "unexpected value \"${value}\""
   	fi
 
-   _sourcetree_set_userinfo_field "a" "foo" "baz" "NO" || exit 1
-   value="`_sourcetree_get_userinfo_field "a" "foo"`"
+   _sde_set_sourcetree_userinfo_field "a" "foo" "baz" "NO" || exit 1
+   value="`_sde_get_sourcetree_userinfo_field "a" "foo"`"
    if [ "${value}" != "baz" ]
   	then
       internal_fail "unexpected value \"${value}\""
@@ -164,15 +164,15 @@ main()
    log_verbose "----- #1 PASSED -----"
 
 
-   _sourcetree_set_userinfo_field "a" "foo" "bar" "YES" || exit 1
-   value="`_sourcetree_get_userinfo_field "a" "foo"`"
+   _sde_set_sourcetree_userinfo_field "a" "foo" "bar" "YES" || exit 1
+   value="`_sde_get_sourcetree_userinfo_field "a" "foo"`"
    if [ "${value}" != "baz,bar" ]
   	then
       internal_fail "unexpected value \"${value}\""
   	fi
 
-   _sourcetree_set_userinfo_field "a" "foo" "xxx" "YES" || exit 1
-   value="`_sourcetree_get_userinfo_field "a" "foo"`"
+   _sde_set_sourcetree_userinfo_field "a" "foo" "xxx" "YES" || exit 1
+   value="`_sde_get_sourcetree_userinfo_field "a" "foo"`"
    if [ "${value}" != "baz,bar,xxx" ]
   	then
       internal_fail "unexpected value \"${value}\""
@@ -182,23 +182,23 @@ main()
 
    log_verbose "----- #2 PASSED -----"
 
-   _sourcetree_set_userinfo_field "a" "foobar" "bar" "YES" || exit 1
+   _sde_set_sourcetree_userinfo_field "a" "foobar" "bar" "YES" || exit 1
    run_mulle_sourcetree -N list
 
-   value="`_sourcetree_get_userinfo_field "a" "foobar"`"
+   value="`_sde_get_sourcetree_userinfo_field "a" "foobar"`"
    if [ "${value}" != "bar" ]
   	then
       internal_fail "unexpected value \"${value}\""
   	fi
 
-   _sourcetree_set_userinfo_field "a" "foobar" "xxx" "YES" || exit 1
-   value="`_sourcetree_get_userinfo_field "a" "foobar"`"
+   _sde_set_sourcetree_userinfo_field "a" "foobar" "xxx" "YES" || exit 1
+   value="`_sde_get_sourcetree_userinfo_field "a" "foobar"`"
    if [ "${value}" != "bar,xxx" ]
   	then
       internal_fail "unexpected value \"${value}\""
   	fi
 
-   value="`_sourcetree_get_userinfo_field "a" "foo"`"
+   value="`_sde_get_sourcetree_userinfo_field "a" "foo"`"
    if [ "${value}" != "baz,bar,xxx" ]
   	then
       internal_fail "unexpected value \"${value}\""

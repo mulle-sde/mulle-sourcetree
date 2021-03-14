@@ -78,7 +78,7 @@ sourcetree_dbstatus_main()
       ! db_is_ready "${SOURCETREE_START}"
    then
       log_info "Needs update"
-      return 4
+      return 2
    fi
 
    log_info "Is up-to-date"

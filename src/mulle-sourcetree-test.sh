@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 #
-#   Copyright (c) 2018 Nat! - Mulle kybernetiK
+#   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
 #   Redistribution and use in source and binary forms, with or without
@@ -29,63 +29,54 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+MULLE_SOURCETREE_TEST_SH="included"
 
 
-_mulle_sourcetree_complete()
+sourcetree_test_usage()
 {
-   local cur=${COMP_WORDS[COMP_CWORD]}
-   local prev=${COMP_WORDS[COMP_CWORD-1]}
+   [ $# -ne 0 ] && log_error "$1"
 
-   local list
-   local i
-   local context
-   local mulle_uname
+   cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} test <marks> <mark>
 
-   for i in "${COMP_WORDS[@]}"
-   do
-      case "$i" in
-         add|craftorder|clean|dotdump|fix|get|info|list|\
-mark|move|nameguess|remove|reset|set|status|unmark|update|walk)
-            context="$i"
-         ;;
-      esac
-   done
+   Tests if a mark is enabled by marks. This is the same operation that is
+   used by the ENABLES function of the qualifiers used by ${MULLE_USAGE_NAME} 
+   list.
 
-   case "$prev" in
-      get|set|mark|move|unmark)
-         list="`mulle-sourcetree -s -e list --output-no-header --format "%a\\n"`"
-         COMPREPLY=( $( compgen -W "${list}" -- "$cur" ) )
-         return
-      ;;
-   esac
+Example:
 
-   local prevprev
+  ${MULLE_USAGE_NAME} test only-platform-mingw platform-linux
 
-   if [ ${COMP_CWORD} -gt 1 ]
-   then
-      prevprev=${COMP_WORDS[COMP_CWORD-2]}
-   fi
-
-   case "${prevprev}" in
-      mark|unmark)
-         mulle_uname="`mulle-sourcetree -s -e uname`"
-         COMPREPLY=( $( compgen -W "no-all-load no-build no-defer no-delete no-fs \
-no-header no-include no-link no-require no-set no-share \
-no-update no-${mulle_uname} only-${mulle_uname}" -- "$cur" ) )
-      ;;
-
-      move)
-         COMPREPLY=( $( compgen -W "up down top bottom" -- "$cur" ) )
-      ;;
-
-      *)
-         COMPREPLY=( $( compgen -W "add craftorder clean dotdump fix get info \
-list mark move nameguess remove reset set status unmark update walk" -- "$cur" ) )
-      ;;
-   esac
+Returns:
+    0 : yes
+    1 : error
+    2 : no
+EOF
+  exit 1
 }
 
 
-complete -F _mulle_sourcetree_complete mulle-sourcetree
+sourcetree_test_main()
+{
+   log_entry "sourcetree_test_main" "$@"
 
+   [ $# -ne 2 ] && sourcetree_test_usage
+
+   if [ -z "${MULLE_SOURCETREE_NODEMARKS_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-nodemarks.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
+   fi
+
+   assert_sane_nodemarks "$1"
+   assert_sane_nodemark  "$2"
+
+   if nodemarks_enable "$1" "$2"
+   then
+      log_info "YES"
+      return 0
+   fi
+   log_info "NO"
+   return 2
+}

@@ -84,7 +84,7 @@ sourcetree_wrap_config()
          continue
       fi
 
-      nodeline_parse "${nodeline}"
+      nodeline_parse "${nodeline}"  # memo: _marks not used
 
       r_de_camel_case_upcase_identifier "${_address}"
       identifier="${RVAL}"

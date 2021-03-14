@@ -57,7 +57,7 @@ Usage:
       require    : fence with \`#if __has_include\`
       import     : use "import" instead of "include"
       public     : takes part in the generation of the public include file
-      os         : to produce \`#ifndef __APPLE__\` and such
+      platform   : to produce \`#ifndef __APPLE__\` and such
 
 Flags:
    --stdout      : Emit to stdout instead
@@ -100,9 +100,9 @@ r_uname_to_cpp()
 }
 
 
-r_osexclude_to_cpp_if()
+r_platformexclude_to_cpp_if()
 {
-   log_entry "r_osexclude_to_cpp_if" "$@"
+   log_entry "r_platformexclude_to_cpp_if" "$@"
 
    local marks="$1"
 
@@ -113,19 +113,21 @@ r_osexclude_to_cpp_if()
 
    set -o noglob ; IFS=","
 
-   for osexclude in ${marks}
+   local mark
+
+   for mark in ${marks}
    do
       IFS="${DEFAULT_IFS}"; set +o noglob
 
-      case "${osexclude}" in
-         only-os-*)
-				r_uname_to_cpp "${osexclude:8}"
+      case "${mark}" in
+         only-platform-*)
+				r_uname_to_cpp "${mark:14}"
             r_concat "${onlys}" "defined( ${RVAL})" " || "
             onlys="${RVAL}"
          ;;
 
-         no-os-*)
-				r_uname_to_cpp "${osexclude:6}"
+         no-platform-*)
+				r_uname_to_cpp "${mark:12}"
             r_concat "${excludes}" "! defined( ${RVAL})" " && "
             excludes="${RVAL}"
          ;;
@@ -153,44 +155,50 @@ _emit_c_include()
 {
    log_entry "_emit_c_include" "$@"
 
-   local address="$1"
-   local header="$2"
+   local uuid="$1"
+   local address="$2"
    local marks="$3"
+   local header="$4"
 
    local indent
    local ifstatement
    local include
    local mark
-
+   local tinclude
 
    #
    # so objc can reuse this, make a provision for import with --objc flag
    # but allow #include if the mark no-objc is set
    #
    include="include"
+   tinclude="include:"
    if [ "${OPTION_IMPORT}" = 'YES' ]
    then
       include="import"
+      tinclude="import: "
 
       case ",${marks}," in
          *,no-import,*)
             include="include"
+            tinclude="include:"
          ;;
       esac
    fi
 
    cat <<EOF
-// How to tweak the following ${address} #$include
+// You can tweak the following #$include with these commands.
+// (Use ${uuid} instead of ${address} if there are duplicate entries)
 //    remove:             \`mulle-sourcetree mark ${address} no-header\`
 //    rename:             \`mulle-sde dependency|library set ${address} include whatever.h\`
-//    toggle #import:     \`mulle-sourcetree mark ${address} [no-]import\`
+//    reorder:            \`mulle-sourcetree move ${address} <up|down>\`
+//    toggle #${tinclude}    \`mulle-sourcetree mark ${address} [no-]import\`
 //    toggle public:      \`mulle-sourcetree mark ${address} [no-]public\`
 //    toggle optional:    \`mulle-sourcetree mark ${address} [no-]require\`
-//    remove for os:      \`mulle-sourcetree mark ${address} no-os-<osname>\`
+//    remove for platform:\`mulle-sourcetree mark ${address} no-platform-<name>\`
 EOF
    if [ ! -z "${marks}" ]
    then
-   	r_osexclude_to_cpp_if "${marks}"
+   	r_platformexclude_to_cpp_if "${marks}"
       ifstatement="${RVAL}"
    fi
 
@@ -206,7 +214,7 @@ EOF
    # not loading a required header... hmm
    #
    case ",${marks}," in
-      *,no-require,*)
+      *,no-require,*|*,no-require-${MULLE_UNAME},*)
          local name
 
          r_tweaked_de_camel_case "${address}"
@@ -215,24 +223,24 @@ EOF
          name="${RVAL}"
 
          cat <<EOF
-#${indent} ifdef __has_include
-#${indent}  if __has_include(<${header}>)
-#${indent}   ${indent}${include} <${header}>   // ${address}
-#${indent}   define HAVE_LIB_${name%%_}
-#${indent}  endif
+#${indent}ifdef __has_include
+#${indent} if __has_include(<${header}>)
+#${indent}  ${indent}${include} <${header}>   // ${address}
+#${indent}  define HAVE_LIB_${name%%_}
 #${indent} endif
+#${indent}endif
 EOF
       ;;
 
       *)
-         echo "# ${indent}${include} <${header}>   // ${address}"
+         echo "#${indent}${include} <${header}>   // ${address}"
       ;;
    esac
 
 
    if [ ! -z "${ifstatement}" ]
    then
-      echo "# endif"
+      echo "#endif"
    fi
 
    echo
@@ -243,9 +251,10 @@ emit_c_include_library()
 {
    log_entry "emit_c_include_library" "$@"
 
-   local address="$1"
-   local marks="$2"
-   local header="$3"
+   local uuid="$1"
+   local address="$2"
+   local marks="$3"
+   local header="$4"
 
    #
    # the default for libraries is old style <name.h> not <name/name.h>
@@ -259,8 +268,7 @@ emit_c_include_library()
       header="${name}.h"
    fi
 
-   _emit_c_include "${address}" "${header}" "${marks}"
-
+   _emit_c_include "${uuid}" "${address}" "${marks}" "${header}" 
 }
 
 
@@ -268,9 +276,10 @@ emit_c_include_dependency()
 {
    log_entry "emit_c_include_dependency" "$@"
 
-   local address="$1"
-   local marks="$2"
-   local header="$3"
+   local uuid="$1"
+   local address="$2"
+   local marks="$3"
+   local header="$4"
 
    #
    # the default for dependencies is <name/name.h>
@@ -284,7 +293,7 @@ emit_c_include_dependency()
       header="${name}/${name}.h"
    fi
 
-   _emit_c_include "${address}" "${header}" "${marks}"
+   _emit_c_include "${uuid}" "${address}" "${marks}" "${header}" 
 }
 
 
@@ -304,7 +313,7 @@ emit_c_header()
    local headers
 
    headers="`exekutor mulle-sourcetree list \
-                                       --format "%a;%m;%i={include,,-------}\\n" \
+                                       --format "%_;%a;%m;%i={include,,-------}\\n" \
                                        --marks "${filter_marks}" \
                                        --bequeath \
                                        --output-format raw \
@@ -320,10 +329,11 @@ emit_c_header()
       local address
       local marks
       local include
+      local uuid
 
-      IFS=";" read address marks include <<< "${header}"
+      IFS=";" read uuid address marks include <<< "${header}"
 
-      if [ -z "${address}" ]
+      if [ -z "${uuid}" ]
       then
          continue
       fi
@@ -332,14 +342,16 @@ emit_c_header()
 
       case ",${marks}," in
          *,no-dependency,*)
-            emit_c_include_library "${address}" \
+            emit_c_include_library "${uuid}" \
+                                   "${address}" \
                                    "${marks}" \
                                    "${include}" \
                                    "$@"
          ;;
 
          *)
-            emit_c_include_dependency "${address}" \
+            emit_c_include_dependency "${uuid}" \
+                                      "${address}" \
                                       "${marks}" \
                                       "${include}" \
                                       "$@"
@@ -387,11 +399,11 @@ r_text_info_none()
 
    RVAL="/* Contents suppressed by ${key} NONE.
 * Use
-*   mulle-sde environment --global set ${key} DISABLE
+*   mulle-sde environment set ${key} DISABLE
 * to not generate this file.
 *
 * Use
-*   mulle-sde environment --global set MULLE_SOURCETREE_TO_C_RUN DISABLE
+*   mulle-sde environment set MULLE_SOURCETREE_TO_C_RUN DISABLE
 * to not generate any header files.
 */"
 }
@@ -405,12 +417,13 @@ r_text_info_on()
  *   This file will be regenerated by \`mulle-sourcetree-to-c\` via
  *   \`mulle-sde reflect\` and any edits will be lost.
  *   Suppress generation of this file with:
- *      mulle-sde environment --global \\
- *         set ${key} DISABLE
+ *
+ *      mulle-sde environment set ${key} DISABLE
  *
  *   To not generate any header files:
- *      mulle-sde environment --global \\
- *         set MULLE_SOURCETREE_TO_C_RUN DISABLE
+ *
+ *      mulle-sde environment set MULLE_SOURCETREE_TO_C_RUN DISABLE
+ *
  */"
 }
 
@@ -541,12 +554,7 @@ objc_import()
       r_text_info_on 'MULLE_SOURCETREE_TO_C_IMPORT_FILE'
       text_h="${RVAL}
 
-#ifndef _${projectidentifier}_import_h__
-#define _${projectidentifier}_import_h__
-
-${text_h}
-
-#endif"
+${text_h}"
    fi
 
    output_file  "${MULLE_SOURCETREE_TO_C_IMPORT_FILE}" \
@@ -671,7 +679,7 @@ objc_import_private()
             text_h="${text_h}
 
 #ifdef __has_include
-# if __has_include( \"_${projectname}-include.h\")
+# if __has_include( \"_${projectname}-include-private.h\")
 #  include \"_${projectname}-include-private.h\"
 # endif
 #endif"
@@ -681,13 +689,7 @@ objc_import_private()
 
       r_text_info_on 'MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE'
       text_h="${RVAL}
-
-#ifndef _${projectidentifier}_import_private_h__
-#define _${projectidentifier}_import_private_h__
-
-${text_h}
-
-#endif"
+${text_h}"
    fi
 
    output_file "${MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE}" \
@@ -811,18 +813,22 @@ main()
 
    if [ -z "${PROJECT_IDENTIFIER}" ]
    then
-      r_identifier "${PROJECT_IDENTIFIER}"
+      r_identifier "${PROJECT_NAME}"
       PROJECT_IDENTIFIER="${RVAL}"
    fi
 
-   r_lowercase "${PROJECT_IDENTIFIER}"
-   PROJECT_DOWNCASE_IDENTIFIER="${RVAL}"
+   if [ -z "${PROJECT_DOWNCASE_IDENTIFIER}" ]
+   then
+      r_tweaked_de_camel_case "${PROJECT_IDENTIFIER}"
+      r_lowercase "${RVAL}"
+      PROJECT_DOWNCASE_IDENTIFIER="${RVAL}"
+   fi
 
    PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR:-.}"
    PROJECT_DIALECT="${PROJECT_DIALECT:-c}"
 
-   c_include "${PROJECT_NAME}" "${PROJECT_IDENTIFIER}" || exit 1
-   c_include_private "${PROJECT_NAME}" "${PROJECT_IDENTIFIER}" || exit 1
+   c_include "${PROJECT_NAME}" "${PROJECT_DOWNCASE_IDENTIFIER}" || exit 1
+   c_include_private "${PROJECT_NAME}" "${PROJECT_DOWNCASE_IDENTIFIER}" || exit 1
 
    if [ "${PROJECT_DIALECT}" = "objc" ]
    then

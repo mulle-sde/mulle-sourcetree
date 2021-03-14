@@ -118,7 +118,6 @@ EOF
 # Possible permissions: "symlink,missing"
 # Useful for craftorder it would seem
 #
-
 _callback_permissions()
 {
    log_entry "_callback_permissions" "$@"
@@ -289,21 +288,20 @@ _descend_filter()
 #
 # clobbers:
 #
-# local old
-# local oldshared
+# local _old
 #
 __docd_preamble()
 {
    local directory="$1"
 
-   old="${PWD}"
+   _old="${PWD}"
    exekutor cd "${directory}"
 }
 
 
 __docd_postamble()
 {
-   exekutor cd "${old}"
+   exekutor cd "${_old}"
 }
 
 
@@ -319,6 +317,9 @@ __docd_postamble()
 # mode
 # callback
 # ...
+#
+# Special return value 121 signals callbackqualifier was the reason
+# this can be used by callers to not check for optimization purposes
 #
 _visit_callback()
 {
@@ -341,8 +342,8 @@ _visit_callback()
    then
       if ! _callback_filter "${_marks}" "${callbackqualifier}"
       then
-         log_fluff "Node \"${_address}\": \"${_marks}\" doesn't jive with marks \"${callbackqualifier}\""
-         return 1 # the 1 indicates that the filter was the reason (can be reused by descend maybe)
+         log_fluff "Node \"${_address}\" marks \"${_marks}\" don't jive with qualifier \"${callbackqualifier}\""
+         return 121  # the 1 indicates that the filter was the reason (can be reused by descend maybe)
       fi
    fi
 
@@ -366,11 +367,13 @@ doesn't jive with permissions \"${filterpermissions}\""
       fi
    fi
 
+   local rval
+
+   rval=0
    WALK_INDEX=$((WALK_INDEX + 1))
    case ",${mode}," in
       *,docd,*)
-         local old
-         local directory
+         local _old
 
          if [ -d "${_filename}" ]
          then
@@ -378,10 +381,7 @@ doesn't jive with permissions \"${filterpermissions}\""
                __call_callback "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
                rval=$?
             __docd_postamble
-            if [ $rval -ne 0 ]
-            then
-               exit $rval
-            fi
+            log_debug "callback returned $rval"
          else
             log_fluff "\"${_filename}\" not there, so no callback"
          fi
@@ -389,10 +389,12 @@ doesn't jive with permissions \"${filterpermissions}\""
 
       *)
          __call_callback "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
+         rval=$?
+         log_debug "callback returned $rval"
       ;;
    esac
 
-   return 0
+   return $rval
 }
 
 
@@ -427,7 +429,7 @@ _visit_descend()
    local descendqualifier="$6"
    local mode="$7"
 
-   if nodemarks_contain "${_marks}" "no-descend"
+   if nodemarks_disable "${_marks}" "descend"
    then
       log_debug "Do not recurse on \"${virtual}/${_destination}\" due to no-descend mark"
       return 0
@@ -438,7 +440,7 @@ _visit_descend()
       if ! _descend_filter "${_marks}" "${descendqualifier}"
       then
          log_debug "Node \"${_address}\" marks \"${_marks}\" don't jive with \"${descendqualifier}\""
-         return 1 # the 1 indicates that the filter was the reason (can be reused by callback maybe)
+         return 0
       fi
    fi
 
@@ -467,25 +469,31 @@ doesn't jive with permissions \"${filterpermissions}\""
    WALK_INDENT="${WALK_INDENT} "
    WALK_LEVEL=$((WALK_LEVEL + 1))
 
+   local rval
+
    case ",${mode}," in
       *,walkdb,*)
          _walk_db_uuids "$@"
+         rval=$?
       ;;
 
       *)
          _walk_config_uuids "$@"
+         rval=$?
       ;;
    esac
 
    WALK_LEVEL=$((WALK_LEVEL - 1))
    WALK_INDENT="${WALK_INDENT%?}"
 
-   if [ ! -z "${DID_DESCEND_CALLBACK}" ]
+   if [ $rval -eq 0 -a ! -z "${DID_DESCEND_CALLBACK}" ]
    then
       "${DID_DESCEND_CALLBACK}" "$@"
-   fi
+      rval=$?
+      log_debug "DID_DESCEND_CALLBACK of \"${virtual}/${_destination}\" returns $rval"
 
-   return 0
+   fi
+   return $rval
 }
 
 
@@ -557,7 +565,7 @@ ${_raw_userinfo}"
                   # ignore these flag for deduping otherwise
                ;;
 
-               *-os-*|only-configuration-*|no-link)
+               *-platform-*|only-configuration-*|no-link)
                   r_comma_concat "${linkmarks}" "${i}"
                   linkmarks="${RVAL}"
                ;;
@@ -622,7 +630,7 @@ r_walk_has_visited()
    fi
 
    RVAL="${lineid}"
-   return 4
+   return 2
 }
 
 
@@ -704,34 +712,61 @@ _visit_node()
                return
             ;;
 
-            4) # dedupe
+            2) # dedupe
                walk_remember_visit "${RVAL}"
             ;;
          esac
       ;;
    esac
 
+   local rval
+
    case ",${mode}," in
       *,flat,*|*,in-flat,*|*,post-flat,*|*,breadth-flat,*)
          log_debug "No descend"
          _visit_callback "$@"
+         rval=$?
       ;;
 
       *,in-order,*)
          log_debug "In-order descend into ${next_datasource}"
+
+         # this is on the second pass, the callback will have been called already
          _visit_descend "$@"
+         rval=$?
       ;;
 
       *,post-order,*)
          log_debug "Post-order descend into ${next_datasource}"
+
+         # this is on the first pass, the callback will be called later
          _visit_descend "$@"
+         rval=$?
       ;;
 
       *,pre-order,*)
-         if _visit_callback "$@" || [ "${descendqualifier}" != "${callbackqualifier}" ]
+         _visit_callback "$@"
+         rval=$?
+
+         #
+         # we don't need to check the  descendqualifier if its the same
+         # as the callbackqualifier and it has already failed in
+         # _visit_callback
+         #
+         if [ $rval -eq 121 ]
+         then
+            if "${descendqualifier}" = "${callbackqualifier}" ]
+            then
+               break
+            fi
+            rval=0
+         fi
+
+         if [ $rval -eq 0 ]
          then
             log_debug "Pre-order descend into ${next_datasource}"
             _visit_descend "$@"
+            rval=$?
          fi
       ;;
 
@@ -741,10 +776,19 @@ _visit_node()
       *,breadth-order,*)
          log_debug "Breadth-first descend into ${next_datasource}"
          _visit_descend "$@"
+         rval=$?
+      ;;
+
+      *)
+         internal_fail "Unknown visit mode"
       ;;
    esac
 
-   return 0
+   if [ $rval -eq 121 ]
+   then
+      rval=0
+   fi
+   return $rval
 }
 
 
@@ -888,7 +932,7 @@ walk_nodeline()
    local _raw_userinfo
    local _uuid
 
-   nodeline_parse "${nodeline}"
+   nodeline_parse "${nodeline}"  # !!
 
    #
    # Assume you have a -> b -> c.
@@ -900,7 +944,7 @@ walk_nodeline()
          if [ ${WALK_LEVEL} -gt 0 ]
          then
             # node marked as no-bequeath   : ignore
-            if ! nodemarks_contain "${_marks}" "bequeath"
+            if nodemarks_disable "${_marks}" "bequeath"
             then
                log_debug "Do not act on non-toplevel \"${virtual}/${_destination}\" with no-bequeath mark"
                return 0
@@ -923,7 +967,7 @@ walk_nodeline()
       ;;
 
       *,share,*)
-         if nodemarks_contain "${_marks}" "share"
+         if nodemarks_enable "${_marks}" "share"
          then
             _walk_share_node "$@"
             return $?
@@ -1051,7 +1095,7 @@ _print_walk_info()
 #
 _walk_nodelines()
 {
-#   log_entry "_walk_nodelines" "$@"
+   log_entry "_walk_nodelines" "$@"
 
    local nodelines="$1"; shift
 
@@ -1063,10 +1107,7 @@ _walk_nodelines()
    local descendqualifier="$1"; shift
    local mode="$1" ; shift
 
-   if ! _print_walk_info "${datasource}" "${nodelines}" "${mode}"
-   then
-      return
-   fi
+   _print_walk_info "${datasource}" "${nodelines}" "${mode}"
 
    case ",${mode}," in
       *,backwards,*)
@@ -1074,6 +1115,8 @@ _walk_nodelines()
          nodelines="${RVAL}"
       ;;
    esac
+
+   local rval
 
    case ",${mode}," in
       *,breadth-order,*)
@@ -1098,6 +1141,8 @@ _walk_nodelines()
                           "${descendqualifier}" \
                           "${tmpmode}" \
                           "$@"
+            rval=$?
+            [ $rval -ne 0 ] && return $rval
          done
          IFS="${DEFAULT_IFS}" ; set +o noglob
       ;;
@@ -1120,6 +1165,8 @@ _walk_nodelines()
                     "${descendqualifier}" \
                     "${mode}" \
                     "$@"
+      rval=$?
+      [ $rval -ne 0 ] && return $rval
 
       case ",${mode}," in
          *,in-order,*)
@@ -1138,6 +1185,8 @@ _walk_nodelines()
                           "${descendqualifier}" \
                           "${tmpmode}" \
                           "$@"
+            rval=$?
+            [ $rval -ne 0 ] && return $rval
          ;;
       esac
    done
@@ -1166,6 +1215,8 @@ _walk_nodelines()
                           "${descendqualifier}" \
                           "${tmpmode}" \
                           "$@"
+            rval=$?
+            [ $rval -ne 0 ] && return $rval
          done
          IFS="${DEFAULT_IFS}" ; set +o noglob
       ;;
@@ -1186,7 +1237,7 @@ walk_dedupe()
 
    if find_line "${WALKED}" "${datasource}"
    then
-      log_fluff "Datasource \"${datasource}\" has already been walked"
+      log_debug "Datasource \"${datasource}\" has already been walked"
       return 0
    fi
 
@@ -1260,29 +1311,26 @@ walk_config_uuids()
 {
    log_entry "walk_config_uuids" "$@"
 
-   # this is a subshell, so that the callback max call "exit"
-   # to preempt walking
-   (
-      local VISITED
-      local WALKED
-      local rval
-      local WALK_INDENT=""
-      local WALK_LEVEL=0
-      local WALK_INDEX=0
+   local VISITED
+   local WALKED
+   local rval
+   local WALK_INDENT=""
+   local WALK_LEVEL=0
+   local WALK_INDEX=0
 
-      WALKED=
-      VISITED=
-      _walk_config_uuids "${SOURCETREE_START}" "" "$@"
-      rval=$?
+   WALKED=
+   VISITED=
+   _walk_config_uuids "${SOURCETREE_START}" "" "$@"
+   rval=$?
 
-      if [ ! -z "${DID_WALK_CALLBACK}" ]
-      then
-         # keep callback signature somewhat uniform with other callbacks
-         "${DID_WALK_CALLBACK}" "${SOURCETREE_START}" "" "$@"
-      fi
+   # on 2, which is preempt we dont call the callback
+   if [ $rval -eq 0 -a ! -z "${DID_WALK_CALLBACK}" ]
+   then
+      # keep callback signature somewhat uniform with other callbacks
+      "${DID_WALK_CALLBACK}" "${SOURCETREE_START}" "" "$@"
+   fi
 
-      exit $rval
-   )
+   return $rval
 }
 
 
@@ -1348,25 +1396,24 @@ walk_db_uuids()
 
    # this is a subshell, so that the callback max call "exit"
    # to preempt walking
-   (
-      local VISITED
-      local WALKED
-      local WALK_INDENT=""
-      local WALK_LEVEL=0
-      local WALK_INDEX=0
+   local VISITED
+   local WALKED
+   local WALK_INDENT=""
+   local WALK_LEVEL=0
+   local WALK_INDEX=0
 
-      WALKED=
-      VISITED=
-      _walk_db_uuids "${SOURCETREE_START}" "" "$@"
+   WALKED=
+   VISITED=
+   _walk_db_uuids "${SOURCETREE_START}" "" "$@"
+   rval=$?
+
+   if [ ! -z "${DID_WALK_CALLBACK}" ]
+   then
+      "${DID_WALK_CALLBACK}" "${SOURCETREE_START}" "" "$@"
       rval=$?
+   fi
 
-      if [ ! -z "${DID_WALK_CALLBACK}" ]
-      then
-         "${DID_WALK_CALLBACK}" "${SOURCETREE_START}" "" "$@"
-      fi
-
-      exit $rval
-   )
+   return $rval
 }
 
 
@@ -1467,7 +1514,7 @@ sourcetree_walk()
       esac
    fi
 
-   if [ $rval -eq 4 ]
+   if [ $rval -eq 2 ]
    then
       return 0
    fi
@@ -1617,14 +1664,14 @@ sourcetree_walk_main()
             OPTION_LENIENT='NO'
          ;;
 
-         --will-recurse-callback)
+         --will-descend-callback|--will-recurse-callback)
             [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
             shift
 
             WILL_DESCEND_CALLBACK="$1"
          ;;
 
-         --did-recurse-callback)
+         --did-descend-callback|--did-recurse-callback)
             [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
             shift
 
@@ -1701,19 +1748,22 @@ sourcetree_walk_main()
       sourcetree_walk_usage "Superflous arguments \"$*\". Pass callback \
 as one string and use "
 
+   local mode
+
+   mode="${SOURCETREE_MODE}"
+
    local callback
 
    if [ $# -eq 0 ]
    then
       callback='printf "%s\n" "${WALK_NODE}"'
+      r_comma_concat "${mode}" "eval"
+      mode="${RVAL}"
    else
       callback="$1"
       shift
    fi
 
-   local mode
-
-   mode="${SOURCETREE_MODE}"
 
    #
    # MEMO: as we are not binary tree but really a graph with multiple

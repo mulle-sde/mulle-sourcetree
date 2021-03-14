@@ -140,7 +140,7 @@ main()
    run_mulle_sourcetree remove b  &&
    # c reappears somewhere else
    run_mulle_sourcetree add --nodetype git "file://${repos}/c" &&
-   run_mulle_sourcetree -vvv -ld --share sync || dump_fail "${project}"
+   run_mulle_sourcetree --share sync || dump_fail "${project}"
 
    [ -d "stash/b" ] && fail "b still there"
    [ ! -d "stash/c" ] && fail "c not there"

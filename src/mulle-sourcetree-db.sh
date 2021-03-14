@@ -386,7 +386,8 @@ db_bury()
    #
    local project_dir
 
-   [ -z "${SOURCETREE_DB_FILENAME_RELATIVE}" ] && internal_fail "SOURCETREE_DB_FILENAME_RELATIVE is empty"
+   [ -z "${SOURCETREE_DB_FILENAME_RELATIVE}" ] \
+      && internal_fail "SOURCETREE_DB_FILENAME_RELATIVE is empty"
 
    r_simplified_absolutepath "${databasedir}/${SOURCETREE_DB_FILENAME_RELATIVE}"
    project_dir="${RVAL}"
@@ -402,7 +403,8 @@ db_bury()
    r_relative_path_between "${phys_filename}" "${phys_project_dir}"
    case "${RVAL}" in
       ../*)
-         internal_fail "Bury path \"${filename#${MULLE_USER_PWD}/}\" escapes project \"${project_dir#${MULLE_USER_PWD}/}"
+         internal_fail "Bury path \"${filename#${MULLE_USER_PWD}/}\" escapes \
+project \"${project_dir#${MULLE_USER_PWD}/}"
       ;;
    esac
 
@@ -432,7 +434,9 @@ db_bury()
    TAR="`command -v "tar"`"
    if [ ! -z "${TAR}" -a -d "${gravepath}" ]
    then
-      log_info "Burying charred ${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
+      log_info "Burying charred \
+${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \
+\"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
       exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}.tmp" >&2 &&
       (
          rexekutor cd "${gravepath}.tmp" &&
@@ -440,7 +444,9 @@ db_bury()
          rmdir_safer "${gravepath}.tmp"
       ) &
    else
-      log_info "Burying ${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
+      log_info "Burying \
+${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \
+\"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
       exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}" >&2
       exekutor find "${gravepath}" -type f -exec chmod a-w {} \;
    fi
@@ -463,9 +469,9 @@ __db_parse_dbentry()
 
    while read -r nodeline
    do
-      read owner
-      read filename
-      read evaledurl
+      read -r owner
+      read -r filename
+      read -r evaledurl
       break
    done <<< "${dbentry}"
 
@@ -989,7 +995,7 @@ db_is_ready()
       log_debug "\"${database}\" was made in a different environment. Needs reset"
       log_debug "Current environment : ${environment}"
       log_debug "Old environment     : ${oldenvironment}"
-      return 4
+      return 2
    fi
 
    return 0
@@ -1072,7 +1078,8 @@ db_set_update()
    __db_common_databasedir "$@"
 
    mkdir_if_missing "${databasedir}"
-   redirect_exekutor "${databasedir}/.db_update"  echo "# intentionally left blank"
+   redirect_exekutor "${databasedir}/.db_update" \
+      echo "# intentionally left blank"
 }
 
 
@@ -1400,7 +1407,8 @@ db_set_uuid_alive()
    then
       log_fluff "Marking \"${uuid}\" as alive"
 
-      remove_file_if_present "${zombiefile}" || fail "failed to delete zombie ${zombiefile}"
+      remove_file_if_present "${zombiefile}" \
+      || fail "failed to delete zombie ${zombiefile}"
    else
       log_fluff "\"${uuid}\" is alive as no zombie is present"
    fi
@@ -1459,7 +1467,8 @@ db_zombify_nodes()
          set='YES'
       fi
 
-      exekutor cp ${OPTION_COPYMOVEFLAGS} "${filename}" "${zombiedir}/"  || exit 1
+      exekutor cp ${OPTION_COPYMOVEFLAGS} "${filename}" "${zombiedir}/" \
+      || exit 1
    done
    shopt -u nullglob
 }
@@ -1506,7 +1515,7 @@ db_zombify_nodelines()
 
       if [ ! -z "${nodeline}" ]
       then
-         nodeline_parse "${nodeline}"
+         nodeline_parse "${nodeline}"  # memo: _marks unused
 
          if __db_common_dbfilepath "${databasedir}" "${_uuid}"
          then
@@ -1593,7 +1602,7 @@ db_safe_bury_dbentry()
    local _userinfo
    local _uuid
 
-   nodeline_parse "${nodeline}"
+   nodeline_parse "${nodeline}"     # memo: _marks unused
 
    db_forget "${database}" "${_uuid}"
 
@@ -1678,7 +1687,7 @@ db_bury_zombie_nodelines()
 
       if [ ! -z "${nodeline}" ]
       then
-         nodeline_parse "${nodeline}"
+         nodeline_parse "${nodeline}"     # memo: _marks unused
 
          zombiefile="${zombiedir}/${_uuid}"
          if [ -e "${zombiefile}" ]
@@ -1792,7 +1801,8 @@ r_db_update_determine_share_filename()
                fi
 
                r_basename "${database}"
-               log_error "Shared \"${address}\" is not in the root database but in database ($database).
+               log_error "\
+Shared \"${address}\" is not in the root database but in database ($database).
 ${C_INFO}This can sometimes happen, if you added a dependency, that depends on
 a dependency that a previous dependency also depends on. This can trip up the
 database order, so try ${C_RESET_BOLD}mulle-sde clean tidy${C_INFO} first.

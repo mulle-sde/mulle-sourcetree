@@ -93,27 +93,58 @@ __nodeline_get_address_nodetype_marks_uuid()
 }
 
 
-nodeline_get_url()
+r_nodeline_get_uuid()
 {
-   cut '-d;' -f 5 <<< "$*"
+   local nodeline="$1"
+
+   local _nodetype
+   local _marks
+   local _uuid
+
+   _nodetype="${nodeline#*;}"
+   _marks="${_nodetype#*;}"
+   _uuid="${_marks#*;}"
+   RVAL="${_uuid%%;*}"
 }
+
+
+nodeline_get_uuid()
+{
+   r_nodeline_get_uuid "$@"
+   printf "%s\n" "${RVAL}"
+}
+
 
 r_nodeline_get_url()
 {
-   RVAL="`nodeline_get_url "$@"`"
+   local address,nodetype,marks,uuid
+
+   IFS=';' \
+      read -r address,nodetype,marks,uuid,RVAL <<< "$*"
+}
+
+
+nodeline_get_url()
+{
+   r_nodeline_get_url "$@"
+   printf "%s\n" "${RVAL}"
 }
 
 
 nodeline_get_evaled_url()
 {
-   eval echo "`cut '-d;' -f 5 <<< "$*"`"
+   r_nodeline_get_url "$@"
+   r_expanded_string "${RVAL}"
+   printf "%s\n" "${RVAL}"
 }
 
 
 r_nodeline_get_evaled_url()
 {
-   RVAL="`nodeline_get_evaled_url "$@"`"
+   r_nodeline_get_url "$@"
+   r_expanded_string "${RVAL}"
 }
+
 
 
 #
@@ -185,9 +216,15 @@ nodeline_parse()
    # set this to empty, so we know raw is not converted yet
 
    _userinfo=""
+
    [ -z "${_address}" ]   && internal_fail "_address is empty"
    [ -z "${_nodetype}" ]  && internal_fail "_nodetype is empty"
    [ -z "${_uuid}" ]      && internal_fail "_uuid is empty"
+
+   # correct some legacy stuff, because i was too lazy to write a script
+   # probably only used by MulleObjCOSFoundation
+   _marks="${_marks//only-os-/only-platform-}"
+   _marks="${_marks//no-os-/no-platform-}"
 
    # early escape here
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'NO' ]
@@ -203,7 +240,7 @@ nodeline_parse()
    log_trace2 "BRANCH:       \"${_branch}\""
    log_trace2 "TAG:          \"${_tag}\""
    log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
-   log_trace2 "USERINFO:     \"${_raw_userinfo}\""
+   log_trace2 "RAW_USERINFO: \"${_raw_userinfo}\""
 
    :
 }
@@ -211,20 +248,24 @@ nodeline_parse()
 
 #   local _raw_userinfo
 #   local _userinfo
-nodeline_raw_userinfo_parse()
+r_nodeline_raw_userinfo_parse()
 {
-   log_entry "nodeline_raw_userinfo_parse" "$@"
+   log_entry "r_nodeline_raw_userinfo_parse" "$@"
 
-   _userinfo="$1"
-   case "${_userinfo}" in
+   local raw_userinfo="$1"
+
+   case "${raw_userinfo}" in
       base64:*)
-         _userinfo="`base64 --decode <<< "${_raw_userinfo:7}"`"
+         RVAL="`base64 --decode <<< "${raw_userinfo:7}"`"
          if [ "$?" -ne 0 ]
          then
             internal_fail "userinfo could not be base64 decoded."
          fi
+         return 0
       ;;
    esac
+
+   RVAL="${raw_userinfo}"
 }
 
 
@@ -372,6 +413,23 @@ nodeline_find_by_evaled_url()
 }
 
 
+nodeline_find_by_uuid()
+{
+   log_entry "nodeline_find_by_uuid" "$@"
+
+   local nodelines="$1"
+   local uuid="$2"
+
+   [ -z "${uuid}" ] && internal_fail "uuid is empty"
+
+   if ! _r_nodeline_find "${nodelines}" "${uuid}" r_nodeline_get_uuid NO
+   then
+      return 1
+   fi
+   printf "%s\n" "${RVAL}"
+}
+
+
 nodeline_has_duplicate()
 {
    log_entry "nodeline_has_duplicate" "$@"
@@ -448,7 +506,7 @@ r_get_formatstring()
 
    RVAL="${formatstring}"
 
-   if [ -z "${RVAL}" ]
+   if [ -z "${formatstring}" ]
    then
       RVAL="%a${sep}%n${sep}%m${sep}%i"
       case ",${mode}," in
@@ -465,7 +523,7 @@ r_get_formatstring()
 
       case ",${mode}," in
          *,output_uuid,*)
-            RVAL="${RVAL}${sep}%_"
+            RVAL="%_${sep}${RVAL}"
          ;;
       esac
       RVAL="${RVAL}\\n"

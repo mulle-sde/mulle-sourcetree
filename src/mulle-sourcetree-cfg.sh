@@ -244,12 +244,13 @@ cfg_get_nodeline()
 {
    log_entry "cfg_get_nodeline" "$@"
 
+   local projectdir="$1"
    local address="$2"
    local fuzzy="$3"
 
    local nodelines
 
-   nodelines="`cfg_read "$1"`"
+   nodelines="`cfg_read "${projectdir}"`"
    nodeline_find "${nodelines}" "${address}" "${fuzzy}"
 }
 
@@ -258,12 +259,27 @@ cfg_get_nodeline_by_url()
 {
    log_entry "cfg_get_nodeline_by_url" "$@"
 
+   local projectdir="$1"
    local url="$2"
 
    local nodelines
 
-   nodelines="`cfg_read "$1"`"
+   nodelines="`cfg_read "${projectdir}"`"
    nodeline_find_by_url "${nodelines}" "${url}"
+}
+
+
+cfg_get_nodeline_by_uuid()
+{
+   log_entry "cfg_get_nodeline_by_uuid" "$@"
+
+   local projectdir="$1"
+   local uuid="$2"
+
+   local nodelines
+
+   nodelines="`cfg_read "${projectdir}"`"
+   nodeline_find_by_uuid "${nodelines}" "${uuid}"
 }
 
 
@@ -271,11 +287,12 @@ cfg_get_nodeline_by_evaled_url()
 {
    log_entry "cfg_get_nodeline_by_evaled_url" "$@"
 
+   local projectdir="$1"
    local url="$2"
 
    local nodelines
 
-   nodelines="`cfg_read "$1"`"
+   nodelines="`cfg_read "${projectdir}"`"
    nodeline_find_by_evaled_url "${nodelines}" "${url}"
 }
 
@@ -318,24 +335,25 @@ cfg_remove_nodeline()
 }
 
 
-cfg_remove_nodeline_by_url()
+cfg_remove_nodeline_by_uuid()
 {
-   log_entry "cfg_remove_nodeline_by_url" "$@"
+   log_entry "cfg_remove_nodeline_by_uuid" "$@"
 
    local configfile
 
    __cfg_common_configfile "$@"
 
-   local url="$2"
+   local uuid="$2"
 
    local escaped
-   log_debug "Removing \"${url}\" from \"${configfile}\""
 
-   r_escaped_sed_pattern "${url}"
+   log_debug "Removing \"${uuid}\" from \"${configfile}\""
+
+   r_escaped_sed_pattern "${uuid}"
    escaped="${RVAL}"
 
    # linux don't like space after -i
-   if ! inplace_sed -e "/^[^;]*;[^;]*[^;]*[^;]*${escaped};/d" "${configfile}"
+   if ! inplace_sed -e "/^[^;]*;[^;]*;[^;]*;${escaped};/d" "${configfile}"
    then
       internal_fail "sed address corrupt ?"
    fi
@@ -727,8 +745,10 @@ cfg_reuuid()
       local _uuid
       local _userinfo
 
-      nodeline_parse "${nodeline}"
+      nodeline_parse "${nodeline}"  # memo: :_marks used raw
+
       _uuid="`node_uuidgen`" || exit 1
+
       _r_node_to_nodeline
       r_add_line "${output}" "${RVAL}"
       output="${RVAL}"

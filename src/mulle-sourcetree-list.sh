@@ -64,6 +64,10 @@ Usage:
    the sourcetree to another project.
 
    This command only reads config files.
+
+   A '-' indicates a no-bequeath entry.
+   A '*' indicates a duplicate that has conflicting marks.
+
 EOF
 
    if [ "${MULLE_FLAG_LOG_VERBOSE}" = 'YES' ]
@@ -80,7 +84,6 @@ EOF
       sourcetree_dedupe_mode_help >&2
    else
       cat <<EOF >&2
-
    Use \`mulle-sourcetree -v list help\` to see a list of format characters.
 EOF
    fi
@@ -89,7 +92,7 @@ EOF
 
 Options:
    -l                       : output long information
-   -ll                      : output full information
+   -ll                      : output full information (except UUID)
    -r                       : recursive list
    -g                       : output branch/tag information (use -G for raw output)
    -u                       : output URL information  (use -U for raw output)
@@ -108,6 +111,7 @@ Options:
    --output-no-indent       : suppress indentation on recursive list
    --output-no-marks <list> : suppress output of certain marks (comma sep)
    --output-no-separator    : suppress separator line if header is printed
+   --output-uuid            : print the UUID of each line
    --qualifier <value>      : specify marks qualifier (see \`walk\` command)
 EOF
   exit 1
@@ -194,7 +198,7 @@ list_walk_callback()
    local _uuid
    local _raw_userinfo
 
-   nodeline_parse "${nodeline}"
+   nodeline_parse "${nodeline}"  # !!
 
    if [ ! -z "${OPTION_NO_OUTPUT_MARKS}" ]
    then
@@ -209,12 +213,13 @@ list_walk_callback()
       indent="${WALK_INDENT}"
    fi
 
-   if nodemarks_contain "${_marks}" "no-bequeath"
+   if nodemarks_disable "${_marks}" "bequeath"
    then
       if [ "${OPTION_OUTPUT_INDENT}" != 'NO' ]
       then
          indent="-${WALK_INDENT# }"
       fi
+      log_verbose "no-bequeath: ${_address}"
       node_printf "${_mode}" "${formatstring}" "${cmdline}" "${indent}"
    else
       if [ "${_nodetype}" != 'none' ] && find_line "${DUPLICATES}" "${_address}"
@@ -223,7 +228,7 @@ list_walk_callback()
          then
             indent="*${WALK_INDENT# }"
          fi
-         log_fluff "Duplicate: ${_nodeline}"
+         log_verbose "duplicate: ${_address}"
          node_printf "${_mode}" "${formatstring}" "${cmdline}" "${indent}"
       else
          r_add_line "${DUPLICATES}" "${_address}"
@@ -433,7 +438,6 @@ sourcetree_list_main()
    local OPTION_OUTPUT_COLUMN='DEFAULT'
    local OPTION_OUTPUT_UUID='DEFAULT'
    local OPTION_OUTPUT_URL='DEFAULT'
-   local OPTION_UNSAFE='NO'
    local OPTION_OUTPUT_CMDLINE="${MULLE_USAGE_NAME} -N add"
    local OPTION_NODETYPES
    local OPTION_BEQUEATH='NO'
@@ -451,6 +455,22 @@ sourcetree_list_main()
             sourcetree_list_usage
          ;;
 
+         -b|--bequeath)
+            OPTION_BEQUEATH='YES'
+         ;;
+
+         --no-bequeath)
+            OPTION_BEQUEATH='NO'
+         ;;
+
+
+         --config-file)
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            shift
+
+            OPTION_CONFIG_FILE="$1"
+         ;;
+
          -m|--marks)
             [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
             shift
@@ -458,14 +478,6 @@ sourcetree_list_main()
             # allow to concatenate multiple flags
             r_comma_concat "${OPTION_MARKS}" "$1"
             OPTION_MARKS="${RVAL}"
-         ;;
-
-         -q|--qualifier)
-            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
-            shift
-
-            # allow to concatenate multiple flags
-            OPTION_MARKS_QUALIFIER="$1"
          ;;
 
          -n|--nodetype|--nodetypes)
@@ -476,6 +488,25 @@ sourcetree_list_main()
             OPTION_NODETYPES="${RVAL}"
 
             [ "${OPTION_OUTPUT_INDENT}" = "DEFAULT" ] && OPTION_OUTPUT_INDENT="NO"
+         ;;
+
+         -q|--qualifier)
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            shift
+
+            # allow to concatenate multiple flags
+            OPTION_MARKS_QUALIFIER="$1"
+         ;;
+
+         --dedupe-mode)
+            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            shift
+
+            OPTION_DEDUPE_MODE="$1"
+         ;;
+
+         --no-dedupe)
+            OPTION_DEDUPE_MODE="none"
          ;;
 
          --format)
@@ -498,7 +529,7 @@ sourcetree_list_main()
                   OPTION_OUTPUT_FULL='YES'
                   OPTION_OUTPUT_FORMAT="CMD"
                   OPTION_OUTPUT_INDENT='NO'
-            ;;
+               ;;
 
                cmd2|command2)
                   OPTION_OUTPUT_FULL='YES'
@@ -517,72 +548,17 @@ sourcetree_list_main()
             esac
          ;;
 
-         --output-color)
-            OPTION_OUTPUT_COLOR='YES'
-         ;;
-
-         --no-output-color|--output-no-color)
-            OPTION_OUTPUT_COLOR='NO'
-         ;;
-
-         --output-column)
-            OPTION_OUTPUT_COLUMN='YES'
-         ;;
-
-         --no-output-column|--output-no-column)
-            OPTION_OUTPUT_COLUMN='NO'
-         ;;
-
-         --output-header)
-            OPTION_OUTPUT_HEADER='YES'
-         ;;
-
-         --no-output-header|--output-no-header)
-            OPTION_OUTPUT_HEADER='NO'
-         ;;
-
-         --no-output-indent|--output-no-indent)
-            OPTION_OUTPUT_INDENT='NO'
-         ;;
-
-         --output-separator)
-            OPTION_OUTPUT_SEPARATOR='YES'
-         ;;
-
-         --no-output-separator|--output-no-separator)
-            OPTION_OUTPUT_SEPARATOR='NO'
-         ;;
-
-         --no-dedupe)
-            OPTION_DEDUPE_MODE="none"
-         ;;
-
-         --dedupe-mode)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
-            shift
-
-            OPTION_DEDUPE_MODE="$1"
-         ;;
-
          #
          #
          #
-         -b|--bequeath)
-            OPTION_BEQUEATH='YES'
-         ;;
-
-         --no-bequeath)
-            OPTION_BEQUEATH='NO'
-         ;;
-
          -_|--output-uuid)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
-               OPTION_FORMAT="%a;%_\\n"
+               OPTION_FORMAT="%_;%a\\n" #prepend
             else
-               OPTION_FORMAT="${OPTION_FORMAT%??}"
-               OPTION_FORMAT="${OPTION_FORMAT};%u\\n"
+               OPTION_FORMAT="%_;${OPTION_FORMAT}"
             fi
+            OPTION_OUTPUT_UUID='YES' # needed for -ll
          ;;
 
          -g|--output-git)
@@ -651,20 +627,35 @@ sourcetree_list_main()
             OPTION_OUTPUT_URL='NO'
          ;;
 
-         --output-uuid)
-            OPTION_OUTPUT_UUID='YES'
-         ;;
-
-         --no-output-uuid|--output-no-uuid)
-            OPTION_OUTPUT_UUID='NO'
-         ;;
-
          --output-banner)
             OPTION_OUTPUT_BANNER='YES'
          ;;
 
          --no-output-banner|--output-no-banner)
             OPTION_OUTPUT_BANNER='NO'
+         ;;
+
+         --output-color)
+            OPTION_OUTPUT_COLOR='YES'
+         ;;
+
+         --no-output-color|--output-no-color)
+            OPTION_OUTPUT_COLOR='NO'
+         ;;
+
+         --output-cmdline)
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            shift
+
+            OPTION_OUTPUT_CMDLINE="$1"
+         ;;
+
+         --output-column)
+            OPTION_OUTPUT_COLUMN='YES'
+         ;;
+
+         --no-output-column|--output-no-column)
+            OPTION_OUTPUT_COLUMN='NO'
          ;;
 
          --output-eval)
@@ -675,6 +666,18 @@ sourcetree_list_main()
             OPTION_OUTPUT_EVAL='NO'
          ;;
 
+         --output-header)
+            OPTION_OUTPUT_HEADER='YES'
+         ;;
+
+         --no-output-header|--output-no-header)
+            OPTION_OUTPUT_HEADER='NO'
+         ;;
+
+         --no-output-indent|--output-no-indent)
+            OPTION_OUTPUT_INDENT='NO'
+         ;;
+
          --no-output-marks|--output-no-marks)
             [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
             shift
@@ -682,18 +685,12 @@ sourcetree_list_main()
             OPTION_NO_OUTPUT_MARKS="$1"
          ;;
 
-         --output-cmdline)
-            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
-            shift
-
-            OPTION_OUTPUT_CMDLINE="$1"
+         --output-separator)
+            OPTION_OUTPUT_SEPARATOR='YES'
          ;;
 
-         --config-file)
-            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
-            shift
-
-            OPTION_CONFIG_FILE="$1"
+         --no-output-separator|--output-no-separator)
+            OPTION_OUTPUT_SEPARATOR='NO'
          ;;
 
          -*)

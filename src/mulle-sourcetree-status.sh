@@ -74,6 +74,12 @@ Options:
    -n <value>        : node types to walk (default: ALL)
    -p <value>        : specify permissions (missing)
    -m <value>        : specify marks to match (e.g. build)
+
+Returns:
+   0 : OK
+   1 : error
+   3 : there is no sourcetree
+   4 : needs update
 EOF
   exit 1
 }
@@ -81,8 +87,9 @@ EOF
 
 #
 # 0 : OK
-# 1 : needs update
-# 2 : config file missing
+# 1 : error
+# 2 : needs update
+# 3 : there is no sourcetree
 #
 sourcetree_is_uptodate()
 {
@@ -99,7 +106,7 @@ sourcetree_is_uptodate()
    if [ -z "${configtimestamp}" ]
    then
       log_fluff "No timestamp available for \"${datasource}\""
-      return 4
+      return 3
    fi
 
    dbtimestamp="`db_get_timestamp "${datasource}"`"
@@ -109,7 +116,7 @@ sourcetree_is_uptodate()
    if [ "${configtimestamp}" -gt "${dbtimestamp:-0}" ]
    then
       log_fluff "Sourcetree \"${datasource}\" is newer than the database"
-      return 1
+      return 2
    fi
 
    return 0
@@ -166,6 +173,17 @@ sourcetree_is_db_compatible()
 
 #
 # we are arriving here in prefixed mode
+# return values:
+# (keep 1 for fails, 2 for walk ?)
+#
+# ok=0
+# missing=3
+# absent=4 
+# optional=5
+# stale=6
+# updating=7 
+# outdated=8
+# unready=9
 #
 r_emit_status()
 {
@@ -209,7 +227,7 @@ r_emit_status()
    if string_has_prefix "${output_address}" "${MULLE_SOURCETREE_STASH_DIR}"
    then
       output_address="${output_address#${MULLE_SOURCETREE_STASH_DIR}}"
-      output_address="\${MULLE_SOURCETREE_STASH_DIR}${output_address}"
+#      output_address="\${MULLE_SOURCETREE_STASH_DIR}${output_address}"
    fi
 
    case "${datasource}" in
@@ -238,10 +256,10 @@ r_emit_status()
    local dbexists
    local status
 
-   configexists='NO'
-   dbexists='NO'
-   fs="library"
-   status="unknown"
+   configexists='-'
+   dbexists='-'
+   fs="library"      # not a fs (system) library
+   status="ok"
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
@@ -254,13 +272,15 @@ r_emit_status()
       log_trace2 "filename:       ${filename}"
    fi
 
-   if nodemarks_contain "${marks}" "fs"
+   if nodemarks_enable "${marks}" "fs"
    then
       fs="missing"
+      configexists='NO'
 
       if [ -e "${filename}/${SOURCETREE_CONFIG_FILENAME}" ]
       then
          configexists='YES'
+         dbexists='NO'
       fi
 
       if [ -d "${filename}/${SOURCETREE_DB_FILENAME}" ]
@@ -269,11 +289,14 @@ r_emit_status()
       fi
 
       #
+      # Here we are doing still filesystem checks, not database
+      # ot config
+      #
       # Dstfile    | Url | Marks      | Output
       # -----------|-----|------------|------------------
-      # not exists | no  | -          | missing
-      # not exists | yes | require    | unhappy
-      # not exists | yes | no-require | optional
+      # not exists | no  | -          | missing (3)
+      # not exists | yes | require    | absent (4)
+      # not exists | yes | no-require | optional (5)
       #
 
       if [ ! -e "${filename}" ]
@@ -283,7 +306,8 @@ r_emit_status()
             fs="broken"
          fi
 
-         if ! nodemarks_contain "${marks}" "require"
+         if nodemarks_disable "${marks}" "require" || 
+            nodemarks_disable "${marks}" "require-os-${MULLE_UNAME}"
          then
             #
             # if we say not uptodate here, it will retrigger
@@ -291,144 +315,105 @@ r_emit_status()
             # never there. Fix: (always need a require node)
             #
             log_fluff "\"${filename}\" does not exist but it isn't required ($PWD)"
-            if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
-            then
-               return 0
-            fi
             RVAL="${output_address};optional;${fs};${configexists};${dbexists}" #;${filename}"
-         else
-            if [ -z "${_url}" ]
-            then
-               log_fluff "\"${filename}\" does not exist and and is required \
-($PWD), but _url is empty"
-               if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
-               then
-                  log_fluff "exit with 2"
-                  exit 2   # indicate brokenness
-               fi
-               RVAL="${output_address};absent;${fs};${configexists};${dbexists}" #;${filename}"
-               return 0
-            fi
-
-            log_fluff "\"${filename}\" does not exist and is required ($PWD)"
-            if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
-            then
-               log_fluff "exit with 1"
-               exit 1
-            fi
-            RVAL="${output_address};absent;${fs};${configexists};${dbexists}" #;${filename}"
+            return 5
          fi
-         return
-      else
-         fs="file"
-         if [ -L "${filename}" ]
+
+         if [ -z "${_url}" ]
          then
-            fs="symlink"
-         else
-            if [ -d "${filename}" ]
-            then
-               fs="directory"
-            fi
+            log_fluff "\"${filename}\" does not exist and and is required \
+($PWD), but _url is empty"
+            RVAL="${output_address};missing;${fs};${configexists};${dbexists}" #;${filename}"
+            return 3
+         fi
+
+         log_fluff "\"${filename}\" does not exist and is required ($PWD)"
+         RVAL="${output_address};absent;${fs};${configexists};${dbexists}" #;${filename}"
+         return 4
+      fi
+
+      fs="file"
+      if [ -L "${filename}" ]
+      then
+         fs="symlink"
+         RVAL="${output_address};ok;${fs};-;-" #;${filename}"
+         return 0
+      else
+         if [ -d "${filename}" ]
+         then
+            fs="directory"
          fi
       fi
 
-      if [ "${dbexists}" = 'YES' ] && \
-         ! sourcetree_is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
+      #
+      # Start of database/config checks
+      #
+      # Config     | Database   | Config > DB | Output
+      # -----------|------------|-------------|----------
+      # exists     | exists     | ?           | outdated (8)
+      # not exists | *          | *           | ok (0)
+      # exists     | not ready  | *           | unready (9)
+      # exists     | updating   | *           | updating (7)
+      # exists     | exists     | -           | ok (0)
+      # exists     | exists     | +           | dirty (6)
+      # exists     | not-exists | *           | dirty (6)
+      #
+      if [ "${configexists}" = 'NO' ]
+      then
+         log_fluff "\"${directory}\" does not have a \
+${SOURCETREE_CONFIG_FILENAME} ($PWD)"
+
+         RVAL="${output_address};ok;${fs};${configexists};${dbexists}" #;${filename}"
+         return 0
+      fi
+
+      if [  "${dbexists}" = 'NO' ]
+      then
+         log_fluff "\"${filename}\" is dirty ($PWD)"
+         RVAL="${output_address};dirty;${fs};\
+${configexists};${dbexists}" #;${filename}"
+         return 6
+      fi  
+
+      if ! sourcetree_is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
       then
          log_fluff "Database \"${datasource}\" is not compatible with \
 \"${SOURCETREE_MODE}\" ($PWD)"
 
-         if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
-         then
-            log_fluff "exit with 1"
-            exit 1
-         fi
          RVAL="${output_address};outdated;${fs};${configexists};${dbexists}" #;${filename}"
-         return 0
+         return 8
+      fi
+
+      if ! db_is_ready "${datasource}"
+      then
+         log_fluff "Database \"${datasource}\" is not ready"
+         RVAL="${output_address};unready;${fs};\
+${configexists};${dbexists}" #;${filename}"                 
+         return 9
+      fi 
+
+      if db_is_updating "${datasource}"
+      then
+         log_fluff "\"${filename}\" is marked as updating ($PWD)"
+         RVAL="${output_address};updating;${fs};\
+${configexists};${dbexists}" #;${filename}"
+         return 7
+      fi
+
+      if ! sourcetree_is_uptodate "${datasource}"
+      then
+         log_fluff "Database \"${datasource}\" is dirty ($PWD)"
+         RVAL="${output_address};dirty;${fs};\
+${configexists};${dbexists}" #;${filename}"                 
+         return 6
       fi
 
       status="ok"
 
-      case ",${mode}," in
-         *,flat,*)
-         ;;
-
-         *)
-            #
-            # Config     | Database | Config > DB | Output
-            # -----------|----------|-------------|----------
-            # not exists | *        | *           | ok
-            #
-            if [ "${configexists}" = 'NO' ]
-            then
-               log_fluff "\"${directory}\" does not have a \
-${SOURCETREE_CONFIG_FILENAME} ($PWD)"
-
-               if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
-               then
-                  return 0
-               fi
-
-               RVAL="${output_address};none;${fs};${configexists};${dbexists}" #;${filename}"
-               return
-            fi
-
-            #
-            # Config  | Database   | Config > DB | Output
-            # --------|------------|-------------|----------
-            # exists  | not exists | *           | update
-            # exists  | updating   | *           | updating
-            # exists  | exists     | -           | ok
-            # exists  | exists     | +           | update
-            #
-
-            if ! db_is_ready "${datasource}"
-            then
-               log_fluff "Database \"${datasource}\" is not ready"
-               status="unready"
-            else
-               if db_is_updating "${datasource}"
-               then
-                  log_fluff "\"${filename}\" is marked as updating ($PWD)"
-
-                  if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
-                  then
-                     log_fluff "exit with 2"
-                     exit 2  # only time we exit with 2 on IS_UPTODATE
-                  fi
-
-                  RVAL="${output_address};updating;${fs};\
-${configexists};${dbexists}" #;${filename}"
-                  return 0
-               fi
-
-               if ! sourcetree_is_uptodate "${datasource}"
-               then
-                  if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
-                  then
-                     log_fluff "exit with 1"
-                     exit 1
-                  fi
-
-                  log_fluff "Database \"${datasource}\" is stale ($PWD)"
-                  status="stale"
-               fi
-            fi
-         ;;
-      esac
-   fi
-
-   if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
-   then
-      return 0
-   fi
-
-   if [ "${fs}" = "symlink" ]
-   then
-      status="ok"
    fi
 
    RVAL="${output_address};${status};${fs};${configexists};${dbexists}" # ;${filename}"
+   return 0
 }
 
 
@@ -443,20 +428,30 @@ walk_status()
                  "${WALK_MODE}" \
                  "${NODE_FILENAME}"
    rval=$?
-   if [ ! -z "${RVAL}" ]
+   if [ $rval -eq  1 ]  # real error
    then
-      if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
-      then
-         if [ -e "${NODE_FILENAME}" ]
-         then
-            RVAL="${RVAL};${NODE_FILENAME#${MULLE_USER_PWD}/};YES"
-         else
-            RVAL="${RVAL};${NODE_FILENAME#${MULLE_USER_PWD}/};NO"
-         fi
-      fi
-      printf "%s\n" "${RVAL}"
+      return 1
    fi
-   return $rval
+
+   #
+   # if we are just quickly checking for
+   #  
+   if [ "${OPTION_IS_UPTODATE}" = 'YES'  ]
+   then
+      return $rval  # any non-0 will preempt
+   fi
+
+   if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
+   then
+      if [ -e "${NODE_FILENAME}" ]
+      then
+         RVAL="${RVAL};${NODE_FILENAME#${MULLE_USER_PWD}/};YES"
+      else
+         RVAL="${RVAL};${NODE_FILENAME#${MULLE_USER_PWD}/};NO"
+      fi
+   fi
+
+   printf "%s\n" "${RVAL}"
 }
 
 
@@ -469,16 +464,23 @@ sourcetree_status()
    local output
    local output2
    local rval
+
    # empty parameters means local
    r_emit_status
    output="${RVAL}"
+
    output2="`walk_config_uuids "ALL" \
-                               "" \
-                               "" \
-                               "" \
-                               "${mode}" \
-                               "walk_status"`"
+                                "" \
+                                "" \
+                                "" \
+                                "${mode}" \
+                                "walk_status"`"
    rval="$?"
+   if [ $rval -eq 2 ]
+   then
+      rval=0
+   fi
+
    if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
    then
       return $rval
@@ -486,11 +488,12 @@ sourcetree_status()
 
    if [ $rval -ne 0 ]
    then
-      fail "Walk errored out ($rval)"
+      log_fluff "Walk errored out ($rval)"
+      return $rval
    fi
 
    #
-   # sorting lines is harmless and this remove some duplicates too
+   # sorting lines is harmless and this removes some duplicates too
    # which we would otherwise have to filter
    #
    output2="$(sort -u <<< "${output2}")"
@@ -641,7 +644,7 @@ sourcetree_status_main()
       if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
       then
          log_fluff "db is not marked as ready"
-         exit 1
+         return 2
       fi
 
       log_fluff "Sync has not run yet (mode=${SOURCETREE_MODE})"
@@ -670,6 +673,22 @@ sourcetree_status_main()
    fi
 
    sourcetree_status "${mode}"
+   rval=$?
+
+   case $rval in 
+      0)
+         return 0
+      ;;
+
+      2|3|4|5|6|7|8|9)
+         return 2
+      ;;
+
+      *)
+         return 1
+      ;;
+   esac   
+
 }
 
 

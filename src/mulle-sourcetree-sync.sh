@@ -43,7 +43,10 @@ Usage:
    if the destination is absent.
 
    Use \`${MULLE_EXECUTABLE_NAME} fix\`, if you want to sync the source
-   tree with changes you made  in the filesystem.
+   tree with changes you made  in the filesystem. You can inhibit the fetching
+   of a dependency by setting MULLE_SOURCETREE_FETCH_<name> to 'NO'.
+   e.g. mulle-sde environment --os darwin MULLE_SOURCETREE_FETCH_FOUNDATION NO.
+        mulle-sourctree mark Foundation no-require-darwin
 
 Options:
    -r                         : sync recursively
@@ -61,13 +64,18 @@ Options:
    See the ${MULLE_FETCH:-mulle-fetch} usage for information.
 
 Environment:
-   MULLE_SOURCETREE_RESOLVE_TAG : resolve tags using mulle-fetch resolve (YES)
-
+   MULLE_SOURCETREE_RESOLVE_TAG   : resolve tags using mulle-fetch resolve (YES)
+   MULLE_SOURCETREE_FETCH_<name>  : set to NO to inhibit fetch of a dependency
 EOF
   exit 1
 }
 
 
+#
+# local _config
+# local _filename
+# local _database
+#
 _get_db_descendinfo()
 {
    log_entry "_get_db_descendinfo" "$@"
@@ -84,7 +92,11 @@ _get_db_descendinfo()
    _database="${_config}"
 }
 
-
+#
+# local _config
+# local _filename
+# local _database
+#
 _get_config_descendinfo()
 {
    log_entry "_get_config_descendinfo" "$@"
@@ -104,7 +116,7 @@ _get_config_descendinfo()
 
 # rval: 0 recurse
 #     : 1 don't recurse
-#     : 2 symlink
+#     : 4 symlink
 #
 # input: parsed nodeline + filename
 _check_descend_nodeline()
@@ -114,7 +126,7 @@ _check_descend_nodeline()
    local filename="$1"
    local marks="$2"
 
-   if ! nodemarks_contain "${marks}" "descend"
+   if nodemarks_disable "${marks}" "descend"
    then
       log_fluff "Node \"${filename}\" is marked no-descend"
       return 1
@@ -144,7 +156,7 @@ a directory"
          return 1
       fi
 
-      if nodemarks_contain "${marks}" "share"
+      if nodemarks_enable "${marks}" "share"
       then
          log_fluff "Destination \"${filename}\" does not exist."
       else
@@ -154,7 +166,7 @@ a directory"
       return 1
    fi
 
-   log_debug "Recurse as its a directory"
+   log_debug "Recurse as it's a directory"
    return 0
 }
 
@@ -185,7 +197,7 @@ _descend_db_nodeline()
    local _url
    local _uuid
 
-   nodeline_parse "${nodeline}"
+   nodeline_parse "${nodeline}"  # ??
 
    local _filename
    local _config
@@ -245,7 +257,7 @@ _descend_config_nodeline()
    local _url
    local _uuid
 
-   nodeline_parse "${nodeline}"
+   nodeline_parse "${nodeline}"  # !!
 
    local _filename
    local _config
@@ -343,7 +355,8 @@ _descend_config_nodelines()
       return
    fi
 
-   log_fluff "Continuing with a \"${style}\" update nodelines \"${nodelines}\" of config \"${config:-ROOT}\" ($PWD)"
+   log_fluff "Continuing with a \"${style}\" update of \
+nodelines \"${nodelines}\" from config \"${config:-ROOT}\" ($PWD)"
 
    local nodeline
 
@@ -422,8 +435,9 @@ _sync_nodeline_only_share()
    local _url
    local _uuid
 
-   nodeline_parse "${nodeline}"
-   if [ ! -z "${_url}" ] && nodemarks_contain "${_marks}" "share"
+   nodeline_parse "${nodeline}" # !!!
+
+   if [ ! -z "${_url}" ] && nodemarks_enable "${_marks}" "share"
    then
       do_actions_with_nodeline "${nodeline}" "share" "${config}" "${database}"
    fi
@@ -997,8 +1011,6 @@ sourcetree_sync_main()
 
       shift
    done
-
-
 
    MULLE_FETCH="${MULLE_FETCH:-`command -v mulle-fetch`}"
    [ -z "${MULLE_FETCH}" ] && fail "mulle-fetch not installed"

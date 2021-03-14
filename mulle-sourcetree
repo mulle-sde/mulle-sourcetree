@@ -78,6 +78,7 @@ print_commands()
    remove         : remove a node from the sourcetree
    reset          : clear the database, to force a sync
    wrap           : wrap nodetypes,branches,URLs in environment variables
+   test           : test if a mark matches against a list of marks
    touch          : mark sourcetree as dirty
    uname          : ${MULLE_USAGE_NAME}'s simplified uname(1)
    unmark         : remove marks from a node in the sourcetree
@@ -147,8 +148,9 @@ EOF
 
    cat <<EOF
 Environment:
-   MULLE_SOURCETREE_STASH_DIR : place to store shared dependencies (stash)
-   MULLE_SOURCETREE_SYMLINK   : allow symlinks to be used
+   MULLE_SOURCETREE_STASH_DIR     : place to store shared dependencies (stash)
+   MULLE_SOURCETREE_SYMLINK       : allow symlinks to be used
+   MULLE_SOURCETREE_FETCH_<name>  : set to NO to inhibit fetch of a dependency
 EOF
    exit 1
 }
@@ -519,6 +521,13 @@ main()
          sourcetree_sync_main "$@"
       ;;
 
+      test)
+         # shellcheck source=src/mulle-sourcetree-test.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-test.sh"
+
+         sourcetree_test_main "$@"
+      ;;
+      
       version)
          printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
          return 0

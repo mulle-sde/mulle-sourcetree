@@ -93,7 +93,7 @@ walk_clean()
    #
    # the actual desired filename for a config file is pretty complicated though
    #
-   if ! nodemarks_contain "${marks}" "delete"
+   if nodemarks_disable "${marks}" "delete"
    then
       log_fluff "\"${filename}\" is protected from delete"
       echo "P ${filename}"

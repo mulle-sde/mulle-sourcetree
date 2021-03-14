@@ -192,7 +192,8 @@ _r_node_to_nodeline()
          ;;
 
          *)
-            if egrep -q '[^-A-Za-z0-9%&/()=|+_.,$# ]' <<< "${_userinfo}"
+            # basically escape non-printables :isprint: and ';'
+            if egrep -q '[^[:print:]]|;' <<< "${_userinfo}"
             then
                convert="YES"
             fi
@@ -405,7 +406,7 @@ node_printf_format_help()
    f        ${i}: fetchoptions
    f!       ${i}: evaluated fetchoptions
    i        ${i}: userinfo (e.g. aliases). You can influence the formatting
-            ${i}  with i={header,separators}
+            ${i}  with i={key,header,separators}
    m        ${i}: marks
    n        ${i}: nodetype
    n!       ${i}: evaluated nodetype
@@ -545,9 +546,16 @@ node_printf()
          %i*)
             switch="--userinfo"
 
+            case ",${mode}," in
+               *,output_cmd,*|*,output_cmd2,*)
+                  value="${_raw_userinfo}"
+               ;;
+
+               *)
             if [ ! -z "${_raw_userinfo}" -a -z "${_userinfo}" ]
             then
-               nodeline_raw_userinfo_parse "${_raw_userinfo}"
+                     r_nodeline_raw_userinfo_parse "${_raw_userinfo}"
+                     _userinfo="${RVAL}"
             fi
 
             extended='NO'
@@ -557,16 +565,7 @@ node_printf()
                key="${RVAL}"
                formatstring="${_formatstring}"
                extended='YES'
-            fi
 
-            case ",${mode}," in
-               *,output_cmd,*|*,output_cmd2,*)
-                  value="${_raw_userinfo}"
-               ;;
-
-               *)
-                  if [ "${extended}" = 'YES' ]
-                  then
                      switch="--${key}"
 
                      r_assoc_array_get "${_userinfo}" "${key}"
@@ -580,6 +579,7 @@ node_printf()
                ;;
             esac
          ;;
+
 
          %m*)
             switch="--marks"

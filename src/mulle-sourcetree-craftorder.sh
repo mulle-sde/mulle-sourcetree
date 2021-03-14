@@ -40,13 +40,8 @@ sourcetree_craftorder_usage()
 Usage:
    ${MULLE_USAGE_NAME} craftorder [options]
 
-   Print all sourcetree addresses according to the following rules with
-   precedence give in that order:
-
-   * ignore nodes marked as "no-build"
-   * ignore nodes marked as "no-os-${MULLE_UNAME}"
-   * ignore nodes marked as "no-os-${MULLE_UNAME}-build"
-   * ignore nodes marked with "only-os-<platform>" except "only-os-${MULLE_UNAME}" or "only-os-${MULLE_UNAME}-build"
+   Print all sourcetree addresses that are marked as "build" (i.e. don't
+   have the mark "no-build")
 
    In a make based project, this can be used to build everything like this:
 
@@ -56,11 +51,14 @@ Usage:
       done
 
 Options:
-   --callback <f>    : a callback function to modify the output
-   --output-eval     : resolve variables in the output
-   --output-no-marks : don't output marks of sourcetree node
-   --print-qualifier : prints qualifier for sourcetree marks, then exits
+   --callback <f>         : a callback function to modify the output
+   --output-eval          : resolve variables in the output
+   --output-no-marks      : don't output marks of sourcetree node
+   --print-qualifier      : prints qualifier for sourcetree marks, then exits
 
+Environment:
+   MULLE_PLATFORM_VERSION  : the OS version used for the build
+   MULLE_PLATFORM    : the platform used for the build
 EOF
   exit 1
 }
@@ -103,6 +101,8 @@ collect_craftorder_line()
    filename="${RVAL}"
 
    rexekutor printf "%s\n" "${filename}"
+
+   return 0
 }
 
 
@@ -122,7 +122,7 @@ augment_craftorder_line()
    fi
 
    # remove file from remainders
-   _remainder_collection="`fgrep -x -v -e "${filename}" <<< "${_remainder_collection}"`"
+   _remainder_collection="`rexekutor fgrep -x -v -e "${filename}" <<< "${_remainder_collection}"`"
 
    marks="${_marks}"
    if [ ! -z "${OPTION_CALLBACK}" ]
@@ -145,16 +145,16 @@ augment_craftorder_line()
    if [ -z "${_remainder_collection}" ]
    then
       log_debug "Done with collection"
-      exit 2  #signal done but no error
+      return 2   # signal done but no error
    fi
 
    return 0
 }
 
 
-output_craftorder()
+sourcetree_output_craftorder()
 {
-   log_entry "output_craftorder" "$@"
+   log_entry "sourcetree_output_craftorder" "$@"
 
    local collection="$1"
 
@@ -178,7 +178,6 @@ sourcetree_craftorder_main()
 {
    log_entry "sourcetree_craftorder_main" "$@"
 
-   local OPTION_PRINT_ENV='YES'
    local OPTION_CALLBACK
    local OPTION_ABSOLUTE='NO'
    local OUTPUT_BEQUEATH='NO'
@@ -187,6 +186,11 @@ sourcetree_craftorder_main()
    local OUTPUT_RAW_USERINFO='NO'
    local OPTION_OUTPUT_COLLECTION='NO'
    local OUTPUT_EVAL='NO'
+   local OPTION_PRINT_ENV='YES'
+   local OPTION_PLATFORM
+   local OPTION_CONFIGURATION
+   local OPTION_SDK
+   local OPTION_VERSION
 
    while [ $# -ne 0 ]
    do
@@ -250,11 +254,6 @@ sourcetree_craftorder_main()
             OUTPUT_EVAL='YES'
          ;;
 
-         --print-qualifier)
-            printf "%s\n" "${SOURCETREE_CRAFTORDER_QUALIFIER}"
-            exit 0
-         ;;
-
          -*)
             sourcetree_craftorder_usage "Unknown craftorder option $1"
          ;;
@@ -292,12 +291,16 @@ sourcetree_craftorder_main()
       mode="${RVAL}"
    fi
 
+   local qualifier
+
+   qualifier="MATCHES build"
+
    local _craftorder_collection
 
    _craftorder_collection="`sourcetree_walk "" \
                                             "" \
-                                            "${SOURCETREE_CRAFTORDER_QUALIFIER}" \
-                                            "${SOURCETREE_CRAFTORDER_QUALIFIER}" \
+                                            "${qualifier}" \
+                                            "${qualifier}" \
                                             "${mode},in-order" \
                                             "collect_craftorder_line"`"
 
@@ -311,7 +314,7 @@ sourcetree_craftorder_main()
 
    if [ "${OUTPUT_MARKS}" = 'NO' ]
    then
-      output_craftorder "${_craftorder_collection}"
+      sourcetree_output_craftorder "${_craftorder_collection}"
       return 0
    fi
 
@@ -323,8 +326,8 @@ sourcetree_craftorder_main()
    _remainder_collection="${_craftorder_collection}"
    _augmented_collection="`sourcetree_walk "" \
                                            "" \
-                                           "${SOURCETREE_CRAFTORDER_QUALIFIER}" \
-                                           "${SOURCETREE_CRAFTORDER_QUALIFIER}" \
+                                           "${qualifier}" \
+                                           "${qualifier}" \
                                            "${mode},breadth-order" \
                                            "augment_craftorder_line"`"
 
@@ -342,43 +345,7 @@ sourcetree_craftorder_main()
    done
    IFS="${DEFAULT_IFS}" ; set +o noglob
 
-   output_craftorder "${lines}"
-}
-
-
-r_make_craftorder_qualifier()
-{
-   log_entry "r_make_craftorder_qualifier"
-
-   local qualifier="$1"
-
-   if [ ! -z "${qualifier}" ]
-   then
-      qualifier="${qualifier} AND "
-   fi
-
-   if [ -z "${MULLE_OS_VERSION}" ]
-   then
-      case "${MULLE_UNAME}" in
-         darwin)
-            MULLE_OS_VERSION="`sw_vers -productVersion`" || exit 1
-         ;;
-      esac
-   fi
-
-   qualifier="${qualifier} \
-NOT MATCHES no-os-${MULLE_UNAME} \
-AND NOT MATCHES no-os-${MULLE_UNAME}-build \
-AND (NOT MATCHES only-os-* OR MATCHES only-os-${MULLE_UNAME} OR MATCHES only-os-${MULLE_UNAME}-build)"
-
-   if [ ! -z "${MULLE_OS_VERSION}" ]
-   then
-      qualifier="${qualifier} \
-AND VERSION version-min-${MULLE_UNAME} <= ${MULLE_OS_VERSION} \
-AND VERSION version-max-${MULLE_UNAME} >= ${MULLE_OS_VERSION}"
-   fi
-
-   RVAL="${qualifier}"
+   sourcetree_output_craftorder "${lines}"
 }
 
 
@@ -397,9 +364,6 @@ sourcetree_craftorder_initialize()
       # shellcheck source=../../mulle-bashfunctions/src/mulle-version.sh
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-version.sh" || exit 1
    fi
-
-   r_make_craftorder_qualifier "MATCHES build"
-   SOURCETREE_CRAFTORDER_QUALIFIER="${RVAL}"
 }
 
 
