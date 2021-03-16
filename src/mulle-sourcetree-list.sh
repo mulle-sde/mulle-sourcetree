@@ -463,7 +463,6 @@ sourcetree_list_main()
             OPTION_BEQUEATH='NO'
          ;;
 
-
          --config-file)
             [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
             shift
@@ -713,16 +712,14 @@ sourcetree_list_main()
    local mark
    local mode
 
-   [ -z "${SOURCETREE_CONFIG_FILENAME}" ] && fail "Config filename is empty"
-
    [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && sourcetree_list_usage
-
 
    if [ "${OPTION_CONFIG_FILE}" != 'DEFAULT' ]
    then
       # hack hack hacky hack
       r_basename "${OPTION_CONFIG_FILE}"
       SOURCETREE_CONFIG_FILENAME="${RVAL}"
+      SOURCETREE_FALLBACK_CONFIG_FILENAME=
 
       r_dirname "${OPTION_CONFIG_FILE}"
 
@@ -731,6 +728,9 @@ sourcetree_list_main()
 
       FLAG_SOURCETREE_MODE="flat"
    fi
+
+   [ -z "${SOURCETREE_CONFIG_FILENAME}" ] && fail "Config filename is empty"
+
 
    # if mode is not flat, we use output-banner by default
    if [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" ]

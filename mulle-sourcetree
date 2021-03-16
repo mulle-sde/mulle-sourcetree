@@ -52,28 +52,28 @@ print_commands()
 
    SHOWN_COMMANDS="\
    add            : add a node to the sourcetree
-   craftorder     : emit nodes that are buildable in proper dependency order
    clean          : remove files added by a sync
    list           : list nodes in the current sourcetree
-   reuuid         : create new uuids for the sourcetree
+   mark           : add or remove a mark from a node in the sourcetree
+   move           : move a node relative to other nodes in the sourcetree
    set            : set a node's properties in the sourcetree
    status         : query state of the tree
    sync           : synchronize the project tree with the sourcetree [default]"
 
    HIDDEN_COMMANDS="\
-   dbstatus       : query state of database
+   craftorder     : emit nodes that are marked \"build\", in dependency order
+   dbstatus       : query state of the database
    desecrate      : remove all graveyards
    dotdump        : create a picture of the sourcetree or the database
    duplicate      : duplicate a sourcetree node
-   info           : print current sourcetree information
    filter         : test a filter with user supplied marks
    fix            : support to track user modifications in the filesystem
    get            : get a node's properties from the sourcetree
+   info           : print current sourcetree information
    libexec-dir    : print path to ${MULLE_USAGE_NAME} libexec
    knownmarks     : list known marks
-   mark           : add or remove a mark from a node in the sourcetree
-   move           : move a node within the sourcetree
    sourcetree-dir : print path to project (if a sourcetree exists)
+   reuuid         : create new uuids for the sourcetree
    rename         : rename a node in the sourcetree
    remove         : remove a node from the sourcetree
    reset          : clear the database, to force a sync
@@ -112,6 +112,9 @@ Usage:
    and archives and other things. The sourcetree is backed by a database,
    which is created during \`sync\`.
 
+   A sourcetree is created with the "add" of the first node. The actual
+   contents will be fetched during "sync".
+
 Flags:
 EOF
 
@@ -147,6 +150,7 @@ EOF
 
 
    cat <<EOF
+
 Environment:
    MULLE_SOURCETREE_STASH_DIR     : place to store shared dependencies (stash)
    MULLE_SOURCETREE_SYMLINK       : allow symlinks to be used
@@ -241,8 +245,7 @@ main()
 
    local MULLE_FLAG_DEFER=""
    local FLAG_SOURCETREE_MODE=
-
-
+   local MULLE_FLAG_CONFIG_DIR
    local MULLE_FLAG_SHARE_DIR
    local MULLE_FLAG_SCOPE
    #
@@ -263,6 +266,13 @@ main()
 
          -h*|--help|help)
             usage "${MULLE_TRACE}"
+         ;;
+
+         --config-dir)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            MULLE_FLAG_CONFIG_DIR="$1"
          ;;
 
          -d|--directory)
@@ -377,7 +387,10 @@ main()
    local SOURCETREE_START
    local SOURCETREE_SCOPE
 
-   sourcetree_environment "${MULLE_FLAG_SCOPE}" "${MULLE_FLAG_SHARE_DIR}"
+   sourcetree_environment "${MULLE_FLAG_SCOPE}" \
+                          "${MULLE_FLAG_SHARE_DIR}" \
+                          "${MULLE_FLAG_CONFIG_DIR}" \
+                          "${MULLE_FLAG_DEFER}"
 
    cmd="${1}"
    [ $# -eq 0 ] || shift
@@ -527,7 +540,7 @@ main()
 
          sourcetree_test_main "$@"
       ;;
-      
+
       version)
          printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
          return 0

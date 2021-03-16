@@ -605,8 +605,8 @@ _nodemarks_filter_sexpr()
       ;;
 
       # check if a key is enabled or disabled by marks (only- and no-)
-      ENABLE*)
-         _s="${_s:6}"
+      ENABLES*)
+         _s="${_s:7}"
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
          key="${_s%%[[:space:])]*}"
          _s="${_s#"${key}"}"

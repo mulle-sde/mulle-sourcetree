@@ -858,7 +858,7 @@ sourcetree_sync_start()
    if [ $rval -eq 127 -a "${OPTION_LENIENT}" = 'YES' ]
    then
       # it's OK we can live with that
-      log_verbose "There is no sourcetree in \"${MULLE_VIRTUAL_ROOT}${SOURCETREE_START}\""
+      log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_FILENAME}\")"
       return 0
    fi
 

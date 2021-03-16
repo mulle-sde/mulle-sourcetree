@@ -178,10 +178,10 @@ sourcetree_is_db_compatible()
 #
 # ok=0
 # missing=3
-# absent=4 
+# absent=4
 # optional=5
 # stale=6
-# updating=7 
+# updating=7
 # outdated=8
 # unready=9
 #
@@ -306,7 +306,7 @@ r_emit_status()
             fs="broken"
          fi
 
-         if nodemarks_disable "${marks}" "require" || 
+         if nodemarks_disable "${marks}" "require" ||
             nodemarks_disable "${marks}" "require-os-${MULLE_UNAME}"
          then
             #
@@ -373,7 +373,7 @@ ${SOURCETREE_CONFIG_FILENAME} ($PWD)"
          RVAL="${output_address};dirty;${fs};\
 ${configexists};${dbexists}" #;${filename}"
          return 6
-      fi  
+      fi
 
       if ! sourcetree_is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
       then
@@ -388,9 +388,9 @@ ${configexists};${dbexists}" #;${filename}"
       then
          log_fluff "Database \"${datasource}\" is not ready"
          RVAL="${output_address};unready;${fs};\
-${configexists};${dbexists}" #;${filename}"                 
+${configexists};${dbexists}" #;${filename}"
          return 9
-      fi 
+      fi
 
       if db_is_updating "${datasource}"
       then
@@ -404,7 +404,7 @@ ${configexists};${dbexists}" #;${filename}"
       then
          log_fluff "Database \"${datasource}\" is dirty ($PWD)"
          RVAL="${output_address};dirty;${fs};\
-${configexists};${dbexists}" #;${filename}"                 
+${configexists};${dbexists}" #;${filename}"
          return 6
       fi
 
@@ -435,7 +435,7 @@ walk_status()
 
    #
    # if we are just quickly checking for
-   #  
+   #
    if [ "${OPTION_IS_UPTODATE}" = 'YES'  ]
    then
       return $rval  # any non-0 will preempt
@@ -635,7 +635,7 @@ sourcetree_status_main()
 
    if ! cfg_exists "${SOURCETREE_START}"
    then
-      log_info "There is no ${SOURCETREE_CONFIG_FILENAME} here"
+      log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_FILENAME}\")"
       return 0
    fi
 
@@ -675,7 +675,7 @@ sourcetree_status_main()
    sourcetree_status "${mode}"
    rval=$?
 
-   case $rval in 
+   case $rval in
       0)
          return 0
       ;;
@@ -687,7 +687,7 @@ sourcetree_status_main()
       *)
          return 1
       ;;
-   esac   
+   esac
 
 }
 

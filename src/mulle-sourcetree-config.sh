@@ -85,7 +85,7 @@ Usage:
    Nodes with an url will be fetched and possibly unpacked on the next update.
 
    Examples:
-      ${MULLE_EXECUTABLE_NAME} add ./src
+      ${MULLE_EXECUTABLE_NAME} add foo
       ${MULLE_EXECUTABLE_NAME} add --url https://x.com/x external/x
 
    This command only affects the local sourcetree.
@@ -1434,12 +1434,20 @@ sourcetree_common_main()
    local OPTION_IF_MISSING='NO'
    local OPTION_IF_PRESENT='NO'
    local OPTION_MATCH='NO'
+   local OPTION_CONFIG_FILE='DEFAULT'
 
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
             ${USAGE}
+         ;;
+
+         --config-file)
+            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            shift
+
+            OPTION_CONFIG_FILE="$1"
          ;;
 
          --print-common-keys)

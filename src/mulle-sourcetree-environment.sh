@@ -37,6 +37,7 @@ sourcetree_basic_environment()
    log_entry "sourcetree_basic_environment" "$@"
 
    local directory="$1"
+   local config_dir="$2"
 
    if [ -z "${directory}" -a ! -z "${MULLE_VIRTUAL_ROOT}" ]
    then
@@ -53,10 +54,7 @@ sourcetree_basic_environment()
    [ -z "${MULLE_PATH_SH}" ] && \
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"
 
-   if [ -z "${MULLE_HOSTNAME}" ]
-   then
-      MULLE_HOSTNAME="`hostname -s`"
-   fi
+   MULLE_HOSTNAME="${MULLE_HOSTNAME:-`hostname -s`}"
 
    r_absolutepath "${directory}"
    MULLE_SOURCETREE_PROJECT_DIR="`physicalpath "${RVAL}"`"
@@ -74,9 +72,24 @@ sourcetree_basic_environment()
    # we don't want to "climb out" of MULLE_SOURCETREE_PROJECT_DIR so
    # use --search-here
    #
-   eval `( cd "${MULLE_SOURCETREE_PROJECT_DIR}" && mulle-env ${MULLE_TECHNICAL_FLAGS} --search-here mulle-tool-env sourcetree )` || exit 1
+   eval `"${MULLE_ENV:-mulle-env}" \
+               ${MULLE_TECHNICAL_FLAGS} \
+               -d "${MULLE_SOURCETREE_PROJECT_DIR}" \
+               --search-here \
+               mulle-tool-env sourcetree` || exit 1
 
-   SOURCETREE_CONFIG_FILENAME="${MULLE_SOURCETREE_ETC_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
+   if [ ! -z "${config_dir}" ]
+   then
+      SOURCETREE_CONFIG_FILENAME="${config_dir#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
+      SOURCETREE_FALLBACK_CONFIG_FILENAME=""
+   else
+      SOURCETREE_CONFIG_FILENAME="${MULLE_SOURCETREE_ETC_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
+      SOURCETREE_FALLBACK_CONFIG_FILENAME="${MULLE_SOURCETREE_SHARE_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
+   fi
+
+   is_absolutepath "${SOURCETREE_CONFIG_FILENAME}" \
+   && internal_fail "SOURCETREE_CONFIG_FILENAME \"${SOURCETREE_CONFIG_FILENAME}\" must be relative"
+
    if [ -z "${SOURCETREE_FIX_FILENAME}" ]
    then
       case "${MULLE_UNAME}" in
@@ -92,11 +105,12 @@ sourcetree_basic_environment()
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
-      log_trace2 "MULLE_SOURCETREE_PROJECT_DIR: ${MULLE_SOURCETREE_PROJECT_DIR}"
-      log_trace2 "SOURCETREE_CONFIG_FILENAME:   ${SOURCETREE_CONFIG_FILENAME}"
-      log_trace2 "MULLE_SOURCETREE_ETC_DIR:     ${MULLE_SOURCETREE_ETC_DIR}"
-      log_trace2 "MULLE_SOURCETREE_VAR_DIR:     ${MULLE_SOURCETREE_VAR_DIR}"
-      log_trace2 "MULLE_SOURCETREE_SHARE_DIR:   ${MULLE_SOURCETREE_SHARE_DIR}"
+      log_trace2 "MULLE_SOURCETREE_PROJECT_DIR:        ${MULLE_SOURCETREE_PROJECT_DIR}"
+      log_trace2 "SOURCETREE_CONFIG_FILENAME:          ${SOURCETREE_CONFIG_FILENAME}"
+      log_trace2 "SOURCETREE_FALLBACK_CONFIG_FILENAME: ${SOURCETREE_CONFIG_FILENAME}"
+      log_trace2 "MULLE_SOURCETREE_ETC_DIR:            ${MULLE_SOURCETREE_ETC_DIR}"
+      log_trace2 "MULLE_SOURCETREE_VAR_DIR:            ${MULLE_SOURCETREE_VAR_DIR}"
+      log_trace2 "MULLE_SOURCETREE_SHARE_DIR:          ${MULLE_SOURCETREE_SHARE_DIR}"
    fi
 }
 
@@ -209,14 +223,16 @@ sourcetree_environment()
 
    local option_scope="$1"
    local option_sharedir="$2"
-   local mode="$3"
+   local option_configdir="$3"
+   local defer="$4"
+   local mode="$5"
 
-   sourcetree_basic_environment
+   sourcetree_basic_environment "" "${option_configdir}"
 
    SOURCETREE_SCOPE="${scope:-default}"
-   SOURCETREE_MODE="$3" # maybe empty for now
+   SOURCETREE_MODE="${mode}" # maybe empty for now
 
-   if [ "${MULLE_FLAG_DEFER}" = "VIRTUAL" ]
+   if [ "${defer}" = "VIRTUAL" ]
    then
       [ -z "${MULLE_VIRTUAL_ROOT}" ] && fail "MULLE_VIRTUAL_ROOT not set"
 
@@ -229,10 +245,10 @@ sourcetree_environment()
       #
       # Todo: the defer thing is probably old junk
       #
-      if ! cfg_defer_if_needed "${MULLE_FLAG_DEFER:-NEAREST}"
+      if ! cfg_defer_if_needed "${defer:-NEAREST}"
       then
          # could be an add, so can't really quit here
-         if [ "${MULLE_FLAG_DEFER}" = "PARENT" ]
+         if [ "${defer}" = "PARENT" ]
          then
             exit 1
          fi

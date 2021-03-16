@@ -330,7 +330,7 @@ sourcetree_clean_main()
    then
       if ! cfg_exists "${SOURCETREE_START}"
       then
-         log_verbose "There is no \"${SOURCETREE_CONFIG_FILENAME}\" here"
+         log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_FILENAME}\")"
       fi
 
       local rval

@@ -825,7 +825,7 @@ sourcetree_dotdump_main()
    else
       if ! cfg_exists "${SOURCETREE_START}"
       then
-         log_info "There is no ${SOURCETREE_CONFIG_FILENAME} here"
+         log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_FILENAME}\")"
       fi
    fi
 

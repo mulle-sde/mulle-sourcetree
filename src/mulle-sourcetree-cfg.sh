@@ -33,7 +33,11 @@ MULLE_SOURCETREE_CFG_SH="included"
 
 
 #
-# config file stuff
+# config file stuff. The fallback file is usally in"share" and the default
+# in "etc"
+#
+# local _configfile
+# local _fallback_configfile
 #
 __cfg_common_configfile()
 {
@@ -46,15 +50,24 @@ __cfg_common_configfile()
          then
             case "$1" in
                "/")
-                  configfile="${SOURCETREE_CONFIG_FILENAME}"
+                  _configfile="${SOURCETREE_CONFIG_FILENAME}"
+                  _fallback_configfile="${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
                ;;
 
                /*/)
-                  configfile="$1${SOURCETREE_CONFIG_FILENAME}"
+                  _configfile="$1${SOURCETREE_CONFIG_FILENAME}"
+                  if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_FILENAME}" ]
+                  then
+                     _fallback_configfile="$1${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
+                  fi
                ;;
 
                *)
-                  configfile="$1/${SOURCETREE_CONFIG_FILENAME}"
+                  _configfile="$1/${SOURCETREE_CONFIG_FILENAME}"
+                  if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_FILENAME}" ]
+                  then
+                     _fallback_configfile="$1/${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
+                  fi
                ;;
             esac
             return
@@ -64,15 +77,27 @@ __cfg_common_configfile()
 
    case "$1" in
       "/")
-         configfile="${MULLE_VIRTUAL_ROOT}/${SOURCETREE_CONFIG_FILENAME}"
+         _configfile="${MULLE_VIRTUAL_ROOT}/${SOURCETREE_CONFIG_FILENAME}"
+         if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_FILENAME}" ]
+         then
+            _fallback_configfile="${MULLE_VIRTUAL_ROOT}/${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
+         fi
       ;;
 
       /*/)
-         configfile="${MULLE_VIRTUAL_ROOT}$1${SOURCETREE_CONFIG_FILENAME}"
+         _configfile="${MULLE_VIRTUAL_ROOT}$1${SOURCETREE_CONFIG_FILENAME}"
+         if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_FILENAME}" ]
+         then
+            _fallback_configfile="${MULLE_VIRTUAL_ROOT}$1${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
+         fi
       ;;
 
       /*)
-         configfile="${MULLE_VIRTUAL_ROOT}$1/${SOURCETREE_CONFIG_FILENAME}"
+         _configfile="${MULLE_VIRTUAL_ROOT}$1/${SOURCETREE_CONFIG_FILENAME}"
+         if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_FILENAME}" ]
+         then
+            _fallback_configfile="${MULLE_VIRTUAL_ROOT}$1/${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
+         fi
       ;;
 
       *)
@@ -82,20 +107,33 @@ __cfg_common_configfile()
 
    #
    # allow "hacky" per-platform config files if all else fails
+   # TODO: never used this though.. is this still useful ?
    #
    case "${SOURCETREE_SCOPE}" in
       'default')
-         if [ -f "${configfile}.${MULLE_UNAME}" ]
+         if [ -f "${_configfile}.${MULLE_UNAME}" ]
          then
-            configfile="${configfile}.${MULLE_UNAME}"
+            _configfile="${_configfile}.${MULLE_UNAME}"
          fi
+         if [ ! -z "${_fallback_configfile}" -a -f "${_fallback_configfile}.${MULLE_UNAME}"  ]
+         then
+            _fallback_configfile="${_fallback_configfile}.${MULLE_UNAME}"
+         fi
+      ;;
+
+      "")
+         internal_fail "Scope can't be empty"
       ;;
 
       'global')
       ;;
 
       *)
-         configfile="${configfile}.${SOURCETREE_SCOPE}"
+         _configfile="${_configfile}.${SOURCETREE_SCOPE}"
+         if [ ! -z "${_fallback_configfile}" ]
+         then
+            _fallback_configfile="${_fallback_configfile}.${SOURCETREE_SCOPE}"
+         fi
       ;;
    esac
 }
@@ -111,15 +149,15 @@ __cfg_common_rootdir()
          then
             case "$1" in
                "/")
-                  rootdir="."
+                  _rootdir="."
                ;;
 
                /*/)
-                  rootdir="$(sed 's|/$||g' <<< "$1")"
+                  _rootdir="$(sed 's|/$||g' <<< "$1")"
                ;;
 
                *)
-                  rootdir="$1"
+                  _rootdir="$1"
                ;;
             esac
             return
@@ -129,15 +167,15 @@ __cfg_common_rootdir()
 
    case "$1" in
       "/")
-         rootdir="${MULLE_VIRTUAL_ROOT}"
+         _rootdir="${MULLE_VIRTUAL_ROOT}"
       ;;
 
       /*/)
-         rootdir="${MULLE_VIRTUAL_ROOT}/$(sed 's|/$||g' <<< "$1")"
+         _rootdir="${MULLE_VIRTUAL_ROOT}/$(sed 's|/$||g' <<< "$1")"
       ;;
 
       /*)
-         rootdir="${MULLE_VIRTUAL_ROOT}/$1"
+         _rootdir="${MULLE_VIRTUAL_ROOT}/$1"
       ;;
 
       *)
@@ -149,10 +187,10 @@ __cfg_common_rootdir()
 
 cfg_rootdir()
 {
-   local rootdir
+   local _rootdir
 
    __cfg_common_rootdir "$1"
-   printf "%s\n" "${rootdir}"
+   printf "%s\n" "${_rootdir}"
 }
 
 
@@ -163,17 +201,24 @@ cfg_exists()
 {
    log_entry "cfg_exists" "$@"
 
-   local configfile
+   local _configfile
+   local _fallback_configfile
 
    __cfg_common_configfile "$@"
 
-   if [ -f "${configfile}" ]
+   if [ -f "${_configfile}" ]
    then
-      log_debug "\"${configfile}\" exists"
+      log_debug "\"${_configfile}\" exists"
       return 0
    fi
 
-   log_debug "\"${configfile}\" not found"
+   if [ ! -z "${_fallback_configfile}" ] && [ -f "${_fallback_configfile}" ]
+   then
+      log_debug "\"${_fallback_configfile}\" exists"
+      return 0
+   fi
+
+   log_debug "\"${_configfile}\" not found"
    return 1
 }
 
@@ -182,30 +227,46 @@ cfg_timestamp()
 {
    log_entry "cfg_timestamp" "$@"
 
-   local configfile
+   local _configfile
+   local _fallback_configfile
 
    __cfg_common_configfile "$@"
 
-   if [ -f "${configfile}" ]
+   if [ -f "${_configfile}" ]
    then
-      modification_timestamp "${configfile}"
+      modification_timestamp "${_configfile}"
+      return $?
+   fi
+
+   if [ ! -z "${_fallback_configfile}" ] && [ -f "${_fallback_configfile}" ]
+   then
+      modification_timestamp "${_fallback_configfile}"
+      return $?
    fi
 }
 
 
 #
-# can receive a configfile (for walking)
+# can receive a _configfile (for walking)
 #
 __cfg_read()
 {
-   if [ -f "${configfile}" ]
+   if [ -f "${_configfile}" ]
    then
-      log_debug "Read config file \"${configfile}\" ($PWD)"
-      egrep -s -v '^#' "${configfile}"
-   else
-      log_debug "No config file \"${configfile}\" found ($PWD)"
-      return 1
+      log_debug "Read config file \"${_configfile}\" ($PWD)"
+      egrep -s -v '^#' "${_configfile}"
+      return $?
    fi
+
+   if [ ! -z "${_fallback_configfile}" ] && [ -f "${_fallback_configfile}" ]
+   then
+      log_debug "Read config file \"${_fallback_configfile}\" ($PWD)"
+      egrep -s -v '^#' "${_fallback_configfile}"
+      return $?
+   fi
+
+   log_debug "No config file \"${_configfile}\" or \"${_fallback_configfile}\" found ($PWD)"
+   return 1
 }
 
 
@@ -213,7 +274,8 @@ cfg_read()
 {
    log_entry "cfg_read" "$@"
 
-   local configfile
+   local _configfile
+   local _fallback_configfile
 
    __cfg_common_configfile "$@"
 
@@ -227,13 +289,15 @@ cfg_write()
 
    [ -z "${MULLE_SOURCETREE_ETC_DIR}" ] && internal_fail "MULLE_SOURCETREE_ETC_DIR is empty"
 
-   local configfile
+   local _configfile
+   local _fallback_configfile
 
    __cfg_common_configfile "$@"
    shift
 
-   mkdir_if_missing "${MULLE_SOURCETREE_ETC_DIR}"
-   if ! redirect_exekutor "${configfile}" printf "%s\n" "$*"
+   r_mkdir_parent_if_missing "${_configfile}"
+
+   if ! redirect_exekutor "${_configfile}" printf "%s\n" "$*"
    then
       exit 1
    fi
@@ -312,23 +376,46 @@ cfg_has_duplicate()
 }
 
 
+
+
+#
+# local _configfile
+# local _fallback_configfile
+#
+_cfg_copy_to_etc_if_needed()
+{
+   log_entry "_cfg_copy_to_etc_if_needed" "$@"
+
+   if [ ! -f "${_configfile}" -a -f "${_fallback_configfile}" ]
+   then
+      r_mkdir_parent_if_missing "${_configfile}"
+      exekutor cp "${_fallback_configfile}" "${_configfile}" || exit 1
+      exekutor chmod +w "${_configfile}" || exit 1
+   fi
+}
+
+
 cfg_remove_nodeline()
 {
    log_entry "cfg_remove_nodeline" "$@"
 
-   local configfile
+   local _configfile
+   local _fallback_configfile
 
    __cfg_common_configfile "$@"
+
+   _cfg_copy_to_etc_if_needed
 
    local address="$2"
 
    local escaped
-   log_debug "Removing \"${address}\" from  \"${configfile}\""
+
+   log_debug "Removing \"${address}\" from  \"${_configfile}\""
    r_escaped_sed_pattern "${address}"
    escaped="${RVAL}"
 
    # linux don't like space after -i
-   if ! inplace_sed -e "/^${escaped};/d" "${configfile}"
+   if ! inplace_sed -e "/^${escaped};/d" "${_configfile}"
    then
       internal_fail "sed address corrupt ?"
    fi
@@ -339,21 +426,24 @@ cfg_remove_nodeline_by_uuid()
 {
    log_entry "cfg_remove_nodeline_by_uuid" "$@"
 
-   local configfile
+   local _configfile
+   local _fallback_configfile
 
    __cfg_common_configfile "$@"
+
+   _cfg_copy_to_etc_if_needed
 
    local uuid="$2"
 
    local escaped
 
-   log_debug "Removing \"${uuid}\" from \"${configfile}\""
+   log_debug "Removing \"${uuid}\" from \"${_configfile}\""
 
    r_escaped_sed_pattern "${uuid}"
    escaped="${RVAL}"
 
    # linux don't like space after -i
-   if ! inplace_sed -e "/^[^;]*;[^;]*;[^;]*;${escaped};/d" "${configfile}"
+   if ! inplace_sed -e "/^[^;]*;[^;]*;[^;]*;${escaped};/d" "${_configfile}"
    then
       internal_fail "sed address corrupt ?"
    fi
@@ -362,27 +452,37 @@ cfg_remove_nodeline_by_uuid()
 
 cfg_file_remove()
 {
-   log_entry "cfg_file_remove_if_empty" "$@"
+   log_entry "cfg_file_remove" "$@"
 
-   local configfile
+   local _configfile
+   local _fallback_configfile
 
    __cfg_common_configfile "$@"
 
-   remove_file_if_present "${configfile}"
+   remove_file_if_present "${_configfile}"
 }
 
 
+#
+# This is in a fallback situation probably not the best idea, because then
+# you couldn't remove everything. Depends though. So lets say if there is
+# a fallback, then we don't otherwise we do.
+#
 cfg_file_remove_if_empty()
 {
    log_entry "cfg_file_remove_if_empty" "$@"
 
-   local configfile
+   local _configfile
+   local _fallback_configfile
 
    __cfg_common_configfile "$@"
 
-   if [ -z "`__cfg_read`" ]
+   if [ -z "${_fallback_configfile}" ]
    then
-      remove_file_if_present "${configfile}"
+      if [ -z "`__cfg_read`" ]
+      then
+         remove_file_if_present "${_configfile}"
+      fi
    fi
 }
 
@@ -391,9 +491,12 @@ cfg_change_nodeline()
 {
    log_entry "cfg_change_nodeline" "$@"
 
-   local configfile
+   local _configfile
+   local _fallback_configfile
 
    __cfg_common_configfile "$@"
+
+   _cfg_copy_to_etc_if_needed
 
    local oldnodeline="$2"
    local newnodeline="$3"
@@ -409,7 +512,7 @@ cfg_change_nodeline()
    log_debug "Editing \"${SOURCETREE_CONFIG_FILENAME}\""
 
    # linux don't like space after -i
-   if ! inplace_sed -e "s/^${oldescaped}$/${newescaped}/" "${configfile}"
+   if ! inplace_sed -e "s/^${oldescaped}$/${newescaped}/" "${_configfile}"
    then
       fail "Edit of config file failed unexpectedly"
    fi
@@ -459,7 +562,7 @@ cfg_search_for_configfile()
       ;;
    esac
 
-   log_debug "Searching for configfile \"${SOURCETREE_CONFIG_FILENAME}\" \
+   log_debug "Searching for _configfile \"${SOURCETREE_CONFIG_FILENAME}\" \
 from \"${physdirectory}\" to \"${physceiling}\""
 
    (
@@ -642,18 +745,18 @@ cfg_touch_parents()
 {
    log_entry "cfg_touch_parents" "$@"
 
-   local rootdir
+   local _rootdir
 
    __cfg_common_rootdir "$@"
 
    local parent
 
-   while parent="`cfg_get_parent "${rootdir}" `"
+   while parent="`cfg_get_parent "${_rootdir}" `"
    do
-      [ "${parent}" = "${rootdir}" ] && internal_fail "${parent} endless loop"
+      [ "${parent}" = "${_rootdir}" ] && internal_fail "${parent} endless loop"
 
       exekutor touch "${parent}/${SOURCETREE_CONFIG_FILENAME}"
-      rootdir="${parent}"
+      _rootdir="${parent}"
    done
 }
 

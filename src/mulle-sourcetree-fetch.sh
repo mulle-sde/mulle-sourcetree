@@ -56,7 +56,8 @@ r_sourcetree_guess_address()
                -s "${evalednodetype}" \
                "${evaledurl}"`"
    rval=$?
-   [ $rval -eq 127 ] && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
+   [ $rval -eq 127 ] \
+   && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
    log_fluff "${MULLE_DOMAIN:-mulle-domain} returned \"${RVAL}\" as \
 default address for url ($url)"
@@ -106,7 +107,8 @@ r_sourcetree_guess_nodetype()
                typeguess \
                   "${_evaledurl}"`" || return 1
    rval=$?
-   [ $rval -eq 127 ] && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
+   [ $rval -eq 127 ] \
+   && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
    log_fluff "${MULLE_DOMAIN:-mulle-domain} determined \"${RVAL}\" as \
 nodetype from url ($_evaledurl)"
@@ -135,7 +137,8 @@ r_sourcetree_resolve_url_with_tag()
                          "${url}" \
                          "${tag}" `"
    rval=$?
-   [ $rval -eq 127 ] && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
+   [ $rval -eq 127 ] \
+   && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
    return $rval
 }
@@ -234,13 +237,14 @@ sourcetree_sync_operation()
                ;;
 
                *)
-                  log_warning "Don't know how to modify ${_evaledurl} for \
-${_evaledtag}. Hope for symlink."
+                  log_warning "Don't know how to modify URL \"${_evaledurl}\" \
+for tag \"${_evaledtag}\". Hope for symlink."
                ;;
             esac
          fi
       else
-         log_fluff "Not resolving ${_evaledtag} as MULLE_SOURCETREE_RESOLVE_TAG is NO"
+         log_fluff "Not resolving tag \"${_evaledtag}\" as \
+MULLE_SOURCETREE_RESOLVE_TAG is NO"
       fi
    fi
 

@@ -57,24 +57,29 @@ sourcetree_dbstatus_main()
 
    [ "$#" -eq 0 ] || sourcetree_dbstatus_usage
 
-   local configfile
+   local _configfile
+   local _fallback_configfile
 
    __cfg_common_configfile "${SOURCETREE_START}"
 
-   local database
-   local databasedir
+   local _database
+   local _databasedir
 
    __db_common_databasedir "/"
 
-   dbdonefile="${databasedir}/.db_done"
+   dbdonefile="${_databasedir}/.db_done"
 
-   if [ ! -e "${configfile}" ]
+   if [ ! -e "${_configfile}" ]
    then
-      log_info "No sourcetree here"
-      return 1
+      if [ ! -e "${_fallback_configfile}" ]
+      then
+         log_info "No sourcetree here"
+         return 1
+      fi
+      _configfile="${_fallback_configfile}"
    fi
 
-   if [ "${configfile}" -nt "${dbdonefile}" ] || \
+   if [ "${_configfile}" -nt "${dbdonefile}" ] || \
       ! db_is_ready "${SOURCETREE_START}"
    then
       log_info "Needs update"
