@@ -117,10 +117,13 @@ nodeline_get_uuid()
 
 r_nodeline_get_url()
 {
-   local address,nodetype,marks,uuid
+   local address
+   local nodetype
+   local marks
+   local uuid
 
    IFS=';' \
-      read -r address,nodetype,marks,uuid,RVAL <<< "$*"
+      read -r address nodetype marks uuid RVAL <<< "$*"
 }
 
 

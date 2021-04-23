@@ -41,7 +41,8 @@ MULLE_SOURCETREE_CFG_SH="included"
 #
 __cfg_common_configfile()
 {
-   [ -z "${SOURCETREE_CONFIG_FILENAME}" ] && internal_fail "SOURCETREE_CONFIG_FILENAME is not set"
+   [ -z "${SOURCETREE_CONFIG_FILENAME}" ] \
+      && internal_fail "SOURCETREE_CONFIG_FILENAME is not set"
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
    case "${MULLE_SOURCETREE_STASH_DIR}" in
@@ -197,9 +198,9 @@ cfg_rootdir()
 #
 # these can be prefixed for external queries
 #
-cfg_exists()
+r_cfg_exists()
 {
-   log_entry "cfg_exists" "$@"
+   log_entry "r_cfg_exists" "$@"
 
    local _configfile
    local _fallback_configfile
@@ -209,16 +210,19 @@ cfg_exists()
    if [ -f "${_configfile}" ]
    then
       log_debug "\"${_configfile}\" exists"
+      RVAL="${_configfile}"
       return 0
    fi
 
    if [ ! -z "${_fallback_configfile}" ] && [ -f "${_fallback_configfile}" ]
    then
       log_debug "\"${_fallback_configfile}\" exists"
+      RVAL="${_fallback_configfile}"
       return 0
    fi
 
    log_debug "\"${_configfile}\" not found"
+   RVAL=
    return 1
 }
 
@@ -562,12 +566,12 @@ cfg_search_for_configfile()
       ;;
    esac
 
-   log_debug "Searching for _configfile \"${SOURCETREE_CONFIG_FILENAME}\" \
+   log_debug "Searching for _configfile \"${SOURCETREE_CONFIG_FILENAME}\" (\"$SOURCETREE_FALLBACK_CONFIG_FILENAME\") \
 from \"${physdirectory}\" to \"${physceiling}\""
 
    (
       cd "${physdirectory}" &&
-      while [ ! -f "${SOURCETREE_CONFIG_FILENAME}" ]
+      while [ ! -f "${SOURCETREE_CONFIG_FILENAME}" -a  ! -f "${SOURCETREE_FALLBACK_CONFIG_FILENAME}" ]
       do
          # since we do physical paths, PWD is ok here
          if [ "${PWD}" = "${physceiling}" ]
@@ -634,7 +638,7 @@ cfg_determine_working_directory()
 
    case "${defer}" in
       'NONE')
-         if cfg_exists "${SOURCETREE_START}"
+         if r_cfg_exists "${SOURCETREE_START}"
          then
             pwd -P
             return 0
@@ -753,9 +757,16 @@ cfg_touch_parents()
 
    while parent="`cfg_get_parent "${_rootdir}" `"
    do
-      [ "${parent}" = "${_rootdir}" ] && internal_fail "${parent} endless loop"
+      [ "${parent}" = "${_rootdir}" ] \
+         && internal_fail "${parent} endless loop"
 
-      exekutor touch "${parent}/${SOURCETREE_CONFIG_FILENAME}"
+      if [ -f "${SOURCETREE_CONFIG_FILENAME}" ]
+      then
+         exekutor touch "${parent}/${SOURCETREE_CONFIG_FILENAME}"
+      else
+         # could be write protected though
+         exekutor touch -f "${parent}/${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
+      fi
       _rootdir="${parent}"
    done
 }
@@ -850,7 +861,8 @@ cfg_reuuid()
 
       nodeline_parse "${nodeline}"  # memo: :_marks used raw
 
-      _uuid="`node_uuidgen`" || exit 1
+      r_node_uuidgen
+      _uuid="${RVAL}"
 
       _r_node_to_nodeline
       r_add_line "${output}" "${RVAL}"

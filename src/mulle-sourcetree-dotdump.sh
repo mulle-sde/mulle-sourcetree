@@ -231,7 +231,7 @@ r_get_fs_status()
       ;;
    esac
 
-   if ! cfg_exists "${datasource}"
+   if ! r_cfg_exists "${datasource}"
    then
       log_debug "${destination} has no cfg (is a folder)"
       RVAL="folder"
@@ -823,7 +823,7 @@ sourcetree_dotdump_main()
       r_comma_concat "${mode}" "walkdb"
       mode="${RVAL}"
    else
-      if ! cfg_exists "${SOURCETREE_START}"
+      if ! r_cfg_exists "${SOURCETREE_START}"
       then
          log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_FILENAME}\")"
       fi

@@ -127,7 +127,28 @@ r_sourcetree_resolve_url_with_tag()
    local tag="$2"
    local scm="$3"
 
+   [ "${scm}" = 'comment' ] \
+      && internal_fail "comment should have been ignored previously"
+
+   local type 
    local rval
+
+
+   type="`rexekutor "${MULLE_SEMVER:-mulle-semver}" \
+                         ${MULLE_TECHNICAL_FLAGS} \
+                      "qualifier-type" \
+                         "${tag}" `"
+   rval=$?
+   
+   [ $rval -eq 127 ] \
+      && fail "mulle-semver not found (you may need to run mulle-sde upgrade)"
+
+   case "${type}" in
+      NO|EMPTY|SEMVER)
+         RVAL="${url}"
+         return 0
+      ;;
+   esac   
 
    RVAL="`rexekutor "${MULLE_DOMAIN:-mulle-domain}" \
                          ${MULLE_TECHNICAL_FLAGS} \
@@ -138,7 +159,7 @@ r_sourcetree_resolve_url_with_tag()
                          "${tag}" `"
    rval=$?
    [ $rval -eq 127 ] \
-   && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
+      && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
    return $rval
 }
@@ -290,6 +311,10 @@ MULLE_SOURCETREE_RESOLVE_TAG is NO"
          # does not implement local search
       ;;
 
+      comment)
+         internal_fail "comment should have been ignored previously"
+      ;;
+
       *)
          log_fluff "Looking for local copy of \
 ${C_RESET_BOLD}${_evaledurl}${C_INFO}"
@@ -375,6 +400,9 @@ r_sourcetree_list_operations()
 
    local nodetype="$1"
 
+   [ "${nodetype}" = 'comment' ] \
+      && internal_fail "comment should have been ignored previously"
+
    local cachekey
 
    r_uppercase "${nodetype}"
@@ -382,7 +410,7 @@ r_sourcetree_list_operations()
 
    if [ -z "${!cachekey}" ]
    then
-      if ! value="`${MULLE_FETCH:-mulle-fetch} \
+      if ! value="`"${MULLE_FETCH:-mulle-fetch}" \
                   ${MULLE_TECHNICAL_FLAGS} \
                   -s \
                operation -s "${nodetype}" list`"

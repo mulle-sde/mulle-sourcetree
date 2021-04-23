@@ -110,7 +110,9 @@ Usage:
    ${MULLE_EXECUTABLE_NAME} duplicate [options] <address>
 
    Duplicate a node in the sourcetree. The new node will have a #1 appended to
-   it, if it's the first duplicate. Otherwise #2, #3 and so on.
+   it, if it's the first duplicate. Otherwise #2, #3 and so on. If this node
+   is intended to reference the same URL as the original (as it will initially)
+   make sure to mark the node as 'no-fs'.
 
    Examples:
       ${MULLE_EXECUTABLE_NAME} duplicate foo
@@ -225,6 +227,31 @@ EOF
 
    Example:
       ${MULLE_EXECUTABLE_NAME} mark src/bar no-build
+EOF
+
+  exit 1
+}
+
+
+sourcetree_rename_mark_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+   cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} mark-rename [options] <node> <oldmark> <newmark>
+
+   Rename a mark. Marks with leading "only-" and "no-" will be affected but
+   no others.
+
+   This command only affects the local sourcetree.
+
+Options:
+   --match         : use regular expression to find address to match
+   --extended-mark : allow the use of non-predefined marks
+
+   Example:
+      ${MULLE_EXECUTABLE_NAME} mark-rename src/bar buildx build
 EOF
 
   exit 1
@@ -700,8 +727,13 @@ _sourcetree_append_new_node()
       fi
       if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
       then
-         fail "A node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} already exists \
-in the sourcetree (${PWD#${MULLE_USER_PWD}/}). Use -f to skip this check."
+         if r_cfg_exists "${SOURCETREE_START}"
+         then
+            fail "A node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} already exists \
+in the sourcetree (${RVAL#${MULLE_USER_PWD}/}). Use -f to skip this check."
+         else
+            internal_fail "Bizarre error"
+         fi
       fi
    fi
 
@@ -828,7 +860,7 @@ sourcetree_duplicate_node()
 
    local node
 
-   node="`sourcetree_get_nodeline "${SOURCETREE_START}" "${input}"`"
+   node="`sourcetree_get_nodeline "${input}"`"
    if [ -z "${node}" ]
    then
       fail "Node \"${input}\" not found"
@@ -1191,10 +1223,12 @@ KNOWN_MARKS="\
 no-all-load
 no-bequeath
 no-build
-no-cmakeadd
-no-cmakeinherit
-no-cmakeloader
-no-cmakesearchpath
+no-cmake-add
+no-cmake-dependency
+no-cmake-inherit
+no-cmake-intermediate-link
+no-cmake-loader
+no-cmake-searchpath
 no-delete
 no-dependency
 no-descend
@@ -1206,6 +1240,11 @@ no-import
 no-inplace
 no-intermediate-link
 no-link
+no-cmake-platform-mingw
+no-cmake-platform-darwin
+no-cmake-platform-freebsd
+no-cmake-platform-linux
+no-cmake-platform-windows
 no-platform-mingw
 no-platform-darwin
 no-platform-freebsd
@@ -1221,11 +1260,17 @@ no-static-link
 no-share
 no-update
 only-standalone
+only-framework
+only-camke-platform-darwin
+only-camke-platform-freebsd
+only-camke-platform-linux
+only-camke-platform-windows
+only-camke-platform-mingw
 only-platform-darwin
+only-platform-freebsd
 only-platform-linux
 only-platform-windows
 only-platform-mingw
-only-platform-freebsd
 "
 
 
@@ -1241,7 +1286,16 @@ _sourcetree_add_mark_known_absent()
    then
       if ! fgrep -x -q -e "${mark}" <<< "${KNOWN_MARKS}"
       then
-         fail "mark \"${mark}\" is unknown. If this is not a typo use \`${MULLE_EXECUTABLE_NAME} mark -e ...\`"
+         case "${mark}" in
+            version-min-*|version-max-*)
+            ;;
+
+            *)
+               fail "mark \"${mark}\" is unknown.
+${C_INFO}If this is not a typo use:
+${C_RESET_BOLD}   ${MULLE_EXECUTABLE_NAME} mark -e ..."
+            ;;
+         esac
       fi
    fi
 
@@ -1268,7 +1322,9 @@ _sourcetree_remove_mark_known_present()
    then
       if ! fgrep -x -q -e "${mark}" <<< "${KNOWN_MARKS}"
       then
-         fail "mark \"${mark}\" is unknown. If this is not a typo use \`${MULLE_EXECUTABLE_NAME} unmark -e ...\`"
+         fail "mark \"${mark}\" is unknown.
+${C_INFO}If this is not a typo use:
+${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} unmark -e ..."
       fi
    fi
 
@@ -1292,6 +1348,7 @@ sourcetree_mark_node()
 
    if ! oldnodeline="`sourcetree_get_nodeline "${input}"`"
    then
+      log_warning "Not found"
       return 2
    fi
 
@@ -1323,13 +1380,17 @@ sourcetree_mark_node()
          then
             mark="no-${mark}"
             _sourcetree_remove_mark_known_present "${mark}"
+            return $?
          fi
 
          if nodemarks_contain "${_marks}" "only-${mark}"
          then
             mark="only-${mark}"
             _sourcetree_remove_mark_known_present "${mark}"
+            return $?
          fi
+
+         log_info "Node already implicitly marked as \"${mark}\" (as are all postive marks)"
       ;;
 
       *)
@@ -1394,6 +1455,115 @@ sourcetree_unmark_node()
    esac
 
    sourcetree_mark_node "${input}" "${mark}"
+}
+
+
+r_sourcetree_rename_mark_nodeline()
+{
+   log_entry "r_sourcetree_rename_mark_nodeline" "$@"
+
+   local oldnodeline="$1"
+
+   local _address
+   local _branch
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _raw_userinfo
+   local _tag
+   local _url
+   local _userinfo
+   local _uuid
+
+   nodeline_parse "${oldnodeline}" # !!
+
+   local mark
+   local changed
+   local tmp
+
+   set -o noglob ; IFS=","
+   for mark in ${_marks}
+   do
+      IFS="${DEFAULT_IFS}" ; set +o noglob
+
+      if [ "${mark}" = "no-${oldmark}" ]
+      then
+         mark="no-${newmark}"
+      else
+         if [ "${mark}" = "only-${oldmark}" ]
+         then
+            mark="only-${newmark}"
+         fi
+      fi
+
+      r_comma_concat "${changed}" "${mark}"
+      changed="${RVAL}"
+   done
+   IFS="${DEFAULT_IFS}" ; set +o noglob
+
+   r_nodemarks_sort "${changed}"
+   _marks="${RVAL}"
+
+   r_node_to_nodeline
+}
+
+
+sourcetree_rename_marks()
+{
+   log_entry "sourcetree_rename_marks" "$@"
+
+   local oldmark="$1"
+   local newmark="$2"
+
+   case "${newmark}" in
+      "")
+         fail "Empty node mark"
+      ;;
+
+      *[^a-z0-9._-]*)
+         fail "Node mark \"${newmark}\" contains invalid characters"
+      ;;
+
+      no-*|only-*|version-*)
+         fail "Mark \"${newmark}\" must not start with no-/only-/version-"
+      ;;
+   esac
+
+   case "${oldmark}" in
+      "")
+         fail "Empty node mark"
+      ;;
+
+      *[^a-z0-9._-]*)
+         fail "Node mark \"${oldmark}\" contains invalid characters"
+      ;;
+
+      no-*|only-*|version-*)
+         fail "Mark \"${oldmark}\" must not start with no-/only-/version-"
+      ;;
+   esac
+
+   local oldnodelines
+   local oldnodeline
+   local nodelines
+
+   oldnodelines="`cfg_read "${SOURCETREE_START}"`"
+
+   set -o noglob ; IFS=$'\n'
+   for oldnodeline in ${oldnodelines}
+   do
+      IFS="${DEFAULT_IFS}" ; set +o noglob
+
+      r_sourcetree_rename_mark_nodeline "${oldnodeline}"
+      r_add_line "${nodelines}" "${RVAL}"
+      nodelines="${RVAL}"
+   done
+   IFS="${DEFAULT_IFS}" ; set +o noglob
+
+   if [ "${nodelines}" != "${oldnodelines}" ]
+   then
+      cfg_write "${SOURCETREE_START}" "${nodelines}"
+   fi
 }
 
 
@@ -1634,6 +1804,22 @@ sourcetree_common_main()
          sourcetree_${COMMAND}_node "${input}" "${argument}"
       ;;
 
+      rename_marks)
+         local oldmark
+         local newmark
+
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         oldmark="$1"
+         [ -z "${oldmark}" ] && log_error "empty argument" && ${USAGE}
+         shift
+         newmark="$1"
+         [ -z "${newmark}" ] && log_error "empty argument" && ${USAGE}
+         shift
+         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+
+         sourcetree_rename_marks "${oldmark}" "${newmark}"
+      ;;
+
       rename)
          local newaddress
 
@@ -1736,6 +1922,16 @@ sourcetree_move_main()
 
    USAGE="sourcetree_move_usage"
    COMMAND="move"
+   sourcetree_common_main "$@"
+}
+
+# maybe move elsewhere
+sourcetree_rename_marks_main()
+{
+   log_entry "sourcetree_rename_marks_main" "$@"
+
+   USAGE="sourcetree_rename_marks_usage"
+   COMMAND="rename_marks"
    sourcetree_common_main "$@"
 }
 

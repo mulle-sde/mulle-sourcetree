@@ -290,7 +290,7 @@ r_emit_status()
 
       #
       # Here we are doing still filesystem checks, not database
-      # ot config
+      # or config
       #
       # Dstfile    | Url | Marks      | Output
       # -----------|-----|------------|------------------
@@ -321,7 +321,7 @@ r_emit_status()
 
          if [ -z "${_url}" ]
          then
-            log_fluff "\"${filename}\" does not exist and and is required \
+            log_fluff "\"${filename}\" does not exist and is required \
 ($PWD), but _url is empty"
             RVAL="${output_address};missing;${fs};${configexists};${dbexists}" #;${filename}"
             return 3
@@ -427,19 +427,26 @@ walk_status()
                  "${NODE_MARKS}" \
                  "${WALK_MODE}" \
                  "${NODE_FILENAME}"
-   rval=$?
-   if [ $rval -eq  1 ]  # real error
-   then
-      return 1
-   fi
 
-   #
-   # if we are just quickly checking for
-   #
-   if [ "${OPTION_IS_UPTODATE}" = 'YES'  ]
-   then
-      return $rval  # any non-0 will preempt
-   fi
+   case $? in
+      1)
+         return 1 # real error
+      ;;
+
+      5)
+         # optional missing  
+      ;;
+
+      *)
+         #
+         # if we are just quickly checking for
+         #
+         if [ "${OPTION_IS_UPTODATE}" = 'YES'  ]
+         then
+            return $rval  # any other non-0 will preempt
+         fi
+      ;;
+   esac
 
    if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
    then
@@ -633,7 +640,7 @@ sourcetree_status_main()
 
    [ "$#" -eq 0 ] || sourcetree_status_usage "superflous arguments \"$*\""
 
-   if ! cfg_exists "${SOURCETREE_START}"
+   if ! r_cfg_exists "${SOURCETREE_START}"
    then
       log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_FILENAME}\")"
       return 0

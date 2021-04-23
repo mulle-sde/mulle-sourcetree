@@ -300,7 +300,8 @@ _descend_db_nodelines()
 
    nodelines="`db_fetch_all_nodelines "${database}" `" || exit 1
 
-   log_fluff "Continuing with a \"${style}\" update nodelines  \"${nodelines}\" of db \"${database:-ROOT}\" ($PWD)"
+   log_fluff "Continuing with a \"${style}\" update of nodelines \
+\"${nodelines}\" of db \"${database:-ROOT}\" ($PWD)"
 
    local nodeline
 
@@ -456,7 +457,7 @@ _sourcetree_sync_only_share()
 
    if ! find_line "${UPDATED}" "${config}"
    then
-      log_debug "Add \"${config}\" to UPDATED"
+      log_debug "Add config \"${config}\" to UPDATED"
 
       r_add_line "${UPDATED}" "${config}"
       UPDATED="${RVAL}"
@@ -553,7 +554,7 @@ _sourcetree_sync_share()
 
    if ! find_line "${UPDATED}" "${config}"
    then
-      log_debug "Add \"${config}\" to UPDATED"
+      log_debug "Add config \"${config}\" to UPDATED"
       r_add_line "${UPDATED}" "${config}"
       UPDATED="${RVAL}"
    fi
@@ -574,22 +575,43 @@ _sourcetree_sync_share()
       fi
    fi
 
+   #
+   # We run through the nodelines and check if there is a match for
+   # no-share, if yes, then we will need to manage a database. Else it will
+   # all be kept in root, so we don't bother/pollute.
+   #
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
-   db_set_dbtype "${database}" "${style}"
-   db_set_update "${database}"
+   local need_db='NO'
 
-   db_set_shareddir "${database}" "${MULLE_SOURCETREE_STASH_DIR}"
-
-   #
-   # do a flat update first and remove what we don't have
-   #
-   db_zombify_nodes "${database}"
+   if [ "${database}" = "/" ]
+   then
+      need_db='YES'
+   else
+      case ";${nodelines};" in 
+         *[\;\,]no-share[\,\;]*)
+            need_db='YES'
+         ;;
+      esac
+   fi
+   
+   if [ "${need_db}"  = 'YES' ]
+   then
+      db_set_dbtype "${database}" "${style}"
+      db_set_update "${database}"
+      db_set_shareddir "${database}" "${MULLE_SOURCETREE_STASH_DIR}"
+      #
+      # do a flat update first and remove what we don't have
+      #
+      db_zombify_nodes "${database}"
+   fi
 
    do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}" || return 1
 
-   db_bury_zombies "${database}"
-
+   if [ "${need_db}"  = 'YES' ]
+   then
+      db_bury_zombies "${database}"
+   fi
    # until now, it was just pretty much like flat. Now recurse through nodelines.
 
 
@@ -627,8 +649,11 @@ _sourcetree_sync_share()
       _descend_db_nodelines "share" "${config}" "${database}" || return 1
    fi
 
-   db_clear_update "${database}"
-   db_set_ready "${database}"
+   if [ "${need_db}"  = 'YES' ]
+   then
+      db_clear_update "${database}"
+      db_set_ready "${database}"
+   fi
 }
 
 

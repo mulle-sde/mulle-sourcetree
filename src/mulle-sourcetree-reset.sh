@@ -54,6 +54,8 @@ walk_reset()
 
 sourcetree_reset_usage()
 {
+   [ "$#" -ne 0 ] && log_error "$1"
+   
     cat <<EOF >&2
 Usage:
    ${MULLE_USAGE_NAME} reset [options]

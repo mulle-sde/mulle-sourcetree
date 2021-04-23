@@ -39,8 +39,10 @@ run_git_tests()
    local new
 
    local uuid
+   local uuid2
 
-   uuid="`node_uuidgen`"
+   r_node_uuidgen
+   uuid="${RVAL}"
 
    old="ringo/starr;git;;${uuid};https://github.com/mulle-nat/mulle-c11.git;release"
 
@@ -50,8 +52,11 @@ run_git_tests()
    expect_actions "${actions}" "fetch"
    log_verbose "----- #1 PASSED -----"
 
+   r_node_uuidgen
+   uuid2="${RVAL}"
+
    # uuid change is bug
-   new="ringo/starr;git;;;`node_uuidgen`;https://github.com/mulle-nat/mulle-c11.git;release"
+   new="ringo/starr;git;;;${uuid2};https://github.com/mulle-nat/mulle-c11.git;release"
    ( update_actions_for_nodelines "${old}" "${new}" ) 2> /dev/null && fail "did not fail unexpectedly"
    log_verbose "----- #2 PASSED -----"
 
@@ -130,7 +135,8 @@ run_tar_tests()
    local old
    local new
 
-   uuid="`node_uuidgen`"
+   r_node_uuidgen
+   uuid="${RVAL}"
 
    # into empty is simple
    new="ringo/starr;tar;;${uuid};https://github.com/mulle-nat/mulle-c11/archive/1.2.5.tar.gz"

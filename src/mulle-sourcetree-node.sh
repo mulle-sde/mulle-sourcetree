@@ -32,11 +32,18 @@
 MULLE_SOURCETREE_NODE_SH="included"
 
 
-node_uuidgen()
+r_node_uuidgen()
 {
-   log_entry "node_uuidgen" "$@"
+   log_entry "r_node_uuidgen" "$@"
 
-   uuidgen || fail "Need uuidgen to wok"
+   #
+   # ensure that case doesn't change on linux, uuidgen is lowercase
+   # on macsos it's uppercase. Now this is likely not a problem IRL
+   # but who knows if b314406e-371a-4d73-996f-9b5906564dcf != 
+   # B314406E-371A-4D73-996F-9B5906564DCF isn't a subtle bug in the future
+   #
+   RVAL="`uuidgen`" || fail "Need uuidgen to work"
+   r_uppercase "${RVAL}"
 }
 
 
@@ -48,7 +55,8 @@ r_node_sanitized_address()
 
    local modified
 
-   modified="`simplified_path "${address}"`"
+   r_simplified_path "${address}"
+   modified="${RVAL}"
    if is_absolutepath "${modified}"
    then
       fail "Address \"${address}\" is an absolute filepath"
@@ -90,7 +98,8 @@ node_augment()
 
    if [ -z "${_uuid}" ]
    then
-      _uuid="$(node_uuidgen)"
+      r_node_uuidgen
+      _uuid="${RVAL}"
    fi
 
    _nodetype="${_nodetype:-local}"
@@ -118,7 +127,8 @@ node_augment()
 
          if [ "${before}" != "${after}" ]
          then
-            log_warning "Node of nodetype \"${_nodetype}\" augmented with necessary marks \"no-delete,no-update,no-share,require\""
+            log_warning "Node of nodetype \"${_nodetype}\" augmented with \
+necessary marks \"no-delete,no-update,no-share,require\""
             _marks="${after}"
          fi
 
@@ -166,9 +176,9 @@ node_augment()
    #    ;;
    # esac
 
-   [ -z "${_uuid}" ]     && internal_fail "_uuid is empty"
-   [ -z "${_nodetype}" ] && internal_fail "_nodetype is empty"
-   [ -z "${_address}" ]  && internal_fail "_address is empty"
+   [ -z "${_uuid## }" ]     && internal_fail "_uuid is empty"
+   [ -z "${_nodetype## }" ] && internal_fail "_nodetype is empty"
+   [ -z "${_address## }" ]  && internal_fail "_address is empty"
 
    # does not work
    [ "${_address}" = "." ]  && fail "Node address is '.'"
@@ -465,6 +475,7 @@ node_printf()
 
    r_get_sep "${mode}"
    sep="${RVAL}"
+
    r_get_formatstring "${mode}" "${formatstring}" "${sep}"
    formatstring="${RVAL}"
 
@@ -704,6 +715,15 @@ node_printf()
       fi
    done
 
+   local prefix
+
+   prefix=""
+   case "${_evalednodetype}" in
+      comment)
+         prefix="# "
+      ;;
+   esac
+
    case ",${mode}," in
       *,output_cmd,*)
          rexekutor printf "%s %s\n" "${cmdline}" "'${_address}'"
@@ -718,7 +738,7 @@ node_printf()
       ;;
 
       *)
-         rexekutor printf "%s%s" "${indent}" "${line}"
+         rexekutor printf "%s%s%s" "${prefix}" "${indent}" "${line}"
       ;;
    esac
 }

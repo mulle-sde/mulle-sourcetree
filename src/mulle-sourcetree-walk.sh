@@ -625,7 +625,7 @@ r_walk_has_visited()
 
    if find_line "${VISITED}" "${lineid}"
    then
-      log_fluff "A node with \"${lineid}\" has already been visited"
+      log_debug "A node with lineid \"${lineid}\" has already been visited"
       return 0
    fi
 
@@ -755,11 +755,11 @@ _visit_node()
          #
          if [ $rval -eq 121 ]
          then
-            if "${descendqualifier}" = "${callbackqualifier}" ]
-            then
-               break
-            fi
             rval=0
+            if [ "${descendqualifier}" = "${callbackqualifier}" ]
+            then
+               return $rval
+            fi
          fi
 
          if [ $rval -eq 0 ]
@@ -805,7 +805,10 @@ _walk_share_node()
    local mode="$7"
    shift 7
 
-#   [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
+   # TODO: this was commented out, not sure anymore why, if this assert
+   #       is wrong, comment out and note in comment why
+   [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] \
+   && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
 
    #
    # So the node is shared, so virtual changes
@@ -935,6 +938,30 @@ walk_nodeline()
    nodeline_parse "${nodeline}"  # !!
 
    #
+   # if we have a comment, ignore, unless comments are enabled but
+   # even then only walk them as flat. Unfortunately we need to expand here
+   #
+   local evalednodetype
+
+   r_expanded_string "${_nodetype}"
+   evalednodetype="${RVAL}"
+
+   case "${evalednodetype}" in
+      comment)
+         case ",${mode}," in
+            *,comments,*)
+               r_comma_concat "${mode}" "flat"
+               mode="${RVAL}"
+            ;;
+
+            *)
+               return 0
+            ;;
+         esac
+      ;;
+   esac
+
+   #
    # Assume you have a -> b -> c.
    # By default c gets linked to a via b. If you mark c in b as no-bequeath
    # it is invisble to a.
@@ -952,6 +979,7 @@ walk_nodeline()
          fi
       ;;
    esac
+
 
    local _nodeline
 
@@ -1237,7 +1265,7 @@ walk_dedupe()
 
    if find_line "${WALKED}" "${datasource}"
    then
-      log_debug "Datasource \"${datasource}\" has already been walked"
+      log_debug "Datasource \"${datasource#${MULLE_USER_PWD}/}\" has already been walked"
       return 0
    fi
 
@@ -1292,17 +1320,17 @@ _walk_config_uuids()
 
    if ! nodelines="`cfg_read "${datasource}" `"
    then
-      log_fluff "Config \"${datasource}\" does not exist"
+      log_fluff "Config \"${datasource#${MULLE_USER_PWD}/}\" does not exist"
       return 0
    fi
 
    if [ -z "${nodelines}" ]
    then
-      log_fluff "Config \"${datasource}\" has no nodes"
+      log_fluff "Config \"${datasource#${MULLE_USER_PWD}/}\" has no nodes"
       return 0
    fi
 
-   log_fluff "Walking config \"${datasource}\" nodes"
+   log_fluff "Walking config \"${datasource#${MULLE_USER_PWD}/}\" nodes"
    _walk_nodelines "${nodelines}" "$@"
 }
 
@@ -1368,7 +1396,7 @@ _walk_db_uuids()
       ;;
 
       *)
-         if cfg_exists "${datasource}" && ! db_is_ready "${datasource}"
+         if r_cfg_exists "${datasource}" && ! db_is_ready "${datasource}"
          then
             fail "The sourcetree at \"${datasource}\" is not updated fully \
 yet, can not proceed"
@@ -1537,22 +1565,24 @@ sourcetree_walk_main()
 
    local MULLE_ROOT_DIR
 
-   local OPTION_CALLBACK_ROOT="DEFAULT"
-   local OPTION_CD="DEFAULT"
-   local OPTION_TRAVERSE_STYLE="PREORDER"
+   local OPTION_BEQUEATH='DEFAULT'
+   local OPTION_CALLBACK_QUALIFIER=""
+   local OPTION_CALLBACK_ROOT='DEFAULT'
+   local OPTION_CALLBACK_TRACE='YES'
+   local OPTION_CD='DEFAULT'
+   local OPTION_COMMENTS='DEFAULT'
+   local OPTION_DESCEND_QUALIFIER=""
+   local OPTION_DIRECTION="FORWARD"
+   local OPTION_EVAL='YES'
    local OPTION_EXTERNAL_CALL='YES'
    local OPTION_LENIENT='NO'
    local OPTION_MARKS=""
-   local OPTION_QUALIFIER=""
-   local OPTION_DESCEND_QUALIFIER=""
-   local OPTION_CALLBACK_QUALIFIER=""
    local OPTION_NODETYPES=""
    local OPTION_PERMISSIONS=""
-   local OPTION_CALLBACK_TRACE='YES'
-   local OPTION_WALK_DB="DEFAULT"
-   local OPTION_EVAL='YES'
-   local OPTION_BEQUEATH='DEFAULT'
-   local OPTION_DIRECTION="FORWARD"
+   local OPTION_COMMENTS="D"
+   local OPTION_QUALIFIER=""
+   local OPTION_TRAVERSE_STYLE="PREORDER"
+   local OPTION_WALK_DB='DEFAULT'
    local CONFIGURATION="Release"
    local OPTION_WALK_LEVEL_ZERO=0
    local WALK_VISIT_CALLBACK=
@@ -1571,6 +1601,14 @@ sourcetree_walk_main()
             shift
 
             CONFIGURATION="$1"
+         ;;
+
+         --comments)
+            OPTION_COMMENTS='YES'
+         ;;
+
+         --no-comments)
+            OPTION_COMMENTS='NO'
          ;;
 
          --callback-root)
@@ -1746,7 +1784,7 @@ sourcetree_walk_main()
    [ $# -gt 1 ] && \
       shift && \
       sourcetree_walk_usage "Superflous arguments \"$*\". Pass callback \
-as one string and use "
+as one string and use quotes."
 
    local mode
 
@@ -1797,12 +1835,6 @@ as one string and use "
       ;;
    esac
 
-   if [ "${OPTION_DIRECTION}" = "BACKWARDS" ]
-   then
-      r_comma_concat "${mode}" "backwards"
-      mode="${RVAL}"
-   fi
-
    case "${OPTION_DEDUPE_MODE}" in
       address|address-filename|address-marks-filename|address-url|filename|\
 hacked-marks-nodeline-no-uuid|\
@@ -1827,9 +1859,14 @@ ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
       r_comma_concat "${mode}" "bequeath"
       mode="${RVAL}"
    fi
-   if [ "${OPTION_LENIENT}" = 'YES' ]
+   if [ "${OPTION_CALLBACK_ROOT}" = 'YES' ]
    then
-      r_comma_concat "${mode}" "lenient"
+      r_comma_concat "${mode}" "callroot"
+      mode="${RVAL}"
+   fi
+   if [ "${OPTION_CALLBACK_TRACE}" = 'NO' ]
+   then
+      r_comma_concat "${mode}" "no-trace"
       mode="${RVAL}"
    fi
    if [ "${OPTION_CD}" = 'YES' ]
@@ -1837,19 +1874,14 @@ ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
       r_comma_concat "${mode}" "docd"
       mode="${RVAL}"
    fi
-   if [ "${OPTION_EXTERNAL_CALL}" = 'YES' ]
+   if [ "${OPTION_COMMENTS}" = 'YES' ]
    then
-      r_comma_concat "${mode}" "external"
+      r_comma_concat "${mode}" "comments"
       mode="${RVAL}"
    fi
-   if [ "${OPTION_WALK_DB}" = 'YES' ]
+   if [ "${OPTION_DIRECTION}" = "BACKWARDS" ]
    then
-      r_comma_concat "${mode}" "walkdb"
-      mode="${RVAL}"
-   fi
-   if [ "${OPTION_CALLBACK_ROOT}" = 'YES' ]
-   then
-      r_comma_concat "${mode}" "callroot"
+      r_comma_concat "${mode}" "backwards"
       mode="${RVAL}"
    fi
    if [ "${OPTION_EVAL}" = 'YES' ]
@@ -1857,9 +1889,19 @@ ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
       r_comma_concat "${mode}" "eval"
       mode="${RVAL}"
    fi
-   if [ "${OPTION_CALLBACK_TRACE}" = 'NO' ]
+   if [ "${OPTION_EXTERNAL_CALL}" = 'YES' ]
    then
-      r_comma_concat "${mode}" "no-trace"
+      r_comma_concat "${mode}" "external"
+      mode="${RVAL}"
+   fi
+   if [ "${OPTION_LENIENT}" = 'YES' ]
+   then
+      r_comma_concat "${mode}" "lenient"
+      mode="${RVAL}"
+   fi
+   if [ "${OPTION_WALK_DB}" = 'YES' ]
+   then
+      r_comma_concat "${mode}" "walkdb"
       mode="${RVAL}"
    fi
 

@@ -417,7 +417,8 @@ project \"${project_dir#${MULLE_USER_PWD}/}"
       local otheruuid
       local othergravepath
 
-      otheruuid="`node_uuidgen`"
+      r_node_uuidgen 
+      otheruuid="${RVAL}"
       othergravepath="${graveyard}/${otheruuid}"
 
       log_fluff "Moving old grave with same uuid \"${gravepath}\" to \"${othergravepath}\""
@@ -655,9 +656,9 @@ db_fetch_uuid_for_address()
 }
 
 
-db_fetch_uuid_for_evaledurl()
+r_db_fetch_uuid_for_evaledurl()
 {
-   log_entry "db_fetch_uuid_for_evaledurl" "$@"
+   log_entry "r_db_fetch_uuid_for_evaledurl" "$@"
 
    local _database
    local _databasedir
@@ -670,71 +671,72 @@ db_fetch_uuid_for_evaledurl()
 
    if ! dir_has_files "${_databasedir}" f
    then
+      RVAL=
       return 1
    fi
 
-   (
-      local evaledurl
-      local candidate
+   local evaledurl
+   local candidate
 
-      cd "${_databasedir}"
-      IFS=$'\n'
-      for candidate in `fgrep -l -x -s -e "${searchurl}" *`
-      do
-         IFS="${DEFAULT_IFS}"
+   IFS=$'\n'
+   for candidate in `( fgrep -l -x -s -e "${searchurl}" "${_databasedir}"/* )`
+   do
+      IFS="${DEFAULT_IFS}"
 
-         evaledurl="`_db_evaledurl < "${candidate}" `"
-         if [ "${searchurl}" = "${evaledurl}" ]
-         then
-            printf "%s\n" "${candidate}"
-            exit 0
-         fi
-      done
-      exit 1
-   )
-}
+      evaledurl="`_db_evaledurl < "${candidate}" `"
+      if [ "${searchurl}" = "${evaledurl}" ]
+      then
+         r_basename "${candidate}"
+         return 0
+      fi
+   done
+   IFS="${DEFAULT_IFS}"
 
-
-db_fetch_uuid_for_filename()
-{
-   log_entry "db_fetch_uuid_for_filename" "$@"
-
-   local _database
-   local _databasedir
-
-   __db_common_databasedir "$@"
-
-   local searchurl="$2"
-
-   [ -z "${searchfilename}" ] && internal_fail "filename is empty"
-
-   if ! dir_has_files "${_databasedir}" f
-   then
-      return 1
-   fi
-
-   (
-      local filename
-      local candidate
-
-      cd "${_databasedir}"
-      IFS=$'\n'
-      for candidate in `fgrep -l -x -s -e "${searchfilename}" *`
-      do
-         IFS="${DEFAULT_IFS}"
-
-         filename="`_db_filename < "${candidate}" `"
-         if [ "${searchfilename}" = "${filename}" ]
-         then
-            printf "%s\n" "${candidate}"
-            exit 0
-         fi
-      done
-      exit 1
-   )
-
+   RVAL=
    return 1
 }
+
+# unused
+# db_fetch_uuid_for_filename()
+# {
+#    log_entry "db_fetch_uuid_for_filename" "$@"
+# 
+#    local _database
+#    local _databasedir
+# 
+#    __db_common_databasedir "$@"
+# 
+#    local searchurl="$2"
+# 
+#    [ -z "${searchfilename}" ] && internal_fail "filename is empty"
+# 
+#    if ! dir_has_files "${_databasedir}" f
+#    then
+#       return 1
+#    fi
+# 
+#    (
+#       local filename
+#       local candidate
+# 
+#       cd "${_databasedir}"
+#       IFS=$'\n'
+#       for candidate in `fgrep -l -x -s -e "${searchfilename}" *`
+#       do
+#          IFS="${DEFAULT_IFS}"
+# 
+#          filename="`_db_filename < "${candidate}" `"
+#          if [ "${searchfilename}" = "${filename}" ]
+#          then
+#             printf "%s\n" "${candidate}"
+#             exit 0
+#          fi
+#       done
+#       exit 1
+#    )
+# 
+#    return 1
+# }
 
 
 db_fetch_all_filenames()
@@ -1016,6 +1018,7 @@ db_set_ready()
 }
 
 
+# never
 db_clear_ready()
 {
    log_entry "db_clear_ready" "$@"
@@ -1431,7 +1434,7 @@ db_is_filename_inuse()
 
 
 #
-# you pass in the owner (_database) for the nodes to zombify
+# The owner thing is never used IRL though
 #
 db_zombify_nodes()
 {
@@ -1444,7 +1447,7 @@ db_zombify_nodes()
 
    local owner="$2"
 
-   log_fluff "Marking nodes of owner "${owner:-all}" as zombies for now (${_databasedir})"
+   log_fluff "Marking nodes as zombies for now (${_databasedir})"
 
    local zombiedir
 
@@ -1457,7 +1460,7 @@ db_zombify_nodes()
    shopt -s nullglob
    for filename in "${_databasedir}"/*
    do
-      if [ ! -z "${owner}" -a "`_db_owner < "${filename}"`" != "${owner}" ]
+      if [ ! -z "${owner}" ] && [ "`_db_owner < "${filename}"`" != "${owner}" ]
       then
          continue
       fi
@@ -1751,7 +1754,7 @@ db_state_description()
 
 #
 # Figure out the filename for a node marked share (which is the default)
-# It is assumed, that this particular node is not in the _database yet.
+# It is assumed, that this particular node is not in the database yet.
 # I.e. this is run during an update!
 # The returned filename is not absolute.
 #
@@ -1764,85 +1767,14 @@ r_db_update_determine_share_filename()
 {
    log_entry "r_db_update_determine_share_filename" "$@"
 
-   local _database="$1"
-   local address="$2"
-   local evaledurl="$3"
-   local evalednodetype="$4"
-   local marks="$5"
-   local uuid="$6"
-
-   local filename
+   local address="$1"
+   local evaledurl="$2"
+   local evalednodetype="$3"
+   local marks="$4"
+   local uuid="$5"
+   local database="$6"
 
    [ -z "${evaledurl}" ] && internal_fail "URL \"${evaledurl}\" is empty"
-
-   #
-   # Check root _database if there is not the same URL in there already.
-   #
-   local otheruuid
-   local check
-
-   otheruuid="`db_fetch_uuid_for_evaledurl "/" "${evaledurl}"`"
-   if [ ! -z "${otheruuid}" ]
-   then
-      log_debug "uuid     : ${uuid}"
-      log_debug "otheruuid: ${otheruuid}"
-
-      if [ "${otheruuid}" = "${uuid}" ]
-      then
-         if [ "${_database}" != "/" ]
-         then
-            # we don't know if we got here because of a db actually being
-            # read or just from a config, in which case this would be ok
-            check="`db_fetch_uuid_for_evaledurl "${_database}" "${evaledurl}"`"
-            if [ ! -z "${check}" ]  # kosher
-            then
-               if [ "${check}" != "${uuid}" ]
-               then
-                  internal_fail "Database corrupted. mulle-sde clean tidy everything."
-               fi
-
-               r_basename "${_database}"
-               log_error "\
-Shared \"${address}\" is not in the root _database but in _database ($_database).
-${C_INFO}This can sometimes happen, if you added a dependency, that depends on
-a dependency that a previous dependency also depends on. This can trip up the
-_database order, so try ${C_RESET_BOLD}mulle-sde clean tidy${C_INFO} first.
-
-This could also mean, that \"${address}\" is simultaneously marked as 'share'
-and 'no-share' by two projects. And then it could also mean that
-\"${address}\" is used by two projects, but they reuse the same UUIDs in their
-mulle-sourcetree configurations.
-
-Check your uuids and marks with:
-
-   ${C_RESET_BOLD}mulle-sourcetree list -r --format \"%a;%_;%v={WALK_DATASOURCE};%m\\\\n\" \\
-      --output-no-indent --output-no-header --no-dedupe | sort -u${C_INFO}
-
-If you see a project using a 'no-share' marked  \"${address}\" and another
-without the mark, mark the second one 'no-share' (if possible).
-
-If you see duplicate UUIDs try this remedial action in the problematic
-project:${C_RESET_BOLD}
-   cd \"${MULLE_SOURCETREE_STASH_DIR}/${RVAL}\"
-   mulle-sourcetree -N reuuid
-   mulle-sourcetree -N reset"
-               return 1
-            fi
-         fi
-      else
-#         [ "${_database}" = "/" ] &&
-#            internal_fail "Unexpected root _database for \"${address}\". \
-#But uuids differ \"${uuid}\" vs \"${otheruuid}\""
-
-         if [ "${_database}" != "/" ]
-         then
-            log_fluff "The \"${evaledurl}\" is already used in root. So skip it."
-            return 3
-         fi
-      fi
-   fi
-
-   log_debug "Use root _database for share node \"${address}\""
 
    #
    # Use the "${MULLE_SOURCETREE_STASH_DIR}" for shared nodes, except when
@@ -1852,22 +1784,115 @@ project:${C_RESET_BOLD}
    if [ "${evalednodetype}" = "local" ]
    then
       log_debug "Use local minion node \"${address}\" as share"
-      RVAL="${address}"
-      return 0
+      filename="${address}"
+   else
+      local name
+      local filename
+
+      r_basename "${address}"
+      name="${RVAL}"
+
+      r_filepath_concat "${MULLE_SOURCETREE_STASH_DIR}" "${name}"
+      filename="${RVAL}"
+
+      log_debug "Set filename to share directory \"${filename}\" for \"${address}\""
    fi
 
-   local name
 
-   r_basename "${address}"
-   name="${RVAL}"
+   if [ "${database}" != "/" ] 
+   then
+      #
+      # Check root database if there is not the same URL in there already.
+      # If it is and the filename exists, we skip. If it doesn't exist we 
+      # want to retry
+      #
+      local otheruuid
+      local check
 
-   r_filepath_concat "${MULLE_SOURCETREE_STASH_DIR}" "${name}"
-   filename="${RVAL}"
+      r_db_fetch_uuid_for_evaledurl "/" "${evaledurl}"
+      otheruuid="${RVAL}"
 
-   log_debug "Set filename to share directory \"${filename}\" for \"${name}\""
+      if [ ! -z "${otheruuid}" ]
+      then
+         # So its already there, is this good ?
+
+         log_debug "address   : ${address}"
+         log_debug "evaledurl : ${evaledurl}"
+         log_debug "uuid      : ${uuid}"
+         log_debug "otheruuid : ${otheruuid}"
+
+         if [ -e "${filename}" ]
+         then
+            log_fluff "The URL \"${evaledurl}\" is already used in root and \
+exists. So skip \"${address}\" for database \"${database}\"."
+            return 3
+         fi
+      fi
+   fi
 
    RVAL="${filename}"
    return 0
+#      # uuid same as in root ?
+#      if [ "${otheruuid}" = "${uuid}" ]
+#      then
+#         # We are saving into root as this is known to be share. Or don't we ?
+#         # We just skip this 
+#         return 3
+#
+#          if [ "${database}" != "/" ]
+#          then
+#             # we don't know if we got here because of a db actually being
+#             # read or just from a config, in which case this could be ok
+#             check="`db_fetch_uuid_for_evaledurl "${database}" "${evaledurl}"`"
+#             log_debug "checkuuid : ${check}"
+#             if [ ! -z "${check}" ] 
+#             then
+#                if [ "${check}" != "${uuid}" ]
+#                then
+#                   internal_fail "Database corrupted. mulle-sde clean tidy everything."
+#                fi
+# 
+#                r_basename "${database}"
+#                log_error "\
+# Shared node \"${address}\" is not in the root database but in database (${database}).
+# ${C_INFO}This can sometimes happen, if you added a dependency, that depends on
+# a dependency that a previous dependency also depends on. This can trip up the
+# database order, so try ${C_RESET_BOLD}mulle-sde clean tidy${C_INFO} first.
+# Another problem could be a duplicated node that references the same stash 
+# directory.
+# 
+# This could also mean, that \"${address}\" is simultaneously marked as 'share'
+# and 'no-share' by two projects. And then it could also mean that
+# \"${address}\" is used by two projects, but they reuse the same UUIDs in their
+# mulle-sourcetree configurations.
+# 
+# Check your uuids and marks with:
+# 
+#    ${C_RESET_BOLD}mulle-sourcetree list -r --format \"%_;%a;%v={WALK_DATASOURCE};%m\\\\n\" \\
+#       --output-no-indent --output-no-header --no-dedupe | sort -u${C_INFO}
+# 
+# If you see a project using a 'no-share' marked  \"${address}\" and another
+# without the mark, mark the second one 'no-share' (if possible).
+# 
+# If you see duplicate UUIDs try this remedial action in the problematic
+# project:${C_RESET_BOLD}
+#    cd \"${MULLE_SOURCETREE_STASH_DIR}/${RVAL}\"
+#    mulle-sourcetree -N reuuid
+#    mulle-sourcetree -N reset"
+#                return 1
+#             fi
+#          fi
+#     else
+#         [ "${_database}" = "/" ] &&
+#            internal_fail "Unexpected root database for \"${address}\". \
+#But uuids differ \"${uuid}\" vs \"${otheruuid}\""
+#        if [ "${_database}" != "/" ]
+#        then
+#           log_fluff "The URL \"${evaledurl}\" is already used in root. So skip it."
+#           return 3
+#        fi
+#     fi
+
 }
 
 

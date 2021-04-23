@@ -41,7 +41,7 @@ _nodemarks_key_check()
          fail "Empty node mark"
       ;;
 
-      *[^a-z-_0-9.]*)
+      *[^a-z0-9._-]*)
          fail "Node mark \"$1\" contains invalid characters"
       ;;
 
@@ -139,8 +139,9 @@ r_nodemarks_add()
          if _r_nodemarks_find_prefix "${marks}" "${key%-*}"
          then
             _r_nodemarks_remove "${marks}" "${RVAL}"
+            marks="${RVAL}"
          fi
-         _r_nodemarks_add "${RVAL}" "${key}"
+         _r_nodemarks_add "${marks}" "${key}"
       ;;
 
       *)
@@ -212,8 +213,8 @@ _nodemarks_contain()
 #
 # check for version of
 #
-# like "version-darwin-min-0.12.0"
-# like "version-darwin-max-0.16.0"
+# like "version-min-darwin-0.12.0"
+# like "version-max-darwin-0.16.0"
 #
 # 0 yes
 # 1 no

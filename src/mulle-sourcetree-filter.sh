@@ -1,6 +1,6 @@
 #! /usr/bin/env bash
 #
-#   Copyright (c) 2017 Nat! - Mulle kybernetiK
+#   Copyright (c) 2021 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
 #   Redistribution and use in source and binary forms, with or without
@@ -29,73 +29,69 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_STATUS_SH="included"
+MULLE_SOURCETREE_FILTER_SH="included"
 
 
-sourcetree_dbstatus_usage()
+
+sourcetree_filter_usage()
 {
-   [ $# -ne 0 ] && log_error "$1"
+   if [ "$#" -ne 0 ]
+   then
+      log_error "$*"
+   fi
 
    cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} dbstatus
+   ${MULLE_USAGE_NAME} filter [options] <marks> <qualifier>
 
-   Tests if a database is up to date.
+   Apply qualifier on marks, and report if it matches or not.
 
-Returns:
-    0 : yes
-    1 : error
-    2 : no
+
+Example:
+   ${MULLE_USAGE_NAME} filter no-foo 'ENABLES foo'
+   ${MULLE_USAGE_NAME} filter version-max-darwin-10.99.0 \
+                              'VERSION version-max-darwin >= 11.0.0'
+
+Options:
+   -h   : this help
 EOF
-  exit 1
+   exit 1
 }
 
 
-sourcetree_dbstatus_main()
+sourcetree_filter_main()
 {
-   log_entry "sourcetree_dbstatus_main" "$@"
+   log_entry "sourcetree_filter_main" "$@"
 
-   [ "$#" -eq 0 ] || sourcetree_dbstatus_usage
+   while :
+   do
+      case "$1" in
+         -h*|--help|help)
+            sourcetree_filter_usage
+         ;;
 
-   local _configfile
-   local _fallback_configfile
+         -*)
+            sourcetree_filter_usage "Unknown option \"$1\""
+         ;;
 
-   __cfg_common_configfile "${SOURCETREE_START}"
+         *)
+            break
+         ;;
+      esac
 
-   local _database
-   local _databasedir
+      shift
+   done
 
-   __db_common_databasedir "/"
+   [ $# -eq 2 ] || sourcetree_filter_usage
 
-   dbdonefile="${_databasedir}/.db_done"
+   # shellcheck source=src/mulle-sourcetree-fix.sh
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"
 
-   if [ ! -e "${_configfile}" ]
+   if nodemarks_filter_with_qualifier "$@"
    then
-      if [ ! -e "${_fallback_configfile}" ]
-      then
-         log_info "No sourcetree here"
-         return 1
-      fi
-      _configfile="${_fallback_configfile}"
+      echo 'YES'
+   else
+      echo 'NO'
    fi
-
-   if rexekutor [ "${_configfile}" -nt "${dbdonefile}" ]
-   then
-      if [ -e "${dbdonefile}" ]
-      then
-         log_info "Needs sync as sourcetree has edits"
-      else
-         log_info "Needs sync as database is not complete"
-      fi
-      return 2
-   fi
-
-   if ! db_is_ready "${SOURCETREE_START}"
-   then
-      log_info "Needs sync as database is not ready"
-      return 2
-   fi
-
-   log_info "Is up-to-date"
 }
 

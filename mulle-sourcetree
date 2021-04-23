@@ -68,6 +68,7 @@ print_commands()
    duplicate      : duplicate a sourcetree node
    filter         : test a filter with user supplied marks
    fix            : support to track user modifications in the filesystem
+   eval-add       : batch process mulle-sourcetree add commands
    get            : get a node's properties from the sourcetree
    info           : print current sourcetree information
    libexec-dir    : print path to ${MULLE_USAGE_NAME} libexec
@@ -75,6 +76,7 @@ print_commands()
    sourcetree-dir : print path to project (if a sourcetree exists)
    reuuid         : create new uuids for the sourcetree
    rename         : rename a node in the sourcetree
+   rename-marks   : rename marks in the sourcetree
    remove         : remove a node from the sourcetree
    reset          : clear the database, to force a sync
    wrap           : wrap nodetypes,branches,URLs in environment variables
@@ -241,6 +243,7 @@ main()
    local MULLE_FLAG_LOG_SETTINGS='NO'
    local MULLE_FLAG_LOG_VERBOSE='NO'
    local MULLE_FLAG_LOG_MERGE='NO'
+   local MULLE_FLAG_USE_FALLBACK='NO'
    local MULLE_TRACE_POSTPONE='NO'
 
    local MULLE_FLAG_DEFER=""
@@ -361,6 +364,10 @@ main()
             MULLE_FLAG_SHARE_DIR="$1"
          ;;
 
+         --use-fallback)
+            MULLE_FLAG_USE_FALLBACK='YES'
+         ;;
+
          --version)
             printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
             exit 0
@@ -390,6 +397,7 @@ main()
    sourcetree_environment "${MULLE_FLAG_SCOPE}" \
                           "${MULLE_FLAG_SHARE_DIR}" \
                           "${MULLE_FLAG_CONFIG_DIR}" \
+                          "${MULLE_FLAG_USE_FALLBACK}" \
                           "${MULLE_FLAG_DEFER}"
 
    cmd="${1}"
@@ -444,11 +452,11 @@ main()
    fi
 
    case "${cmd}" in
-      add|get|duplicate|info|knownmarks|mark|move|rename|remove|set|unmark)
+      add|get|duplicate|info|knownmarks|mark|move|rename|rename-marks|remove|set|unmark)
          # shellcheck source=src/mulle-sourcetree-config.sh
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
 
-         sourcetree_${cmd}_main "$@"
+         sourcetree_${cmd//-/_}_main "$@"
       ;;
 
       craftorder|clean|fix|list|reset|reuuid|wrap|status|walk)
@@ -468,6 +476,13 @@ main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dotdump.sh"
 
          sourcetree_dotdump_main "$@"
+      ;;
+
+      eval-add)
+         # shellcheck source=src/mulle-sourcetree-eval-add.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-eval-add.sh"
+
+         sourcetree_eval_add_main "$@"
       ;;
 
       filter)

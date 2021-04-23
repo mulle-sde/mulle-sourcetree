@@ -111,7 +111,6 @@ augment_craftorder_line()
    log_entry "augment_craftorder_line" "$@"
 
    local filename
-   local marks
 
    r_create_craftorder_filename "${_filename}"
    filename="${RVAL}"
@@ -122,7 +121,13 @@ augment_craftorder_line()
    fi
 
    # remove file from remainders
-   _remainder_collection="`rexekutor fgrep -x -v -e "${filename}" <<< "${_remainder_collection}"`"
+   # we only remove the first file in the hope we can collect augmentations
+   # for duplicates as well
+
+   r_remove_line_once "${_remainder_collection}" "${filename}"
+   _remainder_collection="${RVAL}"
+
+   local marks
 
    marks="${_marks}"
    if [ ! -z "${OPTION_CALLBACK}" ]
@@ -133,7 +138,7 @@ augment_craftorder_line()
       fi
    fi
 
-   log_fluff "Augmented ${filename} with marks from ${_datasource}${_address}"
+   log_fluff "Augmented ${filename} with marks from ${_datasource#${MULLE_USER_PWD}/}${_address}"
 
    if [ "${OUTPUT_RAW_USERINFO}" = 'YES' ]
    then
@@ -334,12 +339,21 @@ sourcetree_craftorder_main()
    local filename
    local collection
    local lines
+   local duplicates 
 
    set -o noglob; IFS=$'\n'
    for filename in ${_craftorder_collection}
    do
+      if find_line "${duplicates}" "${filename}"
+      then
+         continue
+      fi
+      r_add_line "${duplicates}" "${filename}"
+      duplicates="${RVAL}"
+
       r_escaped_sed_pattern "${filename}"
       line="`egrep -e "^${RVAL};" <<< "${_augmented_collection}"`"
+
       r_add_line "${lines}" "${line}"
       lines="${RVAL}"
    done

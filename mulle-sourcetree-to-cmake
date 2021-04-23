@@ -51,18 +51,19 @@ Usage:
    with \`mulle-sde run ${MULLE_USAGE_NAME}\`.
 
    Marks used:
-     all-load        : emit ObjC specifica
-     cmakeadd        : add to the list of libraries to link
-     cmakedependency : inherit foreign DependenciesAndLibraries.cmake
-     cmakeinherit    : inherit anything from foreign library
-     cmakeloader     : inherit foreign objc-loader.h
-     require         : combines require-link and require-header
-     require-header  : the header must exist
-     require-link    : the library must exist
+     cmake-all-load           : library that need all symbols (ObjC)
+     cmake-add                : add to the list of libraries to link
+     cmake-dependency         : inherit foreign DependenciesAndLibraries.cmake
+     cmake-inherit            : inherit anything from foreign library
+     cmake-intermediate-link  : prefix container name with STARTUP_
+     cmake-loader             : inherit foreign objc-loader.h
+     require                  : combines require-link and require-header
+     require-header           : the header must exist
+     require-link             : the library must exist
 
 Flags:
-      --serial       : serial operation
-      --stdout       : emit to stdout (implies --serial)
+      --serial                : serial operation
+      --stdout                : emit to stdout (implies --serial)
 
 Environment:
    MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE : the dependencies output file
@@ -139,69 +140,66 @@ r_create_exclude_only_if()
 }
 
 
+#
+# key is "platform" usually
+#
 r_osexclude_configuration_to_cmake_if()
 {
    log_entry "r_osexclude_configuration_to_cmake_if" "$@"
 
-   local marks="$1"
+   local marks="$1"; shift
 
    local excludes
    local onlys
    local mark
 
-   set -o noglob ; IFS=","
-   for mark in ${marks}
+   local length
+   local len1
+   local len2
+
+   while [ $# -ne 0 ]
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      key="$1"
+      shift 
 
-      case "${mark}" in
-         only-platform-*)
-            r_uname_to_cmake "${mark:14}"
-            r_concat "${onlys}" "${RVAL}" " OR "
-            onlys="${RVAL}"
-         ;;
+      length="${#key}"
+      len1=$((length + 6))
+      len2=$((length + 4))
 
-         no-platform-*)
-            r_uname_to_cmake "${mark:12}"
-            r_concat "${excludes}" "${RVAL}" " OR "
-            excludes="${RVAL}"
-         ;;
-      esac
+      set -o noglob ; IFS=","
+      for mark in ${marks}
+      do
+         IFS="${DEFAULT_IFS}"; set +o noglob
+
+         case "${mark}" in
+            only-${key}-*)
+               r_uname_to_cmake "${mark:${len1}}"
+               case " OR ${onlys} OR " in
+                  *" OR ${RVAL} OR "*)
+                  ;;
+
+                  *) 
+                     r_concat "${onlys}" "${RVAL}" " OR "
+                     onlys="${RVAL}"
+                  ;;
+               esac
+            ;;
+
+            no-${key}-*)
+               r_uname_to_cmake "${mark:${len2}}"
+               case " OR ${excludes} OR " in
+                  *" OR ${RVAL} OR "*)
+                  ;;
+
+                  *) 
+                     r_concat "${excludes}" "${RVAL}" " OR "
+                     excludes="${RVAL}"
+                  ;;
+               esac
+            ;;
+         esac
+      done
    done
-
-#
-# UNUSED AND PROBABLY USELESS AS IS, AS ITS NOT REFLECTED IN HEADERS
-#
-#   set -o noglob ; IFS=","
-#   for mark in ${marks}
-#   do
-#      IFS="${DEFAULT_IFS}"; set +o noglob
-#
-#      case "${mark}" in
-#         only-configuration-test)
-#            r_concat "${onlys}" "MULLE_TEST" " OR "
-#            onlys="${RVAL}"
-#         ;;
-#
-#         no-configuration-test)
-#            r_concat "${excludes}" "MULLE_TEST" " OR "
-#            excludes="${RVAL}"
-#         ;;
-#
-#         only-configuration-*)
-#            r_capitalize "${mark:19}"
-#            r_concat "${onlys}" "(\${CMAKE_BUILD_TYPE} MATCHES \"${RVAL}*\")" " OR "
-#            onlys="${RVAL}"
-#         ;;
-#
-#         no-configuration-*)
-#            r_capitalize "${mark:17}"
-#            r_concat "${excludes}" "(\${CMAKE_BUILD_TYPE} MATCHES \"${RVAL}*\")" " OR "
-#            excludes="${RVAL}"
-#         ;;
-#      esac
-#   done
-#   IFS="${DEFAULT_IFS}"; set +o noglob
 
    r_create_exclude_only_if "${excludes}" "${onlys}"
 }
@@ -229,14 +227,14 @@ _emit_dependencies_loader_cmake_code()
    fi
 
    case ",${marks}," in
-      *,no-cmakesearchpath,*)
+      *,no-cmake-searchpath,*)
       ;;
 
       *)
          cat <<EOF
 ${indent}      #
 ${indent}      # Append header directory to user search path.
-${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakesearchpath\`
+${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-searchpath\`
 ${indent}      #
 ${indent}      foreach( _TMP_${identifier}_NAME ${quoted_names})
 ${indent}         set( _TMP_${identifier}_DIR "\${_TMP_${identifier}_ROOT}/include/\${_TMP_${identifier}_NAME}")
@@ -257,14 +255,14 @@ EOF
 
 
    case ",${marks}," in
-      *,no-cmakedependency,*)
+      *,no-cmake-dependency,*)
       ;;
 
       *)
          cat <<EOF
 ${indent}      #
 ${indent}      # Search for "DependenciesAndLibraries.cmake" to include.
-${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakedependency\`
+${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-dependency\`
 ${indent}      #
 ${indent}      foreach( _TMP_${identifier}_NAME ${quoted_names})
 ${indent}         set( _TMP_${identifier}_DIR "\${_TMP_${identifier}_ROOT}/include/\${_TMP_${identifier}_NAME}/cmake")
@@ -303,14 +301,14 @@ EOF
    # for objective-c we find objc-loader.inc in the public include files
    #
    case ",${marks}," in
-      *,no-all-load,*|*,no-cmakeloader,*)
+      *,no-all-load,*|*,no-cmake-loader,*)
       ;;
 
       *)
          cat <<EOF
 ${indent}      #
 ${indent}      # Search for "MulleObjCLoader+<name>.h" in include directory.
-${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakeloader\`
+${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-loader\`
 ${indent}      #
 ${indent}      if( NOT NO_INHERIT_OBJC_LOADERS)
 ${indent}         foreach( _TMP_${identifier}_NAME ${quoted_names})
@@ -333,9 +331,9 @@ EOF
 
 #
 # no-require-link and no-require, means that find_library may fail and it's OK
-# no-cmakeadd is hack for subprojects, all the "logic" of a dependency
+# no-cmake-add is hack for subprojects, all the "logic" of a dependency
 # runs but the dependency is not actually added to the linkables
-# no-cmakeloader is sort of the inverse, the "loader" part is removed, but
+# no-cmake-loader is sort of the inverse, the "loader" part is removed, but
 # the library is actually linked
 #
 _emit_cmake_find_library()
@@ -496,14 +494,14 @@ ${indent}   #
 ${indent}   if( ${identifier}_LIBRARY)
 EOF
    case ",${marks}," in
-      *',no-cmakeadd,'*)
+      *',no-cmake-add,'*)
       ;;
 
       *)
          cat <<EOF
 ${indent}      #
 ${indent}      # Add ${identifier}_LIBRARY to ${containername} list.
-${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakeadd\`
+${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-add\`
 ${indent}      #
 ${indent}      set( ${containername}
 ${indent}         \${${containername}}
@@ -515,7 +513,7 @@ EOF
    esac
 
    case ",${marks}," in
-      *',no-cmakeinherit,'*)
+      *',no-cmake-inherit,'*)
          cat <<EOF
 ${indent}      # intentionally left blank
 EOF
@@ -525,9 +523,9 @@ EOF
          cat <<EOF
 ${indent}      #
 ${indent}      # Inherit ObjC loader and link dependency info.
-${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakeinherit\`
+${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-inherit\`
 ${indent}      #
-${indent}      # // temporarily expand CMAKE_MODULE_PATH
+${indent}      # temporarily expand CMAKE_MODULE_PATH
 ${indent}      get_filename_component( _TMP_${identifier}_ROOT "\${${identifier}_LIBRARY}" DIRECTORY)
 ${indent}      get_filename_component( _TMP_${identifier}_ROOT "\${_TMP_${identifier}_ROOT}" DIRECTORY)
 ${indent}      #
@@ -580,7 +578,7 @@ _emit_cmake_dependency()
    findoptions=" NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH"
 
    case ",${marks}," in
-      *,no-suppress-system-path,*)
+      *,no-cmake-suppress-system-path,*)
          findoptions=""
       ;;
    esac
@@ -671,14 +669,14 @@ ${indent}   message( STATUS "${identifier}_HEADER is \${${identifier}_HEADER}")
 EOF
 
    case ",${marks}," in
-      *',no-cmakeadd,'*)
+      *',no-cmake-add,'*)
       ;;
 
       *)
          cat <<EOF
 ${indent}   #
 ${indent}   # Add ${identifier}_HEADER to ${containername} list.
-${indent}   # Disable with: \`mulle-sourcetree mark ${address} no-cmakeadd\`
+${indent}   # Disable with: \`mulle-sourcetree mark ${address} no-cmake-add\`
 ${indent}   #
 ${indent}   set( ${containername}
 ${indent}      \${${identifier}_HEADER}
@@ -695,7 +693,7 @@ EOF
 
 
    case ",${marks}," in
-      *',no-cmakeinherit,'*)
+      *',no-cmake-inherit,'*)
          cat <<EOF
 ${indent}      # intentionally left blank
 EOF
@@ -705,7 +703,7 @@ EOF
          cat <<EOF
 ${indent}      #
 ${indent}      # Inherit ObjC loader and link dependency info.
-${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmakeinherit\`
+${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-inherit\`
 ${indent}      #
 ${indent}      get_filename_component( _TMP_${identifier}_ROOT "\${${identifier}_HEADER}" DIRECTORY)
 ${indent}      get_filename_component( _TMP_${identifier}_NAME "\${_TMP_${identifier}_ROOT}" NAME)
@@ -767,7 +765,7 @@ emit_cmake_dependency()
 
    if [ ! -z "${marks}" ]
    then
-      r_osexclude_configuration_to_cmake_if "${marks}"
+      r_osexclude_configuration_to_cmake_if "${marks}" "platform" "cmake-platform"
       ifstatement="${RVAL}"
       if [ ! -z "${ifstatement}" ]
       then
@@ -775,13 +773,13 @@ emit_cmake_dependency()
       fi
 
       case ",${marks}," in
-         *,no-all-load,*)
+         *,no-all-load,*|*,no-cmake-all-load,*)
             actualcontainername="${containername}"
          ;;
       esac
 
       case ",${marks}," in
-         *,no-intermediate-link,*)
+         *,no-intermediate-link,*|*,no-cmake-intermediate-link,*)
             actualcontainername="STARTUP_${actualcontainername}"
          ;;
       esac
@@ -829,7 +827,8 @@ emit_cmake_dependency()
    cat <<EOF
 #
 # Generated from sourcetree: ${uuid};${address};${marks};${aliases}
-# Disable with: \`mulle-sourcetree mark ${uuid} ${disabler}\`
+# Disable with : \`mulle-sourcetree mark ${address} ${disabler}\`
+# Disable for this platform: \`mulle-sourcetree mark ${address} no-cmake-platform-${MULLE_UNAME}\`
 #
 EOF
 
@@ -935,8 +934,8 @@ MATCHES header AND \
    qualifier="\
 MATCHES dependency AND \
 MATCHES link AND \
-MATCHES actual-link \
-"
+MATCHES actual-link AND \
+NOT MATCHES only-framework"
 
    dependency="`rexekutor "${MULLE_SOURCETREE}" -V \
                               ${MULLE_TECHNICAL_FLAGS} \
@@ -949,6 +948,26 @@ MATCHES actual-link \
 
    emit_cmake_dependencies "_emit_cmake_dependency" \
                            "DEPENDENCY_LIBRARIES" \
+                           "${dependency}" \
+                           "no-link"
+
+   qualifier="\
+MATCHES dependency AND \
+MATCHES link AND \
+MATCHES actual-link AND \
+MATCHES only-framework"
+
+   dependency="`rexekutor "${MULLE_SOURCETREE}" -V \
+                              ${MULLE_TECHNICAL_FLAGS} \
+                           list \
+                              --bequeath \
+                              --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                              --qualifier "${qualifier}" \
+                              --output-format raw \
+                              --no-output-header`" || return 1
+
+   emit_cmake_dependencies "_emit_cmake_dependency" \
+                           "DEPENDENCY_FRAMEWORKS" \
                            "${dependency}" \
                            "no-link"
 }
@@ -989,8 +1008,8 @@ MATCHES no-fs AND \
 MATCHES no-dependency AND \
 MATCHES no-fs AND \
 MATCHES link AND \
-MATCHES actual-link
-"
+MATCHES actual-link AND \
+NOT MATCHES only-framework"
 
    library="`exekutor "${MULLE_SOURCETREE}" -V \
                            ${MULLE_TECHNICAL_FLAGS} \
@@ -1003,6 +1022,26 @@ MATCHES actual-link
 
    emit_cmake_dependencies "_emit_cmake_library" \
                            "OS_SPECIFIC_LIBRARIES" \
+                           "${library}"
+
+   qualifier="\
+MATCHES no-dependency AND \
+MATCHES no-fs AND \
+MATCHES link AND \
+MATCHES actual-link AND \
+MATCHES only-framework"
+
+   library="`exekutor "${MULLE_SOURCETREE}" -V \
+                           ${MULLE_TECHNICAL_FLAGS} \
+                        list \
+                           --bequeath \
+                           --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                           --qualifier "${qualifier}" \
+                           --output-format raw \
+                           --no-output-header`" || return 1
+
+   emit_cmake_dependencies "_emit_cmake_library" \
+                           "OS_SPECIFIC_FRAMEWORKS" \
                            "${library}"
 }
 

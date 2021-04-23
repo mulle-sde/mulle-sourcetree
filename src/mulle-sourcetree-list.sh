@@ -213,7 +213,8 @@ list_walk_callback()
       indent="${WALK_INDENT}"
    fi
 
-   if nodemarks_disable "${_marks}" "bequeath"
+   if nodemarks_disable "${_marks}" "bequeath" || \
+      nodemarks_disable "${_marks}" "bequeath-os-${MULLE_UNAME}"
    then
       if [ "${OPTION_OUTPUT_INDENT}" != 'NO' ]
       then
@@ -270,7 +271,7 @@ sourcetree_list_sourcetree()
 
    local mode="$1"
 
-   if ! cfg_exists "${SOURCETREE_START}"
+   if ! r_cfg_exists "${SOURCETREE_START}"
    then
       if [ -z "${IS_PRINTING}" ]
       then
@@ -745,6 +746,9 @@ sourcetree_list_main()
    # via flags
    #
    r_sourcetree_augment_mode_with_output_options "${FLAG_SOURCETREE_MODE:-flat}"
+   mode="${RVAL}"
+
+   r_comma_concat "${mode}" "comments"
    mode="${RVAL}"
 
    r_sourcetree_list_convert_marks_to_qualifier "${OPTION_MARKS}" "${OPTION_MARKS_QUALIFIER}" ## UGLY

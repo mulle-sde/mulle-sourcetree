@@ -42,7 +42,8 @@ Usage:
 
    Remove everything fetched or symlinked, except when you specify
    a graveyard option. You can combine both with a second --fs though.
-
+   The database itself will not be removed. Use \`reset\` for that.
+   
 Options:
    --all-graveyards : remove all graveyards, implies --no-fs
    --fs             : remove fetched files (default)
@@ -200,7 +201,8 @@ sourcetree_clean()
 
       case "${line}" in
          D*|F*)
-            uuid="`node_uuidgen`"
+            r_node_uuidgen
+            uuid="${RVAL}"
 
             db_bury "${SOURCETREE_START}" "${uuid}" "${filename}"
          ;;
@@ -328,7 +330,7 @@ sourcetree_clean_main()
 
    if [ "${OPTION_CLEAN_FS}" != 'NO' ]
    then
-      if ! cfg_exists "${SOURCETREE_START}"
+      if ! r_cfg_exists "${SOURCETREE_START}"
       then
          log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_FILENAME}\")"
       fi

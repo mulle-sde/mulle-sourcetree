@@ -34,6 +34,8 @@ MULLE_SOURCETREE_REUUID_SH="included"
 
 sourcetree_reuuid_usage()
 {
+   [ "$#" -ne 0 ] && log_error "$1"
+
     cat <<EOF >&2
 Usage:
    ${MULLE_USAGE_NAME} reuuid [options]

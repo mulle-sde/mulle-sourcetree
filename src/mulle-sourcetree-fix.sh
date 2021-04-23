@@ -34,6 +34,8 @@ MULLE_SOURCETREE_FIX_SH="included"
 
 sourcetree_fix_usage()
 {
+   [ "$#" -ne 0 ] && log_error "$1"
+
     cat <<EOF >&2
 Usage:
    ${MULLE_USAGE_NAME} fix
@@ -336,7 +338,7 @@ sourcetree_fix_main()
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
    fi
 
-   if ! cfg_exists "${SOURCETREE_START}"
+   if ! r_cfg_exists "${SOURCETREE_START}"
    then
       log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_FILENAME}\")"
    fi

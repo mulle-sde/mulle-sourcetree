@@ -199,8 +199,11 @@ _do_fetch_operation()
 {
    log_entry "_do_fetch_operation" "$@"
 
+   local _address="$1"        # address of this node 
+   shift 
+
    local _url="$1"            # URL of the node
-   local _address="$2"        # address of this node (absolute or relative to $PWD)
+   local destination="$2"     # destination
    local _branch="$3"         # branch of the node
    local _tag="$4"            # tag to checkout of the node
    local _nodetype="$5"       # nodetype to use for this node
@@ -209,7 +212,7 @@ _do_fetch_operation()
    local _raw_userinfo="$8"   # unused
    local _uuid="$9"           # uuid of the node
 
-   [ -z "${_address}" ] && internal_fail "address is empty"
+   [ -z "${destination}" ] && internal_fail "destination is empty"
 
    [ $# -eq 9 ] || internal_fail "fail"
 
@@ -219,14 +222,14 @@ _do_fetch_operation()
       return 1
    fi
 
-   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" != 'YES' ] && [ -e "${_address}" ]
+   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" != 'YES' ] && [ -e "${destination}" ]
    then
-      fail "Should have cleaned \"${_address}\" beforehand. It's in the way."
+      fail "Should have cleaned \"${destination}\" beforehand. It's in the way."
    fi
 
    local parent
 
-   r_mkdir_parent_if_missing "${_address}"
+   r_mkdir_parent_if_missing "${destination}"
    parent="${RVAL}"
 
    local options
@@ -253,7 +256,7 @@ _do_fetch_operation()
    if [ -z "${MULLE_CASE_SH}" ]
    then
       # shellcheck source=mulle-case.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-case.sh"      || return 1
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-case.sh" || return 1
    fi
 
    r_basename "${_address}"
@@ -269,22 +272,26 @@ _do_fetch_operation()
       return 1
    fi
 
+   #
    # if this variable is set to 'YES' then we use the
    # only-platform- and no-platform- marks (if present) to possibly inhibit
    # the fetch. That's not 100% but can be very nice for example on macOS
    # to not fetch any X11 dependencies, which are unneeded
+   #
    if [ "${MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH}" = 'YES' ]
    then
       if nodemarks_disable "${_marks}" "platform-${MULLE_UNAME}"
       then
-         log_warning "${C_RESET_BOLD}${_address#${MULLE_USER_PWD}/}${C_WARNING} not fetched as ${C_MAGENTA}${C_BOLD}platform-${MULLE_UNAME}${C_WARNING} is disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
+         log_warning "${C_RESET_BOLD}${_address#${MULLE_USER_PWD}/}${C_WARNING} \
+not fetched as ${C_MAGENTA}${C_BOLD}platform-${MULLE_UNAME}${C_WARNING} is \
+disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
          return
       fi
    fi
 
    sourcetree_sync_operation "${opname}" "${options}" \
                                          "${_url}" \
-                                         "${_address}" \
+                                         "${destination}" \
                                          "${_branch}" \
                                          "${_tag}" \
                                          "${_nodetype}" \
@@ -386,15 +393,16 @@ do_operation()
 
    [ -z "${opname}" ] && internal_fail "operation is empty"
 
-   local _url="$1"            # URL of the node
-   local destination="$2"     # destination
-   local _branch="$3"         # branch of the node
-   local _tag="$4"            # tag to checkout of the node
-   local _nodetype="$5"       # nodetype to use for this node
-#   local _marks="$6"         # marks on node
-   local _fetchoptions="$7"   # options to use on _nodetype
-#   local _raw_userinfo="$8"  # userinfo
-#   local _uuid="$9"          # uuid of the node
+#   local _address="$1"
+   local _url="$2"            # URL of the node
+   local destination="$3"     # destination
+   local _branch="$4"         # branch of the node
+   local _tag="$5"            # tag to checkout of the node
+   local _nodetype="$6"       # nodetype to use for this node
+#   local _marks="$7"         # marks on node
+   local _fetchoptions="$8"   # options to use on _nodetype
+#   local _raw_userinfo="$9"  # userinfo
+#   shift; local _uuid="$10"          # uuid of the node
 
    [ -z "${destination}" ] && internal_fail "Destination is empty"
 
@@ -476,7 +484,8 @@ update_safe_clobber()
 
    [ -z "${filename}" ] && internal_fail "empty filename"
 
-   db_bury "${database}" "`node_uuidgen`" "${filename}"
+   r_node_uuidgen 
+   db_bury "${database}" "${RVAL}" "${filename}"
 }
 
 
@@ -865,7 +874,8 @@ __update_perform_item()
 
    case "${item}" in
       "checkout"|"upgrade"|"set-url")
-         if ! do_operation "${item}" "${_url}" \
+         if ! do_operation "${item}" "${_address}" \
+                                     "${_url}" \
                                      "${filename}" \
                                      "${_branch}" \
                                      "${_tag}" \
@@ -887,7 +897,8 @@ __update_perform_item()
       ;;
 
       "fetch")
-         do_operation "fetch" "${_url}" \
+         do_operation "fetch" "${_address}" \
+                              "${_url}" \
                               "${filename}" \
                               "${_branch}" \
                               "${_tag}" \
@@ -1049,9 +1060,8 @@ _memorize_node_in_db()
 {
    log_entry "_memorize_node_in_db" "$@"
 
-   local config="$1"
-   local database="$2"
-   local filename="$3"
+   local database="$1"
+   local config="$2"
    local filename="$3"
 #
    local nodeline
@@ -1067,7 +1077,7 @@ _memorize_node_in_db()
 
    node_evaluate_values
 
-   log_debug "${C_INFO}Remembering ${_address} located at \"${filename}\"..."
+   log_debug "${C_INFO}Remembering ${_address} located at \"${filename}\" in \"${database}\"..."
 
    db_memorize "${database}" \
                "${_uuid}" \
@@ -1112,9 +1122,9 @@ ${nodeline}"
 }
 
 
-do_actions_with_nodeline()
+_r_do_actions_with_nodeline()
 {
-   log_entry "do_actions_with_nodeline" "$@"
+   log_entry "_r_do_actions_with_nodeline" "$@"
 
    local nodeline="$1"
    local style="$2"
@@ -1142,31 +1152,37 @@ do_actions_with_nodeline()
    if nodemarks_disable "${_marks}" "fs"
    then
       log_fluff "\"${_address}\" is marked as no-fs, so there is nothing to update"
-      return
+      return 2
+   fi
+
+   local _evaledurl
+   local _evalednodetype
+   local _evaledbranch
+   local _evaledtag
+   local _evaledfetchoptions
+
+   node_evaluate_values
+
+   if [ "${_evalednodetype}" = 'comment' ]
+   then
+      log_debug "\"${_address}\" is a comment, so there is nothing to update"
+      return 2
    fi
 
    #
-   # the _address is what is relative to the current config (configfile)
+   # the address is what is relative to the current config (configfile)
    # the filename is an absolute path
    #
    local filename
 
-   if [ ! -z "${_url}" -a "${style}" = "share" ] && nodemarks_enable "${_marks}" "share"
+   if [ ! -z "${_evaledurl}" -a "${style}" = "share" ] && nodemarks_enable "${_marks}" "share"
    then
-      local _evaledurl
-      local _evalednodetype
-      local _evaledbranch
-      local _evaledtag
-      local _evaledfetchoptions
-
-      node_evaluate_values
-
-      r_db_update_determine_share_filename "${database}" \
-                                           "${_address%#*}" \
+      r_db_update_determine_share_filename "${_address%#*}" \
                                            "${_evaledurl}" \
                                            "${_evalednodetype}" \
                                            "${_marks}" \
-                                           "${_uuid}"
+                                           "${_uuid}" \
+                                           "${database}"
       case $? in
          0)
             filename="${RVAL}"
@@ -1177,7 +1193,7 @@ do_actions_with_nodeline()
          ;;
 
          3)
-            return
+            return 0
          ;;
          #
 
@@ -1185,7 +1201,7 @@ do_actions_with_nodeline()
             internal_fail "unknown code"
          ;;
       esac
-      database="/"   # see only-share if you're tempted to change this
+      database='/'
    else
       r_cfg_absolute_filename "${config}" "${_address%#*}" "${style}"
       filename="${RVAL}"
@@ -1209,23 +1225,24 @@ do_actions_with_nodeline()
          then
             log_fluff "\"${_address}\" is marked as no-update and doesn't exist, \
 but it is not required"
-            return
+            return 2
          fi
 
          fail "\"${_address}\" is missing, marked as no-update, but its required"
       fi
 
       log_fluff "\"${_address}\" is marked as no-update and exists"
-      # still need to memorize this though, so it can be shared
 
+      # still need to memorize this though, so it can be shared
       if ! is_absolutepath "${filename}"
       then
          r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${filename}"
          filename="${RVAL}"
       fi
 
-      _memorize_node_in_db "${config}" "${database}" "${filename}"
-      return
+      _memorize_node_in_db "${database}" "${config}" "${filename}"
+      RVAL="${_uuid}"
+      return 0
    fi
 
    #
@@ -1252,7 +1269,9 @@ but it is not required"
             # this is _address is already taken
             log_fluff "Filename \"${filename}\" is already used by \
 node \"${otheruuid}\" in database \"${database}\". Skip it."
-            return 0
+            # don't set alive though 
+            # RVAL="${otheruuid}" (or set other alive ?)
+            return 2
          fi
          log_debug "Filename \"${filename}\" belongs to this node"
       else
@@ -1299,11 +1318,9 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    then
       log_debug "Skip update of \"${filename}\" since it's a symlink."
 
-      _memorize_node_in_db "${config}" "${database}" "${filename}"
-
-      db_set_uuid_alive "${database}" "${_uuid}"
-
-      return
+      _memorize_node_in_db "${database}" "${config}" "${filename}"
+      RVAL="${_uuid}"
+      return 0
    fi
 
    #
@@ -1340,7 +1357,7 @@ nodetype        : ${_nodetype}"
          filename="${RVAL}"
       fi
 
-      _memorize_node_in_db "${config}" "${database}" "${filename}"
+      _memorize_node_in_db "${database}" "${config}" "${filename}"
 
       if [ "${OPTION_FIX}" != 'NO' ] && [ -d "${filename}" ]
       then
@@ -1351,8 +1368,29 @@ nodetype        : ${_nodetype}"
       log_debug "Don't need to remember \"${nodeline}\" (should be unchanged)"
    fi
 
-   # this could be executed in parallel
-   db_set_uuid_alive "${database}" "${_uuid}"
+   RVAL="${_uuid}"
+   return 0
+}
+
+
+do_actions_with_nodeline()
+{
+   log_entry "do_actions_with_nodeline" "$@"
+
+#   local nodeline="$1"
+#   local style="$2"
+#   local config="$3"
+   local database="$4"
+
+   local rval 
+   local uuid 
+
+   log_entry "do_actions_with_nodeline" "$@"
+   if _r_do_actions_with_nodeline "$@"
+   then
+      # this could be executed in parallel ?
+      db_set_uuid_alive "${database}" "${RVAL}"
+   fi
 }
 
 
@@ -1382,12 +1420,11 @@ do_actions_with_nodelines()
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
 
-      if [ -z "${nodeline}" ]
+      if [ ! -z "${nodeline}" ]
       then
-         continue
+         do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
       fi
 
-      do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
    done
 
    IFS="${DEFAULT_IFS}" ; set +o noglob

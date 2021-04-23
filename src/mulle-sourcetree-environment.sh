@@ -38,6 +38,7 @@ sourcetree_basic_environment()
 
    local directory="$1"
    local config_dir="$2"
+   local use_fallback="$3"
 
    if [ -z "${directory}" -a ! -z "${MULLE_VIRTUAL_ROOT}" ]
    then
@@ -85,6 +86,12 @@ sourcetree_basic_environment()
    else
       SOURCETREE_CONFIG_FILENAME="${MULLE_SOURCETREE_ETC_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
       SOURCETREE_FALLBACK_CONFIG_FILENAME="${MULLE_SOURCETREE_SHARE_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
+   fi
+
+   if [ "${use_fallback}" = 'YES' ]
+   then
+      SOURCETREE_CONFIG_FILENAME="${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
+      SOURCETREE_FALLBACK_CONFIG_FILENAME=""
    fi
 
    is_absolutepath "${SOURCETREE_CONFIG_FILENAME}" \
@@ -171,7 +178,7 @@ _set_share_dir()
       # this will override the ENVIRONMENT for consistency
       # but only if the .db is not some trash w/o a config
       #
-      if cfg_exists "${SOURCETREE_START}"
+      if r_cfg_exists "${SOURCETREE_START}"
       then
          local share_dir
 
@@ -224,10 +231,13 @@ sourcetree_environment()
    local option_scope="$1"
    local option_sharedir="$2"
    local option_configdir="$3"
-   local defer="$4"
-   local mode="$5"
+   local option_use_fallback="$4"
+   local defer="$5"
+   local mode="$6"
 
-   sourcetree_basic_environment "" "${option_configdir}"
+   sourcetree_basic_environment "" \
+                                "${option_configdir}" \
+                                "${option_use_fallback}"
 
    SOURCETREE_SCOPE="${scope:-default}"
    SOURCETREE_MODE="${mode}" # maybe empty for now
