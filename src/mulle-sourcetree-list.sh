@@ -93,8 +93,9 @@ EOF
 Options:
    -l                       : output long information
    -ll                      : output full information (except UUID)
+   -g                       : output branch/tag information (-G for raw output)
+   -m                       : output marks
    -r                       : recursive list
-   -g                       : output branch/tag information (use -G for raw output)
    -u                       : output URL information  (use -U for raw output)
    --config-file <file>     : list a specific config file (no recursion)
    --dedupe-mode <mode>     : change the way duplicates are detected
@@ -419,6 +420,28 @@ ${C_RESET}   address address-filename address-url filename nodeline
 }
 
 
+r_sourcetree_add_format()
+{
+   log_entry "r_sourcetree_add_format" "$@"
+
+   case ";$1;" in 
+      *\;$2\;*)
+         RVAL="$1"
+      ;;
+
+      *\\n\;)
+         # remove escaped linefeed 
+         # append format character
+         RVAL="${1%??};$2\\n"
+      ;;
+
+      *)
+         RVAL="$1;$2"
+      ;;
+   esac
+}
+
+
 sourcetree_list_main()
 {
    log_entry "sourcetree_list_main" "$@"
@@ -456,7 +479,7 @@ sourcetree_list_main()
             sourcetree_list_usage
          ;;
 
-         -b|--bequeath)
+         --bequeath)
             OPTION_BEQUEATH='YES'
          ;;
 
@@ -471,7 +494,7 @@ sourcetree_list_main()
             OPTION_CONFIG_FILE="$1"
          ;;
 
-         -m|--marks)
+         --marks)
             [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
             shift
 
@@ -480,7 +503,7 @@ sourcetree_list_main()
             OPTION_MARKS="${RVAL}"
          ;;
 
-         -n|--nodetype|--nodetypes)
+         --nodetype|--nodetypes)
             [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
             shift
 
@@ -490,7 +513,7 @@ sourcetree_list_main()
             [ "${OPTION_OUTPUT_INDENT}" = "DEFAULT" ] && OPTION_OUTPUT_INDENT="NO"
          ;;
 
-         -q|--qualifier)
+         --qualifier)
             [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
             shift
 
@@ -566,8 +589,9 @@ sourcetree_list_main()
             then
                OPTION_FORMAT="%a;%t!;%b!\\n"
             else
-               OPTION_FORMAT="${OPTION_FORMAT%??}"
-               OPTION_FORMAT="${OPTION_FORMAT};%t!;%b!\\n"
+               r_sourcetree_add_format "${OPTION_FORMAT}" "%t!"
+               r_sourcetree_add_format "${RVAL}" "%b!"
+               OPTION_FORMAT="${RVAL}"
             fi
          ;;
 
@@ -576,8 +600,9 @@ sourcetree_list_main()
             then
                OPTION_FORMAT="%a;%t;%b\\n"
             else
-               OPTION_FORMAT="${OPTION_FORMAT%??}"
-               OPTION_FORMAT="${OPTION_FORMAT};%t;%b\\n"
+               r_sourcetree_add_format "${OPTION_FORMAT}" "%t"
+               r_sourcetree_add_format "${RVAL}" "%b"
+               OPTION_FORMAT="${RVAL}"
             fi
          ;;
 
@@ -586,8 +611,9 @@ sourcetree_list_main()
             then
                OPTION_FORMAT="%a;%n;%m\\n"
             else
-               OPTION_FORMAT="${OPTION_FORMAT%??}"
-               OPTION_FORMAT="${OPTION_FORMAT};%n;%m\\n"
+               r_sourcetree_add_format "${OPTION_FORMAT}" "%n"
+               r_sourcetree_add_format "${RVAL}" "%m"
+               OPTION_FORMAT="${RVAL}"
             fi
          ;;
 
@@ -595,13 +621,24 @@ sourcetree_list_main()
             FLAG_SOURCETREE_MODE="share"
          ;;
 
+         -m)
+            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+            then
+               OPTION_FORMAT="%a;%m\\n"
+            else
+               r_sourcetree_add_format "${RVAL}" "%m"
+               OPTION_FORMAT="${RVAL}"
+            fi
+         ;;
+
          -u)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
                OPTION_FORMAT="%a;%u!;%f\\n"
             else
-               OPTION_FORMAT="${OPTION_FORMAT%??}"
-               OPTION_FORMAT="${OPTION_FORMAT};%u!;%f\\n"
+               r_sourcetree_add_format "${OPTION_FORMAT}" "%u!"
+               r_sourcetree_add_format "${RVAL}" "%f"
+               OPTION_FORMAT="${RVAL}"
             fi
          ;;
 
@@ -610,8 +647,9 @@ sourcetree_list_main()
             then
                OPTION_FORMAT="%a;%u;%f\\n"
             else
-               OPTION_FORMAT="${OPTION_FORMAT%??}"
-               OPTION_FORMAT="${OPTION_FORMAT};%u;%f\\n"
+               r_sourcetree_add_format "${OPTION_FORMAT}" "%u"
+               r_sourcetree_add_format "${RVAL}" "%f"
+               OPTION_FORMAT="${RVAL}"
             fi
          ;;
 
