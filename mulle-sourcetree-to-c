@@ -63,6 +63,7 @@ Flags:
    --stdout      : Emit to stdout instead
    --import      : Emit import files
    --no-import   : Don't emit import files
+   --unames      : List known unames and their known cpp equivalent
 
 Environment:
    MULLE_SOURCETREE_TO_C_INCLUDE_FILE        | Use DISABLE to turn off
@@ -98,6 +99,29 @@ r_uname_to_cpp()
       ;;
    esac
 }
+
+
+list_unames()
+{
+   log_entry "list_unames" "$@"
+
+   local i
+
+   r_uname_to_cpp "${MULLE_UNAME}"
+   printf "%s : %s\n" "${MULLE_UNAME}" "${RVAL}"
+
+   set -f
+   for i in darwin freebsd mingw
+   do
+      if [ "$i" != "${MULLE_UNAME}" ]
+      then
+         r_uname_to_cpp "$i"
+         printf "%s : %s\n" "${i}" "${RVAL}"
+      fi
+   done
+   set +f
+}
+
 
 
 r_platformexclude_to_cpp_if()
@@ -194,7 +218,8 @@ _emit_c_include()
 //    toggle #${tinclude}    \`mulle-sourcetree mark ${address} [no-]import\`
 //    toggle public:      \`mulle-sourcetree mark ${address} [no-]public\`
 //    toggle optional:    \`mulle-sourcetree mark ${address} [no-]require\`
-//    remove for platform:\`mulle-sourcetree mark ${address} no-platform-<name>\`
+//    remove for platform:\`mulle-sourcetree mark ${address} no-platform-<uname>\`
+//        (use mulle-sourcetree-to-c --unames for known values)
 EOF
    if [ ! -z "${marks}" ]
    then
@@ -214,7 +239,7 @@ EOF
    # not loading a required header... hmm
    #
    case ",${marks}," in
-      *,no-require,*|*,no-require-${MULLE_UNAME},*)
+      *,no-require,*|*,no-require-os-${MULLE_UNAME},*)
          local name
 
          r_tweaked_de_camel_case "${address}"
@@ -268,7 +293,7 @@ emit_c_include_library()
       header="${name}.h"
    fi
 
-   _emit_c_include "${uuid}" "${address}" "${marks}" "${header}" 
+   _emit_c_include "${uuid}" "${address}" "${marks}" "${header}"
 }
 
 
@@ -293,7 +318,7 @@ emit_c_include_dependency()
       header="${name}/${name}.h"
    fi
 
-   _emit_c_include "${uuid}" "${address}" "${marks}" "${header}" 
+   _emit_c_include "${uuid}" "${address}" "${marks}" "${header}"
 }
 
 
@@ -318,6 +343,11 @@ emit_c_header()
                                        --bequeath \
                                        --output-format raw \
                                        --no-output-header`" || return 1
+
+   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
+   then
+      log_trace2 "headers=${headers}"
+   fi
 
    local dependency
 
@@ -420,7 +450,7 @@ r_text_info_on()
  *
  *      mulle-sde environment set ${key} DISABLE
  *
- *   To not generate any header files:
+ *   To not let mulle-sourcetree-to-c generate any header files:
  *
  *      mulle-sde environment set MULLE_SOURCETREE_TO_C_RUN DISABLE
  *
@@ -777,6 +807,11 @@ main()
             MULLE_SOURCETREE_TO_C_PRIVATEINCLUDE_FILE="-"
             MULLE_SOURCETREE_TO_C_IMPORT_FILE="-"
             MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE="-"
+         ;;
+
+         --unames)
+            list_unames
+            return 0
          ;;
 
          --version)
