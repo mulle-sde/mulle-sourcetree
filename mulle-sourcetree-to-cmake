@@ -160,7 +160,7 @@ r_osexclude_configuration_to_cmake_if()
    while [ $# -ne 0 ]
    do
       key="$1"
-      shift 
+      shift
 
       length="${#key}"
       len1=$((length + 6))
@@ -178,7 +178,7 @@ r_osexclude_configuration_to_cmake_if()
                   *" OR ${RVAL} OR "*)
                   ;;
 
-                  *) 
+                  *)
                      r_concat "${onlys}" "${RVAL}" " OR "
                      onlys="${RVAL}"
                   ;;
@@ -191,7 +191,7 @@ r_osexclude_configuration_to_cmake_if()
                   *" OR ${RVAL} OR "*)
                   ;;
 
-                  *) 
+                  *)
                      r_concat "${excludes}" "${RVAL}" " OR "
                      excludes="${RVAL}"
                   ;;
@@ -232,6 +232,29 @@ _emit_dependencies_loader_cmake_code()
    case ",${marks}," in
       *',only-framework,'*)
          headerdir_name="Headers"
+      ;;
+   esac
+
+   local emit_objc_loader
+
+   #
+   # all-load is a bad obj-c differentiator
+   #
+   emit_objc_loader='NO'
+   case ",${marks}," in
+      *,no-all-load,*)
+         emit_objc_loader='YES'
+         case ",${marks}," in
+            *,no-cmake-loader,*)
+               emit_objc_loader='NO'
+            ;;
+         esac
+      ;;
+   esac
+
+   case ",${marks}," in
+      *,no-all-load,*|*,no-cmake-loader,*)
+         emit_objc_loader='YES'
       ;;
    esac
 
@@ -284,7 +307,6 @@ EOF
          esac
       ;;
    esac
-
 
    case ",${marks}," in
       *,no-cmake-dependency,*)
@@ -339,17 +361,33 @@ ${indent}         # use explicit path to avoid "surprises"
 ${indent}         if( EXISTS "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake")
 ${indent}            unset( ${identifier}_DEFINITIONS)
 ${indent}            list( INSERT CMAKE_MODULE_PATH 0 "\${_TMP_${identifier}_DIR}")
+EOF
+
+
+               if [ "${emit_objc_loader}" = 'YES' ]
+               then
+                  cat <<EOF
 ${indent}            # we only want top level INHERIT_OBJC_LOADERS, so disable them
 ${indent}            if( NOT NO_INHERIT_OBJC_LOADERS)
 ${indent}               set( NO_INHERIT_OBJC_LOADERS OFF)
 ${indent}            endif()
 ${indent}            list( APPEND _TMP_INHERIT_OBJC_LOADERS \${NO_INHERIT_OBJC_LOADERS})
 ${indent}            set( NO_INHERIT_OBJC_LOADERS ON)
+EOF
+               fi
+               cat <<EOF
 ${indent}            #
 ${indent}            include( "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake")
 ${indent}            #
+EOF
+               if [ "${emit_objc_loader}" = 'YES' ]
+               then
+                  cat <<EOF
 ${indent}            list( GET _TMP_INHERIT_OBJC_LOADERS -1 NO_INHERIT_OBJC_LOADERS)
 ${indent}            list( REMOVE_AT _TMP_INHERIT_OBJC_LOADERS -1)
+EOF
+               fi
+               cat <<EOF
 ${indent}            #
 ${indent}            list( REMOVE_ITEM CMAKE_MODULE_PATH "\${_TMP_${identifier}_DIR}")
 ${indent}            set( INHERITED_DEFINITIONS
@@ -397,7 +435,7 @@ ${indent}      endif()
 EOF
             ;;
 
-            *)            
+            *)
                cat <<EOF
 ${indent}      #
 ${indent}      # Search for "MulleObjCLoader+<name>.h" in include directory.
@@ -489,7 +527,7 @@ _emit_cmake_find_library()
             printf -v "${library_key}" "%s" "${RVAL}"
             break
          ;;
-      esac      
+      esac
 
       #
       # /usr/local/lib is apparently NOT part of system path, and therefore
@@ -529,18 +567,23 @@ _emit_cmake_find_library()
 
    case ",${marks}," in
       *',no-require-link,'*)
-
+         failcomment="\
+# Enable with: \`mulle-sourcetree mark ${address} require-link\`"
          failstatus="STATUS"
          failstring="${key} is missing but it is marked as \\\"no-require-link\\\""
       ;;
 
       *',no-require,'*)
-
+         failcomment="\
+# Enable with: \`mulle-sourcetree mark ${address} require\`"
          failstatus="STATUS"
          failstring="${key} is missing but it is marked as \\\"no-require\\\""
       ;;
 
       *)
+         failcomment="\
+# Disable with: \`mulle-sourcetree mark ${address} no-require-link\`"
+
          failstatus="FATAL_ERROR"
          failstring="${key} was not found"
       ;;
@@ -637,7 +680,7 @@ EOF
             *',only-framework,'*)
                cat <<EOF
 ${indent}      #
-${indent}      # Inherit ObjC loader and link dependency info.
+${indent}      # Inherit information from dependency.
 ${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-inherit\`
 ${indent}      #
 ${indent}      # temporarily expand CMAKE_MODULE_PATH
@@ -645,11 +688,12 @@ ${indent}      set( _TMP_${identifier}_ROOT "\${${key}}")
 ${indent}      #
 EOF
             ;;
-         
+
             *)
                cat <<EOF
 ${indent}      #
-${indent}      # Inherit ObjC loader and link dependency info.
+${indent}      # Inherit information from dependency.
+${indent}      # Encompasses: no-cmake-searchpath,no-cmake-dependency,no-cmake-loader
 ${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-inherit\`
 ${indent}      #
 ${indent}      # temporarily expand CMAKE_MODULE_PATH
@@ -672,6 +716,7 @@ EOF
 
    cat <<EOF
 ${indent}   else()
+${indent}      ${failcomment}
 ${indent}      message( ${failstatus} "${failstring}")
 ${indent}   endif()
 ${indent}endif()
@@ -766,22 +811,28 @@ _emit_cmake_header_only()
 
    IFS="${DEFAULT_IFS}"; set +o noglob
 
-   local key 
+   local key
 
    key="${identifier}_HEADER"
 
    case ",${marks}," in
       *',no-require-header,'*)
+         failcomment="\
+# Enable with: \`mulle-sourcetree mark ${address} require-header\`"
          failstatus="STATUS"
          failstring="${key} is missing but it is marked as \\\"no-require-header\\\""
       ;;
 
       *',no-require,'*)
+         failcomment="\
+# Enable with: \`mulle-sourcetree mark ${address} require\`"
          failstatus="STATUS"
          failstring="${key} is missing but it is marked as \\\"no-require\\\""
       ;;
 
       *)
+         failcomment="\
+# Disable with: \`mulle-sourcetree mark ${address} no-require\`"
          failstatus="FATAL_ERROR"
          failstring="${key} was not found"
       ;;
@@ -856,6 +907,7 @@ EOF
 
    cat <<EOF
 ${indent}   else()
+${indent}      ${failcomment}
 ${indent}      message( ${failstatus} "${failstring}")
 ${indent}   endif()
 ${indent}endif()
@@ -939,8 +991,9 @@ emit_cmake_dependency()
    fi
 
    r_tweaked_de_camel_case "${identifiername}"
-   identifier="`printf "%s" "${RVAL}" | tr -c 'a-zA-Z0-9' '_'`"
-   identifier="`tr 'a-z' 'A-Z' <<< "${identifier}"`"
+   r_identifier "${RVAL}"
+   r_uppercase "${RVAL}"
+   identifier="${RVAL}"
 
    [ -z "${identifier}" ] && \
       fail "Identifier derived from \"${names}\" is empty"
