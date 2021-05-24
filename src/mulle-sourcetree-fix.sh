@@ -119,7 +119,9 @@ r_locate_fix_file()
       local fix
 
       nodeline="`rexekutor egrep -s -v '^#' "${found}"`"
-      fix="`nodeline_get_address "${nodeline}"`"
+
+      r_nodeline_get_address "${nodeline}"
+      fix="${RVAL}"
 
       if [ "${fix}" = "${address}" ]
       then
@@ -209,7 +211,8 @@ _fixup_dir_exists()
       return
    fi
 
-   fix="`nodeline_get_address "${nodeline}"`"
+   r_nodeline_get_address "${nodeline}"
+   fix="${RVAL}"
    if [ "${address}" = "${fix}" ]  # looks good
    then
       log_debug "Fix \"${fix}\" is in the right place"

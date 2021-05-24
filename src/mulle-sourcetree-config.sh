@@ -110,9 +110,9 @@ Usage:
    ${MULLE_EXECUTABLE_NAME} duplicate [options] <address>
 
    Duplicate a node in the sourcetree. The new node will have a #1 appended to
-   it, if it's the first duplicate. Otherwise #2, #3 and so on. If this node
-   is intended to reference the same URL as the original (as it will initially)
-   make sure to mark the node as 'no-fs'.
+   it, if it's the first duplicate. Otherwise #2, #3 and so on. Its assumed
+   this node is intended to reference the same URL so it marked as 'no-fs'
+   to avoid duplicate fetches.
 
    Examples:
       ${MULLE_EXECUTABLE_NAME} duplicate foo
@@ -745,7 +745,7 @@ in the sourcetree (${RVAL#${MULLE_USER_PWD}/}). Use -f to skip this check."
 
    node_augment "${mode}"
 
-   contents="`egrep -s -v '^#' "${SOURCETREE_CONFIG_FILENAME}"`"
+   contents="`cfg_read "${SOURCETREE_START}" `"
    r_node_to_nodeline
    r_add_line "${contents}" "${RVAL}"
    appended="${RVAL}"
@@ -793,7 +793,6 @@ sourcetree_add_node()
    esac
 
    assert_sane_nodemarks "${_marks}"
-
 
    if [ ! -z "${_address}" -a ! -z "${_url}" ]
    then
@@ -889,6 +888,9 @@ sourcetree_duplicate_node()
       then
          _marks="${OPTION_MARKS}"
       fi
+   else
+      r_nodemarks_remove "${_marks}" "fs"
+      _marks="${RVAL}"
    fi
 
    _address="${newname}"

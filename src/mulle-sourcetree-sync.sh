@@ -46,7 +46,7 @@ Usage:
    tree with changes you made  in the filesystem. You can inhibit the fetching
    of a dependency by setting MULLE_SOURCETREE_FETCH_<name> to 'NO'.
    e.g. mulle-sde environment --os darwin MULLE_SOURCETREE_FETCH_FOUNDATION NO.
-        mulle-sourctree mark Foundation no-require-darwin
+        mulle-sourctree mark Foundation no-require-os-darwin
 
 Options:
    -r                         : sync recursively
@@ -221,7 +221,7 @@ _descend_db_nodeline()
    local _style
    local rval
 
-   _check_descend_nodeline "${_filename}"
+   _check_descend_nodeline "${_filename}" "${_marks}"
    rval=$?
 
    if _style_for_${style} ${rval}
@@ -300,7 +300,7 @@ _descend_db_nodelines()
 
    nodelines="`db_fetch_all_nodelines "${database}" `" || exit 1
 
-   log_fluff "Continuing with a \"${style}\" update of nodelines \
+   log_debug "Continuing with a \"${style}\" update of nodelines \
 \"${nodelines}\" of db \"${database:-ROOT}\" ($PWD)"
 
    local nodeline
@@ -346,7 +346,6 @@ _descend_config_nodelines()
    local config="$1"
    local database="$2"
 
-
    local nodelines
 
    nodelines="`cfg_read "${config}" `"
@@ -356,7 +355,7 @@ _descend_config_nodelines()
       return
    fi
 
-   log_fluff "Continuing with a \"${style}\" update of \
+   log_debug "Continuing with a \"${style}\" update of \
 nodelines \"${nodelines}\" from config \"${config:-ROOT}\" ($PWD)"
 
    local nodeline
@@ -559,6 +558,19 @@ _sourcetree_sync_share()
       UPDATED="${RVAL}"
    fi
 
+   local need_db='NO'
+
+   if [ "${database}" = "/" ]
+   then
+      need_db='YES'
+   else
+      case ";${nodelines};" in
+         *[\;\,]no-share[\,\;]*)
+            need_db='YES'
+         ;;
+      esac
+   fi
+
    #
    # if there are no nodelines that's OK, we still want to do zombification
    # but if there's also no database then just bail
@@ -568,6 +580,13 @@ _sourcetree_sync_share()
    if ! nodelines="`cfg_read "${config}" `"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
+      if [ "${need_db}" = 'YES' ]
+      then
+         db_clear_update "${database}"
+         db_set_ready "${database}"
+         return 127
+      fi
+
       if ! db_dir_exists "${database}"
       then
          log_debug "There is also no database \"${database}\" so nothing to do."
@@ -582,19 +601,7 @@ _sourcetree_sync_share()
    #
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
-   local need_db='NO'
 
-   if [ "${database}" = "/" ]
-   then
-      need_db='YES'
-   else
-      case ";${nodelines};" in 
-         *[\;\,]no-share[\,\;]*)
-            need_db='YES'
-         ;;
-      esac
-   fi
-   
    if [ "${need_db}"  = 'YES' ]
    then
       db_set_dbtype "${database}" "${style}"
@@ -606,7 +613,11 @@ _sourcetree_sync_share()
       db_zombify_nodes "${database}"
    fi
 
-   do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}" || return 1
+   do_actions_with_nodelines "${nodelines}" \
+                             "${style}" \
+                             "${config}" \
+                             "${database}" \
+   || return 1
 
    if [ "${need_db}"  = 'YES' ]
    then
@@ -627,13 +638,17 @@ _sourcetree_sync_share()
 
       log_fluff "Root updates additions if any"
 
-      before="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`"  || exit 1
+      before="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`"  \
+      || return 1
 
-      _descend_db_nodelines "share" "${config}" "${database}" || return 1
+      _descend_db_nodelines "share" "${config}" "${database}" \
+      || return 1
 
       while :
       do
-         nodelines="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`" || exit 1
+         nodelines="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`" \
+         || exit 1
+
          if [ "${nodelines}" = "${before}" ]
          then
             break
@@ -649,7 +664,7 @@ _sourcetree_sync_share()
       _descend_db_nodelines "share" "${config}" "${database}" || return 1
    fi
 
-   if [ "${need_db}"  = 'YES' ]
+   if [ "${need_db}" = 'YES' ]
    then
       db_clear_update "${database}"
       db_set_ready "${database}"
@@ -676,7 +691,8 @@ sourcetree_sync_share()
 
       if ! find_line "${UPDATED}" "${startpoint}"
       then
-         fail "\"${MULLE_VIRTUAL_ROOT}${startpoint}\" is not reachable from the sourcetree root (${MULLE_VIRTUAL_ROOT})"
+         fail "\"${MULLE_VIRTUAL_ROOT}${startpoint}\" is not reachable from \
+the sourcetree root (${MULLE_VIRTUAL_ROOT})"
       fi
    fi
    return $rval

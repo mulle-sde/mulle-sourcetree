@@ -403,8 +403,11 @@ db_bury()
    r_relative_path_between "${phys_filename}" "${phys_project_dir}"
    case "${RVAL}" in
       ../*)
-         internal_fail "Bury path \"${filename#${MULLE_USER_PWD}/}\" escapes \
-project \"${project_dir#${MULLE_USER_PWD}/}"
+         internal_fail "Bury path for \"${filename#${MULLE_USER_PWD}/}\" escapes \
+project \"${project_dir#${MULLE_USER_PWD}/}\".
+${C_INFO}If you recently renamed your project, this is not unusual. 
+You need to clean it up manually (sorry). Suggested fix:
+${C_RESET_BOLD} rm -rf .mulle/var kitchen stash dependency"
       ;;
    esac
 
@@ -417,7 +420,7 @@ project \"${project_dir#${MULLE_USER_PWD}/}"
       local otheruuid
       local othergravepath
 
-      r_node_uuidgen 
+      r_node_uuidgen
       otheruuid="${RVAL}"
       othergravepath="${graveyard}/${otheruuid}"
 
@@ -700,31 +703,31 @@ r_db_fetch_uuid_for_evaledurl()
 # db_fetch_uuid_for_filename()
 # {
 #    log_entry "db_fetch_uuid_for_filename" "$@"
-# 
+#
 #    local _database
 #    local _databasedir
-# 
+#
 #    __db_common_databasedir "$@"
-# 
+#
 #    local searchurl="$2"
-# 
+#
 #    [ -z "${searchfilename}" ] && internal_fail "filename is empty"
-# 
+#
 #    if ! dir_has_files "${_databasedir}" f
 #    then
 #       return 1
 #    fi
-# 
+#
 #    (
 #       local filename
 #       local candidate
-# 
+#
 #       cd "${_databasedir}"
 #       IFS=$'\n'
 #       for candidate in `fgrep -l -x -s -e "${searchfilename}" *`
 #       do
 #          IFS="${DEFAULT_IFS}"
-# 
+#
 #          filename="`_db_filename < "${candidate}" `"
 #          if [ "${searchfilename}" = "${filename}" ]
 #          then
@@ -734,7 +737,7 @@ r_db_fetch_uuid_for_evaledurl()
 #       done
 #       exit 1
 #    )
-# 
+#
 #    return 1
 # }
 
@@ -1799,11 +1802,11 @@ r_db_update_determine_share_filename()
    fi
 
 
-   if [ "${database}" != "/" ] 
+   if [ "${database}" != "/" ]
    then
       #
       # Check root database if there is not the same URL in there already.
-      # If it is and the filename exists, we skip. If it doesn't exist we 
+      # If it is and the filename exists, we skip. If it doesn't exist we
       # want to retry
       #
       local otheruuid
@@ -1836,7 +1839,7 @@ exists. So skip \"${address}\" for database \"${database}\"."
 #      if [ "${otheruuid}" = "${uuid}" ]
 #      then
 #         # We are saving into root as this is known to be share. Or don't we ?
-#         # We just skip this 
+#         # We just skip this
 #         return 3
 #
 #          if [ "${database}" != "/" ]
@@ -1845,35 +1848,35 @@ exists. So skip \"${address}\" for database \"${database}\"."
 #             # read or just from a config, in which case this could be ok
 #             check="`db_fetch_uuid_for_evaledurl "${database}" "${evaledurl}"`"
 #             log_debug "checkuuid : ${check}"
-#             if [ ! -z "${check}" ] 
+#             if [ ! -z "${check}" ]
 #             then
 #                if [ "${check}" != "${uuid}" ]
 #                then
 #                   internal_fail "Database corrupted. mulle-sde clean tidy everything."
 #                fi
-# 
+#
 #                r_basename "${database}"
 #                log_error "\
 # Shared node \"${address}\" is not in the root database but in database (${database}).
 # ${C_INFO}This can sometimes happen, if you added a dependency, that depends on
 # a dependency that a previous dependency also depends on. This can trip up the
 # database order, so try ${C_RESET_BOLD}mulle-sde clean tidy${C_INFO} first.
-# Another problem could be a duplicated node that references the same stash 
+# Another problem could be a duplicated node that references the same stash
 # directory.
-# 
+#
 # This could also mean, that \"${address}\" is simultaneously marked as 'share'
 # and 'no-share' by two projects. And then it could also mean that
 # \"${address}\" is used by two projects, but they reuse the same UUIDs in their
 # mulle-sourcetree configurations.
-# 
+#
 # Check your uuids and marks with:
-# 
+#
 #    ${C_RESET_BOLD}mulle-sourcetree list -r --format \"%_;%a;%v={WALK_DATASOURCE};%m\\\\n\" \\
 #       --output-no-indent --output-no-header --no-dedupe | sort -u${C_INFO}
-# 
+#
 # If you see a project using a 'no-share' marked  \"${address}\" and another
 # without the mark, mark the second one 'no-share' (if possible).
-# 
+#
 # If you see duplicate UUIDs try this remedial action in the problematic
 # project:${C_RESET_BOLD}
 #    cd \"${MULLE_SOURCETREE_STASH_DIR}/${RVAL}\"

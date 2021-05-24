@@ -32,25 +32,9 @@
 MULLE_SOURCETREE_NODELINE_SH="included"
 
 
-# first field no -s
-
-__nodeline_get_address()
-{
-   local nodeline="$1"
-
-   _address="${nodeline%%;*}"
-}
-
-
 r_nodeline_get_address()
 {
    RVAL="${*%%;*}"
-}
-
-
-nodeline_get_address()
-{
-   cut '-d;' -f 1 <<< "$*"
 }
 
 
@@ -108,13 +92,6 @@ r_nodeline_get_uuid()
 }
 
 
-nodeline_get_uuid()
-{
-   r_nodeline_get_uuid "$@"
-   printf "%s\n" "${RVAL}"
-}
-
-
 r_nodeline_get_url()
 {
    local address
@@ -124,21 +101,6 @@ r_nodeline_get_url()
 
    IFS=';' \
       read -r address nodetype marks uuid RVAL <<< "$*"
-}
-
-
-nodeline_get_url()
-{
-   r_nodeline_get_url "$@"
-   printf "%s\n" "${RVAL}"
-}
-
-
-nodeline_get_evaled_url()
-{
-   r_nodeline_get_url "$@"
-   r_expanded_string "${RVAL}"
-   printf "%s\n" "${RVAL}"
 }
 
 
@@ -295,11 +257,8 @@ nodeline_remove()
          ;;
       esac
 
-      local _address
-
-      __nodeline_get_address "${nodeline}"
-
-      if [ "${_address}" != "${addresstoremove}" ]
+      r_nodeline_get_address "${nodeline}"
+      if [ "${RVAL}" != "${addresstoremove}" ]
       then
          printf "%s\n" "${nodeline}"
       fi

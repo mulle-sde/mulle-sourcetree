@@ -66,7 +66,7 @@ Usage:
    This command only reads config files.
 
    A '-' indicates a no-bequeath entry.
-   A '*' indicates a duplicate that has conflicting marks.
+   A '*' indicates a duplicate (most often conflicting marks).
 
 EOF
 
@@ -114,6 +114,7 @@ Options:
    --output-no-separator    : suppress separator line if header is printed
    --output-uuid            : print the UUID of each line
    --qualifier <value>      : specify marks qualifier (see \`walk\` command)
+
 EOF
   exit 1
 }
@@ -424,13 +425,13 @@ r_sourcetree_add_format()
 {
    log_entry "r_sourcetree_add_format" "$@"
 
-   case ";$1;" in 
+   case ";$1;" in
       *\;$2\;*)
          RVAL="$1"
       ;;
 
       *\\n\;)
-         # remove escaped linefeed 
+         # remove escaped linefeed
          # append format character
          RVAL="${1%??};$2\\n"
       ;;

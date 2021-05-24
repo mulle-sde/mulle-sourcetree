@@ -39,7 +39,7 @@ r_node_uuidgen()
    #
    # ensure that case doesn't change on linux, uuidgen is lowercase
    # on macsos it's uppercase. Now this is likely not a problem IRL
-   # but who knows if b314406e-371a-4d73-996f-9b5906564dcf != 
+   # but who knows if b314406e-371a-4d73-996f-9b5906564dcf !=
    # B314406E-371A-4D73-996F-9B5906564DCF isn't a subtle bug in the future
    #
    RVAL="`uuidgen`" || fail "Need uuidgen to work"
@@ -151,6 +151,12 @@ necessary marks \"no-delete,no-update,no-share,require\""
       ;;
    esac
 
+
+
+   r_nodemarks_simplify "${_marks}"
+   r_nodemarks_sort "${RVAL}"
+   _marks="${RVAL}"
+
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
       log_trace2 "ADDRESS:      \"${_address}\""
@@ -163,11 +169,6 @@ necessary marks \"no-delete,no-update,no-share,require\""
       log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
       log_trace2 "USERINFO:     \"${_raw_userinfo}\""
    fi
-
-   local rval
-
-   r_nodemarks_sort "${_marks}"
-   _marks="${RVAL}"
 
    # this is done  during auto already
    # case "${_address}" in

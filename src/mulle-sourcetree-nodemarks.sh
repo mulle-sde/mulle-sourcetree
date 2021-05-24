@@ -292,7 +292,7 @@ nodemarks_version_match()
 
 
 #
-# The "clever" existence check. (Not thaaaat clever though, use 
+# The "clever" existence check. (Not thaaaat clever though, use
 # nodemarks_enable for that)
 #
 # Input         | Matches
@@ -305,7 +305,7 @@ nodemarks_version_match()
 # Note: The only-<key> needs to be queried explicitly for existence
 #       It will not deny a no-<key>.In fact there must not be a
 #       no-<key> present if there is a only-<key>
-# 
+#
 # The version keys are ignored
 #
 nodemarks_contain()
@@ -371,7 +371,7 @@ nodemarks_enable()
    local marks="$1"
    local key="$2"
 
-   case "${key}" in 
+   case "${key}" in
       'only-'*|'no-'*)
          internal_fail "key must not start with only or no"
       ;;
@@ -379,7 +379,7 @@ nodemarks_enable()
 
    # if key is enabled with only- like only-platform-linux it's cool
    if _nodemarks_contain "${marks}" "only-${key}"
-   then 
+   then
       return 0
    fi
 
@@ -412,7 +412,7 @@ nodemarks_compatible_with_nodemarks()
    for key in ${anymarks}
    do
       IFS="${DEFAULT_IFS}" ; set +o noglob
-      case "${key}" in 
+      case "${key}" in
          no-*)
             key="${key:3}"
          ;;
@@ -426,7 +426,7 @@ nodemarks_compatible_with_nodemarks()
          ;;
       esac
 
-      if nodemarks_enable "${marks}" "${key}" 
+      if nodemarks_enable "${marks}" "${key}"
       then
          if nodemarks_disable "${anymarks}" "${key}"
          then
@@ -465,6 +465,28 @@ nodemarks_intersect()
    IFS="${DEFAULT_IFS}" ; set +o noglob
 
    return 1
+}
+
+
+#
+# remove marks that cancel each other out
+#
+r_nodemarks_simplify()
+{
+   local marks="$1"
+
+   local result
+   local key
+
+   set -o noglob ; IFS=","
+   for key in ${marks}
+   do
+      r_nodemarks_add "${result}" "${key}"
+      result="${RVAL}"
+   done
+   IFS="${DEFAULT_IFS}" ; set +o noglob
+
+   RVAL="${result}"
 }
 
 
@@ -614,7 +636,7 @@ _nodemarks_filter_sexpr()
          #log_entry nodemarks_match "${marks}" "${key}"
          nodemarks_enable "${marks}" "${key}"
          return $?
-      ;;      
+      ;;
 
       VERSION*)
          _s="${_s:7}"
@@ -771,7 +793,7 @@ assert_sane_nodemarks()
       IFS="${DEFAULT_IFS}"; set +o noglob
 
       [ -z "${mark}" ] && continue
- 
+
       assert_sane_nodemark "${mark}"
    done
    IFS="${DEFAULT_IFS}"; set +o noglob

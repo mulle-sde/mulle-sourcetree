@@ -43,25 +43,44 @@ Usage:
 
    Walk over the nodes described by the config file and execute <shell command>
    for each node. Unprocessed node information is passed in the following
-   environment variables: NODE_URL, NODE_ADDRESS, NODE_BRANCH, NODE_TAG,
+   environment variables:
+EOF
+
+   if [ "${MULLE_FLAG_LOG_VERBOSE}" = 'YES' ]
+   then
+      cat <<EOF  >&2
+
+      NODE_FILENAME     : the place where the node will be fetched to
+
+      NODE_ADDRESS      : address part of WALK_NODE
+      NODE_BRANCH       : branch part of WALK_NODE
+      NODE_FETCHOPTIONS : the fetchoptions part of WALK_NODE
+      NODE_MARKS        : the marks part of WALK_NODE
+      NODE_TAG          : tag part of WALK_NODE
+      NODE_TYPE         : the type (nodetype) part of the WALK_NODE
+      NODE_URL          : the URL part of WALK_NODE
+      NODE_USERINFO     : the userinfo part of WALK_NODE (possibly base64)
+      NODE_UUID         : the uuid part of WALK_NODE
+
+      WALK_NODE         : the complete contents of the node
+      WALK_DATASOURCE   : the current node sourcetree config path
+      WALK_DESTINATION  : what will be used to recurse the current node
+      WALK_MODE         : current internal mode used for walking
+      WALK_INDEX        : current node index of all nodes walked
+      WALK_LEVEL        : recursion depth of current node
+
+EOF
+   else
+      cat <<EOF  >&2
+   NODE_URL, NODE_ADDRESS, NODE_BRANCH, NODE_TAG, NODE_FILENAME,
    NODE_TYPE, NODE_UUID, NODE_MARKS, NODE_FETCHOPTIONS, NODE_USERINFO,
-   WALK_NODE.  Additional information is passed in: WALK_DESTINATION,
-   WALK_MODE, NODE_FILENAME, WALK_INDEX, WALK_INDEX, WALK_LEVEL.
+   WALK_NODE. WALK_DESTINATION, WALK_MODE, WALK_INDEX, WALK_LEVEL.
 
+EOF
+   fi
+
+      cat <<EOF  >&2
    The working directory will be the node (if it's a directory).
-
-   This example dumps the names of each node, that needs to be built in
-   "singlephase" mode with index and indentation:
-
-      mulle-sourcetree walk --qualifier 'MATCHES singlephase' \\
-         printf "%s\n" "\${WALK_INDEX} \${WALK_INDENT}\${NODE_ADDRESS}"'
-
-   This example finds the location of a dependency named foo:
-
-      mulle-sourcetree walk --lenient '[ "\${NODE_ADDRESS}" = "foo" ] && \\
-                                          echo "\${NODE_FILENAME}"'
-
-   There is a little qualifier language available to query the marks of a node.
 EOF
    if [ "${MULLE_FLAG_LOG_VERBOSE}" = 'YES' ]
    then
@@ -87,10 +106,30 @@ EOF
    AND/OR have the same precedence.
 EOF
    else
-      cat <<EOF >&2
+      cat <<EOF  >&2
+   There is a little qualifier language available to query the marks of a node.
    (Use -v for more info about the qualifier language)
 EOF
    fi
+
+   cat <<EOF >&2
+
+Examples:
+   Dump the names of each node, that needs to be built in "singlephase" mode
+   with index and indentation:
+      mulle-sourcetree walk --qualifier 'MATCHES singlephase' \\
+         printf "%s\n" "\${WALK_INDEX} \${WALK_INDENT}\${NODE_ADDRESS}"'
+
+   Find the location of a dependency named foo:
+      mulle-sourcetree walk --lenient '[ "\${NODE_ADDRESS}" = "foo" ] && \\
+                                          echo "\${NODE_FILENAME}"'
+
+   Dump marks as used for the same dependency by different other dependencies
+   (aka search for stars):
+      mulle-sourcetree walk --no-dedupe --lenient \\
+         '[ "\${NODE_ADDRESS}" = "foo" ] && \\
+         echo "\${NODE_MARKS} (\${WALK_DATASOURCE})"' | sort -u
+EOF
 
    cat <<EOF >&2
 
@@ -101,8 +140,9 @@ Options:
    -q <value>       : qualifier for marks to match (e.g. MATCHES build)
    --cd             : change directory to node's working directory
    --lenient        : allow shell command to error
-   --backwards      : walk tree nodes backwards [rarely useful]
-   --in-order       : walk tree depth first  (Root, Left, Right)
+   --backwards      : walk tree nodes backwards [rarely useful]de duplicates
+   --in-order       : walk tree depth first  (Root, Left, Right
+   --no-dedupe      : walk all nodes in the tree (very slow)
    --pre-order      : walk tree in pre-order  (Root, Left, Right)
    --breadth-first  : walk tree breadth first (first all top levels)
    --post-order     : walk tree depth first for all siblings (Left, Right, Root)
@@ -342,7 +382,7 @@ _visit_callback()
    then
       if ! _callback_filter "${_marks}" "${callbackqualifier}"
       then
-         log_fluff "Node \"${_address}\" marks \"${_marks}\" don't jive with qualifier \"${callbackqualifier}\""
+         log_fluff "Node \"${_address}\" marks \"${_marks}\" don't jive with qualifier \"${callbackqualifier//$'\n'/ }\""
          return 121  # the 1 indicates that the filter was the reason (can be reused by descend maybe)
       fi
    fi
@@ -431,7 +471,8 @@ _visit_descend()
 
    if nodemarks_disable "${_marks}" "descend"
    then
-      log_debug "Do not recurse on \"${virtual}/${_destination}\" due to no-descend mark"
+      log_debug "Do not recurse on \"${virtual}/${_destination}\" due to \
+no-descend mark"
       return 0
    fi
 
@@ -439,14 +480,17 @@ _visit_descend()
    then
       if ! _descend_filter "${_marks}" "${descendqualifier}"
       then
-         log_debug "Node \"${_address}\" marks \"${_marks}\" don't jive with \"${descendqualifier}\""
+         log_debug "Node \"${_address}\" marks \"${_marks}\" don't jive \
+with \"${descendqualifier}\""
          return 0
       fi
    fi
 
    if [ ! -z "${filterpermissions}" ]
    then
-      if ! _descend_permissions "${_filename}" "${_marks}" "${filterpermissions}"
+      if ! _descend_permissions "${_filename}" \
+                                "${_marks}" \
+                                "${filterpermissions}"
       then
          log_debug "Node \"${_address}\" with filename \"${_filename}\" \
 doesn't jive with permissions \"${filterpermissions}\""
@@ -458,7 +502,8 @@ doesn't jive with permissions \"${filterpermissions}\""
    then
       if ! "${WILL_DESCEND_CALLBACK}" "$@"
       then
-         log_debug "Do not visit on \"${virtual}/${_destination}\" due to WILL_DESCEND_CALLBACK"
+         log_debug "Do not visit on \"${virtual}/${_destination}\" due \
+to WILL_DESCEND_CALLBACK"
          return 0
       fi
    fi
@@ -470,6 +515,8 @@ doesn't jive with permissions \"${filterpermissions}\""
    WALK_LEVEL=$((WALK_LEVEL + 1))
 
    local rval
+
+   log_fluff "Descend into \"${datasource}\""
 
    case ",${mode}," in
       *,walkdb,*)
@@ -490,7 +537,8 @@ doesn't jive with permissions \"${filterpermissions}\""
    then
       "${DID_DESCEND_CALLBACK}" "$@"
       rval=$?
-      log_debug "DID_DESCEND_CALLBACK of \"${virtual}/${_destination}\" returns $rval"
+      log_debug "DID_DESCEND_CALLBACK of \"${virtual}/${_destination}\" \
+returns $rval"
 
    fi
    return $rval
@@ -1320,17 +1368,17 @@ _walk_config_uuids()
 
    if ! nodelines="`cfg_read "${datasource}" `"
    then
-      log_fluff "Config \"${datasource#${MULLE_USER_PWD}/}\" does not exist"
+      log_debug "Config \"${datasource#${MULLE_USER_PWD}/}\" does not exist"
       return 0
    fi
 
    if [ -z "${nodelines}" ]
    then
-      log_fluff "Config \"${datasource#${MULLE_USER_PWD}/}\" has no nodes"
+      log_debug "Config \"${datasource#${MULLE_USER_PWD}/}\" has no nodes"
       return 0
    fi
 
-   log_fluff "Walking config \"${datasource#${MULLE_USER_PWD}/}\" nodes"
+   log_debug "Walking config \"${datasource#${MULLE_USER_PWD}/}\" nodes"
    _walk_nodelines "${nodelines}" "$@"
 }
 

@@ -55,7 +55,7 @@ The `fs` is the very first mark being checked during stage 2.
 
 ### require
 
-[Stage 2] If a dependency marked `require`  can not be fetched, the sync will fail. The mark `no-require` can be Operating System specific. For example `no-require-linux` would make a dependency required on all systems except linux.
+[Stage 2] If a dependency marked `require`  can not be fetched, the sync will fail. The mark `no-require` can be Operating System specific. For example `no-require-os-linux` would make a dependency required on all systems except linux.
 
 
 ## mulle-sourcetree walk

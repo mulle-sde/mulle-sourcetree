@@ -199,8 +199,8 @@ _do_fetch_operation()
 {
    log_entry "_do_fetch_operation" "$@"
 
-   local _address="$1"        # address of this node 
-   shift 
+   local _address="$1"        # address of this node
+   shift
 
    local _url="$1"            # URL of the node
    local destination="$2"     # destination
@@ -359,22 +359,23 @@ update_actions_for_nodelines()
    local filename
 
    filename="${_address}"
-   previousfilename="`nodeline_get_address "${previousnodeline}"`"
+   r_nodeline_get_address "${previousnodeline}"
+   previousfilename="${RVAL}"
 
    # just _address as filename ?
    r_update_actions_for_node "${style}" \
-                            "${nodeline}" \
-                            "${filename}" \
-                            "${previousnodeline}" \
-                            "${previousfilename}" \
-                            "/" \
-                            "${_address}" \
-                            "${_nodetype}" \
-                            "${_marks}" \
-                            "${_uuid}" \
-                            "${_url}" \
-                            "${_branch}" \
-                            "${_tag}"
+                             "${nodeline}" \
+                             "${filename}" \
+                             "${previousnodeline}" \
+                             "${previousfilename}" \
+                             "/" \
+                             "${_address}" \
+                             "${_nodetype}" \
+                             "${_marks}" \
+                             "${_uuid}" \
+                             "${_url}" \
+                             "${_branch}" \
+                             "${_tag}"
    echo "${RVAL}"
 }
 
@@ -484,7 +485,7 @@ update_safe_clobber()
 
    [ -z "${filename}" ] && internal_fail "empty filename"
 
-   r_node_uuidgen 
+   r_node_uuidgen
    db_bury "${database}" "${RVAL}" "${filename}"
 }
 
@@ -496,16 +497,19 @@ r_update_actions_for_node()
 {
    log_entry "r_update_actions_for_node" "$@"
 
-   local style="$1"; shift
-   local newnodeline="$1" ; shift
-   local newfilename="$1"; shift
-   local previousnodeline="$1" ; shift
-   local previousfilename="$1"; shift
-   local database="$1"; shift
+   local style="$1"
+   local newnodeline="$2"
+   local newfilename="$3"
+   local previousnodeline="$4"
+   local previousfilename="$5"
+   local database="$6"
+   local config="$7"
+
+   shift 7
 
    local newaddress="$1"    # address of this node
    local newnodetype="$2"   # nodetype to use for this node
-   local newmarks="$3"      # nodetype to use for this node
+   local newmarks="$3"      # marks to use for this node
    local newuuid="$4"       # uuid of the node
    local newurl="$5"        # URL of the node
    local newbranch="$6"     # branch of the node
@@ -534,16 +538,16 @@ chickening out"
    newexists='NO'
    if [ -e "${newfilename}" ]
    then
-      log_fluff "\"${newfilename}\" already exists"
+      log_fluff "\"${newfilename#${MULLE_USER_PWD}/}\" already exists"
       newexists='YES'
    else
       if [ -L "${newfilename}" ]
       then
-         log_fluff "Node \"${newfilename}\" references a broken symlink \
+         log_fluff "Node \"${newfilename#${MULLE_USER_PWD}/}\" references a broken symlink \
 \"${newfilename}\". Clobbering it"
          remove_file_if_present "${newfilename}"
       else
-         log_debug "\"${newfilename}\" is not there"
+         log_debug "\"${newfilename#${MULLE_USER_PWD}/}\" is not there"
       fi
    fi
 
@@ -577,12 +581,12 @@ chickening out"
          then
             case "${newnodetype}" in
                local)
-                  log_fluff "Local node is present at \"${newfilename}\". \
+                  log_fluff "Local node is present at \"${newfilename#${MULLE_USER_PWD}/}\". \
 Very well just remember it."
                ;;
 
                *)
-                  log_fluff "Node is new but \"${newfilename}\" exists. \
+                  log_fluff "Node is new but \"${newfilename#${MULLE_USER_PWD}/}\" exists. \
 As node is marked \"no-delete\" just remember it."
                ;;
             esac
@@ -596,7 +600,7 @@ As node is marked \"no-delete\" just remember it."
          then
             local oldnodeline
 
-            oldnodeline="`rexekutor egrep -s -v '^#' "${newfilename}/${SOURCETREE_FIX_FILENAME}"`"
+            oldnodeline="`rexekutor egrep -s -v '^#' "${newfilename#${MULLE_USER_PWD}/}/${SOURCETREE_FIX_FILENAME}"`"
             if [ "${oldnodeline}" = "${nodeline}" ]
             then
                log_fluff "Fix info was written by identical config, so it looks ok"
@@ -606,16 +610,29 @@ As node is marked \"no-delete\" just remember it."
             fi
          fi
 
-         log_fluff "Node is new, but \"${newfilename}\" exists. Clobber it."
+         log_fluff "Node is new, but \"${newfilename#${MULLE_USER_PWD}/}\" exists. Clobber it."
          update_safe_clobber "${newfilename}" "${database}"
          ACTIONS="remember"
       else
          if [ -z "${_url}" ]
          then
-            fail "Node \"${newfilename}\" has no URL and it doesn't exist ($PWD)"
+            fail "Node \"${newfilename#${MULLE_USER_PWD}/}\" has no URL and it doesn't exist ($PWD)"
          fi
 
-         log_fluff "Node \"${newfilename}\" is missing, so fetch"
+         local pretty_config
+
+         pretty_config="${config#/}"
+         pretty_config="${pretty_config%/}"
+         if [ -z "${pretty_config}" ]
+         then
+            pretty_config="."
+         fi
+         log_verbose "Node \"${newfilename#${MULLE_USER_PWD}/}\" of sourcetree \"${pretty_config}\" is missing, so fetch"
+
+#         if [ "${newaddress}" = "Foundation" ]
+#         then
+#            exit 1
+#        fi
       fi
 
       r_add_line "${ACTIONS}" "fetch"
@@ -637,7 +654,7 @@ As node is marked \"no-delete\" just remember it."
    #
    if [ "${previousnodeline}" = "${newnodeline}" ]
    then
-      log_fluff "Node \"${newfilename}\" is unchanged"
+      log_fluff "Node \"${newfilename#${MULLE_USER_PWD}/}\" is unchanged"
 
       if [ "${newexists}" = 'YES' ]
       then
@@ -1002,6 +1019,7 @@ __update_perform_actions()
    local previousnodeline="$4"
    local previousfilename="$5"
    local database="$6"  # used in _perform
+   local config="$7"
 
    local _branch
    local _address
@@ -1025,6 +1043,7 @@ __update_perform_actions()
                              "${previousnodeline}" \
                              "${previousfilename}" \
                              "${database}" \
+                             "${config}" \
                              "${_address}" \
                              "${_nodetype}" \
                              "${_marks}" \
@@ -1077,7 +1096,8 @@ _memorize_node_in_db()
 
    node_evaluate_values
 
-   log_debug "${C_INFO}Remembering ${_address} located at \"${filename}\" in \"${database}\"..."
+   log_debug "${C_INFO}Remembering ${_address} located at \"${filename}\" \
+in \"${database}\"..."
 
    db_memorize "${database}" \
                "${_uuid}" \
@@ -1106,7 +1126,9 @@ write_fix_info()
    # don't do this as it resolved symlinks that we might need
    # filename="`physicalpath "${filename}" `"
 
-   [ -z "${SOURCETREE_FIX_FILENAME}" ] && internal_fail "SOURCETREE_FIX_FILENAME is empty"
+   [ -z "${SOURCETREE_FIX_FILENAME}" ] \
+   && internal_fail "SOURCETREE_FIX_FILENAME is empty"
+
    r_filepath_concat "${filename}" "${SOURCETREE_FIX_FILENAME}"
    output="${RVAL}"
 
@@ -1118,7 +1140,8 @@ write_fix_info()
 ${nodeline}"
 
    r_mkdir_parent_if_missing "${output}"
-   redirect_exekutor "${output}" printf "%s\n" "${text}" || internal_fail "failed to write fixinfo \"${output}\""
+   redirect_exekutor "${output}" printf "%s\n" "${text}" \
+   || internal_fail "failed to write fixinfo \"${output}\""
 }
 
 
@@ -1151,7 +1174,7 @@ _r_do_actions_with_nodeline()
 
    if nodemarks_disable "${_marks}" "fs"
    then
-      log_fluff "\"${_address}\" is marked as no-fs, so there is nothing to update"
+      log_fluff "\"${_address}\" is marked as no-fs, so nothing to update"
       return 2
    fi
 
@@ -1165,7 +1188,7 @@ _r_do_actions_with_nodeline()
 
    if [ "${_evalednodetype}" = 'comment' ]
    then
-      log_debug "\"${_address}\" is a comment, so there is nothing to update"
+      log_debug "\"${_address}\" is a comment, so nothing to update"
       return 2
    fi
 
@@ -1175,7 +1198,8 @@ _r_do_actions_with_nodeline()
    #
    local filename
 
-   if [ ! -z "${_evaledurl}" -a "${style}" = "share" ] && nodemarks_enable "${_marks}" "share"
+   if [ ! -z "${_evaledurl}" -a "${style}" = "share" ] \
+      && nodemarks_enable "${_marks}" "share"
    then
       r_db_update_determine_share_filename "${_address%#*}" \
                                            "${_evaledurl}" \
@@ -1269,7 +1293,7 @@ but it is not required"
             # this is _address is already taken
             log_fluff "Filename \"${filename}\" is already used by \
 node \"${otheruuid}\" in database \"${database}\". Skip it."
-            # don't set alive though 
+            # don't set alive though
             # RVAL="${otheruuid}" (or set other alive ?)
             return 2
          fi
@@ -1301,6 +1325,11 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    else
       if [ -L "${filename}" ]
       then
+         #
+         # if we remove this old link, it could have been placed by a duplicate
+         # and be valid, we should really check this differently...
+         # But really, the duplicate should be marked as no-fs
+         #
          log_verbose "Removing an old symlink \"${filename}\" for safety"
          exekutor rm -f "${filename}" || exit 1
 #      else
@@ -1335,7 +1364,8 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
                             "${filename}" \
                             "${previousnodeline}" \
                             "${previousfilename}" \
-                            "${database}"
+                            "${database}" \
+                            "${config}"
 
    log_debug "\
 contentschanged : ${_contentschanged}
@@ -1382,8 +1412,8 @@ do_actions_with_nodeline()
 #   local config="$3"
    local database="$4"
 
-   local rval 
-   local uuid 
+   local rval
+   local uuid
 
    log_entry "do_actions_with_nodeline" "$@"
    if _r_do_actions_with_nodeline "$@"
