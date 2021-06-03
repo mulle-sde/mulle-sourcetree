@@ -66,7 +66,8 @@ Usage:
    This command only reads config files.
 
    A '-' indicates a no-bequeath entry.
-   A '*' indicates a duplicate (most often conflicting marks).
+   A '*' indicates a duplicate (most often conflicting marks). Use the 
+         \`${MULLE_USAGE_NAME} star-search\` command to list duplicates by name.
 
 EOF
 
@@ -443,6 +444,29 @@ r_sourcetree_add_format()
 }
 
 
+warn_if_sync_outstanding()
+{
+   local memo 
+   local rval 
+
+   if [ -z "${MULLE_SOURCETREE_DBSTATUS_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-dbstatus.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dbstatus.sh" || exit 1
+   fi      
+
+   memo="${MULLE_FLAG_LOG_TERSE}"
+   MULLE_FLAG_LOG_TERSE='YES'
+   sourcetree_dbstatus_main
+   rval=$?
+   MULLE_FLAG_LOG_TERSE="${memo}"
+
+   if [ $rval -ne 0 ]
+   then
+      log_warning "Listing will be complete after a sync."
+   fi   
+}
+
 sourcetree_list_main()
 {
    log_entry "sourcetree_list_main" "$@"
@@ -771,6 +795,10 @@ sourcetree_list_main()
 
    [ -z "${SOURCETREE_CONFIG_FILENAME}" ] && fail "Config filename is empty"
 
+   if [ "${FLAG_SOURCETREE_MODE}" = "share" ]
+   then
+      warn_if_sync_outstanding
+   fi
 
    # if mode is not flat, we use output-banner by default
    if [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" ]

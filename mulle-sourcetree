@@ -74,11 +74,13 @@ print_commands()
    libexec-dir    : print path to ${MULLE_USAGE_NAME} libexec
    knownmarks     : list known marks
    sourcetree-dir : print path to project (if a sourcetree exists)
-   reuuid         : create new uuids for the sourcetree
    rename         : rename a node in the sourcetree
    rename-marks   : rename marks in the sourcetree
    remove         : remove a node from the sourcetree
    reset          : clear the database, to force a sync
+   reuuid         : create new uuids for the sourcetree
+   rewrite        : clean up marks of a sourcetree
+   star-search    : search for duplicates by name listed as '*' in list
    wrap           : wrap nodetypes,branches,URLs in environment variables
    test           : test if a mark matches against a list of marks
    touch          : mark sourcetree as dirty
@@ -459,7 +461,7 @@ main()
          sourcetree_${cmd//-/_}_main "$@"
       ;;
 
-      craftorder|clean|fix|list|reset|reuuid|wrap|status|walk)
+      craftorder|clean|fix|list|reset|reuuid|rewrite|wrap|status|walk)
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-${cmd}.sh"
 
          sourcetree_${cmd}_main "$@"
@@ -524,6 +526,16 @@ main()
 
       share-dir|stash-dir)
          printf "%s\n" "${MULLE_SOURCETREE_STASH_DIR}"
+      ;;
+
+      star-search)
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
+
+         sourcetree_walk_main \
+            --dedupe-mode nodeline-no-uuid \
+            --lenient \
+            "[ \"\${NODE_ADDRESS}\" = \"$1\" ] && \
+echo \"\${NODE_MARKS} \${NODE_TAG} \${NODE_BRANCH} \${NODE_URL} (\${WALK_DATASOURCE#\${PWD}/})\"" | sort -u
       ;;
 
       tool-env)

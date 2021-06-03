@@ -29,20 +29,20 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_REUUID_SH="included"
+MULLE_SOURCETREE_REWRITE_SH="included"
 
 
-sourcetree_reuuid_usage()
+sourcetree_rewrite_usage()
 {
    [ "$#" -ne 0 ] && log_error "$1"
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} reuuid [options]
+   ${MULLE_USAGE_NAME} rewrite [options]
 
-   Populate configuration with fresh UUIDs. This is necessary if you copy a
-   project. And intend to use it together with the old project.
-   You should \`reset\` the database afterwards.
+   If you hand-edited a sourcetree config file, the marks may contain 
+   duplicates and might be sorted in the wrong order. With "rewrite" you can
+   clean up.
 
    This will lose all '#' comments.
 
@@ -52,9 +52,12 @@ EOF
 
 
 
-cfg_reuuid()
+#
+# this cleans up the marks and resorts them
+#
+cfg_rewrite()
 {
-   log_entry "cfg_reuuid" "$@"
+   log_entry "cfg_rewrite" "$@"
 
    local config="$1"
 
@@ -84,8 +87,14 @@ cfg_reuuid()
 
       nodeline_parse "${nodeline}"  # memo: :_marks used raw
 
-      r_node_uuidgen
-      _uuid="${RVAL}"
+      r_nodemarks_simplify "${_marks}"
+      r_nodemarks_sort "${RVAL}"
+
+      if [ "${_marks}" != "${RVAL}" ]
+      then
+         log_verbose "${_address} marks changed"
+      fi
+      _marks="${RVAL}"
 
       _r_node_to_nodeline
       r_add_line "${output}" "${RVAL}"
@@ -97,9 +106,9 @@ cfg_reuuid()
 }
 
 
-sourcetree_reuuid_main()
+sourcetree_rewrite_main()
 {
-   log_entry "sourcetree_reuuid_main" "$@"
+   log_entry "sourcetree_rewrite_main" "$@"
 
    local OPTION_REMOVE_GRAVEYARD="DEFAULT"
 
@@ -107,12 +116,12 @@ sourcetree_reuuid_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_reuuid_usage
+            sourcetree_rewrite_usage
          ;;
 
          -*)
-            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown reuuid option $1"
-            sourcetree_reuuid_usage
+            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown rewrite option $1"
+            sourcetree_rewrite_usage
          ;;
 
          *)
@@ -123,53 +132,16 @@ sourcetree_reuuid_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_reuuid_usage
+   [ "$#" -eq 0 ] || sourcetree_rewrite_usage
 
-   log_info "Create new UUIDs for sourcetree"
-   cfg_reuuid "/" || exit 1
-
-   log_info "${C_VERBOSE}Don't forget to \`reset\` affected databases"
+   log_info "Rewriting marks for sourcetree"
+   cfg_rewrite "/" || exit 1
 }
 
 
-sourcetree_reuuid_main()
+sourcetree_rewrite_initialize()
 {
-   log_entry "sourcetree_reuuid_main" "$@"
-
-   local OPTION_REMOVE_GRAVEYARD="DEFAULT"
-
-   while [ $# -ne 0 ]
-   do
-      case "$1" in
-         -h*|--help|help)
-            sourcetree_reuuid_usage
-         ;;
-
-         -*)
-            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown reuuid option $1"
-            sourcetree_reuuid_usage
-         ;;
-
-         *)
-            break
-         ;;
-      esac
-
-      shift
-   done
-
-   [ "$#" -eq 0 ] || sourcetree_reuuid_usage
-
-   log_info "Create new UUIDs for sourcetree"
-   cfg_reuuid "/" || exit 1
-
-   log_info "${C_VERBOSE}Don't forget to \`reset\` affected databases"
-}
-
-
-sourcetree_reuuid_initialize()
-{
-   log_entry "sourcetree_reuuid_initialize"
+   log_entry "sourcetree_rewrite_initialize"
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
@@ -202,7 +174,7 @@ sourcetree_reuuid_initialize()
 }
 
 
-sourcetree_reuuid_initialize
+sourcetree_rewrite_initialize
 
 :
 

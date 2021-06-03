@@ -57,6 +57,16 @@ sourcetree_dbstatus_main()
 
    [ "$#" -eq 0 ] || sourcetree_dbstatus_usage
 
+   if [ -z "${MULLE_SOURCETREE_CFG_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-cfg.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh" || exit 1
+   fi
+   if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
+   then
+      # shellcheck source=mulle-sourcetree-cfg.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
+   fi
    local _configfile
    local _fallback_configfile
 

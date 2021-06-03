@@ -87,6 +87,7 @@ Usage:
    Examples:
       ${MULLE_EXECUTABLE_NAME} add foo
       ${MULLE_EXECUTABLE_NAME} add --url https://x.com/x external/x
+      ${MULLE_EXECUTABLE_NAME} add --nodetype comment "Was denn hier los ?"
 
    This command only affects the local sourcetree.
 
@@ -441,6 +442,14 @@ _sourcetree_nameguess_node()
    local nodetype="$2"
    local url="$3"
 
+   if [ "${nodetype}" = "comment" ]
+   then
+      _address="${input}"
+      _nodetype="${nodetype}"
+      _url=""
+      return
+   fi
+
    local original_address
 
    original_address="${_address}"
@@ -789,6 +798,10 @@ sourcetree_add_node()
       'none')
          r_comma_concat "${_marks}" "no-delete,no-fs,no-update,no-share"
          _marks="${RVAL}"
+      ;;
+
+      'comment')
+         _marks="no-fs"
       ;;
    esac
 
@@ -1226,6 +1239,7 @@ no-all-load
 no-bequeath
 no-build
 no-cmake-add
+no-cmake-all-load
 no-cmake-dependency
 no-cmake-inherit
 no-cmake-intermediate-link
@@ -1302,11 +1316,7 @@ ${C_RESET_BOLD}   ${MULLE_EXECUTABLE_NAME} mark -e ..."
    fi
 
    r_nodemarks_add "${_marks}" "${mark}"
-   r_nodemarks_sort "${RVAL}"
    _marks="${RVAL}"
-
-   r_node_to_nodeline
-   sourcetree_change_nodeline_uuid "${oldnodeline}" "${RVAL}" "${_uuid}"
 }
 
 
@@ -1331,11 +1341,20 @@ ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} unmark -e ..."
    fi
 
    r_nodemarks_remove "${_marks}" "${mark}"
-   r_nodemarks_sort "${RVAL}"
    _marks="${RVAL}"
+}
 
+
+sourcetree_write_nodeline_changed_marks()
+{
+   local oldnodeline="$1"
+
+   r_nodemarks_sort "${_marks}"
+   r_nodemarks_simplify "${RVAL}"
+   _marks="${RVAL}"
+   
    r_node_to_nodeline
-   sourcetree_change_nodeline_uuid "${oldnodeline}" "${RVAL}" "${_uuid}"
+   sourcetree_change_nodeline_uuid "${oldnodeline}" "${RVAL}" "${_uuid}"   
 }
 
 
@@ -1344,7 +1363,7 @@ sourcetree_mark_node()
    log_entry "sourcetree_mark_node" "$@"
 
    local input="$1"
-   local mark="$2"
+   local marks="$2"
 
    local oldnodeline
 
@@ -1365,40 +1384,57 @@ sourcetree_mark_node()
    local _userinfo
    local _uuid
 
+   local rval 
+   local mark
+
    nodeline_parse "${oldnodeline}" # !!
 
-   case "${mark}" in
-      no-*|only-*|version-*)
-         if _nodemarks_contain "${_marks}" "${mark}"
-         then
-            log_info "Node is already marked as \"${mark}\"."
-            return
-         fi
-         _sourcetree_add_mark_known_absent "${mark}"
-      ;;
+   # this loop is suboptimal as we are constantly rewriting the line
+   # it was added as an afterthought
 
-      [a-z_]*)
-         if nodemarks_contain "${_marks}" "no-${mark}"
-         then
-            mark="no-${mark}"
-            _sourcetree_remove_mark_known_present "${mark}"
-            return $?
-         fi
+   set -o noglob ; IFS=","
+   for mark in ${marks}
+   do
+      IFS="${DEFAULT_IFS}" ; set +o noglob
+      case "${mark}" in
+         no-*|only-*|version-*)
+            if _nodemarks_contain "${_marks}" "${mark}"
+            then
+               log_info "Node is already marked as \"${mark}\"."
+               continue
+            fi
+            _sourcetree_add_mark_known_absent "${mark}" 
+            rval=$?
+            [ $rval -ne 0 ] && return $rval 
+         ;;
 
-         if nodemarks_contain "${_marks}" "only-${mark}"
-         then
-            mark="only-${mark}"
-            _sourcetree_remove_mark_known_present "${mark}"
-            return $?
-         fi
+         [a-z_]*)
+            if nodemarks_contain "${_marks}" "no-${mark}"
+            then
+               mark="no-${mark}"
+               _sourcetree_remove_mark_known_present "${mark}" 
+               rval=$?
+               [ $rval -ne 0 ] && return $rval 
+            fi
 
-         log_info "Node already implicitly marked as \"${mark}\" (as are all postive marks)"
-      ;;
+            if nodemarks_contain "${_marks}" "only-${mark}"
+            then
+               mark="only-${mark}"
+               _sourcetree_remove_mark_known_present "${mark}"
+               rval=$?
+               [ $rval -ne 0 ] && return $rval 
+            fi
 
-      *)
-         fail "Malformed mark \"${mark}\" (only lowercase identifiers please)"
-      ;;
-   esac
+            log_info "Node already implicitly marked as \"${mark}\" (as are all postive marks)"
+         ;;
+
+         *)
+            fail "Malformed mark \"${mark}\" (only lowercase identifiers please)"
+         ;;
+      esac
+   done
+
+   sourcetree_write_nodeline_changed_marks "${oldnodeline}"
 }
 
 
@@ -1446,6 +1482,7 @@ sourcetree_unmark_node()
          if nodemarks_contain "${_marks}" "${mark}"
          then
             _sourcetree_remove_mark_known_present "${mark}"
+            sourcetree_write_nodeline_changed_marks "${oldnodeline}"
             return $?
          fi
          return 2
