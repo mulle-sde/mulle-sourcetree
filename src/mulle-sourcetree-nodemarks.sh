@@ -798,3 +798,81 @@ assert_sane_nodemarks()
    done
    IFS="${DEFAULT_IFS}"; set +o noglob
 }
+
+
+#
+# this checks combinations of nodemarks against each other and their possible
+# lacking. In theory these consistency checkers should be added via plugins
+# for now we have a small collection of hardcoded functions
+#
+
+nodemark_only_framework_consistency_check()
+{
+   local mark="$1"
+   local marks="$2"
+   local address="$3"
+
+   if nodemarks_disable "${marks}" singlephase
+   then
+      log_warning "Framework \"${address}\" needs singlephase mark (singlephase)"
+   fi
+
+   if nodemarks_enable "${marks}" cmake-inherit
+   then
+      log_warning "Framework \"${address}\" should not inherit dependencies (no-cmake-inherit)"
+   fi
+
+   if nodemarks_enable "${marks}" cmake-add
+   then
+      log_info "Framework \"${address}\" doesn't need cmake-add (no-cmake-add)"
+   fi
+}
+
+nodemark_no_cmake_inherit_consistency_check()
+{
+   local mark="$1"
+   local marks="$2"
+   local address="$3"
+
+   if nodemarks_disable "${marks}" cmake-searchpath
+   then
+      log_warning "\"${address}\" mark (no-cmake-searchpath) is made superflous by no-cmake-inherit"
+   fi
+
+   if nodemarks_disable "${marks}" cmake-dependency
+   then
+      log_warning "\"${address}\" mark (no-cmake-dependency) is made superflous by no-cmake-inherit"
+   fi
+
+   if nodemarks_disable "${marks}" cmake-loader
+   then
+      log_warning "\"${address}\" mark (no-cmake-loader) is made superflous by no-cmake-inherit"
+   fi
+}
+
+
+nodemarks_check_consistency()
+{
+   log_entry "nodemarks_check_consistency" "$@"
+
+   local marks="$1"
+   local address="$2"
+
+   local f
+
+   IFS=","; set -o noglob
+   for mark in ${marks}
+   do
+      IFS="${DEFAULT_IFS}"; set +o noglob
+
+      [ -z "${mark}" ] && continue
+
+      f="nodemark_${mark//-/_}_consistency_check"
+      if [ "`type -t "${f}" `" = "function" ]
+      then
+         ${f} "${mark}" "${marks}" "${address}"
+      fi
+   done
+   IFS="${DEFAULT_IFS}"; set +o noglob
+} 
+

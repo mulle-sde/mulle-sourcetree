@@ -239,7 +239,7 @@ r_nodeline_raw_userinfo_parse()
 #
 nodeline_remove()
 {
-   log_entry "nodeline_remove" "$@"
+   log_entry "nodeline_remove" "..." "$2"
 
    local nodelines="$1"
    local addresstoremove="$2"
@@ -269,7 +269,7 @@ nodeline_remove()
 
 _r_nodeline_find()
 {
-   log_entry "_r_nodeline_find" "$@"
+   log_entry "_r_nodeline_find" "..." "$2" "$3" "$4"
 
    local nodelines="$1"
    local value="$2"
@@ -325,7 +325,7 @@ _r_nodeline_find()
 
 nodeline_find()
 {
-   log_entry "nodeline_find" "$@"
+   log_entry "nodeline_find" ... "$2" "$3"
 
    local nodelines="$1"
    local address="$2"
@@ -343,7 +343,7 @@ nodeline_find()
 
 nodeline_find_by_url()
 {
-   log_entry "nodeline_find_by_url" "$@"
+   log_entry "nodeline_find_by_url" "..." "$2"
 
    local nodelines="$1"
    local url="$2"
@@ -360,7 +360,7 @@ nodeline_find_by_url()
 
 nodeline_find_by_evaled_url()
 {
-   log_entry "nodeline_find_by_evaled_url" "$@"
+   log_entry "nodeline_find_by_evaled_url" "..." "$2"
 
    local nodelines="$1"
    local url="$2"
@@ -377,7 +377,7 @@ nodeline_find_by_evaled_url()
 
 nodeline_find_by_uuid()
 {
-   log_entry "nodeline_find_by_uuid" "$@"
+   log_entry "nodeline_find_by_uuid"  "..." "$2"
 
    local nodelines="$1"
    local uuid="$2"
@@ -394,7 +394,7 @@ nodeline_find_by_uuid()
 
 nodeline_has_duplicate()
 {
-   log_entry "nodeline_has_duplicate" "$@"
+   log_entry "nodeline_has_duplicate"  "..." "$2" "$3"
 
    local nodelines="$1"
    local address="$2"
@@ -670,7 +670,7 @@ nodeline_printf_header()
 
 nodeline_printf()
 {
-   local nodeline=$1; shift
+   local nodeline="$1"; shift
 
    local _branch
    local _address
@@ -686,6 +686,57 @@ nodeline_printf()
    nodeline_parse "${nodeline}"
 
    node_printf "$@"
+}
+
+
+nodeline_diff()
+{
+   log_entry "nodeline_diff"
+
+   local nodeline1="$1"
+   local nodeline2="$2"
+
+   local _branch
+   local _address
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _tag
+   local _url
+   local _uuid
+   local _raw_userinfo
+   local _userinfo
+
+   nodeline_parse "${nodeline1}"
+
+   local branch="${_branch}"
+   local address="${_address}"
+   local fetchoptions="${_fetchoptions}"
+   local marks="${_marks}"
+   local nodetype="${_nodetype}"
+   local tag="${_tag}"
+   local url="${_url}"
+   local uuid="${_uuid}"
+   local raw_userinfo="${_raw_userinfo}"
+   local userinfo="${_userinfo}"
+
+   nodeline_parse "${nodeline2}"
+
+   local field
+   local u_field
+
+   set -o noglob
+   for field in address branch fetchoptions marks nodetype tag url userinfo
+   do
+      u_field="_${field}"
+      if [ "${!field}" = "${!u_field}" ]
+      then
+         continue
+      fi
+
+      echo "${field}: ${!field} <> ${!u_field}"
+   done
+   set +o noglob
 }
 
 

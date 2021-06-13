@@ -76,6 +76,17 @@ r_node_sanitized_address()
 }
 
 
+r_node_sanitized_marks()
+{
+   local marks="$1"
+
+   nodemarks_check_consistency "${marks}" "${_address}"
+
+   r_nodemarks_simplify "${_marks}"
+   r_nodemarks_sort "${RVAL}"
+}
+
+
 #
 # This function sets values of variables that should be declared
 # in the caller!
@@ -151,10 +162,7 @@ necessary marks \"no-delete,no-update,no-share,require\""
       ;;
    esac
 
-
-
-   r_nodemarks_simplify "${_marks}"
-   r_nodemarks_sort "${RVAL}"
+   r_node_sanitized_marks "${_marks}"
    _marks="${RVAL}"
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]

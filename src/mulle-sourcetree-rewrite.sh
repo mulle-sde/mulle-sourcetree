@@ -87,8 +87,8 @@ cfg_rewrite()
 
       nodeline_parse "${nodeline}"  # memo: :_marks used raw
 
-      r_nodemarks_simplify "${_marks}"
-      r_nodemarks_sort "${RVAL}"
+      r_node_sanitized_marks "${_marks}"
+      _marks="${RVAL}"
 
       if [ "${_marks}" != "${RVAL}" ]
       then

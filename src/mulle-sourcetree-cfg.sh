@@ -77,6 +77,14 @@ __cfg_common_configfile()
    esac
 
    case "$1" in
+      "#/"*)  # hack for copy command for absolute names
+         _configfile="${1#\#}/${SOURCETREE_CONFIG_FILENAME}"
+         if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_FILENAME}" ]
+         then
+            _fallback_configfile="$${1#\#}/${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
+         fi
+      ;;
+
       "/")
          _configfile="${MULLE_VIRTUAL_ROOT}/${SOURCETREE_CONFIG_FILENAME}"
          if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_FILENAME}" ]
@@ -167,6 +175,14 @@ __cfg_common_rootdir()
    esac
 
    case "$1" in
+      "#/"*)
+         r_dirname "$1"       # remove config
+         r_dirname "${RVAL}"  # remove sourcetree
+         r_dirname "${RVAL}"  # remove etc
+         r_dirname "${RVAL}"  # remove .mulle
+         _rootdir="${RVAL}"
+      ;;
+
       "/")
          _rootdir="${MULLE_VIRTUAL_ROOT}"
       ;;
@@ -504,6 +520,11 @@ cfg_change_nodeline()
 
    local oldnodeline="$2"
    local newnodeline="$3"
+
+   if [ "${MULLE_FLAG_LOG_DEBUG}" = 'YES' ]
+   then
+      log_debug "diff " `nodeline_diff "${oldnodeline}" "${newnodeline}"`
+   fi
 
    local oldescaped
    local newescaped

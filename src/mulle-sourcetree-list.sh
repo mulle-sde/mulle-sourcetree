@@ -290,7 +290,7 @@ sourcetree_list_sourcetree()
 
    case ",${mode}," in
       *,output_column,*)
-         _list_sourcetree "$@" | exekutor column -t -s ';'
+         ( _list_sourcetree "$@" ; echo )  | rexekutor column -t -s ';'
       ;;
 
       *)
@@ -651,9 +651,10 @@ sourcetree_list_main()
             then
                OPTION_FORMAT="%a;%m\\n"
             else
-               r_sourcetree_add_format "${RVAL}" "%m"
+               r_sourcetree_add_format "${OPTION_FORMAT}" "%m"
                OPTION_FORMAT="${RVAL}"
             fi
+            OPTION_NO_OUTPUT_MARKS=NO
          ;;
 
          -u)

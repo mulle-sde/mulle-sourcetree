@@ -84,12 +84,12 @@ Usage:
 
    Nodes with an url will be fetched and possibly unpacked on the next update.
 
-   Examples:
+Examples:
       ${MULLE_EXECUTABLE_NAME} add foo
       ${MULLE_EXECUTABLE_NAME} add --url https://x.com/x external/x
       ${MULLE_EXECUTABLE_NAME} add --nodetype comment "Was denn hier los ?"
 
-   This command only affects the local sourcetree.
+   (This command only affects the local sourcetree.)
 
 Options:
 EOF
@@ -98,6 +98,43 @@ EOF
       echo "--if-missing           : only add, if a node with same adddress is not present"
    )  | sed "s|^|$*|" | sort
    echo >&2
+   exit 1
+}
+
+
+sourcetree_copy_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+    cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} copy <field> <dst> [config [src]]
+
+   Copy a node or parts of a node from another node. The copy command is
+   special in that it allows you to copy from another sourcetree.
+
+   "field" is one of the fields name (see below) or "ALL" to copy the whole
+   node.
+
+   "dst" is the node in the current sourcetree you want to copy too, it
+   must already exist, if you are copying a field. If you are using "ALL" then
+   it need not exist already.
+
+   "config" is the complete path to the config file of another project. If
+   you want to copy from the current sourcetree use ".". If left empty, then
+   "." is used.
+
+   "src" is the node in the sourcetree specified by "config". It must exist.
+   If left empty then "dst" is used as "src", unless "config" is ".".
+
+Example:
+   ${MULLE_EXECUTABLE_NAME} copy marks a b marks ~/x/.mulle/etc/sourcetree/config
+
+   (This command only affects the local sourcetree.)
+
+Fields:
+EOF
+   sourcetree_print_common_keys  "   " >&2
    exit 1
 }
 
@@ -115,10 +152,10 @@ Usage:
    this node is intended to reference the same URL so it marked as 'no-fs'
    to avoid duplicate fetches.
 
-   Examples:
-      ${MULLE_EXECUTABLE_NAME} duplicate foo
+Example:
+   ${MULLE_EXECUTABLE_NAME} duplicate foo
 
-   This command only affects the local sourcetree.
+   (This command only affects the local sourcetree.)
 
 Options:
 EOF
@@ -138,7 +175,7 @@ Usage:
 
    Remove a nodes with the given url.
 
-   This command only affects the local sourcetree.
+   (This command only affects the local sourcetree.)
 
 Options:
    --if-present : don't complain if address is missing
@@ -197,7 +234,7 @@ Usage:
    Examine the nodes marks with
        \`${MULLE_EXECUTABLE_NAME} -N list\`.
 
-   This command only affects the local sourcetree.
+   (This command only affects the local sourcetree.)
 
 Options:
    --match         : use regular expression to find address to match
@@ -245,7 +282,7 @@ Usage:
    Rename a mark. Marks with leading "only-" and "no-" will be affected but
    no others.
 
-   This command only affects the local sourcetree.
+   (This command only affects the local sourcetree.)
 
 Options:
    --match         : use regular expression to find address to match
@@ -270,7 +307,7 @@ Usage:
    Remove a negative mark from a node. A node stores only marks,
    prefixed by either "no-" or "only-". All positive marks are implicit set.
 
-   This command only affects the local sourcetree.
+   (This command only affects the local sourcetree.)
 
 Options:
    --match         : use regular expression to find address to match
@@ -319,7 +356,7 @@ Usage:
 
    Change any value of a node referenced by <address> with the set command.
    Changes are applied with the next sync.
-   This command only affects the local sourcetree.
+   (This command only affects the local sourcetree.)
 
 Keys:
 EOF
@@ -351,7 +388,7 @@ Keys:
    url          : the url of the node
    userinfo     : the userinfo of the node
 
-   This command only affects the local sourcetree.
+   (This command only affects the local sourcetree.)
 EOF
   exit 1
 }
@@ -691,9 +728,17 @@ sourcetree_change_nodeline_uuid()
    verifynodelines="`cfg_read "${SOURCETREE_START}"`"
    verifynodeline="`nodeline_find_by_uuid "${verifynodelines}" "${uuid}"`"
 
-   if [ "${verifynodeline}" != "${newnodeline}" ]
+   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" != 'YES' ]
    then
-      fail "Verify of config file failed."
+      if [ "${verifynodeline}" != "${newnodeline}" ]
+      then
+         fail "Verify of config file after write failed.
+${C_RESET}---
+${verifynodeline}
+---
+${newnodeline}
+---"
+      fi
    fi
 
    r_nodeline_get_address "${newnodeline}"
@@ -726,8 +771,6 @@ _sourcetree_append_new_node()
    #
    # now just some sanity checks and save it
    #
-   local mode
-
    if cfg_get_nodeline "${SOURCETREE_START}" "${_address}" > /dev/null
    then
       if [ "${OPTION_IF_MISSING}" = 'YES' ]
@@ -752,7 +795,7 @@ in the sourcetree (${RVAL#${MULLE_USER_PWD}/}). Use -f to skip this check."
 #      mode="${RVAL}"
 #   fi
 
-   node_augment "${mode}"
+   node_augment  # safe by default
 
    contents="`cfg_read "${SOURCETREE_START}" `"
    r_node_to_nodeline
@@ -1349,12 +1392,11 @@ sourcetree_write_nodeline_changed_marks()
 {
    local oldnodeline="$1"
 
-   r_nodemarks_sort "${_marks}"
-   r_nodemarks_simplify "${RVAL}"
+   r_node_sanitized_marks "${_marks}"
    _marks="${RVAL}"
-   
+
    r_node_to_nodeline
-   sourcetree_change_nodeline_uuid "${oldnodeline}" "${RVAL}" "${_uuid}"   
+   sourcetree_change_nodeline_uuid "${oldnodeline}" "${RVAL}" "${_uuid}"
 }
 
 
@@ -1384,8 +1426,9 @@ sourcetree_mark_node()
    local _userinfo
    local _uuid
 
-   local rval 
+   local rval
    local mark
+   local blurb
 
    nodeline_parse "${oldnodeline}" # !!
 
@@ -1400,36 +1443,41 @@ sourcetree_mark_node()
          no-*|only-*|version-*)
             if _nodemarks_contain "${_marks}" "${mark}"
             then
-               log_info "Node is already marked as \"${mark}\"."
+               log_info "Node \"${_address}\" is already marked as \"${mark}\"."
                continue
             fi
-            _sourcetree_add_mark_known_absent "${mark}" 
+            _sourcetree_add_mark_known_absent "${mark}"
             rval=$?
-            [ $rval -ne 0 ] && return $rval 
+            [ $rval -ne 0 ] && return $rval
          ;;
 
          [a-z_]*)
+            blurb='YES'
             if nodemarks_contain "${_marks}" "no-${mark}"
             then
-               mark="no-${mark}"
-               _sourcetree_remove_mark_known_present "${mark}" 
+               blurb='NO'
+               _sourcetree_remove_mark_known_present "no-${mark}"
                rval=$?
-               [ $rval -ne 0 ] && return $rval 
+               [ $rval -ne 0 ] && return $rval
             fi
 
             if nodemarks_contain "${_marks}" "only-${mark}"
             then
-               mark="only-${mark}"
-               _sourcetree_remove_mark_known_present "${mark}"
+               blurb='NO'
+               _sourcetree_remove_mark_known_present "only-${mark}"
                rval=$?
-               [ $rval -ne 0 ] && return $rval 
+               [ $rval -ne 0 ] && return $rval
             fi
 
-            log_info "Node already implicitly marked as \"${mark}\" (as are all postive marks)"
+            if [ "${blurb}" = 'YES' ]
+            then
+               log_info "Node \"${_address}\" is already implicitly marked as \
+\"${mark}\" (as a negative is absent)"
+            fi
          ;;
 
          *)
-            fail "Malformed mark \"${mark}\" (only lowercase identifiers please)"
+            fail "Malformed mark \"${mark}\" for node \"${_address}\" (only lowercase identifiers please)"
          ;;
       esac
    done
@@ -1547,6 +1595,174 @@ r_sourcetree_rename_mark_nodeline()
 }
 
 
+#
+# copy a field or all from another config, possibly from another project
+#
+sourcetree_get_nodeline_from_config()
+{
+   local config="$1"
+   shift
+
+   (
+      if [ ! -z "${config}" ]
+      then
+         r_absolutepath "${config}"
+         # hacky
+         SOURCETREE_START="#${RVAL}"
+      fi
+      sourcetree_get_nodeline "$@"
+   )
+}
+
+
+sourcetree_copy_node()
+{
+   log_entry "sourcetree_copy_node" "$@"
+
+   local fields="$1"
+   local input="$2"
+   local config="$3"
+   local from="$4"
+
+   local dst
+
+   if ! dst="`sourcetree_get_nodeline "${input}" `"
+   then
+      if [ "${fields}" != 'ALL' ]
+      then
+         fail "No node \"${input}\" found, to copy \"${field}\" to."
+      fi
+   fi
+
+   local src
+
+   if [ "${config}" = "." ]
+   then
+      if [ "${input}" = "${from}" ]
+      then
+         fail "Can't copy \"${input}\" unto itself"
+      fi
+
+      if ! src="`sourcetree_get_nodeline "${from}" `"
+      then
+         fail "No node \"${from}\" found, to copy from."
+      fi
+   else
+      if ! src="`sourcetree_get_nodeline_from_config "${config}" "${from}" `"
+      then
+         fail "No node \"${from}\" found, to copy from ${config}."
+      fi
+   fi
+
+   local _address
+   local _branch
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _raw_userinfo
+   local _tag
+   local _url
+   local _userinfo
+   local _uuid
+
+   nodeline_parse "${src}"
+
+   local memo
+   local field
+
+   if [ "${fields}" = "ALL" ]
+   then
+      if [ -z "${dst}" ]
+      then
+         _uuid=
+         _address="${input}"
+         _sourcetree_append_new_node
+         return $?
+      fi
+
+      # clobber all from src for now
+      nodeline_parse "${dst}"
+
+      # keep this
+      memo="${_uuid}"
+      nodeline_parse "${src}"
+      _uuid="${memo}"
+   else
+      set -o noglob; IFS=","
+      for field in ${fields}
+      do
+         IFS="${DEFAULT_IFS}"; set +o noglob
+         case "${field}" in
+            '*')
+               fail "* can not be mixed with other fields"
+            ;;
+
+            address)
+               memo="${_address}"
+               nodeline_parse "${dst}"
+               _address="${memo}"
+            ;;
+
+            branch)
+               memo="${_branch}"
+               nodeline_parse "${dst}"
+               _branch="${memo}"
+            ;;
+
+            fetchoptions)
+               memo="${_fetchoptions}"
+               nodeline_parse "${dst}"
+               _fetchoptions="${memo}"
+            ;;
+
+            marks)
+               memo="${_marks}"
+               nodeline_parse "${dst}"
+               _marks="${memo}"
+            ;;
+
+            nodetype)
+               memo="${_nodetype}"
+               nodeline_parse "${dst}"
+               _nodetype="${memo}"
+            ;;
+
+            tag)
+               memo="${_tag}"
+               nodeline_parse "${dst}"
+               _tag="${memo}"
+            ;;
+
+            url)
+               memo="${_url}"
+               nodeline_parse "${dst}"
+               _url="${memo}"
+            ;;
+
+            userinfo)
+               memo="${_raw_userinfo}"
+               nodeline_parse "${dst}"
+               _raw_userinfo="${memo}"
+            ;;
+
+            uuid)
+               fail "Field uuid can't be copied"
+            ;;
+
+            *)
+               fail "Field ${field} unknown"
+            ;;
+         esac
+      done
+      IFS="${DEFAULT_IFS}"; set +o noglob
+   fi
+
+   r_node_to_nodeline
+   sourcetree_change_nodeline_uuid "${dst}" "${RVAL}" "${_uuid}"
+}
+
+
+
 sourcetree_rename_marks()
 {
    log_entry "sourcetree_rename_marks" "$@"
@@ -1643,20 +1859,12 @@ sourcetree_common_main()
    local OPTION_IF_MISSING='NO'
    local OPTION_IF_PRESENT='NO'
    local OPTION_MATCH='NO'
-   local OPTION_CONFIG_FILE='DEFAULT'
 
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
             ${USAGE}
-         ;;
-
-         --config-file)
-            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
-            shift
-
-            OPTION_CONFIG_FILE="$1"
          ;;
 
          --print-common-keys)
@@ -1849,10 +2057,10 @@ sourcetree_common_main()
 
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          oldmark="$1"
-         [ -z "${oldmark}" ] && log_error "empty argument" && ${USAGE}
+         [ -z "${oldmark}" ] && log_error "empty oldmark argument" && ${USAGE}
          shift
          newmark="$1"
-         [ -z "${newmark}" ] && log_error "empty argument" && ${USAGE}
+         [ -z "${newmark}" ] && log_error "empty newmark argument" && ${USAGE}
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
@@ -1864,16 +2072,60 @@ sourcetree_common_main()
 
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          input="$1"
-         [ -z "${input}" ] && log_error "empty argument" && ${USAGE}
+         [ -z "${input}" ] && log_error "empty input argument" && ${USAGE}
          shift
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          newaddress="$1"
-         [ -z "${newaddress}" ] && log_error "empty argument" && ${USAGE}
+         [ -z "${newaddress}" ] && log_error "empty newaddress argument" && ${USAGE}
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree_set_node "${input}" address "${newaddress}"
       ;;
+
+      #
+      # copy takes: input, what line to change
+      #             field, what field to cnhange,
+      #             from, where to copy from
+      #             config, which file to copy from (can be empty)
+      #
+      copy)
+         local field
+         local from
+         local config
+
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         field="$1"
+         [ -z "${field}" ] && log_error "empty field argument" && ${USAGE}
+         shift
+
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         input="$1"
+         [ -z "${input}" ] && log_error "empty input argument" && ${USAGE}
+         shift
+
+         from="${input}"
+         config="."
+
+         if [ $# -ne 0 ]
+         then
+            config="$1"
+            [ -z "${config}" ] && log_error "empty config argument" && ${USAGE}
+            shift
+
+            if [ $# -eq 1 ]
+            then
+               from="$1"
+               [ -z "${from}" ] && log_error "empty from argument" && ${USAGE}
+               shift
+            fi
+         fi
+
+         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+
+         sourcetree_copy_node "${field}" "${input}" "${config}" "${from}"
+      ;;
+
    esac
 }
 
@@ -1973,6 +2225,17 @@ sourcetree_rename_marks_main()
    COMMAND="rename_marks"
    sourcetree_common_main "$@"
 }
+
+# maybe move elsewhere
+sourcetree_copy_main()
+{
+   log_entry "sourcetree_copy_main" "$@"
+
+   USAGE="sourcetree_copy_usage"
+   COMMAND="copy"
+   sourcetree_common_main "$@"
+}
+
 
 
 sourcetree_unmark_main()

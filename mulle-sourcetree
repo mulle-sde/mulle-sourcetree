@@ -454,7 +454,7 @@ main()
    fi
 
    case "${cmd}" in
-      add|get|duplicate|info|knownmarks|mark|move|rename|rename-marks|remove|set|unmark)
+      add|copy|get|duplicate|info|knownmarks|mark|move|rename|rename-marks|remove|set|unmark)
          # shellcheck source=src/mulle-sourcetree-config.sh
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
 

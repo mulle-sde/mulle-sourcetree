@@ -1,3 +1,35 @@
+## 0.24.0
+
+* new copy command can copy a node or a node field from another project
+* output some information text, when superflous or conflicting marks are detected (experimental)
+* added the rewrite command to fix/beautify marks
+* marks of nodes are now uniqued and sorted and not just sorted
+* improved sync speed for shared nodes
+* improved log and info output
+* special cmake output for frameworks
+* large revision of cmake marks, which have changes from f.e. cmakeadd to cmake-add now
+* added a lot of cmake- specific variants for global marks, like f.e. cmake-all-load in addition to the existing all-load
+* added `eval-add` command for batch processing mulle-sourcetree commands
+* added `rename-marks` command for painless upgrades
+* you can now have `comment` node types
+* The sync process should now be quite a bit faster, as superflous zombifications are avoided
+* the `bequeath` mark gains now a os relative variant `bequeath-os-...`
+* added a **filter** command, so you can test if a qualifier matches a list of marks
+* mulle-sourcetree avoids repository internet calls, if the tag can be determined as to reference only one version
+* mulle-sourcetree now falls back on a config in `share`, if none is found in `etc`. The `share` config is upgradable by design...
+* the **dbstatus** now outputs more and more helpful information
+* mulle-sourcetree now looks for a share/../config file as a fallback for the etc/../config file. This makes extension upgrades much easier to handle
+* new test command to test marks
+* new qualifier function ENABLES combines three often used MATCHES to test against no- and only-
+* improved and more understandable sourcetree status codes
+* mulle-sourcetree --output-uuid now prefixes uuid, which is more readable
+* mulle-sourcetree nodes can now be addressed by UUID as well
+* dbstatus return value reverted from 4 to 2 for dirty (sry)
+* adapt to `PROJECT_DOWNCASE_IDENTIFIER` and friends no longer being part of the default environment in new projects
+* adapt to mulle-fetch 2.0.0 and new mulle-domain
+* removed guess commands from sourcetree they are now exclusively in mulle-domain
+
+
 ### 0.23.1
 
 * fix indent for includes
