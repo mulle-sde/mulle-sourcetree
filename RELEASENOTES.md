@@ -1,3 +1,10 @@
+### 0.24.1
+
+* added **mulle-sourcetree-graph** script
+* added ``WALK_PARENT`` to the list of callback values
+* you can now specify the maximum and minimum depth of a walk with `--min-walk-level` and `--max-walk-level`
+* the address of a node can not contain ':' anymore
+
 ## 0.24.0
 
 * new copy command can copy a node or a node field from another project

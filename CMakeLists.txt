@@ -29,6 +29,7 @@ set( SCRIPTS
 mulle-sourcetree
 mulle-sourcetree-to-c
 mulle-sourcetree-to-cmake
+mulle-sourcetree-graph
 )
 
 

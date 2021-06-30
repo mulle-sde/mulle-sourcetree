@@ -101,13 +101,38 @@ r_nodeline_get_url()
 
    IFS=';' \
       read -r address nodetype marks uuid RVAL <<< "$*"
+
+   # RVAL will contain all the rest of the string, which we don't want
+   RVAL="${RVAL%%;*}"
 }
 
-
+# this needs to do proper expansion to evaluate the URL
 r_nodeline_get_evaled_url()
 {
-   r_nodeline_get_url "$@"
-   r_expanded_string "${RVAL}"
+   local _branch
+   local _address
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _tag
+   local _url
+   local _userinfo
+   local _raw_userinfo
+   local _uuid
+
+   nodeline_parse "$@"
+
+   # define MULLE_TAG and everything else, so we can propery expand
+
+   local _evaledurl
+   local _evalednodetype
+   local _evaledbranch
+   local _evaledtag
+   local _evaledfetchoptions
+
+   node_evaluate_values
+
+   r_expanded_string "${_url}"
 }
 
 
@@ -173,6 +198,9 @@ nodeline_parse()
 
    [ -z "${nodeline}" ] && internal_fail "nodeline_parse: nodeline is empty"
 
+   # MEMO: if there are stray ';' in the back they will be part of
+   # _raw_userinfo (its a bashism)
+   #
    IFS=";" \
       read -r _address _nodetype _marks _uuid \
               _url _branch _tag _fetchoptions \

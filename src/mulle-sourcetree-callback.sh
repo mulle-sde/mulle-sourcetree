@@ -69,6 +69,11 @@ __call_callback()
       ;;
    esac
 
+#   local owner
+#
+#   r_basename "${datasource#/}"
+#   owner="${RVAL:-.}"
+
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
       log_trace2 "NODE_ADDRESS:         \"${_address}\""
@@ -85,6 +90,7 @@ __call_callback()
       log_trace2 "WALK_DESTINATION:     \"${_destination}\""
       log_trace2 "WALK_MODE:            \"${mode}\""
       log_trace2 "WALK_NODE:            \"${_nodeline}\""
+      log_trace2 "WALK_PARENT:          \"${WALK_PARENT}\""
       log_trace2 "WALK_VIRTUAL:         \"${virtual}\""
       log_trace2 "WALK_VIRTUAL_ADDRESS: \"${_virtual_address}\""
    fi
@@ -126,7 +132,11 @@ __call_callback()
    WALK_DATASOURCE="${datasource}" \
    WALK_DESTINATION="${_destination}" \
    WALK_MODE="${mode}" \
+   WALK_INDENT="${WALK_INDENT}" \
+   WALK_INDEX="${WALK_INDEX}" \
+   WALK_LEVEL="${WALK_LEVEL}" \
    WALK_NODE="${_nodeline}" \
+   WALK_PARENT="${WALK_PARENT}" \
    WALK_VIRTUAL="${virtual}" \
    WALK_VIRTUAL_ADDRESS="${_virtual_address}" \
       ${evaluator} "${callback}" "$@"

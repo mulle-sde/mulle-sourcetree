@@ -430,10 +430,14 @@ walk_dotdump()
 
    if [ "${OPTION_OUTPUT_EVAL}" = 'YES' ]
    then
-      url="`eval "echo \"${url}\""`"
-      branch="`eval "printf \"%s\\\\\\\\n\" \"${branch}\""`"
-      tag="`eval "printf \"%s\\\\\\\\n\" \"${tag}\""`"
-      fetchoptions="`eval "printf \"%s\\\\\\\\n\" \"${fetchoptions}\""`"
+      r_expanded_string "${url}"
+      url="${RVAL}"
+      r_expanded_string "${branch}"
+      branch="${RVAL}"
+      r_expanded_string "${tag}"
+      tag="${RVAL}"
+      r_expanded_string "${fetchoptions}"
+      fetchoptions="${RVAL}"
    fi
 
    relative=""
@@ -553,15 +557,15 @@ walk_dotdump()
       html_print_node "${identifier}" \
                       "${isshared}"   \
                       "${title}" \
-                         "${url}" \
-                         "${address}" \
-                         "${branch}" \
-                         "${tag}" \
-                         "${nodetype}" \
-                         "${marks}" \
-                         "${fetchoptions}" \
-                         "${userinfo}" \
-                         "${uuid}"
+                      "${url}" \
+                      "${address}" \
+                      "${branch}" \
+                      "${tag}" \
+                      "${nodetype}" \
+                      "${marks}" \
+                      "${fetchoptions}" \
+                      "${userinfo}" \
+                      "${uuid}"
    else
       print_node "default" \
                  "${destination}" \
@@ -598,11 +602,11 @@ emit_root()
       html_print_node "${ROOT_IDENTIFIER}" \
                       'NO' \
                       "${title}" \
-                           "${url}" \
-                           "${PWD}" \
-                           "" \
-                           "" \
-                           "root"
+                      "${url}" \
+                      "${PWD}" \
+                      "" \
+                      "" \
+                      "root"
    else
       r_basename "${PWD}"
       print_node "root" \
@@ -715,6 +719,7 @@ EOF
 }
 
 
+
 sourcetree_dotdump_main()
 {
    log_entry "sourcetree_dotdump_main" "$@"
@@ -765,6 +770,7 @@ sourcetree_dotdump_main()
          --no-output-html)
             OPTION_OUTPUT_HTML='NO'
          ;;
+
          #
          # more common flags
          #

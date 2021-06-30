@@ -1,0 +1,83 @@
+#! /bin/sh 
+
+# per project settings, if available
+if [ -f .mulle/etc/sourcetree/graph-environment ]
+then
+   . .mulle/etc/sourcetree/graph-environment
+fi
+
+GRAPH_LIBRARIES="${GRAPH_LIBRARIES:-NO}"
+GRAPH_DEDUPE="${GRAPH_DEDUPE:-YES}"
+GRAPH_MAX_LEVEL="${GRAPH_MAX_LEVEL:-3}"
+
+case "$1" in
+   -h|--help|help)
+      cat <<EOF >&2
+Usage:
+   mulle-sourcetree-graph [libraries [dedupe  [level]]]
+
+   Create a pretty SVG picture of your projects dependencies as they
+   are stored in the mulle-sourcetree. The sourcetree must have been synced
+   before the picture can be rendered completely. The default graph is
+   prettier, but many edges (arrows) are hidden for simplification.
+
+   Needs the "dot" command (graphviz) to be installed.
+
+   Set libraries to YES to also dump libraries. (${GRAPH_LIBRARIES})
+   Set dedupe to NO to show all edges. (${GRAPH_DEDUPE})
+   Set max recursion depth (${GRAPH_MAX_LEVEL}). 
+
+EOF
+   exit 1
+esac
+
+
+libraries="${1:-${GRAPH_LIBRARIES}}"
+[ $# -ne 0 ] && shift
+
+dedupe="${1:-${GRAPH_DEDUPE}}"
+[ $# -ne 0 ] && shift
+
+level="${1:-${GRAPH_MAX_LEVEL}}"
+[ $# -ne 0 ] && shift
+
+( 
+   echo "digraph sourcetree"
+   echo "{"
+   echo "   node [ shape=\"box\"; style=\"filled\" ]"
+
+   WALK_PARENT="`basename "$PWD" `"
+
+   (
+      if [ "${dedupe}" = 'NO' ]
+      then
+         dedupe="--no-dedupe"
+         echo "The non-deduped dependency dump may take a very long time..." >&2
+      else
+         dedupe=""
+      fi
+
+      if [ "${libraries}" = 'YES' ]
+      then
+         WALK_PARENT="${WALK_PARENT}" \
+            mulle-sourcetree walk ${dedupe} \
+                                  --max-walk-level ${level} \
+                                  "$@" \
+                                  'echo "\"${WALK_PARENT}\" -> \"${NODE_ADDRESS}\""'
+      else
+         WALK_PARENT="${WALK_PARENT}" \
+            mulle-sourcetree walk --qualifier 'MATCHES fs' \
+                                  ${dedupe} \
+                                   --max-walk-level ${level} \
+                                  "$@" \
+                                  'echo "\"${WALK_PARENT}\" -> \"${NODE_ADDRESS}\""'
+      fi
+
+   ) \
+   | sort \
+   | sort -u \
+   | sed 's/^/   /'  \
+
+   echo "}"
+) \
+| dot -Tsvg

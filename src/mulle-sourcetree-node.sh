@@ -275,6 +275,11 @@ r_node_to_nodeline()
          fail "Address \"${_address}\" starts with a dot"
       ;;
 
+      # this is is our "easy" URL distinction, so disallowe it as node name
+      *":"*)
+         fail "Address \"${_address}\" contains colon"
+      ;;
+
       *";"*)
          fail "Address \"${_address}\" contains semicolon"
       ;;

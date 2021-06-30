@@ -1253,7 +1253,8 @@ sourcetree_remove_node()
       then
          return 0
       fi
-      return 2  # also return non 0 , but lets's not be dramatic about it
+      return 3  # also return non 0 , but lets's not be dramatic about it
+                # 1 is an error, 2 stacktraces
    fi
 
    local uuid

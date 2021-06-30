@@ -140,7 +140,7 @@ Options:
    -q <value>       : qualifier for marks to match (e.g. MATCHES build)
    --cd             : change directory to node's working directory
    --lenient        : allow shell command to error
-   --backwards      : walk tree nodes backwards [rarely useful]de duplicates
+   --backwards      : walk tree nodes backwards, rarely useful
    --in-order       : walk tree depth first  (Root, Left, Right
    --no-dedupe      : walk all nodes in the tree (very slow)
    --pre-order      : walk tree in pre-order  (Root, Left, Right)
@@ -407,6 +407,16 @@ doesn't jive with permissions \"${filterpermissions}\""
       fi
    fi
 
+   if [ ${WALK_LEVEL} -lt ${OPTION_MIN_WALK_LEVEL:-0} ]
+   then
+      return 0
+   fi
+
+   if [ ${WALK_LEVEL} -ge ${OPTION_MAX_WALK_LEVEL:-9999} ]
+   then
+      return 0
+   fi
+
    local rval
 
    rval=0
@@ -511,8 +521,11 @@ to WILL_DESCEND_CALLBACK"
    #
    # Preserve state and globals vars, so dont subshell
    #
+   local old_walk_parent="${WALK_PARENT}"
+
    WALK_INDENT="${WALK_INDENT} "
    WALK_LEVEL=$((WALK_LEVEL + 1))
+   WALK_PARENT="${_address}"
 
    local rval
 
@@ -532,6 +545,7 @@ to WILL_DESCEND_CALLBACK"
 
    WALK_LEVEL=$((WALK_LEVEL - 1))
    WALK_INDENT="${WALK_INDENT%?}"
+   WALK_PARENT="${old_walk_parent}"
 
    if [ $rval -eq 0 -a ! -z "${DID_DESCEND_CALLBACK}" ]
    then
@@ -1393,6 +1407,7 @@ walk_config_uuids()
    local WALK_INDENT=""
    local WALK_LEVEL=0
    local WALK_INDEX=0
+   local WALK_PARENT="${WALK_PARENT:-.}"
 
    WALKED=
    VISITED=
@@ -1632,10 +1647,11 @@ sourcetree_walk_main()
    local OPTION_TRAVERSE_STYLE="PREORDER"
    local OPTION_WALK_DB='DEFAULT'
    local CONFIGURATION="Release"
-   local OPTION_WALK_LEVEL_ZERO=0
    local WALK_VISIT_CALLBACK=
    local WALK_DESCEND_CALLBACK=
    local OPTION_DEDUPE_MODE=''
+   local OPTION_MIN_WALK_LEVEL=
+   local OPTION_MAX_WALK_LEVEL=
 
    while [ $# -ne 0 ]
    do
@@ -1707,10 +1723,6 @@ sourcetree_walk_main()
             OPTION_BEQUEATH='NO'
          ;;
 
-         --walk-level)
-            OPTION_WALK_LEVEL_ZERO=$((OPTION_WALK_LEVEL_ZERO - 1))
-         ;;
-
          --dedupe|--dedupe-mode)
             [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
             shift
@@ -1769,6 +1781,20 @@ sourcetree_walk_main()
             shift
 
             DID_WALK_CALLBACK="$1"
+         ;;
+
+         --min-walk-level)
+            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            shift
+
+            OPTION_MIN_WALK_LEVEL="$1"
+         ;;
+
+         --max-walk-level)
+            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            shift
+
+            OPTION_MAX_WALK_LEVEL="$1"
          ;;
 
          #
