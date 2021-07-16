@@ -499,6 +499,19 @@ sourcetree_status()
       return $rval
    fi
 
+   local column 
+   local column_cmd 
+
+   column_cmd="cat"
+
+   column="`command -v column`"
+   if [ ! -z "${column}" ]
+   then
+      column_cmd="'${column}' '-t' '-s;'"
+   else
+      log_warning "column command not installed, unformatted output"
+   fi
+
    #
    # sorting lines is harmless and this removes some duplicates too
    # which we would otherwise have to filter
@@ -536,7 +549,7 @@ sourcetree_status()
 
    case ",${mode}," in
       *,output-formatted,*)
-         printf "%s\n" "${output}" | column -t -s';'
+         printf "%s\n" "${output}" | eval "${column_cmd}"
       ;;
 
       *)

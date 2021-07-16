@@ -127,8 +127,14 @@ Usage:
    "src" is the node in the sourcetree specified by "config". It must exist.
    If left empty then "dst" is used as "src", unless "config" is ".".
 
-Example:
+Examples:
+   Copy marks from "b" of config in project "x" to "a" of the current project:
+
    ${MULLE_EXECUTABLE_NAME} copy marks a b marks ~/x/.mulle/etc/sourcetree/config
+
+   Copy all fields of node "EOAccess" of same config into "EOControl":
+
+   ${MULLE_EXECUTABLE_NAME} copy ALL EOControl . EOAccess
 
    (This command only affects the local sourcetree.)
 

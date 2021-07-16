@@ -288,9 +288,22 @@ sourcetree_list_sourcetree()
       _sourcetree_banner
    fi
 
+   local column 
+   local column_cmd 
+
+   column_cmd="cat"
+
+   column="`command -v column`"
+   if [ ! -z "${column}" ]
+   then
+      column_cmd="'${column}' '-t' '-s;'"
+   else
+      log_warning "column command not installed, unformatted output"
+   fi
+
    case ",${mode}," in
       *,output_column,*)
-         ( _list_sourcetree "$@" ; echo )  | rexekutor column -t -s ';'
+         ( _list_sourcetree "$@" ; echo )  | eval "${column_cmd}"
       ;;
 
       *)
