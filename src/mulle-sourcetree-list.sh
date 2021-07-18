@@ -98,6 +98,8 @@ Options:
    -m                       : output marks
    -r                       : recursive list
    -u                       : output URL information  (use -U for raw output)
+   --bequeath               : inherit nodes marked no-bequeath
+   --no-bequeath            : don't inherit nodes marked no-bequeath (default)
    --config-file <file>     : list a specific config file (no recursion)
    --dedupe-mode <mode>     : change the way duplicates are detected
    --format <format>        : supply a custom format (abfimntu_)
