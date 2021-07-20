@@ -32,7 +32,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_C_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.24.2"
+MULLE_EXECUTABLE_VERSION="0.25.0"
 
 
 usage()
@@ -340,7 +340,7 @@ emit_c_header()
    headers="`exekutor mulle-sourcetree list \
                                        --format "%_;%a;%m;%i={include,,-------}\\n" \
                                        --marks "${filter_marks}" \
-                                       --bequeath \
+                                       --no-bequeath \
                                        --output-format raw \
                                        --no-output-header`" || return 1
 

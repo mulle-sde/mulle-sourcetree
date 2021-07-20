@@ -33,7 +33,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_CMAKE_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.24.2"
+MULLE_EXECUTABLE_VERSION="0.25.0"
 
 
 usage()
@@ -1105,7 +1105,7 @@ MATCHES header AND \
    header="`rexekutor "${MULLE_SOURCETREE}" -V \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
-                              --bequeath \
+                              --no-bequeath \
                               --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
                               --qualifier "${qualifier}" \
                               --output-format raw \
@@ -1124,7 +1124,7 @@ NOT MATCHES only-framework"
    dependency="`rexekutor "${MULLE_SOURCETREE}" -V \
                               ${MULLE_TECHNICAL_FLAGS} \
                            list \
-                              --bequeath \
+                              --no-bequeath \
                               --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
                               --qualifier "${qualifier}" \
                               --output-format raw \
@@ -1144,7 +1144,7 @@ MATCHES only-framework"
    dependency="`rexekutor "${MULLE_SOURCETREE}" -V \
                               ${MULLE_TECHNICAL_FLAGS} \
                            list \
-                              --bequeath \
+                              --no-bequeath \
                               --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
                               --qualifier "${qualifier}" \
                               --output-format raw \
@@ -1178,7 +1178,7 @@ MATCHES no-fs AND \
    header="`exekutor "${MULLE_SOURCETREE}" -V \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
-                           --bequeath \
+                           --no-bequeath \
                            --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
                            --qualifier "${qualifier}" \
                            --output-format raw \
@@ -1198,7 +1198,7 @@ NOT MATCHES only-framework"
    library="`exekutor "${MULLE_SOURCETREE}" -V \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
-                           --bequeath \
+                           --no-bequeath \
                            --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
                            --qualifier "${qualifier}" \
                            --output-format raw \
@@ -1218,7 +1218,7 @@ MATCHES only-framework"
    library="`exekutor "${MULLE_SOURCETREE}" -V \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
-                           --bequeath \
+                           --no-bequeath \
                            --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
                            --qualifier "${qualifier}" \
                            --output-format raw \

@@ -1029,7 +1029,7 @@ walk_nodeline()
    # it is invisble to a.
    #
    case ",${mode}," in
-      *,bequeath,*)
+      *,no-bequeath,*)
          if [ ${WALK_LEVEL} -gt 0 ]
          then
             # node marked as no-bequeath   : ignore
@@ -1628,7 +1628,7 @@ sourcetree_walk_main()
 
    local MULLE_ROOT_DIR
 
-   local OPTION_BEQUEATH='DEFAULT'
+   local OPTION_BEQUEATH='NO'
    local OPTION_CALLBACK_QUALIFIER=""
    local OPTION_CALLBACK_ROOT='DEFAULT'
    local OPTION_CALLBACK_TRACE='YES'
@@ -1927,10 +1927,10 @@ ${C_RESET}   address address-filename address-marks-filename address-url
 ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
    esac
 
-   # this usually adhere to the no-bequeath flags unless set
-   if [ "${OPTION_BEQUEATH}" = 'YES' ]
+   # this usually adhere to the no-bequeath flags unless set to YES
+   if [ "${OPTION_BEQUEATH}" = 'NO' ]
    then
-      r_comma_concat "${mode}" "bequeath"
+      r_comma_concat "${mode}" "no-bequeath"
       mode="${RVAL}"
    fi
    if [ "${OPTION_CALLBACK_ROOT}" = 'YES' ]

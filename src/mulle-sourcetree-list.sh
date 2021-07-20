@@ -98,8 +98,8 @@ Options:
    -m                       : output marks
    -r                       : recursive list
    -u                       : output URL information  (use -U for raw output)
-   --bequeath               : inherit nodes marked no-bequeath
-   --no-bequeath            : don't inherit nodes marked no-bequeath (default)
+   --bequeath               : inherit from nodes marked no-bequeath
+   --no-bequeath            : don't inherit from no-bequeath nodes (default)
    --config-file <file>     : list a specific config file (no recursion)
    --dedupe-mode <mode>     : change the way duplicates are detected
    --format <format>        : supply a custom format (abfimntu_)
@@ -370,9 +370,9 @@ ${C_RESET}   address address-filename address-url filename nodeline
    esac
 
    # this is the default for listing, ignore the bequeath flags
-   if [ "${OPTION_BEQUEATH}" = 'YES' ]
+   if [ "${OPTION_BEQUEATH}" = 'NO' ]
    then
-      r_comma_concat "${RVAL}" "bequeath"
+      r_comma_concat "${RVAL}" "no-bequeath"
    fi
 
    if [ "${OPTION_OUTPUT_URL}" != 'NO' ]
@@ -476,9 +476,9 @@ warn_if_sync_outstanding()
    rval=$?
    MULLE_FLAG_LOG_TERSE="${memo}"
 
-   if [ $rval -ne 0 ]
+   if [ $rval -eq 2 ]
    then
-      log_warning "Listing will be complete after a sync."
+      log_warning "Listing will be complete after a sync (${PWD#${MULLE_USER_PWD}/})."
    fi   
 }
 

@@ -185,7 +185,7 @@ sourcetree_craftorder_main()
 
    local OPTION_CALLBACK
    local OPTION_ABSOLUTE='NO'
-   local OUTPUT_BEQUEATH='NO'
+   local OUTPUT_BEQUEATH='YES'   # default for craftorder
    local OUTPUT_MARKS='YES'
    local OUTPUT_DIRECTION='FORWARD'
    local OUTPUT_RAW_USERINFO='NO'
