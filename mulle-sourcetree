@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#! /bin/sh
 #
 #   Copyright (c) 2015-2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -32,19 +32,79 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_SOURCETREE_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="0.25.0"
+####
+#
+# Prelude to be placed at top of each script. Rerun this script either in
+# bash or zsh, if not already running in either (which can happen!)
+# Allows script to run on systems that either have bash (linux) or
+# zsh (macOS) only by default.
+#
+# zsh is a major win, when doing things like list -r --no-dedupe
+# so try to use it, if we aren't running it yet, even if we are running bash
+#
+if [ "$1" != --no-auto-shell ]
+then
+   if [ -z "${ZSH_VERSION}" ]
+   then
+      exe_shell="`command -v "zsh" `"
+
+      if [ ! -z "${exe_shell}" -o  -z "${BASH_VERSION}" ]
+      then
+         exe_shell="${exe_shell:-`command -v "bash" `}"
+
+         script="$0"
+
+         #
+         # Quote incoming arguments for shell expansion
+         #
+         quote="'"
+         args=""
+         for arg in "$@"
+         do
+            # True bourne sh doesn't know ${a//b/c} and <<<
+            case "${arg}" in
+               *\'*)
+                  # Use cat instead of echo to avoid possible echo -n
+                  # problems. Escape single quotes in string.
+                  arg="`
+cat <<EOF | sed -e s/\'/\'\"\'\"\'/g
+${arg}
+EOF
+`"
+               ;;
+            esac
+            args="${args} '${arg}'"
+         done
+
+         #
+         # bash/zsh will use arg after -c <arg> as $0, convenient!
+         #
+
+         exec "${exe_shell:-bash}" -c ". ${script} --no-auto-shell ${args}" "${script}"
+      fi
+   fi
+
+   if [ ! -z "${BASH_VERSION}" ]
+   then
+      set +o posix
+   fi
+else
+   shift    # get rid of --no-auto-shell
+fi
+
+
+#
+# Main script to follow, runs now either in zsh or bash
+#
+####
+
+
+MULLE_EXECUTABLE_VERSION="0.26.0"
 
 #
 # This is the main user interface to mulle-sourcetree
 # sorta like git
 #
-
-trap_fail()
-{
-   exit 1
-}
-
-
 
 print_commands()
 {
@@ -170,7 +230,8 @@ __check_sane_stash_dir()
 
    local physical
 
-   physical="`physicalpath "${MULLE_SOURCETREE_STASH_DIR}"`"
+   r_physicalpath "${MULLE_SOURCETREE_STASH_DIR}"
+   physical="${RVAL}"
 
    # if it doesn't exist then we can't say much about it
    if [ ! -z "${physical}" ]
@@ -336,7 +397,7 @@ main()
             MULLE_FLAG_DEFER="NONE"
          ;;
 
-         -V|--virtual-root)                # stay in PWD
+         --virtual-root)                # stay in PWD
             MULLE_FLAG_DEFER="VIRTUAL"
          ;;
 
@@ -373,6 +434,11 @@ main()
          --version)
             printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
             exit 0
+         ;;
+
+         --zprof)
+            RUN_ZPROF='YES'
+            zmodload "zsh/zprof" || exit 1
          ;;
 
          -*)
@@ -591,14 +657,12 @@ echo \"\${NODE_MARKS} \${NODE_TAG} \${NODE_BRANCH} \${NODE_URL} (\${WALK_DATASOU
 ###
 _init()
 {
-   #
-   # minimal setup exit
-   #
-   if [ "$1" = "version" ]
-   then
-      printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
-      exit 0
-   fi
+   # mingw stuff
+   case "$PATH" in
+      '\\'*)
+         PATH="${PATH//\\/\/}"
+      ;;
+   esac
 
    if [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ]
    then
@@ -623,26 +687,48 @@ _init()
    # shellcheck source=../mulle-bashfunctions/src/mulle-file.sh
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"             || exit 1
 
-   r_get_libexec_dir "$0" "mulle-sourcetree" "mulle-sourcetree-config.sh"
-   MULLE_SOURCETREE_LIBEXEC_DIR="${RVAL}"
+   if [ -z "${MULLE_SOURCETREE_LIBEXEC_DIR}" ]
+   then
+      r_get_libexec_dir "$0" "mulle-sourcetree" "mulle-sourcetree-config.sh"
+      MULLE_SOURCETREE_LIBEXEC_DIR="${RVAL}"
+   fi
 
    #
-   # minimal setup exit
+   # commands with minimal trap setup
    #
-   case "$1" in
-      "libexec-dir"|"library-path")
-         printf "%s\n" "${MULLE_SOURCETREE_LIBEXEC_DIR}"
-         exit 0
-      ;;
-   esac
+   if [ $# -eq 1 ]
+   then
+      case "${1}" in
+         libexec-dir|library-path)
+            printf "%s\n" "${MULLE_SOURCETREE_LIBEXEC_DIR}"
+            exit 0
+         ;;
+
+         version)
+            printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
+            exit 0
+         ;;
+      esac
+   fi
 
    #  set -e # more pain then gain in the end
    #  set -u # doesn't work with my style
 
-   trap trap_fail INT
-   set -o pipefail
+   shell_enable_pipefail
+   shell_enable_extglob
 
    MULLE_ARGUMENTS="$*"
+
+   local rval
+
+   call_main "${MULLE_SOURCETREE_FLAGS}" "$@"
+   rval=$?
+
+   if [ "${RUN_ZPROF}" = 'YES' ]
+   then
+      zprof
+   fi
+   return $rval
 }
 ###
 ### INIT
@@ -651,16 +737,3 @@ _init()
 
 
 _init "$@" # needs params
-
-quote="'"
-args=""
-for arg in "$@"
-do
-   arg="${arg//${quote}/${quote}\"${quote}\"${quote}}"
-   args="${args} '${arg}'"
-done
-
-unset quote
-unset arg
-
-eval main "${MULLE_SOURCETREE_FLAGS}" "${args}"

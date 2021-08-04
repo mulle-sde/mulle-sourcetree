@@ -80,10 +80,10 @@ _r_nodemarks_find_prefix()
 
    local i
 
-   set -o noglob ; IFS=","
+   shell_disable_glob ; IFS=","
    for i in ${marks}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
       case "${i}" in
          "${prefix}"*)
             RVAL="$i"
@@ -91,7 +91,7 @@ _r_nodemarks_find_prefix()
          ;;
       esac
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    RVAL=""
    return 1
@@ -233,10 +233,10 @@ nodemarks_version_match()
    local i
    local markvalue
 
-   set -o noglob ; IFS=","
+   shell_disable_glob ; IFS=","
    for i in ${marks}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
       case "$i" in
          "${key}"-*)
@@ -284,7 +284,7 @@ nodemarks_version_match()
             esac
       esac
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    return 2  # no match found
 }
@@ -331,27 +331,29 @@ nodemarks_match()
    local marks="$1"
    local pattern="$2"
 
-   local cmd
-   local rval
-
    case "${pattern}" in
       "no-"*"*"*|"no-"*"["*"]"*|"only-"*"*"*|"only-"*"["*"]"*|"version-"*"*"*|"version-"*"["*"]"*)
-         cmd="u"
-         if shopt -q extglob
-         then
-            cmd="s"
-         fi
+         local rval
 
          rval=1
          pattern="${pattern//\*/*([^,])}"
 
-         shopt -s extglob
-         case ",${marks}," in
-            *\,${pattern}\,*)
-               rval=0
-            ;;
-         esac
-         shopt -${cmd} extglob
+         shell_is_extglob_enabled || internal_fail "extglob must be enabled"
+
+         if [ ! -z "${ZSH_VERSION}" ]
+         then
+            case ",${marks}," in
+               *\,${~pattern}\,*)
+                  rval=0
+               ;;
+            esac
+         else
+            case ",${marks}," in
+               *\,${pattern}\,*)
+                  rval=0
+               ;;
+            esac
+         fi
          return $rval
       ;;
 
@@ -408,10 +410,10 @@ nodemarks_compatible_with_nodemarks()
 
    local key
 
-   set -o noglob ; IFS=","
+   shell_disable_glob ; IFS=","
    for key in ${anymarks}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
       case "${key}" in
          no-*)
             key="${key:3}"
@@ -439,7 +441,7 @@ nodemarks_compatible_with_nodemarks()
          fi
       fi
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    return 0
 }
@@ -453,16 +455,16 @@ nodemarks_intersect()
 
    local key
 
-   set -o noglob ; IFS=","
+   shell_disable_glob ; IFS=","
    for key in ${anymarks}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
       if _nodemarks_contain "${marks}" "${key}"
       then
          return 0
       fi
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    return 1
 }
@@ -478,13 +480,13 @@ r_nodemarks_simplify()
    local result
    local key
 
-   set -o noglob ; IFS=","
+   shell_disable_glob ; IFS=","
    for key in ${marks}
    do
       r_nodemarks_add "${result}" "${key}"
       result="${RVAL}"
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    RVAL="${result}"
 }
@@ -612,7 +614,13 @@ _nodemarks_filter_sexpr()
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
          key="${_s%%[[:space:])]*}"
          _s="${_s#"${key}"}"
-         value="${!key}"
+
+         if [ ! -z "${ZSH_VERSION}" ]
+         then
+            value="${(P)key}"
+         else
+            value="${!key}"
+         fi
          [ ! -z "${value}" ]
          return $?
       ;;
@@ -732,10 +740,10 @@ nodemarks_walk()
    local i
    local rval=0
 
-   set -o noglob ; IFS=","
+   shell_disable_glob ; IFS=","
    for i in ${marks}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
       "${callback}" "${i}" "$@"
       rval=$?
@@ -745,7 +753,7 @@ nodemarks_walk()
          break
       fi
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    return $rval
 }
@@ -787,16 +795,16 @@ assert_sane_nodemarks()
 
    local mark
 
-   IFS=","; set -o noglob
+   IFS=","; shell_disable_glob
    for mark in ${marks}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       [ -z "${mark}" ] && continue
 
       assert_sane_nodemark "${mark}"
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 }
 
 
@@ -824,7 +832,7 @@ nodemark_only_framework_consistency_check()
 
    if nodemarks_enable "${marks}" cmake-add
    then
-      log_info "Framework \"${address}\" doesn't need cmake-add (no-cmake-add)"
+      log_info "Framework \"${address}\" doesn't need cmake-add. (Use no-cmake-add to make reflected files prettier)"
    fi
 }
 
@@ -860,19 +868,19 @@ nodemarks_check_consistency()
 
    local f
 
-   IFS=","; set -o noglob
+   IFS=","; shell_disable_glob
    for mark in ${marks}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       [ -z "${mark}" ] && continue
 
       f="nodemark_${mark//-/_}_consistency_check"
-      if [ "`type -t "${f}" `" = "function" ]
+      if shell_is_function "${f}"
       then
          ${f} "${mark}" "${marks}" "${address}"
       fi
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 } 
 

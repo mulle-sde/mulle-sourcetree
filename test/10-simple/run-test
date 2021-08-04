@@ -5,11 +5,15 @@
 
 run_mulle_sourcetree()
 {
-   log_fluff "####################################"
+   log_fluff "####################################" >&2
    log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
-   log_fluff "####################################"
+   log_fluff "####################################" >&2
 
-   exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   (
+      MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
+
+      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS} "$@"
+   )
 }
 
 
@@ -107,7 +111,7 @@ test_simple_add_remove()
    then
       internal_fail "c: failed unexpectedly"
    fi
-   [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "c: .mulle/etc/sourcetree/config should not exist anymore"
+   [ -e ".mulle/etc/sourcetree/config" ] || internal_fail "c: .mulle/etc/sourcetree/config should still exist"
    [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "c: .mulle/var/sourcetree/db should not exist"
 
    :
@@ -116,7 +120,7 @@ test_simple_add_remove()
 
 test_update1()
 {
-   [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "a: .mulle/etc/sourcetree/config should not exist anymore"
+   [ -e ".mulle/etc/sourcetree/config" ] || internal_fail "a: .mulle/etc/sourcetree/config should still exist"
    [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "a: .mulle/var/sourcetree/db should not exist"
    [ -e "foo" ]                          && internal_fail "a: foo should not exist"
 
@@ -143,7 +147,7 @@ test_update1()
       internal_fail "c: remove failed unexpectedly"
    fi
 
-   [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "d: .mulle/etc/sourcetree/config should not exist anymore"
+   [ -e ".mulle/etc/sourcetree/config" ] || internal_fail "d: .mulle/etc/sourcetree/config should still exist"
    [ -e ".mulle/var/sourcetree/db" ]     || internal_fail "d: .mulle/var/sourcetree/db should exist"
    [ -f "foo/VERSION" ]                  || internal_fail "d: foo/VERSION should exist"
 
@@ -152,7 +156,7 @@ test_update1()
       internal_fail "d: update failed unexpectedly"
    fi
 
-   [ -e ".mulle/etc/sourcetree/config" ]    && internal_fail "e: .mulle/etc/sourcetree/config should not exist anymore"
+   [ -e ".mulle/etc/sourcetree/config" ]    || internal_fail "e: .mulle/etc/sourcetree/config should still exist"
    [ -e "foo" ]                             && internal_fail "e: foo should not exist"
    [ -e ".mulle/var/sourcetree/db" ]        || internal_fail "e: .mulle/var/sourcetree/db should exist"
    [ -e ".mulle/var/sourcetree/graveyard" ] || internal_fail "e: .mulle/var/sourcetree/graveyard should exist"
@@ -165,7 +169,7 @@ test_update2()
 {
    rm -rf foo 2> /dev/null
    rm -rf .mulle/var/sourcetree/db 2> /dev/null
-   rm -f .mulle/etc/config/sourcetree 2> /dev/null
+   rm -f .mulle/etc/sourcetree/config 2> /dev/null
 
    [ -e ".mulle/etc/sourcetree/config" ] && internal_fail "a: .mulle/etc/sourcetree/config should not exist anymore"
    [ -e ".mulle/var/sourcetree/db" ]     && internal_fail "a: .mulle/var/sourcetree/db should not exist"
@@ -206,7 +210,7 @@ test_update2()
 
    [ -e ".mulle/etc/sourcetree/config" ] || internal_fail "e: .mulle/etc/sourcetree/config should exist"
    [ -e ".mulle/var/sourcetree/db" ]     || internal_fail "e: .mulle/var/sourcetree/db should exist"
-   [ -f "foo/VERSION" ]                  && internal_fail "e: foo/VERSION should exist"
+   [ -f "foo/VERSION" ]                  && internal_fail "e: foo/VERSION should not exist anymore"
    [ -f "bar/VERSION" ]                  || internal_fail "e: bar/VERSION should exist"
 
    :
@@ -221,7 +225,8 @@ main()
 
    local directory
 
-   directory="`make_tmp_directory`" || exit 1
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
 
    SOURCETREE_DB_FILENAME=".mulle/var/sourcetree/db"
    export SOURCETREE_DB_FILENAME

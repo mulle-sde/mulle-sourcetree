@@ -5,11 +5,15 @@
 
 run_mulle_sourcetree()
 {
-   log_fluff "####################################"
+   log_fluff "####################################" >&2
    log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
-   log_fluff "####################################"
+   log_fluff "####################################" >&2
 
-   exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   (
+      MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
+
+      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS} "$@"
+   )
 }
 
 #
@@ -161,8 +165,8 @@ main()
 
    local directory
 
-   directory="`make_tmp_directory`" || exit 1
-
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
    local project
 
    project="${directory}/project"

@@ -133,7 +133,6 @@ r_sourcetree_resolve_url_with_tag()
    local type 
    local rval
 
-
    type="`rexekutor "${MULLE_SEMVER:-mulle-semver}" \
                          ${MULLE_TECHNICAL_FLAGS} \
                       "qualifier-type" \
@@ -184,7 +183,6 @@ sourcetree_sync_operation()
    [ -z "${_address}" ] && fail "Address is empty"
    [ -z "${_url}" ] && fail "URL is empty"
 
-   local rval
    local original_nodetype
    local original_tag
    local original_branch
@@ -306,6 +304,8 @@ MULLE_SOURCETREE_RESOLVE_TAG is NO"
       cmdoptions="${RVAL}"
    fi
 
+   local rval
+
    case "${_evalednodetype}" in
       file)
          # does not implement local search
@@ -322,7 +322,6 @@ ${C_RESET_BOLD}${_evaledurl}${C_INFO}"
          local localurl
          local localnodetype
          local cmd2options
-         local rval
 
          cmd2options="${cmdoptions}"
          if [ ! -z "${_evaledurl}" ]
@@ -379,8 +378,6 @@ ${C_RESET_BOLD}${_evaledurl}${C_INFO}"
       cmdoptions="${RVAL}"
    fi
 
-   local rval
-
    eval_exekutor ${MULLE_FETCH:-mulle-fetch} \
                        "${MULLE_TECHNICAL_FLAGS}" \
                     "${opname}" \
@@ -404,11 +401,17 @@ r_sourcetree_list_operations()
       && internal_fail "comment should have been ignored previously"
 
    local cachekey
-
+   local cachekey_value
    r_uppercase "${nodetype}"
    cachekey="_SOURCETREE_OPERATIONS_${RVAL}"
+   if [ ! -z "${ZSH_VERSION}" ]
+   then
+      cachekey_value="${(P)cachekey}"
+   else
+      cachekey_value="${!cachekey}"
+   fi
 
-   if [ -z "${!cachekey}" ]
+   if [ -z "${cachekey_value}" ]
    then
       if ! value="`"${MULLE_FETCH:-mulle-fetch}" \
                   ${MULLE_TECHNICAL_FLAGS} \
@@ -422,9 +425,11 @@ r_sourcetree_list_operations()
          value="EMPTY"
       fi
       printf -v "${cachekey}" "%s" "${value}"
+
+      cachekey_value="${value}"
    fi
 
-   RVAL=${!cachekey}
+   RVAL="${cachekey_value}"
    case "${value}" in
       ERROR)
          RVAL=""

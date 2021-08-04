@@ -220,22 +220,20 @@ nodeline_parse()
    _marks="${_marks//no-os-/no-platform-}"
 
    # early escape here
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'NO' ]
+   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
-      return
+      log_trace2 "ADDRESS:      \"${_address}\""
+      log_trace2 "NODETYPE:     \"${_nodetype}\""
+      log_trace2 "MARKS:        \"${_marks}\""
+      log_trace2 "UUID:         \"${_uuid}\""
+      log_trace2 "URL:          \"${_url}\""
+      log_trace2 "BRANCH:       \"${_branch}\""
+      log_trace2 "TAG:          \"${_tag}\""
+      log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
+      log_trace2 "RAW_USERINFO: \"${_raw_userinfo}\""
    fi
 
-   log_trace2 "ADDRESS:      \"${_address}\""
-   log_trace2 "NODETYPE:     \"${_nodetype}\""
-   log_trace2 "MARKS:        \"${_marks}\""
-   log_trace2 "UUID:         \"${_uuid}\""
-   log_trace2 "URL:          \"${_url}\""
-   log_trace2 "BRANCH:       \"${_branch}\""
-   log_trace2 "TAG:          \"${_tag}\""
-   log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
-   log_trace2 "RAW_USERINFO: \"${_raw_userinfo}\""
-
-   :
+   return 0
 }
 
 
@@ -274,10 +272,10 @@ nodeline_remove()
 
    local nodeline
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
       case "${nodeline}" in
          ^#*)
             printf "%s\n" "${nodeline}"
@@ -291,7 +289,7 @@ nodeline_remove()
          printf "%s\n" "${nodeline}"
       fi
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 }
 
 
@@ -318,10 +316,10 @@ _r_nodeline_find()
       esac
    fi
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       "${lookup}" "${nodeline}"
       other="${RVAL}"
@@ -344,7 +342,7 @@ _r_nodeline_find()
          esac
       fi
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 
    RVAL=
    return 1
@@ -428,10 +426,10 @@ nodeline_has_duplicate()
    local address="$2"
    local uuid="$3"
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       local _address
       local _nodetype
@@ -448,7 +446,7 @@ nodeline_has_duplicate()
          fi
       fi
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 
    return 1
 }
@@ -552,6 +550,7 @@ nodeline_printf_header()
 
    local name
    local dash
+   local tmp
 
    while [ ! -z "${formatstring}" ]
    do
@@ -597,8 +596,6 @@ nodeline_printf_header()
                   dash="------"
                fi
                # skip over format string
-               local tmp
-
                tmp="`sed 's/%.={[^}]*}//' <<< "${formatstring}" `"
                if [ "${tmp}" != "${formatstring}" ]
                then
@@ -665,10 +662,8 @@ nodeline_printf_header()
                ;;
 
                *)
-                  name="
-"
-                  dash="
-"
+                  name=$'\n'
+                  dash=$'\n'
                ;;
             esac
          ;;
@@ -752,19 +747,31 @@ nodeline_diff()
 
    local field
    local u_field
+   local u_field_value
+   local field_value
 
-   set -o noglob
+   shell_disable_glob
    for field in address branch fetchoptions marks nodetype tag url userinfo
    do
       u_field="_${field}"
-      if [ "${!field}" = "${!u_field}" ]
+
+      if [ ! -z "${ZSH_VERSION}" ]
+      then
+         field_value="${(P)field}"
+         u_field_value="${(P)u_field}"
+      else
+         field_value="${!field}"
+         u_field_value="${!u_field}"
+      fi
+
+      if [ "${field_value}" = "${u_field_value}" ]
       then
          continue
       fi
 
-      echo "${field}: ${!field} <> ${!u_field}"
+      echo "${field}: ${field_value} <> ${u_field_value}"
    done
-   set +o noglob
+   shell_enable_glob
 }
 
 

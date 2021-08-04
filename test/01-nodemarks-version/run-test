@@ -11,13 +11,13 @@ main()
 
    # absent version mark matches everything
 
-   nodemarks_version_match "${_marks}" "version-darwin" ">=" "0.0.0" || internal_fail "Absent version >= 0.0.0"
-   nodemarks_version_match "${_marks}" "version-darwin" "=" "0.0.0"  || internal_fail "Absent version =  0.0.0"
-   nodemarks_version_match "${_marks}" "version-darwin" "!=" "0.0.0" || internal_fail "Absent version != 0.0.0"
-   nodemarks_version_match "${_marks}" "version-darwin" "<>" "0.0.0" || internal_fail "Absent version <> 0.0.0"
-   nodemarks_version_match "${_marks}" "version-darwin" "<=" "0.0.0" || internal_fail "Absent version <= 0.0.0"
-   nodemarks_version_match "${_marks}" "version-darwin" ">" "0.0.0"  || internal_fail "Absent version >  0.0.0"
-   nodemarks_version_match "${_marks}" "version-darwin" "<" "0.0.0"  || internal_fail "Absent version <  0.0.0"
+   nodemarks_version_match "${_marks}" "version-darwin" ">=" "0.0.0" ; [ $? -eq 2 ] || internal_fail "Absent version >= 0.0.0"
+   nodemarks_version_match "${_marks}" "version-darwin" "=" "0.0.0"  ; [ $? -eq 2 ] || internal_fail "Absent version =  0.0.0"
+   nodemarks_version_match "${_marks}" "version-darwin" "!=" "0.0.0" ; [ $? -eq 2 ] || internal_fail "Absent version != 0.0.0"
+   nodemarks_version_match "${_marks}" "version-darwin" "<>" "0.0.0" ; [ $? -eq 2 ] || internal_fail "Absent version <> 0.0.0"
+   nodemarks_version_match "${_marks}" "version-darwin" "<=" "0.0.0" ; [ $? -eq 2 ] || internal_fail "Absent version <= 0.0.0"
+   nodemarks_version_match "${_marks}" "version-darwin" ">" "0.0.0"  ; [ $? -eq 2 ] || internal_fail "Absent version >  0.0.0"
+   nodemarks_version_match "${_marks}" "version-darwin" "<" "0.0.0"  ; [ $? -eq 2 ] || internal_fail "Absent version <  0.0.0"
 
    log_verbose "----- #1 PASSED -----"
 

@@ -149,10 +149,10 @@ _has_system_include()
 
    local i
 
-   set -o noglob ; IFS=':'
+   shell_disable_glob ; IFS=':'
    for i in ${include_search_path}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
       if [ -d "${i}/${_uuid}" -o -f "${i}/${includefile}" ]
       then
@@ -164,7 +164,7 @@ _has_system_include()
          return 0
       fi
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    return 1
 }
@@ -232,7 +232,6 @@ _do_fetch_operation()
    r_mkdir_parent_if_missing "${destination}"
    parent="${RVAL}"
 
-   local options
    local rval
 
    if [ ! -z "${OPTION_OVERRIDE_BRANCH}" ]
@@ -265,8 +264,17 @@ _do_fetch_operation()
    r_uppercase "${RVAL}"
    envvar="MULLE_SOURCETREE_FETCH_${RVAL}"
 
+   local value
+
+   if [ ! -z "${ZSH_VERSION}" ]
+   then
+      value="${(P)envvar}"
+   else
+      value="${!envvar}"
+   fi
+
    log_fluff "Check \"${envvar}\" for \"${_address}\""
-   if [ "${!envvar}" = 'NO' ]
+   if [ "${value}" = 'NO' ]
    then
       log_warning "${_address} not fetched as \"${envvar}\" is NO"
       return 1
@@ -325,58 +333,6 @@ disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
    fi
 
    return $rval
-}
-
-
-# useful for testing
-update_actions_for_nodelines()
-{
-   log_entry "update_actions_for_nodelines" "$@"
-
-   [ "$#" -ne 3  ] && internal_fail "api error"
-
-   local style="$1"
-   local previousnodeline="$2"
-   local nodeline="$3"
-
-   [ -z "${style}" ]   && internal_fail "style is empty"
-   [ -z "${nodeline}" ] && internal_fail "nodeline is empty"
-
-   local _branch
-   local _address
-   local _fetchoptions
-   local _marks
-   local _nodetype
-   local _tag
-   local _url
-   local _raw_userinfo
-   local _userinfo
-   local _uuid
-
-   nodeline_parse "${nodeline}" # !!
-
-   local previousfilename
-   local filename
-
-   filename="${_address}"
-   r_nodeline_get_address "${previousnodeline}"
-   previousfilename="${RVAL}"
-
-   # just _address as filename ?
-   r_update_actions_for_node "${style}" \
-                             "${nodeline}" \
-                             "${filename}" \
-                             "${previousnodeline}" \
-                             "${previousfilename}" \
-                             "/" \
-                             "${_address}" \
-                             "${_nodetype}" \
-                             "${_marks}" \
-                             "${_uuid}" \
-                             "${_url}" \
-                             "${_branch}" \
-                             "${_tag}"
-   echo "${RVAL}"
 }
 
 
@@ -685,8 +641,6 @@ As node is marked \"no-delete\" just remember it."
       internal_fail "uuid \"${newuuid}\" wrong (expected \"${_uuid}\")"
    fi
 
-   local sanitized
-
    r_node_sanitized_address "${_address}"
    sanitized="${RVAL}"
    if [ "${_address}" != "${sanitized}" ]
@@ -766,9 +720,6 @@ old \"${previousfilename}\" exist. Looks like a manual move. Doing nothing."
    #
    # Check that the _nodetype can actually do the supported operation
    #
-   local have_checkout
-   local have_upgrade
-
    case "${_nodetype}" in
       symlink)
          if [ "${newexists}" = 'YES' ]
@@ -790,10 +741,6 @@ in URL related info."
    fi
 
    local available
-   local have_upgrade
-   local have_checkout
-   local have_set_url
-   local have_upgrade
 
    if [ "${_branch}" != "${newbranch}" -o \
         "${_tag}" != "${newtag}" -o \
@@ -1061,17 +1008,17 @@ __update_perform_actions()
 
    local item
 
-   set -o noglob
+   shell_disable_glob
    for item in ${actionitems}
    do
-      set +o noglob
+      shell_enable_glob
 
       if ! __update_perform_item
       then
          break
       fi
    done
-   set +o noglob
+   shell_enable_glob
 }
 
 
@@ -1445,10 +1392,10 @@ do_actions_with_nodelines()
 
    local nodeline
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
       if [ ! -z "${nodeline}" ]
       then
@@ -1457,7 +1404,7 @@ do_actions_with_nodelines()
 
    done
 
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 }
 
 

@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#! /bin/sh
 #
 #   Copyright (c) 2018 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -32,8 +32,68 @@
 
 [ "${TRACE}" = 'YES' -o "${MULLE_CMAKE_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
+####
+#
+# Prelude to be placed at top of each script. Rerun this script either in
+# bash or zsh, if not already running in either (which can happen!)
+# Allows script to run on systems that either have bash (linux) or
+# zsh (macOS) only by default.
 
-MULLE_EXECUTABLE_VERSION="0.25.0"
+if [ "$1" != --no-auto-shell ]
+then
+   if [ -z "${BASH_VERSION}" -a -z "${ZSH_VERSION}" ]
+   then
+      exe_shell="`command -v "bash" `"
+      exe_shell="${exe_shell:-`command -v "zsh" `}"
+
+      script="$0"
+
+      #
+      # Quote incoming arguments for shell expansion
+      #
+      args=""
+      for arg in "$@"
+      do
+         # True bourne sh doesn't know ${a//b/c} and <<<
+         case "${arg}" in
+            *\'*)
+               # Use cat instead of echo to avoid possible echo -n
+               # problems. Escape single quotes in string.
+               arg="`cat <<EOF | sed -e s/\'/\'\\\"\'\\\"\'/g
+${arg}
+EOF
+`"
+            ;;
+         esac
+         if [ -z "${args}" ]
+         then
+            args="'${arg}'"
+         else
+            args="${args} '${arg}'"
+         fi
+      done
+
+      #
+      # bash/zsh will use arg after -c <arg> as $0, convenient!
+      #
+
+      exec "${exe_shell:-bash}" -c ". ${script} --no-auto-shell ${args}" "${script}"
+   fi
+   if [ ! -z "${BASH_VERSION}" ]
+   then
+      set +o posix
+   fi
+else
+   shift    # get rid of --no-auto-shell
+fi
+
+
+#
+# Main script to follow, runs now either in zsh or bash
+#
+####
+
+MULLE_EXECUTABLE_VERSION="0.26.0"
 
 
 usage()
@@ -113,7 +173,7 @@ r_create_exclude_only_if()
    local excludes="$1"
    local onlys="$2"
 
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 
    if [ ! -z "${onlys}" ]
    then
@@ -166,10 +226,10 @@ r_osexclude_configuration_to_cmake_if()
       len1=$((length + 6))
       len2=$((length + 4))
 
-      set -o noglob ; IFS=","
+      shell_disable_glob ; IFS=","
       for mark in ${marks}
       do
-         IFS="${DEFAULT_IFS}"; set +o noglob
+         IFS="${DEFAULT_IFS}"; shell_enable_glob
 
          case "${mark}" in
             only-${key}-*)
@@ -493,7 +553,7 @@ _emit_cmake_find_library()
    local library_key
    local types
 
-   IFS=","; set -o noglob
+   IFS=","; shell_disable_glob
    for i in ${names}
    do
       # Split Release:curl into Release (type) and curl (name)
@@ -518,7 +578,12 @@ _emit_cmake_find_library()
 
       # get appropriate libraries into local variable libraries
       library_key="${type}_libraries"
-      libraries="${!library_key}"
+      if [ ! -z "${ZSH_VERSION}" ]
+      then
+         libraries="${(P)library_key}"
+      else
+         libraries="${!library_key}"
+      fi
 
       # frameworks only have one name or ?
       case ",${marks}," in
@@ -552,7 +617,7 @@ _emit_cmake_find_library()
       r_concat "${libraries}" "${name}"
       printf -v "${library_key}" "%s" "${RVAL}"
    done
-   IFS="${DEFAULT_IFS}"; set -o noglob
+   IFS="${DEFAULT_IFS}"; shell_disable_glob
 
    local failstring
    local failstatus
@@ -615,13 +680,19 @@ EOF
       # we have multiple lines for build types, so we produce a more elaborate
       # find_library call sequence. But Release is always a fallback option!
       #
-      set -o noglob
+      shell_disable_glob
       for type in ${types}
       do
          if [ "${type}" != "Release" ]
          then
             library_key="${type}_libraries"
-            libraries="${!library_key}"
+
+            if [ ! -z "${ZSH_VERSION}" ]
+            then
+               libraries="${(P)library_key}"
+            else
+               libraries="${!library_key}"
+            fi
 
             cat  <<EOF
 ${indent}   if(${clause} "\${CMAKE_BUILD_TYPE}" STREQUAL "${type}")
@@ -631,7 +702,7 @@ EOF
             clause=" NOT ${key} AND"
          fi
       done
-      set +o noglob
+      shell_enable_glob
 
       # fallback Reelase
       cat  <<EOF
@@ -792,7 +863,7 @@ _emit_cmake_header_only()
       headername="${RVAL}"
    fi
 
-   IFS=","; set -o noglob
+   IFS=","; shell_disable_glob
    for i in ${names}
    do
       if [ -z "${header}" ]
@@ -809,7 +880,7 @@ _emit_cmake_header_only()
       r_concat "${headers}" "${i}.h"
    fi
 
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 
    local key
 
@@ -1050,10 +1121,10 @@ emit_cmake_dependencies()
 
    local dependency
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for dependency in ${dependencies}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       local address
       local marks
@@ -1082,7 +1153,7 @@ emit_cmake_dependencies()
                                "${disabler}"
       fi
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 }
 
 
@@ -1102,7 +1173,8 @@ MATCHES header AND \
    MATCHES no-actual-link \
 )"
 
-   header="`rexekutor "${MULLE_SOURCETREE}" -V \
+   header="`rexekutor "${MULLE_SOURCETREE}" \
+                           --virtual-root \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                               --no-bequeath \
@@ -1121,7 +1193,8 @@ MATCHES link AND \
 MATCHES actual-link AND \
 NOT MATCHES only-framework"
 
-   dependency="`rexekutor "${MULLE_SOURCETREE}" -V \
+   dependency="`rexekutor "${MULLE_SOURCETREE}" \
+                              --virtual-root \
                               ${MULLE_TECHNICAL_FLAGS} \
                            list \
                               --no-bequeath \
@@ -1141,7 +1214,8 @@ MATCHES link AND \
 MATCHES actual-link AND \
 MATCHES only-framework"
 
-   dependency="`rexekutor "${MULLE_SOURCETREE}" -V \
+   dependency="`rexekutor "${MULLE_SOURCETREE}" \
+                              --virtual-root \
                               ${MULLE_TECHNICAL_FLAGS} \
                            list \
                               --no-bequeath \
@@ -1175,7 +1249,8 @@ MATCHES no-fs AND \
    MATCHES no-actual-link \
 )"
 
-   header="`exekutor "${MULLE_SOURCETREE}" -V \
+   header="`exekutor "${MULLE_SOURCETREE}" \
+                           --virtual-root \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                            --no-bequeath \
@@ -1195,7 +1270,8 @@ MATCHES link AND \
 MATCHES actual-link AND \
 NOT MATCHES only-framework"
 
-   library="`exekutor "${MULLE_SOURCETREE}" -V \
+   library="`exekutor "${MULLE_SOURCETREE}" \
+                           --virtual-root \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                            --no-bequeath \
@@ -1215,7 +1291,8 @@ MATCHES link AND \
 MATCHES actual-link AND \
 MATCHES only-framework"
 
-   library="`exekutor "${MULLE_SOURCETREE}" -V \
+   library="`exekutor "${MULLE_SOURCETREE}" \
+                           --virtual-root \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                            --no-bequeath \
@@ -1467,6 +1544,13 @@ main()
 
 _init()
 {
+   # mingw stuff
+   case "$PATH" in
+      '\\'*)
+         PATH="${PATH//\\/\/}"
+      ;;
+   esac
+
    if [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ]
    then
       MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env "libexec-dir" 2> /dev/null`"
@@ -1476,20 +1560,9 @@ _init()
    fi
 
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   call_main "${MULLE_SOURCETREE_TO_CMAKE_FLAGS}" "$@"
 }
 
 _init "$@"
 
-
-quote="'"
-args=""
-for arg in "$@"
-do
-   arg="${arg//${quote}/${quote}\"${quote}\"${quote}}"
-   args="${args} '${arg}'"
-done
-
-unset quote
-unset arg
-
-eval main "${MULLE_SOURCETREE_TO_CMAKE_FLAGS}" "${args}"

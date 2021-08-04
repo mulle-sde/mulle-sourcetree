@@ -58,7 +58,8 @@ sourcetree_basic_environment()
    MULLE_HOSTNAME="${MULLE_HOSTNAME:-`hostname -s`}"
 
    r_absolutepath "${directory}"
-   MULLE_SOURCETREE_PROJECT_DIR="`physicalpath "${RVAL}"`"
+   r_physicalpath "${RVAL}"
+   MULLE_SOURCETREE_PROJECT_DIR="${RVAL}"
 
    if [ -z "${MULLE_VIRTUAL_ROOT}" ]
    then

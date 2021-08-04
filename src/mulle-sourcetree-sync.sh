@@ -305,10 +305,10 @@ _descend_db_nodelines()
 
    local nodeline
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
       if [ -z "${nodeline}" ]
       then
@@ -329,7 +329,7 @@ _descend_db_nodelines()
       _descend_db_nodeline "${nodeline}" "${style}" "${config}" "${database}"
    done
 
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 }
 
 
@@ -360,10 +360,10 @@ nodelines \"${nodelines}\" from config \"${config:-ROOT}\" ($PWD)"
 
    local nodeline
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
       if [ -z "${nodeline}" ]
       then
@@ -385,7 +385,7 @@ nodelines \"${nodelines}\" from config \"${config:-ROOT}\" ($PWD)"
       _descend_config_nodeline "${nodeline}" "${style}" "${config}" "${database}"
    done
 
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 }
 
 
@@ -476,10 +476,10 @@ _sourcetree_sync_only_share()
 
    local nodeline
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
       if [ -z "${nodeline}" ]
       then
@@ -500,7 +500,7 @@ _sourcetree_sync_only_share()
 
       _sync_nodeline_only_share "${nodeline}" "${config}" "${database}"
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 

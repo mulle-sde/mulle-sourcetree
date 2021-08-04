@@ -130,12 +130,16 @@ __db_common__rootdir()
 }
 
 
+#
+# local _database
+# local _databasedir
+#
 __db_common_databasedir()
 {
    [ -z "${SOURCETREE_DB_FILENAME}" ] && internal_fail "SOURCETREE_DB_FILENAME is not set"
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
-   _database="$1"
+   _database="$1"  # not a local!
 
    case "${MULLE_SOURCETREE_STASH_DIR}" in
       /*)
@@ -179,11 +183,14 @@ __db_common_databasedir()
 }
 
 
+#
+# local _uuid
+#
 __db_common_uuid()
 {
-   uuid="$1"
+   _uuid="$1"
 
-   if [ ! -z "${uuid}" ]
+   if [ ! -z "${_uuid}" ]
    then
       return 0
    fi
@@ -192,6 +199,11 @@ __db_common_uuid()
 }
 
 
+#
+# local _database
+# local _databasedir
+# local _uuid
+#
 __db_common_databasedir_uuid()
 {
    __db_common_databasedir "$1"
@@ -201,13 +213,13 @@ __db_common_databasedir_uuid()
 
 __db_common_dbfilepath()
 {
-   local _databasedir="$1"
+   local databasedir="$1"
    local uuid="$2"
 
-   dbfilepath="${_databasedir}/${uuid}"
+   dbfilepath="${databasedir}/${uuid}"
    if [ ! -f "${dbfilepath}" ]
    then
-      log_debug "No address found for ${uuid} in ${_databasedir}"
+      log_debug "No address found for ${uuid} in ${databasedir}"
       return 1
    fi
    log_debug "Found \"${dbfilepath}\""
@@ -279,13 +291,13 @@ db_recall()
 
    local _database
    local _databasedir
-   local uuid
+   local _uuid
 
    __db_common_databasedir_uuid "$@"
 
    local dbfilepath
 
-   if ! __db_common_dbfilepath "${_databasedir}" "${uuid}"
+   if ! __db_common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       return 1
    fi
@@ -300,15 +312,15 @@ db_forget()
 
    local _database
    local _databasedir
-   local uuid
+   local _uuid
 
    __db_common_databasedir_uuid "$@"
 
    local dbfilepath
 
-   if __db_common_dbfilepath "${_databasedir}" "${uuid}"
+   if __db_common_dbfilepath "${_databasedir}" "${_uuid}"
    then
-      log_debug "Forgetting about uuid \"${uuid}\" ($_databasedir)"
+      log_debug "Forgetting about uuid \"${_uuid}\" ($_databasedir)"
       remove_file_if_present "${dbfilepath}"
    fi
 }
@@ -326,7 +338,7 @@ db_bury()
 
    local _database
    local _databasedir
-   local uuid
+   local _uuid
 
    __db_common_databasedir_uuid "$@"
 
@@ -340,7 +352,7 @@ db_bury()
 
    r_dirname "${_databasedir}"
    graveyard="${RVAL}/graveyard"
-   gravepath="${graveyard}/${uuid}"
+   gravepath="${graveyard}/${_uuid}"
 
    local _rootdir
 
@@ -397,8 +409,11 @@ db_bury()
    local phys_filename
    local phys_project_dir
 
-   phys_filename="`physicalpath "${filename}"`"
-   phys_project_dir="`physicalpath "${project_dir}"`"
+   r_physicalpath "${filename}"
+   phys_filename="${RVAL}"
+
+   r_physicalpath "${project_dir}"
+   phys_project_dir="${RVAL}"
 
    r_relative_path_between "${phys_filename}" "${phys_project_dir}"
    case "${RVAL}" in
@@ -519,13 +534,13 @@ db_fetch_nodeline_for_uuid()
 
    local _database
    local _databasedir
-   local uuid
+   local _uuid
 
    __db_common_databasedir_uuid "$@"
 
    local dbfilepath
 
-   if ! __db_common_dbfilepath "${_databasedir}" "${uuid}"
+   if ! __db_common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       return 1
    fi
@@ -554,20 +569,19 @@ db_fetch_nodeline_for_uuid()
 #   _db_owner < "${dbfilepath}"
 #}
 
-
 db_fetch_filename_for_uuid()
 {
    log_entry "db_fetch_filename_for_uuid" "$@"
 
    local _database
    local _databasedir
-   local uuid
+   local _uuid
 
    __db_common_databasedir_uuid "$@"
 
    local dbfilepath
 
-   if ! __db_common_dbfilepath "${_databasedir}" "${uuid}"
+   if ! __db_common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       return 1
    fi
@@ -582,13 +596,13 @@ db_fetch_evaledurl_for_uuid()
 
    local _database
    local _databasedir
-   local uuid
+   local _uuid
 
    __db_common_databasedir_uuid "$@"
 
    local dbfilepath
 
-   if ! __db_common_dbfilepath "${_databasedir}" "${uuid}"
+   if ! __db_common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       return 1
    fi
@@ -626,12 +640,12 @@ db_fetch_all_nodelines()
 #      internal_fail "noglob should be off"
 #   fi
 
-   shopt -s nullglob
+   shell_enable_nullglob
    for i in "${_databasedir}"/*
    do
       head -1 "${i}" || internal_fail "malformed file $i"
    done
-   shopt -u nullglob
+   shell_disable_nullglob
 }
 
 
@@ -752,7 +766,7 @@ db_fetch_all_filenames()
    __db_common_databasedir "$@"
 
    (
-      shopt -s nullglob
+      shell_enable_nullglob
 
       local i
 
@@ -761,21 +775,6 @@ db_fetch_all_filenames()
          _db_filename < "${i}"
       done
    )
-}
-
-
-db_relative_filename()
-{
-   log_entry "db_relative_filename" "$@"
-
-   local _database
-   local _rootdir
-
-   __db_common__rootdir "$@"
-
-   local filename=$2
-
-   symlink_relpath "${filename}" "${_rootdir}"
 }
 
 
@@ -825,14 +824,14 @@ db_add_missing()
 
    local _database
    local _databasedir
-   local uuid
+   local _uuid
 
    __db_common_databasedir_uuid "$@"
 
    local nodeline="$3"
 
    mkdir_if_missing "${_databasedir}/.missing"
-   redirect_exekutor "${_databasedir}/.missing/${uuid}" printf "%s\n" "${nodeline}"
+   redirect_exekutor "${_databasedir}/.missing/${_uuid}" printf "%s\n" "${nodeline}"
 }
 
 #
@@ -843,11 +842,12 @@ _db_get_dbtype()
 {
    log_entry "_db_get_dbtype" "$@"
 
-   local _databasedir="$1"
+   local databasedir="$1"
+
    # for -e tests
-   if ! head -1 "${_databasedir}/.db_type" 2> /dev/null
+   if ! head -1 "${databasedir}/.db_type" 2> /dev/null
    then
-      log_fluff "\"${_databasedir}/.db_type\" is missing"
+      log_fluff "\"${databasedir}/.db_type\" is missing"
       :
    fi
 }
@@ -1163,9 +1163,9 @@ db_ensure_consistency()
 {
    log_entry "db_ensure_consistency" "$@"
 
-   local _database="$1"
+   local database="$1"
 
-   if db_is_updating "${_database}" && [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
+   if db_is_updating "${database}" && [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
    then
       log_error "A previous update was incomplete.
 Suggested resolution:
@@ -1190,12 +1190,12 @@ db_ensure_compatible_dbtype()
 {
    log_entry "db_ensure_compatible_dbtype" "$@"
 
-   local _database="$1"
+   local database="$1"
    local dbtype="$2"
 
    local actualdbtype
 
-   actualdbtype="`db_get_dbtype "${_database}"`"
+   actualdbtype="`db_get_dbtype "${database}"`"
    if [ -z "${actualdbtype}" -o "${actualdbtype}" = "${dbtype}" ]
    then
       return
@@ -1228,19 +1228,19 @@ _db_set_default_mode()
 {
    log_entry "_db_set_default_mode" "$@"
 
-   local _database="$1"
+   local database="$1"
    local usertype="$2"
 
    local actualdbtype
 
-   actualdbtype="`db_get_dbtype "${_database}"`"
+   actualdbtype="`db_get_dbtype "${database}"`"
 
    local _rootdir
 
    # que ??
    if [ ! -z "${actualdbtype}"  ]
    then
-      __db_common__rootdir "${_database}"
+      __db_common__rootdir "${database}"
    fi
 
    local dbtype
@@ -1253,7 +1253,8 @@ _db_set_default_mode()
       then
          dbtype="share"       # the default
       else
-         log_fluff "Database: ${C_RESET_BOLD}`simplified_absolutepath "${_rootdir}"`${C_INFO} ${C_MAGENTA}${C_BOLD}${actualdbtype}${C_INFO}"
+         r_simplified_absolutepath "${_rootdir}"
+         log_fluff "Database: ${C_RESET_BOLD}${RVAL} ${C_MAGENTA}${C_BOLD}${actualdbtype}${C_INFO}"
       fi
    fi
 
@@ -1319,14 +1320,14 @@ db_is_graveyard()
 {
    log_entry "db_is_graveyard" "$@"
 
-   local _database="$1"
+   local database="$1"
 
-   if ! db_has_graveyard "${_database}"
+   if ! db_has_graveyard "${database}"
    then
       return 1
    fi
 
-   db_contains_entries "${_database}"
+   db_contains_entries "${database}"
 }
 
 
@@ -1364,18 +1365,18 @@ db_reset()
 #
 __db_zombiedir()
 {
-   local _databasedir="$1"
+   local databasedir="$1"
 
-   zombiedir="${_databasedir}/.zombies"
+   zombiedir="${databasedir}/.zombies"
 }
 
 
 __db_zombiefile()
 {
-   local _databasedir="$1"
+   local databasedir="$1"
    local uuid="$2"
 
-   zombiefile="${_databasedir}/.zombies/${uuid}"
+   _zombiefile="${databasedir}/.zombies/${uuid}"
 }
 
 
@@ -1385,15 +1386,15 @@ db_is_uuid_alive()
 
    local _database
    local _databasedir
-   local uuid
+   local _uuid
 
    __db_common_databasedir_uuid "$@"
 
-   local zombiefile
+   local _zombiefile
 
-   __db_zombiefile "${_databasedir}" "${uuid}"
+   __db_zombiefile "${_databasedir}" "${_uuid}"
 
-   [ ! -e "${zombiefile}" ]
+   [ ! -e "${_zombiefile}" ]
 }
 
 
@@ -1403,21 +1404,21 @@ db_set_uuid_alive()
 
    local _database
    local _databasedir
-   local uuid
+   local _uuid
 
    __db_common_databasedir_uuid "$@"
 
-   local zombiefile
+   local _zombiefile
 
-   __db_zombiefile "${_databasedir}" "${uuid}"
-   if [ -e "${zombiefile}" ]
+   __db_zombiefile "${_databasedir}" "${_uuid}"
+   if [ -e "${_zombiefile}" ]
    then
-      log_fluff "Marking \"${uuid}\" as alive"
+      log_fluff "Marking \"${_uuid}\" as alive"
 
-      remove_file_if_present "${zombiefile}" \
-      || fail "failed to delete zombie ${zombiefile}"
+      remove_file_if_present "${_zombiefile}" \
+      || fail "failed to delete zombie ${_zombiefile}"
    else
-      log_fluff "\"${uuid}\" is alive as no zombie is present"
+      log_fluff "\"${_uuid}\" is alive as no zombie is present"
    fi
 }
 
@@ -1426,12 +1427,12 @@ db_is_filename_inuse()
 {
    log_entry "db_is_filename_inuse" "$@"
 
-   local _database="$1"
+   local database="$1"
    local filename="$2"
 
    local inuse
 
-   inuse="`db_fetch_all_filenames "${_database}"`"
+   inuse="`db_fetch_all_filenames "${database}"`"
    fgrep -q -s -x "${filename}" <<< "${inuse}"
 }
 
@@ -1460,7 +1461,7 @@ db_zombify_nodes()
    local filename
    local set
 
-   shopt -s nullglob
+   shell_enable_nullglob
    for filename in "${_databasedir}"/*
    do
       if [ ! -z "${owner}" ] && [ "`_db_owner < "${filename}"`" != "${owner}" ]
@@ -1477,7 +1478,7 @@ db_zombify_nodes()
       exekutor cp ${OPTION_COPYMOVEFLAGS} "${filename}" "${zombiedir}/" \
       || exit 1
    done
-   shopt -u nullglob
+   shell_disable_nullglob
 }
 
 
@@ -1515,10 +1516,10 @@ db_zombify_nodelines()
    local _userinfo
    local _uuid
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       if [ ! -z "${nodeline}" ]
       then
@@ -1530,7 +1531,7 @@ db_zombify_nodelines()
          fi
       fi
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 }
 
 
@@ -1538,11 +1539,8 @@ _db_bury_zombiefile()
 {
    log_entry "_db_bury_zombiefile" "$@"
 
-   local _database="$1"
+   local database="$1"
    local zombiefile="$2"
-
-   local nodeline
-   local owner
 
    local nodeline
    local owner
@@ -1553,7 +1551,7 @@ _db_bury_zombiefile()
 
    __db_parse_dbentry "${entry}"
 
-   db_safe_bury_dbentry "${_database}" "${nodeline}" "${owner}" "${filename}"
+   db_safe_bury_dbentry "${database}" "${nodeline}" "${owner}" "${filename}"
 
    remove_file_if_present "${zombiefile}"
 }
@@ -1576,13 +1574,13 @@ db_bury_zombie()
 
    [ -z "${uuid}" ] && internal_fail "uuid is empty"
 
-   local zombiefile
+   local _zombiefile
 
    __db_zombiefile "${_databasedir}" "${uuid}"
 
-   if [ -e "${zombiefile}" ]
+   if [ -e "${_zombiefile}" ]
    then
-      _db_bury_zombiefile "${_database}" "${zombiefile}"
+      _db_bury_zombiefile "${_database}" "${_zombiefile}"
    else
       log_fluff "There is no zombie for \"${uuid}\""
    fi
@@ -1593,7 +1591,7 @@ db_safe_bury_dbentry()
 {
    log_entry "db_safe_bury_dbentry" "$@"
 
-   local _database="$1"
+   local database="$1"
    local nodeline="$2"
    local owner="$3"
    local filename="$4"
@@ -1611,7 +1609,7 @@ db_safe_bury_dbentry()
 
    nodeline_parse "${nodeline}"     # memo: _marks unused
 
-   db_forget "${_database}" "${_uuid}"
+   db_forget "${database}" "${_uuid}"
 
    case "${_marks}" in
       *no-delete|*no-delete,*)
@@ -1620,13 +1618,13 @@ db_safe_bury_dbentry()
       ;;
    esac
 
-   if db_is_filename_inuse "${_database}" "${filename}"
+   if db_is_filename_inuse "${database}" "${filename}"
    then
       log_fluff "Another node is using \"${filename}\" now"
       return
    fi
 
-   db_bury "${_database}" "${_uuid}" "${filename}"
+   db_bury "${database}" "${_uuid}" "${filename}"
 }
 
 
@@ -1672,8 +1670,6 @@ db_bury_zombie_nodelines()
 
    __db_zombiedir "${_databasedir}"
 
-   local zombiefile
-
    local _branch
    local _address
    local _fetchoptions
@@ -1687,10 +1683,10 @@ db_bury_zombie_nodelines()
 
    local zombiefile
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       if [ ! -z "${nodeline}" ]
       then
@@ -1703,7 +1699,7 @@ db_bury_zombie_nodelines()
          fi
       fi
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 
    # will be done later
    # rmdir_if_empty "${zombiedir}"
@@ -1714,14 +1710,14 @@ db_state_description()
 {
    log_entry "db_state_description" "$@"
 
-   local _database="${1:-/}"
+   local database="${1:-/}"
 
    local dbstate
 
    dbstate="absent"
-   if db_dir_exists "${_database}"
+   if db_dir_exists "${database}"
    then
-      db_is_ready "${_database}"
+      db_is_ready "${database}"
       case "$?" in
          0)
             dbstate="ready"
@@ -1741,11 +1737,11 @@ db_state_description()
       esac
 
       local state
-      state="`db_get_dbtype "${_database}"`"
+      state="`db_get_dbtype "${database}"`"
 
       r_comma_concat "${dbstate}" "${state}"
       dbstate="${RVAL}"
-      if db_has_graveyard "${_database}"
+      if db_has_graveyard "${database}"
       then
          r_comma_concat "${dbstate}" "graveyard"
          dbstate="${RVAL}"

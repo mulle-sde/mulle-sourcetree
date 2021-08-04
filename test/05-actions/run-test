@@ -33,6 +33,59 @@ EOF
 
 
 
+update_actions_for_nodelines()
+{
+   log_entry "update_actions_for_nodelines" "$@"
+
+   [ "$#" -ne 3  ] && internal_fail "api error"
+
+   local style="$1"
+   local previousnodeline="$2"
+   local nodeline="$3"
+
+   [ -z "${style}" ]   && internal_fail "style is empty"
+   [ -z "${nodeline}" ] && internal_fail "nodeline is empty"
+
+   local _branch
+   local _address
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _tag
+   local _url
+   local _raw_userinfo
+   local _userinfo
+   local _uuid
+
+   nodeline_parse "${nodeline}" # !!
+
+   local previousfilename
+   local filename
+
+   filename="${_address}"
+   r_nodeline_get_address "${previousnodeline}"
+   previousfilename="${RVAL}"
+
+   # just _address as filename ?
+   r_update_actions_for_node "${style}" \
+                             "${nodeline}" \
+                             "${filename}" \
+                             "${previousnodeline}" \
+                             "${previousfilename}" \
+                             "/" \
+                             "/" \
+                             \
+                             "${_address}" \
+                             "${_nodetype}" \
+                             "${_marks}" \
+                             "${_uuid}" \
+                             "${_url}" \
+                             "${_branch}" \
+                             "${_tag}"
+   echo "${RVAL}"
+}
+
+
 run_git_tests()
 {
    local old
@@ -175,9 +228,11 @@ main()
 
    set -e
 
-   directory="`make_tmp_directory`" || exit 1
-   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}"`"
-   export MULLE_VIRTUAL_ROOT
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
+   cd "${directory}"
+   r_physicalpath "${directory}"
+   MULLE_VIRTUAL_ROOT="${RVAL}"
 
    (
       cd "${directory}" &&
@@ -185,7 +240,8 @@ main()
    ) || exit 1
    rmdir_safer "${directory}"
 
-   directory="`make_tmp_directory`" || exit 1
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
    (
       cd "${directory}" &&
       run_tar_tests

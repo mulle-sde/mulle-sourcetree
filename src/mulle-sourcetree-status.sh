@@ -62,7 +62,7 @@ Usage:
    Emit status of your sourcetree. The nodes listed are your projects
    sourcetree nodes and those nodes inherited by dependencies.
 
-   Status     - shows the state of the database if any.
+   status     - shows the state of the database if any.
    Filesystem - shows the type of the dependency (directory or symlink)
    Sourcetree - shows if that project has a sourcetree.
    Database   - shows if that project has synced at least once.
@@ -254,12 +254,12 @@ r_emit_status()
    local fs
    local configexists
    local dbexists
-   local status
-
+   local treestatus
+  
    configexists='-'
    dbexists='-'
    fs="library"      # not a fs (system) library
-   status="ok"
+   treestatus="ok"
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
@@ -408,11 +408,10 @@ ${configexists};${dbexists}" #;${filename}"
          return 6
       fi
 
-      status="ok"
-
+      treestatus="ok"
    fi
 
-   RVAL="${output_address};${status};${fs};${configexists};${dbexists}" # ;${filename}"
+   RVAL="${output_address};${treestatus};${fs};${configexists};${dbexists}" # ;${filename}"
    return 0
 }
 
@@ -421,14 +420,17 @@ walk_status()
 {
    log_entry "walk_status" "$@"
 
+   local rval
+
    r_emit_status "${NODE_ADDRESS}" \
                  "${WALK_VIRTUAL_ADDRESS}" \
                  "${WALK_DATASOURCE}" \
                  "${NODE_MARKS}" \
                  "${WALK_MODE}" \
                  "${NODE_FILENAME}"
+   rval=$?
 
-   case $? in
+   case $rval in
       1)
          return 1 # real error
       ;;
@@ -526,7 +528,7 @@ sourcetree_status()
 
    case ",${mode}," in
       *,output-header,*)
-         header="Node;Status;Filesystem;Sourcetree;Database" # ;Filename"
+         header="Node;treestatus;Filesystem;Sourcetree;Database" # ;Filename"
          if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
          then
             header="${header};Filename;Fetched"

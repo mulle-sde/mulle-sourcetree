@@ -55,8 +55,9 @@ locate_sourcetree()
 
    local start="$1"
 
-   start="`absolutepath "${start}" `"
-   start="`physicalpath "${start}" `"
+   r_absolutepath "${start}"
+   r_physicalpath "${RVAL}"
+   start="${RVAL}"
 
    local directory
 
@@ -87,7 +88,8 @@ r_locate_fix_file()
    local address="$2"
 
    r_absolutepath "${start}"
-   start="`physicalpath "${RVAL}"`"
+   r_physicalpath "${RVAL}"
+   start="${RVAL}"
 
    local found
    local match
@@ -356,7 +358,8 @@ sourcetree_fix_main()
    mode="${SOURCETREE_MODE}"
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
-      mode="`comma_concat "${mode}" "pre-order"`"
+      r_comma_concat "${mode}" "pre-order"
+      mode="${RVAL}"
    fi
 
    log_info "Run sourcetree fix"

@@ -74,10 +74,10 @@ sourcetree_wrap_config()
    local url_identifier
    local tag_identifier
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
       if [ -z "${nodeline}" ]
       then
@@ -178,7 +178,7 @@ sourcetree_wrap_config()
       rewritten_nodelines="${RVAL}"
    done
 
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    if [ "${rewritten_nodelines}" = "${nodelines}" ]
    then

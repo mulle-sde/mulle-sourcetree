@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#! /usr/bin/env zsh
 
 [ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
@@ -35,10 +35,11 @@ main()
 
    local directory
 
-   directory="`make_tmp_directory`" || exit 1
-
-   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}"`"
-   export MULLE_VIRTUAL_ROOT
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
+   cd "${directory}"
+   r_physicalpath "${directory}"
+   MULLE_VIRTUAL_ROOT="${RVAL}"
 
    mkdir_if_missing "${directory}/a"
    mkdir_if_missing "${directory}/a/b"
@@ -105,9 +106,10 @@ main()
       internal_fail "remove \"a\" internal_failed unexpectedly"
    fi
 
-   if [ -f ".mulle/etc/sourcetree/config" ]
+   # this has changes, the sourcetree stays to clobber share
+   if [ ! -f ".mulle/etc/sourcetree/config" ]
    then
-      internal_fail "config should not exist now"
+      internal_fail "config should still exist"
    fi
 
    log_verbose "----- #1 PASSED -----"

@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#! /usr/bin/env zsh
 
 [ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
@@ -38,8 +38,6 @@ main()
    MULLE_SOURCETREE_FLAGS="$@"
 
    _options_mini_main "$@"
-
-   set -e # for tests
 
    run_test_1
    log_verbose "----- #1 PASSED -----"

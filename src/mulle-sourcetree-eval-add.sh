@@ -85,9 +85,9 @@ sourcetree_eval_add_commands()
    local arguments_list
 
    (
-      shopt -s extglob
+      shell_enable_extglob
 
-      set -o noglob; IFS=$'\n'
+      shell_disable_glob; IFS=$'\n'
       for line in ${lines}
       do
          # https://stackoverflow.com/questions/50259869/how-to-replace-multiple-spaces-with-a-single-space-using-bash

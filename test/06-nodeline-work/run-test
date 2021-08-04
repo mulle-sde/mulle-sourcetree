@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#! /usr/bin/env zsh
 
 [ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
@@ -97,8 +97,8 @@ main()
 
    local directory
 
-   directory="`make_tmp_directory`" || exit 1
-
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
    local SOURCETREE_FIX_FILENAME=".mulle-sourcetree.fix"
 
    local project

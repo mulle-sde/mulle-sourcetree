@@ -533,12 +533,11 @@ node_printf()
 
    local _formatstring
    local extended
+   local value
+   local switch
 
    while [ ! -z "${formatstring}" ]
    do
-      local value
-      local switch
-
       case "${formatstring}" in
          %a*)
             switch=""
@@ -675,7 +674,12 @@ node_printf()
                formatstring="${_formatstring}"
                switch=""
 
-               value="${!key}"
+               if [ ! -z "${ZSH_VERSION}" ]
+               then
+                  value="${(P)key}"
+               else
+                  value="${!key}"
+               fi
             else
                value="failed format"
             fi

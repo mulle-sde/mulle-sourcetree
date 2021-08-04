@@ -167,17 +167,17 @@ r_sourcetree_remove_marks()
    local nomarks="$2"
 
    RVAL=
-   set -o noglob; IFS=","
+   shell_disable_glob; IFS=","
    for mark in ${marks}
    do
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
 
       if ! nodemarks_contain "${nomarks}" "${mark}"
       then
          r_comma_concat "${RVAL}" "${mark}"
       fi
    done
-   set +o noglob; IFS="${DEFAULT_IFS}"
+   shell_enable_glob; IFS="${DEFAULT_IFS}"
 }
 
 
@@ -303,6 +303,8 @@ sourcetree_list_sourcetree()
       log_warning "column command not installed, unformatted output"
    fi
 
+   local result 
+   
    case ",${mode}," in
       *,output_column,*)
          ( _list_sourcetree "$@" ; echo )  | eval "${column_cmd}"
@@ -325,13 +327,13 @@ r_sourcetree_list_convert_marks_to_qualifier()
 
    local mark
 
-   IFS=","; set -o noglob
+   IFS=","; shell_disable_glob
    for mark in ${marks}
    do
       r_concat "${qualifier}" "MATCHES ${mark}" " AND "
       qualifier="${RVAL}"
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 
    RVAL="${qualifier}"
 }
@@ -786,12 +788,6 @@ sourcetree_list_main()
 
    [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
 
-   local _address
-   local _url
-   local key
-   local mark
-   local mode
-
    [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && sourcetree_list_usage
 
    if [ "${OPTION_CONFIG_FILE}" != 'DEFAULT' ]
@@ -802,8 +798,9 @@ sourcetree_list_main()
       SOURCETREE_FALLBACK_CONFIG_FILENAME=
 
       r_dirname "${OPTION_CONFIG_FILE}"
+      r_physicalpath "${RVAL}"
+      MULLE_VIRTUAL_ROOT="${RVAL}"
 
-      MULLE_VIRTUAL_ROOT="`physicalpath "${RVAL}"`"
       log_fluff "mulle-sourcetree (list) sets MULLE_VIRTUAL_ROOT to \"${MULLE_VIRTUAL_ROOT}\""
 
       FLAG_SOURCETREE_MODE="flat"

@@ -5,13 +5,16 @@
 
 run_mulle_sourcetree()
 {
-   log_fluff "####################################"
+   log_fluff "####################################" >&2
    log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
-   log_fluff "####################################"
+   log_fluff "####################################" >&2
 
-   exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   (
+      MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
+
+      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS} "$@"
+   )
 }
-
 #
 # repository has no .mulle in 1.0.0
 # repository has a .mulle in 2.0.0
@@ -202,8 +205,8 @@ main()
 
    local directory
 
-   directory="`make_tmp_directory`" || exit 1
-
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
    local project
 
    project="${directory}/project"

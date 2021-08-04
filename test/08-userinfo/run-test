@@ -3,7 +3,19 @@
 [ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-# TODO: move this test to mulle-sde ??
+run_mulle_sourcetree()
+{
+   log_fluff "####################################" >&2
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   log_fluff "####################################" >&2
+
+   (
+      MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
+
+      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS} "$@"
+   )
+}
+
 
 expect()
 {
@@ -17,16 +29,6 @@ expect()
 }
 
 
-run_mulle_sourcetree()
-{
-   log_fluff "####################################"
-   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
-   log_fluff "####################################"
-
-   exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
-}
-
-
 commalist_contains()
 {
    log_entry "commalist_contains" "$@"
@@ -37,17 +39,17 @@ commalist_contains()
    local i
 
    # is this faster than case ?
-   set -o noglob ; IFS=","
+   shell_disable_glob ; IFS=","
    for i in ${list}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
       if [ "${i}" = "${key}" ]
       then
          return 0
       fi
    done
 
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
    return 1
 }
 
@@ -131,14 +133,13 @@ main()
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || exit 1
    fi
 
-   set -e
-
    local directory
 
-   directory="`make_tmp_directory`" || exit 1
-
-   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}"`"
-   export MULLE_VIRTUAL_ROOT
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
+   cd "${directory}"
+   r_physicalpath "${directory}"
+   MULLE_VIRTUAL_ROOT="${RVAL}"
 
    cd "${directory}"
 
@@ -164,14 +165,14 @@ main()
    log_verbose "----- #1 PASSED -----"
 
 
-   _sde_set_sourcetree_userinfo_field "a" "foo" "bar" "YES" || exit 1
+   _sde_set_sourcetree_userinfo_field "a" "foo" "bar" "YES" || internal_fail "unexpected failure"
    value="`_sde_get_sourcetree_userinfo_field "a" "foo"`"
    if [ "${value}" != "baz,bar" ]
   	then
       internal_fail "unexpected value \"${value}\""
   	fi
 
-   _sde_set_sourcetree_userinfo_field "a" "foo" "xxx" "YES" || exit 1
+   _sde_set_sourcetree_userinfo_field "a" "foo" "xxx" "YES" ||  internal_fail "unexpected failure"
    value="`_sde_get_sourcetree_userinfo_field "a" "foo"`"
    if [ "${value}" != "baz,bar,xxx" ]
   	then
@@ -182,7 +183,7 @@ main()
 
    log_verbose "----- #2 PASSED -----"
 
-   _sde_set_sourcetree_userinfo_field "a" "foobar" "bar" "YES" || exit 1
+   _sde_set_sourcetree_userinfo_field "a" "foobar" "bar" "YES" ||  internal_fail "unexpected failure"
    run_mulle_sourcetree -N list
 
    value="`_sde_get_sourcetree_userinfo_field "a" "foobar"`"
@@ -191,7 +192,7 @@ main()
       internal_fail "unexpected value \"${value}\""
   	fi
 
-   _sde_set_sourcetree_userinfo_field "a" "foobar" "xxx" "YES" || exit 1
+   _sde_set_sourcetree_userinfo_field "a" "foobar" "xxx" "YES" ||  internal_fail "unexpected failure"
    value="`_sde_get_sourcetree_userinfo_field "a" "foobar"`"
    if [ "${value}" != "bar,xxx" ]
   	then
@@ -217,9 +218,9 @@ main()
 
 init()
 {
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" ||  internal_fail "unexpected failure"
 
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" ||  internal_fail "unexpected failure"
 
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
 }

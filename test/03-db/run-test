@@ -23,9 +23,12 @@ main()
 
    set -e
 
-   directory="`make_tmp_directory`" || exit 1
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
    cd "${directory}"
-   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}" `"
+   r_physicalpath "${directory}"
+   MULLE_VIRTUAL_ROOT="${RVAL}"
+
    SOURCETREE_DB_FILENAME="db"
    SOURCETREE_DB_FILENAME_RELATIVE=".."
 

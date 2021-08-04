@@ -9,7 +9,6 @@
 ![Overview](mulle-sourcetree-overview.png)
 
 Organize your projects freely with multiple archives and repositories.
-It is not meant to manage individual source files.
 
 
 #### Capabilities
@@ -36,6 +35,9 @@ Executable          | Description
 
 See [mulle-sde-developer](//github.com/mulle-sde/mulle-sde-developer) how
 to install mulle-sde.
+
+On systems with `zsh` installed, mulle-sourcetree will run appreciably
+faster.
 
 
 ## Sourcetree Nodes
@@ -173,15 +175,13 @@ $ mulle-sourcetree add --url '${ZLIB_URL:-https://github.com/madler/zlib.git}' e
 ```
 
 
-#### `mulle-sourcetree update` : fetch and update nodes
+#### `mulle-sourcetree sync` : fetch and update nodes
 
-After changing the sourcetree, run *update* to reflect the changes back
-into your project:
-
-
+After changing the sourcetree, run *sync* to reflect the changes back
+into your project by fetching added and deleting removed dependencies:
 
 ```
-$ mulle-sourcetree update
+$ mulle-sourcetree sync
 ```
 
 
@@ -223,10 +223,6 @@ $ mulle-sourcetree craftorder
 /private/tmp/a/external/expat
 /private/tmp/a/external/zlib
 ```
-
-### `mulle-sourcetree list` : retru
-
-
 
 ## GitHub and Mulle kybernetiK
 

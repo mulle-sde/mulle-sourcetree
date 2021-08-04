@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+#! /bin/sh
 #
 #   Copyright (c) 2018 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -31,8 +31,68 @@
 #
 [ "${TRACE}" = 'YES' -o "${MULLE_C_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
+####
+#
+# Prelude to be placed at top of each script. Rerun this script either in
+# bash or zsh, if not already running in either (which can happen!)
+# Allows script to run on systems that either have bash (linux) or
+# zsh (macOS) only by default.
 
-MULLE_EXECUTABLE_VERSION="0.25.0"
+if [ "$1" != --no-auto-shell ]
+then
+   if [ -z "${BASH_VERSION}" -a -z "${ZSH_VERSION}" ]
+   then
+      exe_shell="`command -v "bash" `"
+      exe_shell="${exe_shell:-`command -v "zsh" `}"
+
+      script="$0"
+
+      #
+      # Quote incoming arguments for shell expansion
+      #
+      args=""
+      for arg in "$@"
+      do
+         # True bourne sh doesn't know ${a//b/c} and <<<
+         case "${arg}" in
+            *\'*)
+               # Use cat instead of echo to avoid possible echo -n
+               # problems. Escape single quotes in string.
+               arg="`cat <<EOF | sed -e s/\'/\'\\\"\'\\\"\'/g
+${arg}
+EOF
+`"
+            ;;
+         esac
+         if [ -z "${args}" ]
+         then
+            args="'${arg}'"
+         else
+            args="${args} '${arg}'"
+         fi
+      done
+
+      #
+      # bash/zsh will use arg after -c <arg> as $0, convenient!
+      #
+
+      exec "${exe_shell:-bash}" -c ". ${script} --no-auto-shell ${args}" "${script}"
+   fi
+   if [ ! -z "${BASH_VERSION}" ]
+   then
+      set +o posix
+   fi
+else
+   shift    # get rid of --no-auto-shell
+fi
+
+
+#
+# Main script to follow, runs now either in zsh or bash
+#
+####
+
+MULLE_EXECUTABLE_VERSION="0.26.0"
 
 
 usage()
@@ -110,7 +170,7 @@ list_unames()
    r_uname_to_cpp "${MULLE_UNAME}"
    printf "%s : %s\n" "${MULLE_UNAME}" "${RVAL}"
 
-   set -f
+   shell_disable_glob
    for i in darwin freebsd mingw
    do
       if [ "$i" != "${MULLE_UNAME}" ]
@@ -119,7 +179,7 @@ list_unames()
          printf "%s : %s\n" "${i}" "${RVAL}"
       fi
    done
-   set +f
+   shell_enable_glob
 }
 
 
@@ -135,13 +195,13 @@ r_platformexclude_to_cpp_if()
    local excludes
    local onlys
 
-   set -o noglob ; IFS=","
+   shell_disable_glob ; IFS=","
 
    local mark
 
    for mark in ${marks}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       case "${mark}" in
          only-platform-*)
@@ -157,7 +217,7 @@ r_platformexclude_to_cpp_if()
          ;;
       esac
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 
    if [ ! -z "${onlys}" ]
    then
@@ -351,10 +411,10 @@ emit_c_header()
 
    local dependency
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for header in ${headers}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       local address
       local marks
@@ -389,7 +449,7 @@ emit_c_header()
       esac
    done
 
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 }
 
 
@@ -882,6 +942,13 @@ main()
 
 _init()
 {
+   # mingw stuff
+   case "$PATH" in
+      '\\'*)
+         PATH="${PATH//\\/\/}"
+      ;;
+   esac
+
    if [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ]
    then
       MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env "libexec-dir" 2> /dev/null`"
@@ -891,20 +958,9 @@ _init()
    fi
 
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+   call_main "${MULLE_SOURCETREE_TO_CMAKE_FLAGS}" "$@"
 }
 
 _init "$@"
 
-
-quote="'"
-args=""
-for arg in "$@"
-do
-   arg="${arg//${quote}/${quote}\"${quote}\"${quote}}"
-   args="${args} '${arg}'"
-done
-
-unset quote
-unset arg
-
-eval main "${MULLE_SOURCETREE_TO_C_FLAGS}" "${args}"

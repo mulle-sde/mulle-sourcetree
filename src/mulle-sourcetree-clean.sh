@@ -172,10 +172,10 @@ sourcetree_clean()
 
    local protected
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for line in ${commands}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       filename="${line:2}"
       case "${line}" in
@@ -188,10 +188,10 @@ sourcetree_clean()
 
    local uuid
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for line in ${commands}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       filename="${line:2}"
       if find_line "${protected}" "${filename}"
@@ -212,7 +212,7 @@ sourcetree_clean()
          ;;
       esac
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 
    :
 }
@@ -307,14 +307,14 @@ sourcetree_clean_main()
 
          log_verbose "Removing all graveyards"
 
-         shopt -s nullglob
+         shell_enable_nullglob
          # clean for all hosts
          for graveyard in ${MULLE_SOURCETREE_VAR_DIR}/../../*/sourcetree/graveyard
          do
             r_simplified_path "${graveyard}"
             rmdir_safer "${RVAL}"
          done
-         shopt -u nullglob
+         shell_disable_nullglob
       ;;
 
       YES)

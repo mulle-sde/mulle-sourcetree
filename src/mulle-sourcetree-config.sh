@@ -864,7 +864,6 @@ sourcetree_add_node()
    #
    # the following code is really poor and inscrutable
    #
-   local _nodetype
 
    _sourcetree_nameguess_node "${input}" "${_nodetype}" "${_url}"
 
@@ -1089,6 +1088,18 @@ sourcetree_set_node()
    oldaddress="${_address}"
 
    assert_sane_nodemarks "${_marks}"
+
+   # override with options from command options
+   _address="${OPTION_ADDRESS:-${_address}}"
+   _url="${OPTION_URL:-${_url}}"
+   _branch="${OPTION_BRANCH:-${_branch}}"
+   _nodetype="${OPTION_NODETYPE:-${_nodetype}}"
+   _fetchoptions="${OPTION_FETCHOPTIONS:-${_fetchoptions}}"
+   _marks="${OPTION_MARKS:-${_marks}}"
+   _tag="${OPTION_TAG:-${_tag}}"
+   _userinfo="${OPTION_USERINFO:-${_userinfo}}"
+
+   # but arguments override
 
    local key
    local value
@@ -1442,10 +1453,10 @@ sourcetree_mark_node()
    # this loop is suboptimal as we are constantly rewriting the line
    # it was added as an afterthought
 
-   set -o noglob ; IFS=","
+   shell_disable_glob ; IFS=","
    for mark in ${marks}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
       case "${mark}" in
          no-*|only-*|version-*)
             if _nodemarks_contain "${_marks}" "${mark}"
@@ -1575,10 +1586,10 @@ r_sourcetree_rename_mark_nodeline()
    local changed
    local tmp
 
-   set -o noglob ; IFS=","
+   shell_disable_glob ; IFS=","
    for mark in ${_marks}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
       if [ "${mark}" = "no-${oldmark}" ]
       then
@@ -1593,7 +1604,7 @@ r_sourcetree_rename_mark_nodeline()
       r_comma_concat "${changed}" "${mark}"
       changed="${RVAL}"
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    r_nodemarks_sort "${changed}"
    _marks="${RVAL}"
@@ -1695,10 +1706,10 @@ sourcetree_copy_node()
       nodeline_parse "${src}"
       _uuid="${memo}"
    else
-      set -o noglob; IFS=","
+      shell_disable_glob; IFS=","
       for field in ${fields}
       do
-         IFS="${DEFAULT_IFS}"; set +o noglob
+         IFS="${DEFAULT_IFS}"; shell_enable_glob
          case "${field}" in
             '*')
                fail "* can not be mixed with other fields"
@@ -1761,7 +1772,7 @@ sourcetree_copy_node()
             ;;
          esac
       done
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
    fi
 
    r_node_to_nodeline
@@ -1811,16 +1822,16 @@ sourcetree_rename_marks()
 
    oldnodelines="`cfg_read "${SOURCETREE_START}"`"
 
-   set -o noglob ; IFS=$'\n'
+   shell_disable_glob ; IFS=$'\n'
    for oldnodeline in ${oldnodelines}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
       r_sourcetree_rename_mark_nodeline "${oldnodeline}"
       r_add_line "${nodelines}" "${RVAL}"
       nodelines="${RVAL}"
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    if [ "${nodelines}" != "${oldnodelines}" ]
    then

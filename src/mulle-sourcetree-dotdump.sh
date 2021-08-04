@@ -467,10 +467,14 @@ walk_dotdump()
 
    log_debug "destination: ${destination}"
 
-   set -o noglob; IFS="/"
+   local style
+   local label
+   local relidentifier
+
+   shell_disable_glob; IFS="/"
    for component in ${destination}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       if [ -z "${component}" ]
       then
@@ -483,9 +487,6 @@ walk_dotdump()
       identifier="\"${relative}\""
 
       log_debug "identifier: ${identifier}"
-
-      local style
-      local label
 
       style=""
       label=""
@@ -501,8 +502,6 @@ walk_dotdump()
       # this seems to make no sense but fixes a bug
       if [ "${previdentifier}" != "${identifier}" ]
       then
-         local relidentifier
-
          relidentifier=
          if [ -z "${previdentifier}" ]
          then
@@ -519,7 +518,8 @@ walk_dotdump()
             if ! find_line "${ALL_RELATIONSHIPS}" "${relidentifier}"
             then
                exekutor echo "   ${relidentifier} [ style=\"${style}\", label=\"${label}\" ]"
-               ALL_RELATIONSHIPS="`add_line "${ALL_RELATIONSHIPS}" "${relidentifier}"`"
+               r_add_line "${ALL_RELATIONSHIPS}" "${relidentifier}"
+               ALL_RELATIONSHIPS="${RVAL}"
             fi
          fi
       fi
@@ -542,7 +542,7 @@ walk_dotdump()
 
       previdentifier="${identifier}"
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 
    # remove destinatipn from toemit, as we are emitting it now
    identifier="\"${destination}\""
@@ -627,10 +627,10 @@ emit_remaining_directories()
    local identifier
    local name
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for identifier in ${directories}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       name="$(sed 's/^.\(.*\).$/\1/' <<< "${identifier}")"
 
@@ -640,7 +640,7 @@ emit_remaining_directories()
                  "${name}" \
                  'NO'
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 }
 
 

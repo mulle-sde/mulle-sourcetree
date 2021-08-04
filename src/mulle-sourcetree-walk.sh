@@ -614,7 +614,7 @@ ${_raw_userinfo}"
          local i
          local linkmarks
 
-         set -o noglob ; IFS=","
+         shell_disable_glob ; IFS=","
          for i in ${_marks}
          do
             case "${i}" in
@@ -633,7 +633,7 @@ ${_raw_userinfo}"
                ;;
             esac
          done
-         IFS="${DEFAULT_IFS}" ; set +o noglob
+         IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
          RVAL="${_address};${linkmarks:-DEFAULT}" #;${_filename}"
          return 0
@@ -1215,10 +1215,10 @@ _walk_nodelines()
          r_comma_concat "${mode}" 'breadth-flat'
          tmpmode="${RVAL}"
 
-         set -o noglob; IFS=$'\n'
+         shell_disable_glob; IFS=$'\n'
          for nodeline in ${nodelines}
          do
-            IFS="${DEFAULT_IFS}" ; set +o noglob
+            IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
             [ -z "${nodeline}" ] && continue
 
@@ -1234,15 +1234,15 @@ _walk_nodelines()
             rval=$?
             [ $rval -ne 0 ] && return $rval
          done
-         IFS="${DEFAULT_IFS}" ; set +o noglob
+         IFS="${DEFAULT_IFS}" ; shell_enable_glob
       ;;
    esac
 
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}" ; set +o noglob
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
       [ -z "${nodeline}" ] && continue
 
@@ -1280,7 +1280,7 @@ _walk_nodelines()
          ;;
       esac
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    case ",${mode}," in
       *,post-order,*)
@@ -1289,10 +1289,10 @@ _walk_nodelines()
          r_comma_concat "${mode}" 'post-flat'
          tmpmode="${RVAL}"
 
-         set -o noglob; IFS=$'\n'
+         shell_disable_glob; IFS=$'\n'
          for nodeline in ${nodelines}
          do
-            IFS="${DEFAULT_IFS}" ; set +o noglob
+            IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
             [ -z "${nodeline}" ] && continue
 
@@ -1308,7 +1308,7 @@ _walk_nodelines()
             rval=$?
             [ $rval -ne 0 ] && return $rval
          done
-         IFS="${DEFAULT_IFS}" ; set +o noglob
+         IFS="${DEFAULT_IFS}" ; shell_enable_glob
       ;;
    esac
 }
@@ -1325,6 +1325,7 @@ walk_dedupe()
       ;;
    esac
 
+   # on zsh find_line is faster than a case with all walked in one line 
    if find_line "${WALKED}" "${datasource}"
    then
       log_debug "Datasource \"${datasource#${MULLE_USER_PWD}/}\" has already been walked"
@@ -1984,13 +1985,13 @@ ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
    then
       local mark
 
-      IFS=","; set -o noglob
+      IFS=","; shell_disable_glob
       for mark in ${OPTION_MARKS}
       do
          r_concat "${OPTION_QUALIFIER}" "MATCHES ${mark}" " AND "
          OPTION_QUALIFIER="${RVAL}"
       done
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
    fi
 
    #

@@ -167,12 +167,12 @@ sourcetree_output_craftorder()
    then
       local line
 
-      set -o noglob; IFS=$'\n'
+      shell_disable_glob; IFS=$'\n'
       for line in ${collection}
       do
          eval "echo \"${line}\""
       done
-      set +o noglob; IFS="${DEFAULT_IFS}"
+      shell_enable_glob; IFS="${DEFAULT_IFS}"
    else
       printf "%s\n" "${collection}"
    fi
@@ -228,10 +228,10 @@ sourcetree_craftorder_main()
             # remove possible cruft before function name
             #
             input="`egrep -v '^#' <<< "$1" | sed -e '/^ *$/d' `"
-            randomstring="`uuidgen | cut -c'1-6'`"
+            randomstring="`uuidgen | cut -c '1-6'`"
 
             callbackscript="_cb_${randomstring}_${input#function}"
-            OPTION_CALLBACK="`echo ${callbackscript%%(*}`"
+            OPTION_CALLBACK="`echo ${callbackscript%%\(*}`"
             eval "function ${callbackscript}" || fail "Callback \"${input}\" could not be parsed"
          ;;
 
@@ -341,7 +341,7 @@ sourcetree_craftorder_main()
    local lines
    local duplicates 
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for filename in ${_craftorder_collection}
    do
       if find_line "${duplicates}" "${filename}"
@@ -357,7 +357,7 @@ sourcetree_craftorder_main()
       r_add_line "${lines}" "${line}"
       lines="${RVAL}"
    done
-   IFS="${DEFAULT_IFS}" ; set +o noglob
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    sourcetree_output_craftorder "${lines}"
 }

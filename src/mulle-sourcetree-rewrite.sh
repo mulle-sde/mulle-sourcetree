@@ -69,10 +69,10 @@ cfg_rewrite()
 
    [ -z "${nodelines}" ] && return 0
 
-   set -o noglob; IFS=$'\n'
+   shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
-      IFS="${DEFAULT_IFS}"; set +o noglob
+      IFS="${DEFAULT_IFS}"; shell_enable_glob
 
       local _branch
       local _address
@@ -100,7 +100,7 @@ cfg_rewrite()
       r_add_line "${output}" "${RVAL}"
       output="${RVAL}"
    done
-   IFS="${DEFAULT_IFS}"; set +o noglob
+   IFS="${DEFAULT_IFS}"; shell_enable_glob
 
    cfg_write "${config}" "${output}"
 }
