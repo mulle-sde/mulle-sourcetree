@@ -32,53 +32,14 @@
 MULLE_SOURCETREE_ENVIRONMENT_SH="included"
 
 
-sourcetree_basic_environment()
+sourcetree_config_environment()
 {
-   log_entry "sourcetree_basic_environment" "$@"
+   log_entry "sourcetree_config_environment" "$@"
 
-   local directory="$1"
-   local config_dir="$2"
-   local use_fallback="$3"
-
-   if [ -z "${directory}" -a ! -z "${MULLE_VIRTUAL_ROOT}" ]
-   then
-      directory="${MULLE_VIRTUAL_ROOT}"
-      log_fluff "Sourcetree uses MULLE_VIRTUAL_ROOT ($MULLE_VIRTUAL_ROOT)"
-   fi
-
-   if [ -z "${directory}" ]
-   then
-      directory="${PWD}"
-      log_fluff "Sourcetree uses PWD ($directory)"
-   fi
-
-   [ -z "${MULLE_PATH_SH}" ] && \
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"
-
-   MULLE_HOSTNAME="${MULLE_HOSTNAME:-`hostname -s`}"
-
-   r_absolutepath "${directory}"
-   r_physicalpath "${RVAL}"
-   MULLE_SOURCETREE_PROJECT_DIR="${RVAL}"
-
-   if [ -z "${MULLE_VIRTUAL_ROOT}" ]
-   then
-      MULLE_VIRTUAL_ROOT="${MULLE_SOURCETREE_PROJECT_DIR}"
-      log_fluff "Sourcetree sets MULLE_VIRTUAL_ROOT to \"${MULLE_VIRTUAL_ROOT}\""
-   fi
-
-   # no share in sourcetree operation
-   # MULLE_SOURCETREE_SHARE_DIR="${MULLE_SOURCETREE_PROJECT_DIR}/.mulle/share/sourcetree"
-
-   #
-   # we don't want to "climb out" of MULLE_SOURCETREE_PROJECT_DIR so
-   # use --search-here
-   #
-   eval `"${MULLE_ENV:-mulle-env}" \
-               ${MULLE_TECHNICAL_FLAGS} \
-               -d "${MULLE_SOURCETREE_PROJECT_DIR}" \
-               --search-here \
-               mulle-tool-env sourcetree` || exit 1
+   local config_dir="$1"
+   local use_fallback="$2"
+   local scope="$3"
+   local mode="$4"
 
    if [ ! -z "${config_dir}" ]
    then
@@ -95,6 +56,9 @@ sourcetree_basic_environment()
       SOURCETREE_FALLBACK_CONFIG_FILENAME=""
    fi
 
+   SOURCETREE_SCOPE="${scope:-default}"
+   SOURCETREE_MODE="${mode}" # maybe empty for now
+
    is_absolutepath "${SOURCETREE_CONFIG_FILENAME}" \
    && internal_fail "SOURCETREE_CONFIG_FILENAME \"${SOURCETREE_CONFIG_FILENAME}\" must be relative"
 
@@ -110,6 +74,76 @@ sourcetree_basic_environment()
          ;;
       esac
    fi
+}
+
+
+sourcetree_minimal_environment()
+{
+   log_entry "sourcetree_minimal_environment" "$@"
+
+   local directory="$1"
+   local config_dir="$2"
+   local use_fallback="$3"
+
+   if [ -z "${directory}" -a ! -z "${MULLE_VIRTUAL_ROOT}" ]
+   then
+      directory="${MULLE_VIRTUAL_ROOT}"
+      log_fluff "Sourcetree uses MULLE_VIRTUAL_ROOT ($MULLE_VIRTUAL_ROOT)"
+   fi
+
+   if [ -z "${directory}" ]
+   then
+      directory="${PWD}"
+      log_debug "Sourcetree uses PWD ($directory)"
+   fi
+
+   [ -z "${MULLE_PATH_SH}" ] && . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"
+
+   r_absolutepath "${directory}"
+   r_physicalpath "${RVAL}"
+
+   MULLE_SOURCETREE_PROJECT_DIR="${RVAL}"
+
+   if [ -z "${MULLE_VIRTUAL_ROOT}" ]
+   then
+      MULLE_VIRTUAL_ROOT="${MULLE_SOURCETREE_PROJECT_DIR}"
+      log_fluff "Sourcetree sets MULLE_VIRTUAL_ROOT to \"${MULLE_VIRTUAL_ROOT}\""
+   fi
+
+   MULLE_HOSTNAME="${MULLE_HOSTNAME:-`hostname -s`}"
+}
+
+
+sourcetree_basic_environment()
+{
+   log_entry "sourcetree_basic_environment" "$@"
+
+   local directory="$1"
+   local config_dir="$2"
+   local use_fallback="$3"
+   local scope="$4"
+   local mode="$5"
+
+   sourcetree_minimal_environment "${directory}" "${config_dir}" "${use_fallback}"
+
+   # no share in sourcetree operation
+   # MULLE_SOURCETREE_SHARE_DIR="${MULLE_SOURCETREE_PROJECT_DIR}/.mulle/share/sourcetree"
+
+   #
+   # we don't want to "climb out" of MULLE_SOURCETREE_PROJECT_DIR so
+   # use --search-here
+   #
+   eval `"${MULLE_ENV:-mulle-env}" \
+               ${MULLE_TECHNICAL_FLAGS} \
+               -d "${MULLE_SOURCETREE_PROJECT_DIR}" \
+               --search-here \
+               mulle-tool-env sourcetree` || exit 1
+
+   sourcetree_config_environment "${config_dir}" \
+                                 "${use_fallback}" \
+                                 "${scope}" \
+                                 "${mode}"
+
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
@@ -120,6 +154,56 @@ sourcetree_basic_environment()
       log_trace2 "MULLE_SOURCETREE_VAR_DIR:            ${MULLE_SOURCETREE_VAR_DIR}"
       log_trace2 "MULLE_SOURCETREE_SHARE_DIR:          ${MULLE_SOURCETREE_SHARE_DIR}"
    fi
+}
+
+
+sourcetree_environment()
+{
+   log_entry "sourcetree_environment" "$@"
+
+   local option_scope="$1"
+   local option_sharedir="$2"
+   local option_configdir="$3"
+   local option_use_fallback="$4"
+   local defer="$5"
+   local mode="$6"
+
+   sourcetree_basic_environment "" \
+                                "${option_configdir}" \
+                                "${option_use_fallback}" \
+                                "${option_scope}" \
+                                "${mode}"
+
+   if [ "${defer}" = "VIRTUAL" ]
+   then
+      [ -z "${MULLE_VIRTUAL_ROOT}" ] && fail "MULLE_VIRTUAL_ROOT not set"
+
+      cd "${MULLE_VIRTUAL_ROOT}" || fail "failed to cd to \"${MULLE_VIRTUAL_ROOT}\""
+
+      _set_sourcetree_global "${MULLE_SOURCETREE_PROJECT_DIR}"
+   else
+      _set_sourcetree_global "${MULLE_SOURCETREE_PROJECT_DIR}"
+
+      #
+      # Todo: the defer thing is probably old junk
+      #
+      if ! cfg_defer_if_needed "${defer:-NEAREST}"
+      then
+         # could be an add, so can't really quit here
+         if [ "${defer}" = "PARENT" ]
+         then
+            exit 1
+         fi
+      fi
+   fi
+
+   #
+   # the setting of the share directory is somewhat arcane, the general idea
+   # was probably to have a common stash directory for multiple projects.
+   # TODO: get rid of this ?
+   #
+   _set_share_dir "${option_sharedir}"
+   set +x
 }
 
 
@@ -188,7 +272,7 @@ _set_share_dir()
             if [ -d "${share_dir}" ]
             then
                MULLE_SOURCETREE_STASH_DIR="`physicalpath "${share_dir}" `"
-               log_fluff "Using database share directory \"${share_dir}\""
+               log_debug "Using database share directory \"${share_dir}\""
 
                r_basename "${MULLE_SOURCETREE_STASH_DIR}"
                MULLE_SOURCETREE_STASH_DIRNAME="${RVAL}"
@@ -224,55 +308,6 @@ _set_share_dir()
    esac
 }
 
-
-sourcetree_environment()
-{
-   log_entry "sourcetree_environment" "$@"
-
-   local option_scope="$1"
-   local option_sharedir="$2"
-   local option_configdir="$3"
-   local option_use_fallback="$4"
-   local defer="$5"
-   local mode="$6"
-
-   sourcetree_basic_environment "" \
-                                "${option_configdir}" \
-                                "${option_use_fallback}"
-
-   SOURCETREE_SCOPE="${scope:-default}"
-   SOURCETREE_MODE="${mode}" # maybe empty for now
-
-   if [ "${defer}" = "VIRTUAL" ]
-   then
-      [ -z "${MULLE_VIRTUAL_ROOT}" ] && fail "MULLE_VIRTUAL_ROOT not set"
-
-      cd "${MULLE_VIRTUAL_ROOT}"
-
-      _set_sourcetree_global "${MULLE_SOURCETREE_PROJECT_DIR}"
-   else
-      _set_sourcetree_global "${MULLE_SOURCETREE_PROJECT_DIR}"
-
-      #
-      # Todo: the defer thing is probably old junk
-      #
-      if ! cfg_defer_if_needed "${defer:-NEAREST}"
-      then
-         # could be an add, so can't really quit here
-         if [ "${defer}" = "PARENT" ]
-         then
-            exit 1
-         fi
-      fi
-   fi
-
-   #
-   # the setting of the share directory is somewhat arcane, the general idea
-   # was probably to have a common stash directory for multiple projects.
-   # TODO: get rid of this ?
-   #
-   _set_share_dir "${option_sharedir}"
-}
 
 
 sourcetree_initialize()

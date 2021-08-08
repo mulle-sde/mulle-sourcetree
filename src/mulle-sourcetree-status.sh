@@ -69,7 +69,9 @@ Usage:
 
 Options:
    --all             : visit all nodes, even if they are unused due to sharing
-   --is-uptodate     : return with 0 if sourcetree does not need to run update
+   --shallow         : don't visit sourcetrees of nodes
+   --deep            : visit the sourcetrees of nodes (default)
+   --is-uptodate     : return <> 0 if a sync is needed (preselects --shallow)
    --output-filename : add filename to output
    -n <value>        : node types to walk (default: ALL)
    -p <value>        : specify permissions (missing)
@@ -314,20 +316,20 @@ r_emit_status()
             # build and updates for non-required stuff thats
             # never there. Fix: (always need a require node)
             #
-            log_fluff "\"${filename}\" does not exist but it isn't required ($PWD)"
+            log_fluff "#5: \"${filename}\" does not exist but it isn't required (${PWD#${MULLE_USER_PWD}/})"
             RVAL="${output_address};optional;${fs};${configexists};${dbexists}" #;${filename}"
             return 5
          fi
 
          if [ -z "${_url}" ]
          then
-            log_fluff "\"${filename}\" does not exist and is required \
+            log_fluff "#3 \"${filename}\" does not exist and is required \
 ($PWD), but _url is empty"
             RVAL="${output_address};missing;${fs};${configexists};${dbexists}" #;${filename}"
             return 3
          fi
 
-         log_fluff "\"${filename}\" does not exist and is required ($PWD)"
+         log_fluff "#4 \"${filename}\" does not exist and is required (${PWD#${MULLE_USER_PWD}/})"
          RVAL="${output_address};absent;${fs};${configexists};${dbexists}" #;${filename}"
          return 4
       fi
@@ -345,70 +347,80 @@ r_emit_status()
          fi
       fi
 
-      #
-      # Start of database/config checks
-      #
-      # Config     | Database   | Config > DB | Output
-      # -----------|------------|-------------|----------
-      # exists     | exists     | ?           | outdated (8)
-      # not exists | *          | *           | ok (0)
-      # exists     | not ready  | *           | unready (9)
-      # exists     | updating   | *           | updating (7)
-      # exists     | exists     | -           | ok (0)
-      # exists     | exists     | +           | dirty (6)
-      # exists     | not-exists | *           | dirty (6)
-      #
-      if [ "${configexists}" = 'NO' ]
-      then
-         log_fluff "\"${directory}\" does not have a \
-${SOURCETREE_CONFIG_FILENAME} ($PWD)"
+      case ",${mode}," in
+         *,deep,*)
+            #
+            # Start of database/config checks
+            #
+            # Config     | Database   | Config > DB | Output
+            # -----------|------------|-------------|----------
+            # exists     | exists     | ?           | outdated (8)
+            # not exists | *          | *           | ok (0)
+            # exists     | not ready  | *           | unready (9)
+            # exists     | updating   | *           | updating (7)
+            # exists     | exists     | -           | ok (0)
+            # exists     | exists     | +           | dirty (6)
+            # exists     | not-exists | *           | dirty (6)
+            #
+            if [ "${configexists}" = 'NO' ]
+            then
+               # don't fluff zeroes
+               log_debug "#0: \"${directory}\" does not have a \
+${SOURCETREE_CONFIG_FILENAME} (${PWD#${MULLE_USER_PWD}/})"
 
-         RVAL="${output_address};ok;${fs};${configexists};${dbexists}" #;${filename}"
-         return 0
-      fi
+               RVAL="${output_address};ok;${fs};${configexists};${dbexists}" #;${filename}"
+               return 0
+            fi
 
-      if [  "${dbexists}" = 'NO' ]
-      then
-         log_fluff "\"${filename}\" is dirty ($PWD)"
-         RVAL="${output_address};dirty;${fs};\
+            if [ "${dbexists}" = 'NO' ]
+            then
+               log_fluff "#6 \"${filename}\" is dirty (${PWD#${MULLE_USER_PWD}/})"
+               RVAL="${output_address};dirty;${fs};\
 ${configexists};${dbexists}" #;${filename}"
-         return 6
-      fi
+               return 6
+            fi
 
-      if ! sourcetree_is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
-      then
-         log_fluff "Database \"${datasource}\" is not compatible with \
-\"${SOURCETREE_MODE}\" ($PWD)"
+            if ! sourcetree_is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
+            then
+               log_fluff "#8 Database \"${datasource}\" is not compatible with \
+\"${SOURCETREE_MODE}\" (${PWD#${MULLE_USER_PWD}/})"
 
-         RVAL="${output_address};outdated;${fs};${configexists};${dbexists}" #;${filename}"
-         return 8
-      fi
+               RVAL="${output_address};outdated;${fs};${configexists};${dbexists}" #;${filename}"
+               return 8
+            fi
 
-      if ! db_is_ready "${datasource}"
-      then
-         log_fluff "Database \"${datasource}\" is not ready"
-         RVAL="${output_address};unready;${fs};\
+            if ! db_is_ready "${datasource}"
+            then
+               log_fluff "#9 Database \"${datasource}\" is not ready"
+               RVAL="${output_address};unready;${fs};\
 ${configexists};${dbexists}" #;${filename}"
-         return 9
-      fi
+               return 9
+            fi
 
-      if db_is_updating "${datasource}"
-      then
-         log_fluff "\"${filename}\" is marked as updating ($PWD)"
-         RVAL="${output_address};updating;${fs};\
+            if db_is_updating "${datasource}"
+            then
+               log_fluff "#7: \"${filename}\" is marked as updating (${PWD#${MULLE_USER_PWD}/})"
+               RVAL="${output_address};updating;${fs};\
 ${configexists};${dbexists}" #;${filename}"
-         return 7
-      fi
+               return 7
+            fi
 
-      if ! sourcetree_is_uptodate "${datasource}"
-      then
-         log_fluff "Database \"${datasource}\" is dirty ($PWD)"
-         RVAL="${output_address};dirty;${fs};\
+            if ! sourcetree_is_uptodate "${datasource}"
+            then
+               log_fluff "#6: Database \"${datasource}\" is dirty (${PWD#${MULLE_USER_PWD}/})"
+               RVAL="${output_address};dirty;${fs};\
 ${configexists};${dbexists}" #;${filename}"
-         return 6
-      fi
+              return 6
+            fi
+            treestatus="ok"
+         ;;
 
-      treestatus="ok"
+         *)
+            treestatus="unknown"
+            configexists="unknown"
+            dbexists="unknown"
+         ;;
+      esac
    fi
 
    RVAL="${output_address};${treestatus};${fs};${configexists};${dbexists}" # ;${filename}"
@@ -450,6 +462,11 @@ walk_status()
       ;;
    esac
 
+   if [ "${OPTION_IS_UPTODATE}" = 'YES'  ]
+   then
+      return 0
+   fi
+
    if [ "${OPTION_OUTPUT_FILENAME}" = 'YES' ]
    then
       if [ -e "${NODE_FILENAME}" ]
@@ -475,7 +492,8 @@ sourcetree_status()
    local rval
 
    # empty parameters means local
-   r_emit_status
+   # output an entry for root node
+   r_emit_status "" "" "" "" "${mode}" ""
    output="${RVAL}"
 
    output2="`walk_config_uuids "ALL" \
@@ -569,6 +587,7 @@ sourcetree_status_main()
    local OPTION_PERMISSIONS=""
    local OPTION_NODETYPES=""
    local OPTION_WALK_DB="DEFAULT"
+   local OPTION_DEEP='DEFAULT'
    local OPTION_IS_UPTODATE='NO'
    local OPTION_OUTPUT_HEADER="DEFAULT"
    local OPTION_OUTPUT_FORMAT="FMT"
@@ -584,6 +603,14 @@ sourcetree_status_main()
 
          --all)
             WALK_DEDUPE_MODE='none'
+         ;;
+
+         --deep)
+            OPTION_DEEP='YES'
+         ;;
+
+         --shallow)
+            OPTION_DEEP='NO'
          ;;
 
          --output-header)
@@ -672,10 +699,19 @@ sourcetree_status_main()
       log_fluff "Sync has not run yet (mode=${SOURCETREE_MODE})"
    fi
 
+   local mode
+
    mode="${SOURCETREE_MODE}"
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
       r_comma_concat "${mode}" "pre-order"
+      mode="${RVAL}"
+   fi
+
+   # usually deep, unless --is-uptodate is given or --shallow/--deep explicitly
+   if [ "${OPTION_DEEP}" = 'YES' ] || [ "${OPTION_DEEP}" = 'DEFAULT' -a  "${OPTION_IS_UPTODATE}" != 'YES' ]
+   then
+      r_comma_concat "${mode}" "deep"
       mode="${RVAL}"
    fi
    if [ "${OPTION_OUTPUT_FORMAT}" = 'FMT' ]
@@ -699,10 +735,18 @@ sourcetree_status_main()
 
    case $rval in
       0)
+         if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
+         then
+            log_info "OK"
+         fi
          return 0
       ;;
 
       2|3|4|5|6|7|8|9)
+         if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
+         then
+            log_warning "DIRTY"
+         fi
          return 2
       ;;
 

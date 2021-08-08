@@ -349,6 +349,20 @@ _r_nodeline_find()
 }
 
 
+r_nodeline_find()
+{
+   log_entry "r_nodeline_find" ... "$2" "$3"
+
+   local nodelines="$1"
+   local address="$2"
+   local fuzzy="${3:-NO}"
+
+   [ -z "${address}" ] && internal_fail "address is empty"
+
+   _r_nodeline_find "${nodelines}" "${address}" r_nodeline_get_address "${fuzzy}"
+}
+
+
 nodeline_find()
 {
    log_entry "nodeline_find" ... "$2" "$3"
@@ -398,6 +412,19 @@ nodeline_find_by_evaled_url()
       return 1
    fi
    printf "%s\n" "${RVAL}"
+}
+
+
+r_nodeline_find_by_uuid()
+{
+   log_entry "r_nodeline_find_by_uuid"  "..." "$2"
+
+   local nodelines="$1"
+   local uuid="$2"
+
+   [ -z "${uuid}" ] && internal_fail "uuid is empty"
+
+   _r_nodeline_find "${nodelines}" "${uuid}" r_nodeline_get_uuid NO
 }
 
 
@@ -712,12 +739,13 @@ nodeline_printf()
 }
 
 
-nodeline_diff()
+r_nodeline_diff()
 {
-   log_entry "nodeline_diff"
+   log_entry "r_nodeline_diff"
 
    local nodeline1="$1"
    local nodeline2="$2"
+   local mode="${3:-diff}"
 
    local _branch
    local _address
@@ -749,7 +777,10 @@ nodeline_diff()
    local u_field
    local u_field_value
    local field_value
+   local diffed_value
+   local memo
 
+   RVAL=
    shell_disable_glob
    for field in address branch fetchoptions marks nodetype tag url userinfo
    do
@@ -769,7 +800,24 @@ nodeline_diff()
          continue
       fi
 
-      echo "${field}: ${field_value} <> ${u_field_value}"
+      case "${mode}" in
+         diff)
+            if [ "${field}" = "marks" ]
+            then
+               memo="${RVAL}"
+                  r_nodemarks_diff "${field_value}" "${u_field_value}"
+                  diffed_value="${RVAL}"
+               RVAL="${memo}"
+            else
+               diffed_value="${field_value};${u_field_value}"
+            fi
+            r_add_line "${RVAL}" "${field}:${diffed_value}"
+         ;;
+
+         field)
+            r_commalist_add "${RVAL}" "${field}"
+         ;;
+      esac
    done
    shell_enable_glob
 }

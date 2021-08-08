@@ -732,7 +732,8 @@ sourcetree_change_nodeline_uuid()
    local verifynodeline
 
    verifynodelines="`cfg_read "${SOURCETREE_START}"`"
-   verifynodeline="`nodeline_find_by_uuid "${verifynodelines}" "${uuid}"`"
+   r_nodeline_find_by_uuid "${verifynodelines}" "${uuid}"
+   verifynodeline="${RVAL}"
 
    if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" != 'YES' ]
    then

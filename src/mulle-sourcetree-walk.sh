@@ -1207,10 +1207,10 @@ _walk_nodelines()
    esac
 
    local rval
+   local tmpmode
 
    case ",${mode}," in
       *,breadth-order,*)
-         local tmpmode
 
          r_comma_concat "${mode}" 'breadth-flat'
          tmpmode="${RVAL}"
@@ -1238,7 +1238,6 @@ _walk_nodelines()
       ;;
    esac
 
-
    shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
@@ -1260,8 +1259,6 @@ _walk_nodelines()
 
       case ",${mode}," in
          *,in-order,*)
-            local tmpmode
-
             r_comma_concat "${mode}" 'post-flat'
             tmpmode="${RVAL}"
 
@@ -1284,8 +1281,6 @@ _walk_nodelines()
 
    case ",${mode}," in
       *,post-order,*)
-         local tmpmode
-
          r_comma_concat "${mode}" 'post-flat'
          tmpmode="${RVAL}"
 
@@ -1611,6 +1606,7 @@ sourcetree_walk()
       return 0
    fi
 
+   log_debug "sourcetree_walk rval=$rval"
    return $rval
 }
 

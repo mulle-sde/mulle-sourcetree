@@ -234,7 +234,7 @@ list_walk_callback()
          then
             indent="*${WALK_INDENT# }"
          fi
-         log_verbose "duplicate: ${_address}"
+         log_verbose "Duplicate: ${_address}"
          node_printf "${_mode}" "${formatstring}" "${cmdline}" "${indent}"
       else
          r_add_line "${DUPLICATES}" "${_address}"

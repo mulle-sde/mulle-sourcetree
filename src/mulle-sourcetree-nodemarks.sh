@@ -832,7 +832,7 @@ nodemark_only_framework_consistency_check()
 
    if nodemarks_enable "${marks}" cmake-add
    then
-      log_info "Framework \"${address}\" doesn't need cmake-add. (Use no-cmake-add to make reflected files prettier)"
+      log_info "Framework \"${address}\" implicitly defines cmake-add, which generates superflous cmake code. (Use no-cmake-add)"
    fi
 }
 
@@ -884,3 +884,44 @@ nodemarks_check_consistency()
    IFS="${DEFAULT_IFS}"; shell_enable_glob
 } 
 
+
+r_nodemarks_diff()
+{
+   log_entry "r_nodemarks_diff" "$@"
+
+   local nodemarks1="$1"
+   local nodemarks2="$2"
+
+   local matched
+   local mark
+   local differences
+
+
+   IFS=","; shell_disable_glob
+   for mark in ${nodemarks1}
+   do
+      if nodemarks_contain "${nodemarks2}" "${mark}"
+      then
+         r_comma_concat "${matched}" "${mark}"
+         matched="${RVAL}"
+         continue
+      fi
+
+      r_comma_concat "${differences}" "+${mark}"
+      differences="${RVAL}"
+   done
+
+   for mark in ${nodemarks2}
+   do
+      if nodemarks_contain "${matched}" "${mark}"
+      then
+         continue
+      fi
+
+      r_comma_concat "${differences}" "-${mark}"
+      differences="${RVAL}"
+   done
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+
+   RVAL="${differences}"
+}

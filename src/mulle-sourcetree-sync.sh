@@ -50,6 +50,8 @@ Usage:
 
 Options:
    -r                         : sync recursively
+   --serial                   : don't fetch dependencies in parallel
+   --parallel                 : fetch dependencies in parallel (default)
    --quick-check              : if present in filesystem assume node is OK
    --no-fix                   : do not write ${SOURCETREE_FIX_FILENAME} files
    --share                    : create database in shared configuration
@@ -299,9 +301,15 @@ _descend_db_nodelines()
    local nodelines
 
    nodelines="`db_fetch_all_nodelines "${database}" `" || exit 1
+   if [ -z "${nodelines}" ]
+   then
+      log_fluff "No \"${style}\" update of database \"${database:-ROOT}\" as \
+it is empty (${PWD#${MULLE_USER_PWD}/})"
+      return
+   fi
 
    log_debug "Continuing with a \"${style}\" update of nodelines \
-\"${nodelines}\" of db \"${database:-ROOT}\" ($PWD)"
+\"${nodelines}\" of db \"${database:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
 
    local nodeline
 
@@ -351,12 +359,13 @@ _descend_config_nodelines()
    nodelines="`cfg_read "${config}" `"
    if [ -z "${nodelines}" ]
    then
-      log_fluff "No\"${style}\" update of config \"${config:-ROOT}\" as it is empty ($PWD)"
+      log_fluff "No\"${style}\" update of config \"${config:-ROOT}\" as it \
+is empty (${PWD#${MULLE_USER_PWD}/})"
       return
    fi
 
    log_debug "Continuing with a \"${style}\" update of \
-nodelines \"${nodelines}\" from config \"${config:-ROOT}\" ($PWD)"
+nodelines \"${nodelines}\" from config \"${config:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
 
    local nodeline
 
@@ -601,8 +610,7 @@ _sourcetree_sync_share()
    #
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
-
-   if [ "${need_db}"  = 'YES' ]
+   if [ "${need_db}" = 'YES' ]
    then
       db_set_dbtype "${database}" "${style}"
       db_set_update "${database}"
@@ -613,11 +621,21 @@ _sourcetree_sync_share()
       db_zombify_nodes "${database}"
    fi
 
-   do_actions_with_nodelines "${nodelines}" \
-                             "${style}" \
-                             "${config}" \
-                             "${database}" \
-   || return 1
+   local count
+   local rval
+
+   r_count_lines "${nodelines}"
+   count="${RVAL}"
+
+   if [ "${OPTION_PARALLEL}" = 'YES' -a ${count} -gt 1 ]
+   then
+      do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
+      rval=$?
+   else
+      do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
+      rval=$?
+   fi
+   [ $rval -eq 0 ] || return 1
 
    if [ "${need_db}"  = 'YES' ]
    then
@@ -759,7 +777,21 @@ _sourcetree_sync_recurse()
    # zombify everything
    db_zombify_nodes "${database}"
 
-   do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}" || return 1
+   local count
+   local rval
+
+   r_count_lines "${nodelines}"
+   count="${RVAL}"
+
+   if [ "${OPTION_PARALLEL}" = 'YES' -a ${count} -gt 1 ]
+   then
+      do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
+      rval=$?
+   else
+      do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
+      rval=$?
+   fi
+   [ $rval -eq 0 ] || return 1
 
    db_bury_zombie_nodelines "${database}" "${nodelines}"
 
@@ -828,7 +860,20 @@ _sourcetree_sync_flat()
    db_clear_shareddir "${database}"
    db_zombify_nodes "${database}"
 
-   do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}" || return 1
+   local count
+
+   r_count_lines "${nodelines}"
+   count="${RVAL}"
+
+   if [ "${OPTION_PARALLEL}" = 'YES' -a ${count} -gt 1 ]
+   then
+      do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
+      rval=$?
+   else
+      do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
+      rval=$?
+   fi
+   [ $rval -eq 0 ] || return 1
 
    db_bury_zombies "${database}"
 
@@ -869,7 +914,7 @@ sourcetree_sync_flat()
 #
 sourcetree_sync_start()
 {
-   log_entry "sourcetree_sync_start" "$@" "($PWD)"
+   log_entry "sourcetree_sync_start" "$@" "(${PWD#${MULLE_USER_PWD}/})"
 
    local style
    local startpoint
@@ -938,6 +983,7 @@ sourcetree_sync_main()
    local OPTION_FETCH_ABSOLUTE_SYMLINK="DEFAULT"
    local OPTION_LENIENT='YES'
    local OPTION_QUICK='NO'
+   local OPTION_PARALLEL='YES'
 
    # default is YES, but environment can override
    MULLE_SOURCETREE_RESOLVE_TAG="${MULLE_SOURCETREE_RESOLVE_TAG:-YES}"
@@ -970,6 +1016,14 @@ sourcetree_sync_main()
 
          --no-cache-refresh|--no-refresh|--no-mirror-refresh)
             OPTION_FETCH_REFRESH='NO'
+         ;;
+
+         --parallel)
+            OPTION_PARALLEL='YES'
+         ;;
+
+         --no-parallel|--serial)
+            OPTION_PARALLEL='NO'
          ;;
 
          --symlink)

@@ -60,11 +60,14 @@ r_sourcetree_guess_address()
    && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
    log_fluff "${MULLE_DOMAIN:-mulle-domain} returned \"${RVAL}\" as \
-default address for url ($url)"
+default address for url ($evaledurl)"
    return $rval
 }
 
 
+#
+# returns "local" if the URL is found on the local filesystem
+# this doesn't distinguish then between
 r_sourcetree_guess_nodetype()
 {
    log_entry "r_sourcetree_guess_nodetype" "$@"
@@ -73,12 +76,12 @@ r_sourcetree_guess_nodetype()
 
    [ -z "${url}" ] && fail "URL is empty"
 
-   local _evaledurl
+   local evaledurl
 
    r_expanded_string "${url}"
-   _evaledurl="${RVAL}"
+   evaledurl="${RVAL}"
 
-   case "${_evaledurl}" in
+   case "${evaledurl}" in
       "")
          RVAL=
          return 1
@@ -90,9 +93,9 @@ r_sourcetree_guess_nodetype()
 
       # local filesystem guesses
       /*|~/*|\.\./*|\./*)
-         if [ -e "${_evaledurl}" ]
+         if [ -e "${evaledurl}" ]
          then
-            log_fluff "\"${url}\" looks like a local nodetype url (${_evaledurl})"
+            log_fluff "\"${url}\" looks like a local nodetype url (${evaledurl})"
             RVAL="local"
             return
          fi
@@ -105,13 +108,13 @@ r_sourcetree_guess_nodetype()
                   ${MULLE_TECHNICAL_FLAGS} \
                   ${MULLE_DOMAIN_FLAGS} \
                typeguess \
-                  "${_evaledurl}"`" || return 1
+                  "${evaledurl}"`" || return 1
    rval=$?
    [ $rval -eq 127 ] \
    && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
    log_fluff "${MULLE_DOMAIN:-mulle-domain} determined \"${RVAL}\" as \
-nodetype from url ($_evaledurl)"
+nodetype from url ($evaledurl)"
    return $rval
 }
 
@@ -304,61 +307,62 @@ MULLE_SOURCETREE_RESOLVE_TAG is NO"
       cmdoptions="${RVAL}"
    fi
 
-   local rval
-
-   case "${_evalednodetype}" in
-      file)
-         # does not implement local search
-      ;;
-
-      comment)
-         internal_fail "comment should have been ignored previously"
-      ;;
-
-      *)
-         log_fluff "Looking for local copy of \
-${C_RESET_BOLD}${_evaledurl}${C_INFO}"
-
-         local localurl
-         local localnodetype
-         local cmd2options
-
-         cmd2options="${cmdoptions}"
-         if [ ! -z "${_evaledurl}" ]
-         then
-            r_concat "${cmdoptions}" "--url '${_evaledurl}'"
-            cmd2options="${RVAL}"
-         fi
-
-
-         localurl="$( eval_exekutor "'${MULLE_FETCH:-mulle-fetch}'" \
-                                          "${MULLE_TECHNICAL_FLAGS}" \
-                                       "search-local" \
-                                          "${cmd2options}" \
-                                          "'${_address}'" )"
-         rval=$?
-         [ $rval -eq 127 ] && fail "mulle-fetch not found"
-
-         if [ ! -z "${localurl}" ]
-         then
-            _evaledurl="${localurl}"
-            log_verbose "Local URL found \"${localurl}\""
-
-            r_sourcetree_guess_nodetype "${localurl}"
-            localnodetype="${RVAL}"
-
-            if [ ! -z "${localnodetype}" -a "${localnodetype}" != "local" ]
-            then
-               log_fluff "Local URL found ($localnodetype)"
-               # this doesn't work anymore
-               # evalednodetype="${localnodetype}"
-               :
-            fi
-         else
-            log_fluff "No local URL found"
-         fi
-      ;;
-   esac
+#   local rval
+#   local localurl
+#   local localnodetype
+#   local cmd2options
+#
+#   case "${_evalednodetype}" in
+#      file)
+#         # does not implement local search
+#      ;;
+#
+#      comment)
+#         internal_fail "comment should have been ignored previously"
+#      ;;
+#
+#      *)
+#         log_fluff "Looking for local copy of \
+#${C_RESET_BOLD}${_evaledurl}${C_INFO}"
+#
+#         cmd2options="${cmdoptions}"
+#         if [ ! -z "${_evaledurl}" ]
+#         then
+#            r_concat "${cmdoptions}" "--url '${_evaledurl}'"
+#            cmd2options="${RVAL}"
+#         fi
+#
+#         localurl="$( eval_exekutor "'${MULLE_FETCH:-mulle-fetch}'" \
+#                                          "${MULLE_TECHNICAL_FLAGS}" \
+#                                       "search-local" \
+#                                          "${cmd2options}" \
+#                                          "'${_address}'" )"
+#         rval=$?
+#         [ $rval -eq 127 ] && fail "mulle-fetch not found"
+#
+#         if [ ! -z "${localurl}" ]
+#         then
+#            _evaledurl="${localurl}"
+#
+#            r_sourcetree_guess_nodetype "${localurl}"
+#            localnodetype="${RVAL}"
+#
+#            log_fluff "A ${localnodetype} matched at \"${localurl}\""
+#            if [ ! -z "${localnodetype}" -a "${localnodetype}" != "local" ]
+#            then
+#               case "${options}" in
+#                  *--symlink*)
+#                     _evalednodetype="${localnodetype}"
+#                  ;;
+#               esac
+#               # this is needed for a local match of a tar url to git url
+#               # BUT it was commented out at some point
+#            fi
+#         else
+#            log_fluff "No local URL found"
+#         fi
+#      ;;
+#   esac
 
    #
    # _evaledurl may have changed due to local lookup

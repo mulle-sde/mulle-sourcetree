@@ -1525,7 +1525,7 @@ main()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-`command -v mulle-sourcetree`}"
    [ -z "${MULLE_SOURCETREE}" ] && fail "mulle-sourcetree not in PATH"
 
-   options_setup_trace "${MULLE_TRACE}"
+   options_setup_trace "${MULLE_TRACE}" && set -x
 
    if [ "${OPTION_PARALLEL}" = 'YES' ]
    then
@@ -1563,6 +1563,8 @@ _init()
 
    call_main "${MULLE_SOURCETREE_TO_CMAKE_FLAGS}" "$@"
 }
+
+MULLE_EXECUTABLE="${MULLE_EXECUTABLE:-${BASH_SOURCE[0]:-${(%):-%x}}}"
 
 _init "$@"
 

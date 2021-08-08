@@ -273,19 +273,19 @@ __cfg_read()
 {
    if [ -f "${_configfile}" ]
    then
-      log_debug "Read config file \"${_configfile}\" ($PWD)"
+      log_debug "Read config file \"${_configfile}\" (${PWD#${MULLE_USER_PWD}/})"
       egrep -s -v '^#' "${_configfile}"
       return $?
    fi
 
    if [ ! -z "${_fallback_configfile}" ] && [ -f "${_fallback_configfile}" ]
    then
-      log_debug "Read config file \"${_fallback_configfile}\" ($PWD)"
+      log_debug "Read config file \"${_fallback_configfile}\" (${PWD#${MULLE_USER_PWD}/})"
       egrep -s -v '^#' "${_fallback_configfile}"
       return $?
    fi
 
-   log_debug "No config file \"${_configfile}\" or \"${_fallback_configfile}\" found ($PWD)"
+   log_debug "No config file \"${_configfile}\" or \"${_fallback_configfile}\" found (${PWD#${MULLE_USER_PWD}/})"
    return 1
 }
 
@@ -523,7 +523,8 @@ cfg_change_nodeline()
 
    if [ "${MULLE_FLAG_LOG_DEBUG}" = 'YES' ]
    then
-      log_debug "diff " `nodeline_diff "${oldnodeline}" "${newnodeline}"`
+      r_nodeline_diff "${oldnodeline}" "${newnodeline}"
+      log_debug "diff ${RVAL}"
    fi
 
    local oldescaped

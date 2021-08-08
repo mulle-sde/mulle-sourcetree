@@ -67,20 +67,21 @@ cfg_reuuid()
    [ -z "${nodelines}" ] && return 0
 
    shell_disable_glob; IFS=$'\n'
+
+   local _branch
+   local _address
+   local _fetchoptions
+   local _nodetype
+   local _marks
+   local _raw_userinfo
+   local _tag
+   local _url
+   local _uuid
+   local _userinfo
+
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}"; shell_enable_glob
-
-      local _branch
-      local _address
-      local _fetchoptions
-      local _nodetype
-      local _marks
-      local _raw_userinfo
-      local _tag
-      local _url
-      local _uuid
-      local _userinfo
 
       nodeline_parse "${nodeline}"  # memo: :_marks used raw
 

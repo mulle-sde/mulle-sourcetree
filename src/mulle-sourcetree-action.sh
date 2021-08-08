@@ -572,7 +572,8 @@ As node is marked \"no-delete\" just remember it."
       else
          if [ -z "${_url}" ]
          then
-            fail "Node \"${newfilename#${MULLE_USER_PWD}/}\" has no URL and it doesn't exist ($PWD)"
+            fail "Node \"${newfilename#${MULLE_USER_PWD}/}\" has no URL and \
+it doesn't exist (${PWD#${MULLE_USER_PWD}/})"
          fi
 
          local pretty_config
@@ -583,7 +584,8 @@ As node is marked \"no-delete\" just remember it."
          then
             pretty_config="."
          fi
-         log_verbose "Node \"${newfilename#${MULLE_USER_PWD}/}\" of sourcetree \"${pretty_config}\" is missing, so fetch"
+         log_verbose "Node \"${newfilename#${MULLE_USER_PWD}/}\" of \
+sourcetree \"${pretty_config}\" is missing, so fetch"
 
 #         if [ "${newaddress}" = "Foundation" ]
 #         then
@@ -911,7 +913,7 @@ __update_perform_item()
                   return 1
                fi
 
-               fail "The fetch of ${_address} failed and it is required."
+               fail "The fetch of \"${_address}\" failed and it is required."
             ;;
          esac
 
@@ -1359,9 +1361,6 @@ do_actions_with_nodeline()
 #   local config="$3"
    local database="$4"
 
-   local rval
-   local uuid
-
    log_entry "do_actions_with_nodeline" "$@"
    if _r_do_actions_with_nodeline "$@"
    then
@@ -1388,9 +1387,60 @@ do_actions_with_nodelines()
       return 0
    fi
 
-   log_debug "\"${style}\" update \"${nodelines}\" for db \"${config:-ROOT}\" ($PWD)"
+   log_debug "\"${style}\" update \"${nodelines}\" for db \"${config:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
 
    local nodeline
+   local rval
+
+   rval=0
+   shell_disable_glob; IFS=$'\n'
+   for nodeline in ${nodelines}
+   do
+      IFS="${DEFAULT_IFS}" ; shell_enable_glob
+
+      if [ ! -z "${nodeline}" ]
+      then
+         if ! do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+         then
+            rval=1
+            break
+         fi
+      fi
+   done
+
+   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+
+   return $rval
+}
+
+
+do_actions_with_nodelines_parallel()
+{
+   log_entry "do_actions_with_nodelines_parallel" "$@"
+
+   local nodelines="$1"
+   local style="$2"
+   local config="$3"
+   local database="$4"
+
+   [ -z "${style}" ] && internal_fail "style is empty"
+
+   if [ -z "${nodelines}" ]
+   then
+      log_fluff "There is nothing to do for \"${style}\""
+      return 0
+   fi
+
+   log_debug "\"${style}\" update \"${nodelines}\" for db \"${config:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
+
+   local nodeline
+
+   local _parallel_statusfile
+   local _parallel_maxjobs
+   local _parallel_jobs
+   local _parallel_fails
+
+   _parallel_begin
 
    shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
@@ -1399,12 +1449,14 @@ do_actions_with_nodelines()
 
       if [ ! -z "${nodeline}" ]
       then
-         do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+         _parallel_execute do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+         _parallel_status $? do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
       fi
-
    done
 
    IFS="${DEFAULT_IFS}" ; shell_enable_glob
+
+   _parallel_end
 }
 
 
@@ -1426,6 +1478,10 @@ sourcetree_action_initialize()
    then
       # shellcheck source=mulle-sourcetree-callback.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-fetch.sh" || exit 1
+   fi
+   if [ -z "${MULLE_PARALLEL_SH}" ]
+   then
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-parallel.sh" || exit 1
    fi
 }
 

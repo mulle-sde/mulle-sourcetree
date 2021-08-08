@@ -48,7 +48,7 @@ run_shell()
 
 main()
 {
-   _options_mini_main "$@"
+   _options_mini_main "$@" && set -x
 
    MULLE_SOURCETREE="`which mulle-sourcetree`" || exit 1
 

@@ -1280,11 +1280,11 @@ _db_set_default_mode()
 
    if [ ! -z "${SOURCETREE_MODE}" ]
    then
-      log_fluff "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
+      log_debug "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
       if [ "${SOURCETREE_MODE}" = share ]
       then
          [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
-         log_fluff "Stash directory: ${C_RESET_BOLD}${MULLE_SOURCETREE_STASH_DIR}${C_INFO}"
+         log_debug "Stash directory: ${C_RESET_BOLD}${MULLE_SOURCETREE_STASH_DIR}${C_INFO}"
       fi
    fi
 }

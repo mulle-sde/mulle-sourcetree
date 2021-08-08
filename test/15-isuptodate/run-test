@@ -88,7 +88,7 @@ run_test1()
    local result
    local expected
 
-   result="`run_mulle_sourcetree --recurse status --output-format raw --no-output-header`"
+   result="`run_mulle_sourcetree -ld --recurse status --deep --output-format raw --no-output-header`"
    if [ $? -ne 0 ] # > /dev/null 2>&1
    then
       fail "status failed unexpectedly"
@@ -104,7 +104,7 @@ run_test1()
 
    log_verbose "----- #1 PASSED -----"
 
-   if run_mulle_sourcetree status --is-uptodate
+   if run_mulle_sourcetree status --deep --is-uptodate
    then
       fail "--is-uptodate #1 says OK unexpectedly"
    fi
@@ -116,7 +116,7 @@ run_test1()
       fail "update #1 failed unexpectedly"
    fi
 
-   if ! run_mulle_sourcetree status --is-uptodate
+   if ! run_mulle_sourcetree status --deep --is-uptodate
    then
       fail "--is-uptodate #2 says NOT OK unexpectedly"
    fi
@@ -133,7 +133,7 @@ run_test1()
 
    local rval 
 
-   run_mulle_sourcetree status --is-uptodate
+   run_mulle_sourcetree status --deep --is-uptodate
    rval=$?
    if [ $rval -eq 0 ] 
    then
@@ -147,7 +147,7 @@ run_test1()
       fail "update #2 failed unexpectedly"
    fi
 
-   if ! run_mulle_sourcetree status --is-uptodate
+   if ! run_mulle_sourcetree status --deep --is-uptodate
    then
       fail "--is-uptodate #4 says not ok unexpectedly"
    fi
@@ -160,7 +160,7 @@ main()
 {
    MULLE_SOURCETREE_FLAGS="$@"
 
-   _options_mini_main "$@"
+   _options_mini_main "$@" && set -x
 
    local directory
 

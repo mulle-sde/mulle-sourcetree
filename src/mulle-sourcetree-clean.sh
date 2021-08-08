@@ -122,6 +122,19 @@ walk_clean()
 }
 
 
+sourcetree_clean_bury()
+{
+   local filename="$1"
+
+   local uuid
+
+   r_node_uuidgen
+   uuid="${RVAL}"
+
+   db_bury "${SOURCETREE_START}" "${uuid}" "${filename}"
+}
+
+
 sourcetree_clean()
 {
    log_entry "sourcetree_clean" "$@"
@@ -186,7 +199,20 @@ sourcetree_clean()
       esac
    done
 
+   if [ -z "${MULLE_PARALLEL_SH}" ]
+   then
+      # shellcheck source=mulle-file.sh
+      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-parallel.sh"      || return 1
+   fi
+
    local uuid
+
+   local _parallel_statusfile
+   local _parallel_maxjobs
+   local _parallel_jobs
+   local _parallel_fails
+
+   _parallel_begin
 
    shell_disable_glob; IFS=$'\n'
    for line in ${commands}
@@ -201,18 +227,17 @@ sourcetree_clean()
 
       case "${line}" in
          D*|F*)
-            r_node_uuidgen
-            uuid="${RVAL}"
-
-            db_bury "${SOURCETREE_START}" "${uuid}" "${filename}"
+            _parallel_execute sourcetree_clean_bury "${filename}"
          ;;
 
          L*)
-            remove_file_if_present "${filename}"
+            _parallel_execute remove_file_if_present "${filename}"
          ;;
       esac
    done
    IFS="${DEFAULT_IFS}"; shell_enable_glob
+
+   _parallel_end
 
    :
 }
