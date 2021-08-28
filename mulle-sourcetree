@@ -57,7 +57,6 @@ then
          #
          # Quote incoming arguments for shell expansion
          #
-         quote="'"
          args=""
          for arg in "$@"
          do
@@ -66,14 +65,18 @@ then
                *\'*)
                   # Use cat instead of echo to avoid possible echo -n
                   # problems. Escape single quotes in string.
-                  arg="`
-cat <<EOF | sed -e s/\'/\'\"\'\"\'/g
+                  arg="`cat <<EOF | sed -e s/\'/\'\\\"\'\\\"\'/g
 ${arg}
 EOF
-`"
+   `"
                ;;
             esac
-            args="${args} '${arg}'"
+            if [ -z "${args}" ]
+            then
+               args="'${arg}'"
+            else
+               args="${args} '${arg}'"
+            fi
          done
 
          #
@@ -124,7 +127,6 @@ print_commands()
    craftorder     : emit nodes that are marked \"build\", in dependency order
    dbstatus       : query state of the database
    desecrate      : remove all graveyards
-   diff           : compare two sourcetree configs
    dotdump        : create a picture of the sourcetree or the database
    duplicate      : duplicate a sourcetree node
    filter         : test a filter with user supplied marks
@@ -335,6 +337,12 @@ main()
             usage "${MULLE_TRACE}"
          ;;
 
+         --echo-args)
+            shift
+            printf "%s\n" "$@"
+            exit 0
+         ;;
+
          --config-dir)
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
@@ -398,7 +406,7 @@ main()
             MULLE_FLAG_DEFER="NONE"
          ;;
 
-         --virtual-root)                  # stay in PWD
+         --virtual-root)                # stay in PWD
             MULLE_FLAG_DEFER="VIRTUAL"
          ;;
 
@@ -455,48 +463,22 @@ main()
       shift
    done
 
-   options_setup_trace "${MULLE_TRACE}" && set -x
+   options_setup_trace "${MULLE_TRACE}"
 
    # shellcheck source=mulle-sourcetree-environment.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-environment.sh" || exit 1
 
-   local cmd
-
-   cmd="${1}"
-   [ $# -eq 0 ] || shift
-
-
-   # commands which don't need much
-   if [ "${cmd}" = 'diff' ]
-   then
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-${cmd}.sh"
-
-      sourcetree_basic_environment "" \
-                                   "${MULLE_FLAG_CONFIG_DIR}" \
-                                   "${MULLE_FLAG_USE_FALLBACK}" \
-                                   "${MULLE_FLAG_SCOPE}" \
-                                   "${FLAG_SOURCETREE_MODE}"
-
-      sourcetree_${cmd}_main "$@"
-      return $?
-   fi
-
    local SOURCETREE_START
    local SOURCETREE_SCOPE
 
-   # local option_scope="$1"
-   # local option_sharedir="$2"
-   # local option_configdir="$3"
-   # local option_use_fallback="$4"
-   # local defer="$5"
-   # local mode="$6"
    sourcetree_environment "${MULLE_FLAG_SCOPE}" \
                           "${MULLE_FLAG_SHARE_DIR}" \
                           "${MULLE_FLAG_CONFIG_DIR}" \
                           "${MULLE_FLAG_USE_FALLBACK}" \
-                          "${MULLE_FLAG_DEFER}" \
-                          "${FLAG_SOURCETREE_MODE}"
+                          "${MULLE_FLAG_DEFER}"
 
+   cmd="${1}"
+   [ $# -eq 0 ] || shift
 
    #
    # dbstatus should be fast and doesn't need share
@@ -516,7 +498,7 @@ main()
    # for status it's debatable, but I don't like it
    # for craftorder, we want to be fast so we don't check and dont get
    # default mode
-   # for diff we don't care
+   #
    case "${cmd}" in
       reset|craftorder|dbstatus)
       ;;
@@ -528,7 +510,8 @@ main()
 
    local SOURCETREE_MODE
 
-   _db_set_default_mode "${SOURCETREE_START}" "${FLAG_SOURCETREE_MODE}" || exit 1
+   _db_set_default_mode "${SOURCETREE_START}" "${FLAG_SOURCETREE_MODE}" \
+   || fail "Could not set database to \"${FLAG_SOURCETREE_MODE}\""
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
@@ -554,7 +537,7 @@ main()
          sourcetree_${cmd//-/_}_main "$@"
       ;;
 
-      craftorder|clean|diff|fix|list|reset|reuuid|rewrite|wrap|status|walk)
+      craftorder|clean|fix|list|reset|reuuid|rewrite|wrap|status|walk)
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-${cmd}.sh"
 
          sourcetree_${cmd}_main "$@"
@@ -700,15 +683,19 @@ _init()
          then
             echo "Fatal Error: Could not find mulle-bashfunctions-env in PATH ($PATH) - mulle-bashfunctions not installed ?" >&2
          else
-            echo "Fatal Error: Could not find libexec of mulle-bashfunctions-env (${PWD}})" >&2
+            echo "Fatal Error: Could not find libexec of mulle-bashfunctions-env ($PWD)" >&2
          fi
          exit 1
       fi
    fi
 
       # shellcheck source=../mulle-bashfunctions/src/mulle-string.sh
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh"  || \
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" "minimal" || \
       internal_fail "failed to load bashfunctions from ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}"
+   # shellcheck source=../mulle-bashfunctions/src/mulle-path.sh
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"             || exit 1
+   # shellcheck source=../mulle-bashfunctions/src/mulle-file.sh
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"             || exit 1
 
    if [ -z "${MULLE_SOURCETREE_LIBEXEC_DIR}" ]
    then

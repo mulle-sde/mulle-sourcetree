@@ -61,6 +61,17 @@ _setup_demo_repo_c()
 }
 
 
+_setup_demo_repo_d()
+{
+   local reporoot="$1"
+
+   exekutor git init
+
+   redirect_exekutor VERSION echo "1.0.0"
+   exekutor git add VERSION
+   exekutor git commit -m "d: initial version"
+}
+
 setup_demo_repos()
 {
    (
@@ -115,45 +126,40 @@ main()
 
    local project
 
-   project="${directory}/project"
    repos="${directory}/repositories"
 
 
    log_verbose "------- SETUP-------"
-   setup_demo_repos "${repos}"
+   mkdir_if_missing "${repos}"
+   cd "${repos}"
+
+   mkdir a b c d || exit 1
+ 
+   ( 
+      cd "b" &&
+      run_mulle_sourcetree -N add --nodetype git "file://${repos}/c" 
+   ) || internal_fail "failed"
+
+   ( 
+      cd "a" &&
+      run_mulle_sourcetree -N add --nodetype git "file://${repos}/b" &&
+      run_mulle_sourcetree -N add --nodetype git "file://${repos}/d" 
+   ) || internal_fail "failed"
 
    log_verbose "------- START-------"
 
-   mkdir_if_missing "${project}"
-   cd "${project}" &&
-   run_mulle_sourcetree add --nodetype git "file://${repos}/a" &&
-   run_mulle_sourcetree add --nodetype git "file://${repos}/b" || fail "failed"
-
-#  run_mulle_sourcetree list &&
-   run_mulle_sourcetree --share sync &&
-#   dump "${project}" &&
-   run_mulle_sourcetree remove b  &&
-
-#   run_mulle_sourcetree list &&
-   run_mulle_sourcetree --share sync || dump_fail "${project}"
-
-   [ -d "stash/b" ] && fail "b still there"
-   [ -d "stash/c" ] && fail "c still there"
+   cd "a" &&
+   run_mulle_sourcetree -N --share sync --symlinks || fail "sync 1"
 
    log_verbose "----- #1 PASSED -----"
 
-   run_mulle_sourcetree add --nodetype git "file://${repos}/b" &&
-   run_mulle_sourcetree --share sync &&
-#   dump "${project}" &&
-   run_mulle_sourcetree remove b  &&
-   # c reappears somewhere else
-   run_mulle_sourcetree add --nodetype git "file://${repos}/c" &&
-   run_mulle_sourcetree --share sync || dump_fail "${project}"
-
-   [ -d "stash/b" ] && fail "b still there"
-   [ ! -d "stash/c" ] && fail "c not there"
+   run_mulle_sourcetree -N --share sync --symlinks || fail "sync 2"
 
    log_verbose "----- #2 PASSED -----"
+
+   run_mulle_sourcetree -N --share sync --symlinks || fail "sync 3"
+
+   log_verbose "----- #3 PASSED -----"
 
    log_info "----- ALL PASSED -----"
 

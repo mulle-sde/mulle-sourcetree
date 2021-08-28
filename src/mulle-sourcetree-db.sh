@@ -401,8 +401,10 @@ db_bury()
    [ -z "${SOURCETREE_DB_FILENAME_RELATIVE}" ] \
       && internal_fail "SOURCETREE_DB_FILENAME_RELATIVE is empty"
 
+
    r_simplified_absolutepath "${_databasedir}/${SOURCETREE_DB_FILENAME_RELATIVE}"
    project_dir="${RVAL}"
+
    r_simplified_absolutepath "${filename}"
    filename="${RVAL}"
 
@@ -416,6 +418,7 @@ db_bury()
    phys_project_dir="${RVAL}"
 
    r_relative_path_between "${phys_filename}" "${phys_project_dir}"
+
    case "${RVAL}" in
       ../*)
          internal_fail "Bury path for \"${filename#${MULLE_USER_PWD}/}\" escapes \
@@ -1411,15 +1414,17 @@ db_set_uuid_alive()
    local _zombiefile
 
    __db_zombiefile "${_databasedir}" "${_uuid}"
-   if [ -e "${_zombiefile}" ]
+   if [ ! -e "${_zombiefile}" ]
    then
-      log_fluff "Marking \"${_uuid}\" as alive"
-
-      remove_file_if_present "${_zombiefile}" \
-      || fail "failed to delete zombie ${_zombiefile}"
-   else
-      log_fluff "\"${_uuid}\" is alive as no zombie is present"
+      return 1
    fi
+
+   log_fluff "Marking \"${_uuid}\" as alive"
+
+   remove_file_if_present "${_zombiefile}" \
+   || fail "failed to delete zombie ${_zombiefile}"
+
+   return 0
 }
 
 
@@ -1635,7 +1640,7 @@ db_bury_zombies()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    local zombiedir
 
@@ -1654,6 +1659,36 @@ db_bury_zombies()
    fi
 
    rmdir_safer "${zombiedir}"
+}
+
+
+db_bury_flat_zombies()
+{
+   log_entry "db_bury_flat_zombies" "$@"
+
+   local _database
+   local _databasedir
+
+   __db_common_databasedir "$1"
+
+   local zombiedir
+
+   __db_zombiedir "${_databasedir}"
+
+   local zombiefile
+
+   if dir_has_files "${zombiedir}" f
+   then
+      log_fluff "Moving flat zombies into graveyard"
+
+      for zombiefile in `ls -1 "${zombiedir}/"* 2> /dev/null`
+      do
+         if [ "`_db_owner <"${zombiefile}" `" = "$1" ]
+         then
+            _db_bury_zombiefile "${_database}" "${zombiefile}"
+         fi
+      done
+   fi
 }
 
 
@@ -1761,6 +1796,7 @@ db_state_description()
 #  0: go ahead with update, use return value as filename
 #  1: error
 #  3: skip this node
+#  4: skip this node, unless we are deleting it
 #
 r_db_update_determine_share_filename()
 {
@@ -1811,7 +1847,7 @@ r_db_update_determine_share_filename()
       r_db_fetch_uuid_for_evaledurl "/" "${evaledurl}"
       otheruuid="${RVAL}"
 
-      if [ ! -z "${otheruuid}" ]
+      if [ ! -z "${otheruuid}" ] 
       then
          # So its already there, is this good ?
 
@@ -1819,6 +1855,13 @@ r_db_update_determine_share_filename()
          log_debug "evaledurl : ${evaledurl}"
          log_debug "uuid      : ${uuid}"
          log_debug "otheruuid : ${otheruuid}"
+
+         # if it's our uuid, than we need to treat it though (somewhat)
+         if [ "${uuid}" = "${otheruuid}" ]
+         then
+            RVAL="${filename}"
+            return 4
+         fi
 
          if [ -e "${filename}" ]
          then

@@ -148,6 +148,16 @@ Mark           | Description
 `public`       | Is a public header (_include.h)
 `link`         | Will be linked against
 
+Mark                      | Description
+--------------------------|---------------------------------------------
+`cmake-add`               | Add to the list of libraries to link
+`cmake-all-load`          | A library that needs all symbols (ObjC)
+`cmake-dependency`        | Inherit foreign DependenciesAndLibraries.cmake
+`cmake-inherit`           | Participate in cmake dependency inclusion scheme
+`cmake-intermediate-link` | Prefixes generated container name with STARTUP_
+`cmake-loader `           | Inherite foreign MulleObjCLoader for mulle-objc-loader-tool
+`cmake-searchpath`        | Add include directory to searchpath (flattens headers)
+
 
 #### Sourcetree Modes
 
@@ -158,6 +168,7 @@ Mode         | Description
 `--share`    | Like recurse, but nodes with identical URLs are only fetched once
 
 Generally you will use the `--share` - the default - for minimal hassle.
+
 
 
 ## Commands

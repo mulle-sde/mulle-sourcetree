@@ -203,7 +203,6 @@ sourcetree_environment()
    # TODO: get rid of this ?
    #
    _set_share_dir "${option_sharedir}"
-   set +x
 }
 
 

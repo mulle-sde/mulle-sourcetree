@@ -637,24 +637,25 @@ _sourcetree_sync_share()
    fi
    [ $rval -eq 0 ] || return 1
 
-   if [ "${need_db}"  = 'YES' ]
-   then
-      db_bury_zombies "${database}"
-   fi
-   # until now, it was just pretty much like flat. Now recurse through nodelines.
 
+   #
+   # Here we should bury all the zombies, that stemmed from the 
+   # flat part of our config, so that we get rid of them and don't traverse
+   # an outdated database.
+   #
+   db_bury_flat_zombies "${database}"
 
    #
    # In the share case, we have done the flat and the recurse part already
-   # Now recurse may have added stuff to our database. These haven't been
-   # recursed yet. So we do this now. These can only be additions to
+   # Now recurse may have added stuff to our root database. These haven't been
+   # recursed yet. So lets do this now. These can only be additions to
    # root, so we don't zombify.
    #
    if [ "${database}" = "/" ]
    then
       local before
 
-      log_fluff "Root updates additions if any"
+      log_fluff "Process root updates additions if any"
 
       before="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`"  \
       || return 1
@@ -684,6 +685,7 @@ _sourcetree_sync_share()
 
    if [ "${need_db}" = 'YES' ]
    then
+      db_bury_zombies "${database}"
       db_clear_update "${database}"
       db_set_ready "${database}"
    fi
@@ -1026,11 +1028,11 @@ sourcetree_sync_main()
             OPTION_PARALLEL='NO'
          ;;
 
-         --symlink)
+         --symlink|--symlinks)
             OPTION_FETCH_SYMLINK='YES'
          ;;
 
-         --no-symlink)
+         --no-symlink|--no-symlinks)
             OPTION_FETCH_SYMLINK='NO'
          ;;
 
@@ -1095,7 +1097,7 @@ sourcetree_sync_main()
          # more common flags
          #
          -*)
-            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown update option $1"
+            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown sync option $1"
             sourcetree_sync_usage
          ;;
 
@@ -1121,6 +1123,12 @@ sourcetree_sync_main()
 sourcetree_sync_initialize()
 {
    log_entry "sourcetree_sync_initialize" "$@"
+
+   if [ -z "${MULLE_STRING_SH}" ]
+   then
+      # shellcheck source=mulle-string.sh
+      . "${MULLE_BASHFUNTCIONS_LIBEXEC_DIR}/mulle-string.sh" || exit 1
+   fi
 
    if [ -z "${MULLE_SOURCETREE_ACTION_SH}" ]
    then

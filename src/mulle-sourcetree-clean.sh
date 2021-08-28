@@ -227,7 +227,8 @@ sourcetree_clean()
 
       case "${line}" in
          D*|F*)
-            _parallel_execute sourcetree_clean_bury "${filename}"
+            # doesn't work well in parallel for reasons to be determined
+            sourcetree_clean_bury "${filename}"
          ;;
 
          L*)

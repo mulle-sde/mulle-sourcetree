@@ -19,56 +19,11 @@ run_mulle_sourcetree()
 }
 
 
-_setup_demo_repo_b()
-{
-   local reporoot="$1"
-
-   exekutor git init
-
-   redirect_exekutor VERSION echo "b:1.0.0"
-   exekutor git add VERSION
-   exekutor git commit -m "b: initial version"
-}
-
-
-setup_demo_repos()
-{
-   (
-      set -e
-      mkdir_if_missing "$1/b" &&
-      exekutor cd "$1/b" && _setup_demo_repo_b "$1"
-      set +e
-   ) || exit 1
-}
-
-
-run_test_1()
-{
-   local directory="$1"
-
-   set -e
-   cd "${project}" &&
-   (
-      mkdir a &&
-      cd a &&
-      run_mulle_sourcetree add --nodetype git "file://${repos}/b"
-   ) &&
-   run_mulle_sourcetree add --nodetype local --marks "no-delete,no-update,no-share" "a"
-   set +e
-
-   (
-      MULLE_SOURCETREE_STASH_DIR="${directory}/shared_global"
-      export MULLE_SOURCETREE_STASH_DIR
-
-      run_mulle_sourcetree --share update
-
-      [ -d "a" ]   || fail "Missing a"
-      [ -d "a/b" ] && fail "Wrong a/b"
-      [ -d "${MULLE_SOURCETREE_STASH_DIR}/b" ] || fail "Missing shared ${MULLE_SOURCETREE_STASH_DIR}/b"
-   ) || exit 1
-}
-
-
+#
+#  a -> b
+#  a -> c
+#  b -> c
+#
 main()
 {
    MULLE_SOURCETREE_FLAGS="$@"
@@ -79,21 +34,34 @@ main()
 
    r_make_tmp_directory || exit 1
    directory="${RVAL}"
-   local project
 
-   project="${directory}/project"
-   repos="${directory}/repositories"
 
-   mkdir_if_missing "${project}"
+   mkdir_if_missing "${directory}"
+   cd "${directory}" || exit 1
 
-   setup_demo_repos "${repos}"
-
-   (
-      rmdir_safer "${project}" &&
-      mkdir_if_missing "${project}" &&
-      run_test_1 "${directory}"
-   ) || exit 1
+   run_mulle_sourcetree --scope "${MULLE_UNAME}" add a || exit 1
+   if ! run_mulle_sourcetree --scope "${MULLE_UNAME}" get a > /dev/null
+   then
+      fail "a is gone"
+   fi
+   if ! run_mulle_sourcetree get a > /dev/null
+   then
+      fail "a should have been found"
+   fi
    log_verbose "----- #1 PASSED -----"
+
+   run_mulle_sourcetree --scope "unknown" add b || exit 1
+   if ! run_mulle_sourcetree --scope "unknown" get b > /dev/null
+   then
+      fail "b is gone"
+   fi
+   if run_mulle_sourcetree get b > /dev/null
+   then
+      fail "b should not have been found"
+   fi
+
+   log_verbose "----- #2 PASSED -----"
+
 
    log_info "----- ALL PASSED -----"
 

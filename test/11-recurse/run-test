@@ -10,9 +10,11 @@ run_mulle_sourcetree()
    log_fluff "####################################" >&2
 
    (
+      set +e
       MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
 
-      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS} "$@"
+      # MULLE_SOURCETREE_FLAGS are picked up by mulle-sourcetree
+      . "${MULLE_SOURCETREE}" --no-auto-shell "$@"
    )
 }
 
@@ -33,8 +35,8 @@ _setup_demo_repo_a()
    exekutor git tag "1.0.0"
 
    redirect_exekutor VERSION echo "2.0.0"
-   run_mulle_sourcetree add --nodetype git "file://${reporoot}/b"
-   [ -f .mulle/etc/sourcetree/config ] || internal_fail "fail add"
+   run_mulle_sourcetree -N add --nodetype git "file://${reporoot}/b"
+   [ -f .mulle/etc/sourcetree/config ] || internal_fail "fail add $(PWD)"
    exekutor git add VERSION .mulle
    exekutor git commit -m "a: version 2.0.0 (tagged)"
    exekutor git tag "2.0.0"
@@ -95,16 +97,16 @@ main()
 
       for a in 1.0.0 2.0.0 1.0.0
       do
-         if ! run_mulle_sourcetree add --nodetype git --tag "${a}" "file://${repos}/a"
+         if ! run_mulle_sourcetree -N add --nodetype git --tag "${a}" "file://${repos}/a"
          then
-           internal_fail "add internal_failed unexpectedly"
+           internal_fail "add failed unexpectedly ($PWD)"
          fi
 
-         run_mulle_sourcetree list --output-full
+         run_mulle_sourcetree -N  list --output-full
 
-         if ! run_mulle_sourcetree --recurse update
+         if ! run_mulle_sourcetree -N --recurse update
          then
-            internal_fail "update internal_failed unexpectedly"
+            internal_fail "update failed unexpectedly ($PWD)"
          fi
 
          version="`cat a/VERSION`"
@@ -122,7 +124,7 @@ main()
             ;;
          esac
 
-         run_mulle_sourcetree remove "a"
+         run_mulle_sourcetree -N remove "a"
 
          log_info "----- #${number} PASSED -----"
          number="$(expr $number + 1)"

@@ -10,6 +10,8 @@ run_mulle_sourcetree()
    log_fluff "####################################" >&2
 
    (
+      set +e
+      
       MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
 
       . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS} "$@"

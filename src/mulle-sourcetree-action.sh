@@ -1170,6 +1170,11 @@ _r_do_actions_with_nodeline()
          ;;
          #
 
+         4)
+            # this was handled by the root database,
+            filename="${RVAL}"
+         ;;
+
          *)
             internal_fail "unknown code"
          ;;
@@ -1361,11 +1366,20 @@ do_actions_with_nodeline()
 #   local config="$3"
    local database="$4"
 
+   local uuid 
+
    log_entry "do_actions_with_nodeline" "$@"
    if _r_do_actions_with_nodeline "$@"
    then
+      uuid="${RVAL}"
       # this could be executed in parallel ?
-      db_set_uuid_alive "${database}" "${RVAL}"
+      if ! db_set_uuid_alive "${database}" "${uuid}"
+      then
+         if db_set_uuid_alive "/" "${uuid}"
+         then
+            log_fluff "${uuid} is alive as no zombie is present"
+         fi
+      fi
    fi
 }
 
