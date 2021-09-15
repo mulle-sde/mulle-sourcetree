@@ -116,7 +116,6 @@ __cfg_common_configfile()
 
    #
    # allow "hacky" per-platform config files if all else fails
-   # TODO: never used this though.. is this still useful ?
    #
    case "${SOURCETREE_SCOPE}" in
       'default')
@@ -137,11 +136,29 @@ __cfg_common_configfile()
       'global')
       ;;
 
+      # allow custom scopes. Could split this up into per-platform as well
       *)
-         _configfile="${_configfile}.${SOURCETREE_SCOPE}"
+         if [ -f "${_configfile}.${SOURCETREE_SCOPE}.${MULLE_UNAME}" ]
+         then
+            _configfile="${_configfile}.${SOURCETREE_SCOPE}.${MULLE_UNAME}"
+         else
+            if [ -f "${_configfile}.${SOURCETREE_SCOPE}" ]
+            then
+               _configfile="${_configfile}.${SOURCETREE_SCOPE}"
+            fi
+         fi
+
          if [ ! -z "${_fallback_configfile}" ]
          then
-            _fallback_configfile="${_fallback_configfile}.${SOURCETREE_SCOPE}"
+            if [ -f "${_fallback_configfile}.${SOURCETREE_SCOPE}.${MULLE_UNAME}" ]
+            then
+               _fallback_configfile="${_fallback_configfile}.${SOURCETREE_SCOPE}.${MULLE_UNAME}"
+            else
+               if [ -f "${_fallback_configfile}.${SOURCETREE_SCOPE}" ]
+               then
+                  _fallback_configfile="${_fallback_configfile}.${SOURCETREE_SCOPE}"
+               fi
+            fi
          fi
       ;;
    esac
@@ -588,12 +605,16 @@ cfg_search_for_configfile()
       ;;
    esac
 
-   log_debug "Searching for _configfile \"${SOURCETREE_CONFIG_FILENAME}\" (\"$SOURCETREE_FALLBACK_CONFIG_FILENAME\") \
+   log_debug "Searching for config \"${SOURCETREE_CONFIG_FILENAME}\" (\"$SOURCETREE_FALLBACK_CONFIG_FILENAME\") \
 from \"${physdirectory}\" to \"${physceiling}\""
 
    (
       cd "${physdirectory}" &&
-      while [ ! -f "${SOURCETREE_CONFIG_FILENAME}" -a  ! -f "${SOURCETREE_FALLBACK_CONFIG_FILENAME}" ]
+      while [ ! -f "${SOURCETREE_CONFIG_FILENAME}" -a \
+              ! -f "${SOURCETREE_CONFIG_FILENAME}.${MULLE_UNAME}" -a \
+              ! -f "${SOURCETREE_FALLBACK_CONFIG_FILENAME}" -a \
+              ! -f "${SOURCETREE_FALLBACK_CONFIG_FILENAME}.${MULLE_UNAME}" \
+            ]
       do
          # since we do physical paths, PWD is ok here
          if [ "${PWD}" = "${physceiling}" ]
@@ -767,6 +788,12 @@ cfg_get_parent()
 }
 
 
+#
+#
+# In a subproject/minion master configuration, we wanted to propagate changes
+# upwards. Not 100% sure that this is still very useful (but: in a normal
+# configuration, you don't have a parent anyway)
+#
 cfg_touch_parents()
 {
    log_entry "cfg_touch_parents" "$@"
@@ -782,12 +809,24 @@ cfg_touch_parents()
       [ "${parent}" = "${_rootdir}" ] \
          && internal_fail "${parent} endless loop"
 
-      if [ -f "${SOURCETREE_CONFIG_FILENAME}" ]
+      if [ -f "${parent}/${SOURCETREE_CONFIG_FILENAME}.${MULLE_UNAME}" ]
       then
-         exekutor touch "${parent}/${SOURCETREE_CONFIG_FILENAME}"
+         exekutor touch -f "${parent}/${SOURCETREE_CONFIG_FILENAME}.${MULLE_UNAME}"
       else
-         # could be write protected though
-         exekutor touch -f "${parent}/${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
+         if [ -f "${parent}/${SOURCETREE_CONFIG_FILENAME}" ]
+         then
+            exekutor touch -f "${parent}/${SOURCETREE_CONFIG_FILENAME}"
+         else
+            if [ -f "${parent}/${SOURCETREE_FALLBACK_CONFIG_FILENAME}.${MULLE_UNAME}" ]
+            then
+               exekutor touch -f "${parent}/${SOURCETREE_FALLBACK_CONFIG_FILENAME}.${MULLE_UNAME}"
+            else
+               if [ -f "${parent}/${SOURCETREE_FALLBACK_CONFIG_FILENAME}" ]
+               then
+                  exekutor touch -f "${parent}/${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
+               fi
+            fi
+         fi
       fi
       _rootdir="${parent}"
    done

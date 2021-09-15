@@ -316,7 +316,7 @@ main()
    local FLAG_SOURCETREE_MODE=
    local MULLE_FLAG_CONFIG_DIR
    local MULLE_FLAG_SHARE_DIR
-   local MULLE_FLAG_SCOPE
+   local MULLE_FLAG_SCOPE=
    #
    # simple option handling
    #
@@ -471,7 +471,14 @@ main()
    local SOURCETREE_START
    local SOURCETREE_SCOPE
 
-   sourcetree_environment "${MULLE_FLAG_SCOPE}" \
+   #
+   # get default scope from environment
+   # if empty, will default to "default"
+   #
+   local scope 
+
+   scope="${MULLE_FLAG_SCOPE:-${MULLE_SOURCETREE_SCOPE}}"
+   sourcetree_environment "${scope}" \
                           "${MULLE_FLAG_SHARE_DIR}" \
                           "${MULLE_FLAG_CONFIG_DIR}" \
                           "${MULLE_FLAG_USE_FALLBACK}" \
@@ -623,6 +630,10 @@ echo \"\${NODE_MARKS} \${NODE_TAG} \${NODE_BRANCH} \${NODE_URL} (\${WALK_DATASOU
          if [ -f "${MULLE_SOURCETREE_ETC_DIR}/config}" ]
          then
             exekutor touch "${MULLE_SOURCETREE_ETC_DIR}/config"
+         fi
+         if [ -f "${MULLE_SOURCETREE_ETC_DIR}/config.${MULLE_UNAME}" ]
+         then
+            exekutor touch "${MULLE_SOURCETREE_ETC_DIR}/config.${MULLE_UNAME}"
          fi
       ;;
 

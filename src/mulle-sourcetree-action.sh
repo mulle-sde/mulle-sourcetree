@@ -917,7 +917,8 @@ __update_perform_item()
             ;;
          esac
 
-         if [ -f "${filename}/.mulle-sourcetree/config" -a ! -f "${filename}/.mulle/etc/sourcetree/config" ]
+         if [ -f "${filename}/.mulle-sourcetree/config" -a \
+              ! -f "${filename}/.mulle/etc/sourcetree/config" ]
          then
             log_warning "\"`basename -- "${filename}"`\" contains an old-fashioned sourcetree \
 which must be upgraded to be usable."

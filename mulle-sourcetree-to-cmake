@@ -593,7 +593,9 @@ _emit_cmake_find_library()
       case ",${marks}," in
          *',only-framework,'*)
             r_concat "${libraries}" "${name}"
-            printf -v "${library_key}" "%s" "${RVAL}"
+            libraries="${RVAL}"
+
+            printf -v "${library_key}" "%s" "${libraries}"
             break
          ;;
       esac
@@ -604,22 +606,48 @@ _emit_cmake_find_library()
       # if we are searching for static first, but the test really wants the
       # dynamic local one
       #
+      case ",${marks}," in
+         *',no-dynamic-link,'*)
+            case "${preference}" in
+               'any'|'shared')
+                  preference='static'
+               ;;
+            esac
+         ;;
+
+         *',no-static-link,'*)
+            case "${preference}" in
+               'any'|'static')
+                  preference='shared'
+               ;;
+            esac
+         ;;
+      esac
 
       case "${preference}" in
-         "static")
+         'static')
             r_concat "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
             libraries="${RVAL}"
          ;;
 
-         "shared")
+         'shared')
             r_concat "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${name}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
             libraries="${RVAL}"
          ;;
       esac
 
-      # fallback to whatever linkage
-      r_concat "${libraries}" "${name}"
-      printf -v "${library_key}" "%s" "${RVAL}"
+      # fallback to whatever linkage, if the preference wasn't overridden
+      case ",${marks}," in
+         *',no-dynamic-link,'*|*',no-static-link,'*)
+         ;;
+
+         *)
+            r_concat "${libraries}" "${name}"
+            libraries="${RVAL}"
+         ;;
+      esac
+
+      printf -v "${library_key}" "%s" "${libraries}"
    done
    IFS="${DEFAULT_IFS}"; shell_disable_glob
 

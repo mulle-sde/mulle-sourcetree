@@ -713,7 +713,7 @@ _nodemarks_filter_expr()
 
 nodemarks_filter_with_qualifier()
 {
-   log_entry "nodemarks_filter_with_qualifier" "$@"
+#   log_entry "nodemarks_filter_with_qualifier" "$@"
 
    local marks="$1"
    local qualifier="$2"
@@ -816,6 +816,8 @@ assert_sane_nodemarks()
 
 nodemark_only_framework_consistency_check()
 {
+   log_entry "nodemark_only_framework_consistency_check" "$@"
+
    local mark="$1"
    local marks="$2"
    local address="$3"
@@ -830,14 +832,16 @@ nodemark_only_framework_consistency_check()
       log_warning "Framework \"${address}\" should not inherit dependencies (no-cmake-inherit)"
    fi
 
-   if nodemarks_enable "${marks}" cmake-add
-   then
-      log_info "Framework \"${address}\" implicitly defines cmake-add, which generates superflous cmake code. (Use no-cmake-add)"
-   fi
+#   if nodemarks_enable "${marks}" cmake-add
+#   then
+#      log_info "Framework \"${address}\" implicitly defines cmake-add, which generates superflous cmake code. (Use no-cmake-add)"
+#   fi
 }
 
 nodemark_no_cmake_inherit_consistency_check()
 {
+   log_entry "nodemark_no_cmake_inherit_consistency_check" "$@"
+
    local mark="$1"
    local marks="$2"
    local address="$3"
