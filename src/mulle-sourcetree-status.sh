@@ -279,11 +279,22 @@ r_emit_status()
       fs="missing"
       configexists='NO'
 
-      if [ -e "${filename}/${SOURCETREE_CONFIG_FILENAME}" ]
-      then
-         configexists='YES'
-         dbexists='NO'
-      fi
+      local name 
+      local dir
+
+      for dir in "${SOURCETREE_CONFIG_DIR:-.mulle/etc/sourcetree}" \
+                 "${SOURCETREE_FALLBACK_CONFIG_DIR:-.mulle/share/sourcetree}"
+      do
+         for name in ${SOURCETREE_CONFIG_NAMES:-config}
+         do
+            if [ -e "${filename}/${dir}/${name}" -o \
+                 -e "${filename}/${dir}/${name}.${MULLE_UNAME}" ]
+            then
+               configexists='YES'
+               dbexists='NO'
+            fi
+         done
+      done
 
       if [ -d "${filename}/${SOURCETREE_DB_FILENAME}" ]
       then
@@ -366,7 +377,7 @@ r_emit_status()
             then
                # don't fluff zeroes
                log_debug "#0: \"${directory}\" does not have a \
-${SOURCETREE_CONFIG_FILENAME} (${PWD#${MULLE_USER_PWD}/})"
+${SOURCETREE_CONFIG_DIR} (${PWD#${MULLE_USER_PWD}/})"
 
                RVAL="${output_address};ok;${fs};${configexists};${dbexists}" #;${filename}"
                return 0
@@ -684,7 +695,7 @@ sourcetree_status_main()
 
    if ! r_cfg_exists "${SOURCETREE_START}"
    then
-      log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_FILENAME}\")"
+      log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
       return 0
    fi
 

@@ -1010,18 +1010,23 @@ __update_perform_actions()
    _skip='NO'
 
    local item
+   local rval 
 
+   rval=0
    shell_disable_glob
    for item in ${actionitems}
    do
       shell_enable_glob
 
-      if ! __update_perform_item
+      if ! __update_perform_item # this will exit on fail
       then
+         rval=1
          break
       fi
    done
    shell_enable_glob
+
+   return $rval
 }
 
 
@@ -1314,13 +1319,17 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    local _remember
    local _skip
 
-   __update_perform_actions "${style}" \
-                            "${nodeline}" \
-                            "${filename}" \
-                            "${previousnodeline}" \
-                            "${previousfilename}" \
-                            "${database}" \
-                            "${config}"
+   # this actually exits on fail
+   if ! __update_perform_actions "${style}" \
+                                 "${nodeline}" \
+                                 "${filename}" \
+                                 "${previousnodeline}" \
+                                 "${previousfilename}" \
+                                 "${database}" \
+                                 "${config}"
+   then
+      return 1
+   fi
 
    log_debug "\
 contentschanged : ${_contentschanged}
@@ -1368,18 +1377,27 @@ do_actions_with_nodeline()
    local database="$4"
 
    local uuid 
+   local rval 
 
-   log_entry "do_actions_with_nodeline" "$@"
-   if _r_do_actions_with_nodeline "$@"
+   _r_do_actions_with_nodeline "$@"
+   rval=$?
+
+   case $rval in
+      0|2)
+      ;;
+
+      *)
+         return $rval
+      ;;
+   esac
+
+   uuid="${RVAL}"
+   # this could be executed in parallel ?
+   if ! db_set_uuid_alive "${database}" "${uuid}"
    then
-      uuid="${RVAL}"
-      # this could be executed in parallel ?
-      if ! db_set_uuid_alive "${database}" "${uuid}"
+      if db_set_uuid_alive "/" "${uuid}"
       then
-         if db_set_uuid_alive "/" "${uuid}"
-         then
-            log_fluff "${uuid} is alive as no zombie is present"
-         fi
+         log_fluff "${uuid} is alive as no zombie is present"
       fi
    fi
 }
@@ -1413,13 +1431,12 @@ do_actions_with_nodelines()
    do
       IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
-      if [ ! -z "${nodeline}" ]
+      [ -z "${nodeline}" ] && continue 
+
+      if ! do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
       then
-         if ! do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
-         then
-            rval=1
-            break
-         fi
+         rval=1
+         break
       fi
    done
 
@@ -1449,6 +1466,7 @@ do_actions_with_nodelines_parallel()
    log_debug "\"${style}\" update \"${nodelines}\" for db \"${config:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
 
    local nodeline
+   local rval 
 
    local _parallel_statusfile
    local _parallel_maxjobs
@@ -1465,13 +1483,15 @@ do_actions_with_nodelines_parallel()
       if [ ! -z "${nodeline}" ]
       then
          _parallel_execute do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
-         _parallel_status $? do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
       fi
    done
 
    IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    _parallel_end
+   rval=$? 
+
+   return $rval
 }
 
 

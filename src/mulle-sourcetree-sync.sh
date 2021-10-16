@@ -567,19 +567,6 @@ _sourcetree_sync_share()
       UPDATED="${RVAL}"
    fi
 
-   local need_db='NO'
-
-   if [ "${database}" = "/" ]
-   then
-      need_db='YES'
-   else
-      case ";${nodelines};" in
-         *[\;\,]no-share[\,\;]*)
-            need_db='YES'
-         ;;
-      esac
-   fi
-
    #
    # if there are no nodelines that's OK, we still want to do zombification
    # but if there's also no database then just bail
@@ -589,7 +576,8 @@ _sourcetree_sync_share()
    if ! nodelines="`cfg_read "${config}" `"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
-      if [ "${need_db}" = 'YES' ]
+
+      if [ "${database}" = '/' ]
       then
          db_clear_update "${database}"
          db_set_ready "${database}"
@@ -603,6 +591,18 @@ _sourcetree_sync_share()
       fi
    fi
 
+   local need_db='NO'
+
+   if [ "${database}" = "/" ]
+   then
+      need_db='YES'
+   else
+      case ";${nodelines};" in
+         *[\;\,]no-share[\,\;]*)
+            need_db='YES'
+         ;;
+      esac
+   fi
    #
    # We run through the nodelines and check if there is a match for
    # no-share, if yes, then we will need to manage a database. Else it will
@@ -631,9 +631,11 @@ _sourcetree_sync_share()
    then
       do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
+      log_debug "Parallel update of ${config}: ${rval}"
    else
       do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
+      log_debug "Update of ${config}: ${rval}"
    fi
    [ $rval -eq 0 ] || return 1
 
@@ -789,10 +791,13 @@ _sourcetree_sync_recurse()
    then
       do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
+      log_debug "Parallel update of ${config}: ${rval}"
    else
       do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
+      log_debug "Update of ${config}: ${rval}"
    fi
+
    [ $rval -eq 0 ] || return 1
 
    db_bury_zombie_nodelines "${database}" "${nodelines}"
@@ -871,9 +876,11 @@ _sourcetree_sync_flat()
    then
       do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
+      log_debug "Parallel update of ${config}: ${rval}"
    else
       do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
+      log_debug "Update of ${config}: ${rval}"
    fi
    [ $rval -eq 0 ] || return 1
 
@@ -946,7 +953,7 @@ sourcetree_sync_start()
    if [ $rval -eq 127 -a "${OPTION_LENIENT}" = 'YES' ]
    then
       # it's OK we can live with that
-      log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_FILENAME}\")"
+      log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
       return 0
    fi
 

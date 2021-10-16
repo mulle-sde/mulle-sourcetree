@@ -37,30 +37,35 @@ sourcetree_config_environment()
    log_entry "sourcetree_config_environment" "$@"
 
    local config_dir="$1"
-   local use_fallback="$2"
-   local scope="$3"
-   local mode="$4"
+   local config_names="$2"
+   local use_fallback="$3"
+   local scope="$4"
+   local mode="$5"
+
+   SOURCETREE_CONFIG_NAMES="${config_names:-config}"
 
    if [ ! -z "${config_dir}" ]
    then
-      SOURCETREE_CONFIG_FILENAME="${config_dir#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
-      SOURCETREE_FALLBACK_CONFIG_FILENAME=""
+      SOURCETREE_CONFIG_DIR="${config_dir#${MULLE_SOURCETREE_PROJECT_DIR}/}"
+      SOURCETREE_FALLBACK_CONFIG_DIR=""
    else
-      SOURCETREE_CONFIG_FILENAME="${MULLE_SOURCETREE_ETC_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
-      SOURCETREE_FALLBACK_CONFIG_FILENAME="${MULLE_SOURCETREE_SHARE_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}/config"
+      SOURCETREE_CONFIG_DIR="${MULLE_SOURCETREE_ETC_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}"
+      SOURCETREE_FALLBACK_CONFIG_DIR="${MULLE_SOURCETREE_SHARE_DIR#${MULLE_SOURCETREE_PROJECT_DIR}/}"
    fi
 
    if [ "${use_fallback}" = 'YES' ]
    then
-      SOURCETREE_CONFIG_FILENAME="${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
-      SOURCETREE_FALLBACK_CONFIG_FILENAME=""
+      SOURCETREE_CONFIG_DIR="${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
+      SOURCETREE_FALLBACK_CONFIG_DIR=""
    fi
 
    SOURCETREE_SCOPE="${scope:-default}"
    SOURCETREE_MODE="${mode}" # maybe empty for now
 
-   is_absolutepath "${SOURCETREE_CONFIG_FILENAME}" \
-   && internal_fail "SOURCETREE_CONFIG_FILENAME \"${SOURCETREE_CONFIG_FILENAME}\" must be relative"
+   is_absolutepath "${SOURCETREE_CONFIG_DIR}" \
+   && internal_fail "SOURCETREE_CONFIG_DIR \"${SOURCETREE_CONFIG_DIR}\" must be relative"
+   is_absolutepath "${SOURCETREE_FALLBACK_CONFIG_DIR}" \
+   && internal_fail "SOURCETREE_FALLBACK_CONFIG_DIR \"${SOURCETREE_FALLBACK_CONFIG_DIR}\" must be relative"
 
    if [ -z "${SOURCETREE_FIX_FILENAME}" ]
    then
@@ -82,8 +87,6 @@ sourcetree_minimal_environment()
    log_entry "sourcetree_minimal_environment" "$@"
 
    local directory="$1"
-   local config_dir="$2"
-   local use_fallback="$3"
 
    if [ -z "${directory}" -a ! -z "${MULLE_VIRTUAL_ROOT}" ]
    then
@@ -120,11 +123,12 @@ sourcetree_basic_environment()
 
    local directory="$1"
    local config_dir="$2"
-   local use_fallback="$3"
-   local scope="$4"
-   local mode="$5"
+   local config_names="$3"
+   local use_fallback="$4"
+   local scope="$5"
+   local mode="$6"
 
-   sourcetree_minimal_environment "${directory}" "${config_dir}" "${use_fallback}"
+   sourcetree_minimal_environment "${directory}"
 
    # no share in sourcetree operation
    # MULLE_SOURCETREE_SHARE_DIR="${MULLE_SOURCETREE_PROJECT_DIR}/.mulle/share/sourcetree"
@@ -140,6 +144,7 @@ sourcetree_basic_environment()
                mulle-tool-env sourcetree` || exit 1
 
    sourcetree_config_environment "${config_dir}" \
+                                 "${config_names}" \
                                  "${use_fallback}" \
                                  "${scope}" \
                                  "${mode}"
@@ -147,12 +152,13 @@ sourcetree_basic_environment()
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
-      log_trace2 "MULLE_SOURCETREE_PROJECT_DIR:        ${MULLE_SOURCETREE_PROJECT_DIR}"
-      log_trace2 "SOURCETREE_CONFIG_FILENAME:          ${SOURCETREE_CONFIG_FILENAME}"
-      log_trace2 "SOURCETREE_FALLBACK_CONFIG_FILENAME: ${SOURCETREE_CONFIG_FILENAME}"
-      log_trace2 "MULLE_SOURCETREE_ETC_DIR:            ${MULLE_SOURCETREE_ETC_DIR}"
-      log_trace2 "MULLE_SOURCETREE_VAR_DIR:            ${MULLE_SOURCETREE_VAR_DIR}"
-      log_trace2 "MULLE_SOURCETREE_SHARE_DIR:          ${MULLE_SOURCETREE_SHARE_DIR}"
+      log_trace2 "MULLE_SOURCETREE_PROJECT_DIR:   ${MULLE_SOURCETREE_PROJECT_DIR}"
+      log_trace2 "SOURCETREE_CONFIG_NAMES:        ${SOURCETREE_CONFIG_NAMES}"
+      log_trace2 "SOURCETREE_CONFIG_DIR:          ${SOURCETREE_CONFIG_DIR}"
+      log_trace2 "SOURCETREE_FALLBACK_CONFIG_DIR: ${SOURCETREE_FALLBACK_CONFIG_DIR}"
+      log_trace2 "MULLE_SOURCETREE_ETC_DIR:       ${MULLE_SOURCETREE_ETC_DIR}"
+      log_trace2 "MULLE_SOURCETREE_VAR_DIR:       ${MULLE_SOURCETREE_VAR_DIR}"
+      log_trace2 "MULLE_SOURCETREE_SHARE_DIR:     ${MULLE_SOURCETREE_SHARE_DIR}"
    fi
 }
 
@@ -164,12 +170,14 @@ sourcetree_environment()
    local option_scope="$1"
    local option_sharedir="$2"
    local option_configdir="$3"
-   local option_use_fallback="$4"
-   local defer="$5"
-   local mode="$6"
+   local option_confignames="$4"
+   local option_use_fallback="$5"
+   local defer="$6"
+   local mode="$7"
 
    sourcetree_basic_environment "" \
                                 "${option_configdir}" \
+                                "${option_confignames}" \
                                 "${option_use_fallback}" \
                                 "${option_scope}" \
                                 "${mode}"

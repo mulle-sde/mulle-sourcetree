@@ -39,25 +39,30 @@ main()
    mkdir_if_missing "${directory}"
    cd "${directory}" || exit 1
 
-   run_mulle_sourcetree --scope "${MULLE_UNAME}" add a || exit 1
-   if ! run_mulle_sourcetree --scope "${MULLE_UNAME}" get a > /dev/null
+   # place a into different
+   run_mulle_sourcetree --config-name "different" add a || exit 1
+   if ! run_mulle_sourcetree --config-name "different" get a > /dev/null
    then
       fail "a is gone ($PWD)"
    fi
-   if ! run_mulle_sourcetree get a > /dev/null
+   if run_mulle_sourcetree get a > /dev/null
    then
-      fail "a should have been found ($PWD)"
+      fail "a should not have been found ($PWD)"
    fi
    log_verbose "----- #1 PASSED -----"
 
-   run_mulle_sourcetree --scope "unknown" add b || exit 1
-   if ! run_mulle_sourcetree --scope "unknown" get b > /dev/null
+   # place b into config (default)
+   run_mulle_sourcetree add b || exit 1
+
+   # should not be found, as different supersedes config
+   if run_mulle_sourcetree --config-name "different:config" get b > /dev/null
    then
-      fail "b is gone ($PWD)"
+      fail "b was found, though it shouldn't have been ($PWD)"
    fi
-   if run_mulle_sourcetree get b > /dev/null
+
+   if ! run_mulle_sourcetree --config-name "config" get b > /dev/null
    then
-      fail "b should not have been found ($PWD)"
+      fail "b should have been found ($PWD)"
    fi
 
    log_verbose "----- #2 PASSED -----"

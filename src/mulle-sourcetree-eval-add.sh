@@ -196,8 +196,8 @@ sourcetree_eval_add_initialize()
 
    if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
    then
-      # shellcheck source=mulle-sourcetree-config.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh" || exit 1
+      # shellcheck source=mulle-sourcetree-commands.sh
+      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh" || exit 1
    fi
 }
 

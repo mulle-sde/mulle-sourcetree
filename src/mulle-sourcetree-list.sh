@@ -794,8 +794,8 @@ sourcetree_list_main()
    then
       # hack hack hacky hack
       r_basename "${OPTION_CONFIG_FILE}"
-      SOURCETREE_CONFIG_FILENAME="${RVAL}"
-      SOURCETREE_FALLBACK_CONFIG_FILENAME=
+      SOURCETREE_CONFIG_NAMES="${RVAL}"
+      SOURCETREE_FALLBACK_CONFIG_DIR=
 
       r_dirname "${OPTION_CONFIG_FILE}"
       r_physicalpath "${RVAL}"
@@ -806,7 +806,8 @@ sourcetree_list_main()
       FLAG_SOURCETREE_MODE="flat"
    fi
 
-   [ -z "${SOURCETREE_CONFIG_FILENAME}" ] && fail "Config filename is empty"
+   [ -z "${SOURCETREE_CONFIG_DIR}" ]   && fail "SOURCETREE_CONFIG_DIR is empty"
+   [ -z "${SOURCETREE_CONFIG_NAMES}" ] && fail "SOURCETREE_CONFIG_NAMES is empty"
 
    if [ "${FLAG_SOURCETREE_MODE}" = "share" ]
    then

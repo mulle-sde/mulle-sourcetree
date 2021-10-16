@@ -219,6 +219,7 @@ EOF
    cat <<EOF
 
 Environment:
+   MULLE_SOURCETREE_CONFIG_NAMES  : names separated by : to search (config)
    MULLE_SOURCETREE_STASH_DIR     : place to store shared dependencies (stash)
    MULLE_SOURCETREE_SYMLINK       : allow symlinks to be used
    MULLE_SOURCETREE_FETCH_<name>  : set to NO to inhibit fetch of a dependency
@@ -309,14 +310,17 @@ main()
    local MULLE_FLAG_LOG_SETTINGS='NO'
    local MULLE_FLAG_LOG_VERBOSE='NO'
    local MULLE_FLAG_LOG_MERGE='NO'
-   local MULLE_FLAG_USE_FALLBACK='NO'
    local MULLE_TRACE_POSTPONE='NO'
 
-   local MULLE_FLAG_DEFER=""
-   local FLAG_SOURCETREE_MODE=
-   local MULLE_FLAG_CONFIG_DIR
-   local MULLE_FLAG_SHARE_DIR
-   local MULLE_FLAG_SCOPE=
+   local MULLE_FLAG_DEFER  # test also uses this ?
+
+   local FLAG_USE_FALLBACK='NO'
+   local FLAG_SOURCETREE_MODE
+   local FLAG_CONFIG_DIR
+   local FLAG_SHARE_DIR
+   local FLAG_SCOPE
+   local FLAG_CONFIG_NAMES
+
    #
    # simple option handling
    #
@@ -347,7 +351,15 @@ main()
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
-            MULLE_FLAG_CONFIG_DIR="$1"
+            FLAG_CONFIG_DIR="$1"
+         ;;
+
+         --config-names|--config-name)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            r_colon_concat "${FLAG_CONFIG_NAMES}" "$1"
+            FLAG_CONFIG_NAMES="${RVAL}"
          ;;
 
          -d|--directory)
@@ -376,15 +388,15 @@ main()
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
-            MULLE_FLAG_SCOPE="$1"
+            FLAG_SCOPE="$1"
          ;;
 
          --global)
-            MULLE_FLAG_SCOPE="global"
+            FLAG_SCOPE="global"
          ;;
 
          --os)
-            MULLE_FLAG_SCOPE="${MULLE_UNAME}"
+            FLAG_SCOPE="${MULLE_UNAME}"
          ;;
 
          #
@@ -433,11 +445,11 @@ main()
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
-            MULLE_FLAG_SHARE_DIR="$1"
+            FLAG_SHARE_DIR="$1"
          ;;
 
          --use-fallback)
-            MULLE_FLAG_USE_FALLBACK='YES'
+            FLAG_USE_FALLBACK='YES'
          ;;
 
          --version)
@@ -476,12 +488,16 @@ main()
    # if empty, will default to "default"
    #
    local scope 
+   local names
 
-   scope="${MULLE_FLAG_SCOPE:-${MULLE_SOURCETREE_SCOPE}}"
+   scope="${FLAG_SCOPE:-${MULLE_SOURCETREE_SCOPE}}"
+   names="${FLAG_CONFIG_NAMES:-${MULLE_SOURCETREE_CONFIG_NAMES}}"
+
    sourcetree_environment "${scope}" \
-                          "${MULLE_FLAG_SHARE_DIR}" \
-                          "${MULLE_FLAG_CONFIG_DIR}" \
-                          "${MULLE_FLAG_USE_FALLBACK}" \
+                          "${FLAG_SHARE_DIR}" \
+                          "${FLAG_CONFIG_DIR}" \
+                          "${names}" \
+                          "${FLAG_USE_FALLBACK}" \
                           "${MULLE_FLAG_DEFER}"
 
    cmd="${1}"
@@ -529,7 +545,8 @@ main()
       log_trace2 "MULLE_SOURCETREE_VAR_DIR=${MULLE_SOURCETREE_VAR_DIR}"
       log_trace2 "MULLE_VIRTUAL_ROOT=${MULLE_VIRTUAL_ROOT}"
       log_trace2 "PWD=${PWD}"
-      log_trace2 "SOURCETREE_CONFIG_FILENAME=${SOURCETREE_CONFIG_FILENAME}"
+      log_trace2 "SOURCETREE_CONFIG_NAMES=${SOURCETREE_CONFIG_NAMES}"
+      log_trace2 "SOURCETREE_CONFIG_DIR=${SOURCETREE_CONFIG_DIR}"
       log_trace2 "SOURCETREE_DB_FILENAME=${SOURCETREE_DB_FILENAME}"
       log_trace2 "SOURCETREE_FIX_FILENAME=${SOURCETREE_FIX_FILENAME}"
       log_trace2 "SOURCETREE_MODE=${SOURCETREE_MODE}"
@@ -538,8 +555,8 @@ main()
 
    case "${cmd}" in
       add|copy|get|duplicate|info|knownmarks|mark|move|rename|rename-marks|remove|set|unmark)
-         # shellcheck source=src/mulle-sourcetree-config.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+         # shellcheck source=src/mulle-sourcetree-commands.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
 
          sourcetree_${cmd//-/_}_main "$@"
       ;;
@@ -710,7 +727,7 @@ _init()
 
    if [ -z "${MULLE_SOURCETREE_LIBEXEC_DIR}" ]
    then
-      r_get_libexec_dir "${MULLE_EXECUTABLE}" "mulle-sourcetree" "mulle-sourcetree-config.sh"
+      r_get_libexec_dir "${MULLE_EXECUTABLE}" "mulle-sourcetree" "mulle-sourcetree-commands.sh"
       MULLE_SOURCETREE_LIBEXEC_DIR="${RVAL}"
    fi
 

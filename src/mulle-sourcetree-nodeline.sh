@@ -453,15 +453,15 @@ nodeline_has_duplicate()
    local address="$2"
    local uuid="$3"
 
+   local _address
+   local _nodetype
+   local _marks
+   local _uuid
+
    shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do
       IFS="${DEFAULT_IFS}"; shell_enable_glob
-
-      local _address
-      local _nodetype
-      local _marks
-      local _uuid
 
       __nodeline_get_address_nodetype_marks_uuid "${nodeline}"
 

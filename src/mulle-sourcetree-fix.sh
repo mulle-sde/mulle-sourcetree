@@ -345,7 +345,7 @@ sourcetree_fix_main()
 
    if ! r_cfg_exists "${SOURCETREE_START}"
    then
-      log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_FILENAME}\")"
+      log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
    fi
 
    if ! db_is_ready "${SOURCETREE_START}"

@@ -277,6 +277,24 @@ EOF
 }
 
 
+sourcetree_rename_usage()
+{
+   [ $# -ne 0 ] && log_error "$1"
+
+   cat <<EOF >&2
+Usage:
+   ${MULLE_EXECUTABLE_NAME} rename <nodename> <newnodename>
+
+   Rename a node
+
+   Example:
+      ${MULLE_EXECUTABLE_NAME} rename foo bar
+EOF
+
+  exit 1
+}
+
+
 sourcetree_rename_mark_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -2000,14 +2018,19 @@ sourcetree_common_main()
 
    [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
 
-   local input
    local argument
-   local url
+   local config
+   local direction
+   local field
+   local from
+   local input
    local key
    local mark
    local mode
-   local direction
    local newaddress
+   local newmark
+   local oldmark
+   local url
 
    #
    # make simple commands flat by default, except if the user wants it
@@ -2018,7 +2041,8 @@ sourcetree_common_main()
       log_fluff "Sourcetree mode set to \"flat\" for config operations"
    fi
 
-   [ -z "${SOURCETREE_CONFIG_FILENAME}" ] && fail "config file empty name"
+   [ -z "${SOURCETREE_CONFIG_DIR}" ]   && fail "SOURCETREE_CONFIG_DIR is empty"
+   [ -z "${SOURCETREE_CONFIG_NAMES}" ] && fail "SOURCETREE_CONFIG_NAMES is empty"
 
    case "${COMMAND}" in
       add|duplicate)
@@ -2071,9 +2095,6 @@ sourcetree_common_main()
       ;;
 
       rename_marks)
-         local oldmark
-         local newmark
-
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          oldmark="$1"
          [ -z "${oldmark}" ] && log_error "empty oldmark argument" && ${USAGE}
@@ -2087,8 +2108,6 @@ sourcetree_common_main()
       ;;
 
       rename)
-         local newaddress
-
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          input="$1"
          [ -z "${input}" ] && log_error "empty input argument" && ${USAGE}
@@ -2109,10 +2128,6 @@ sourcetree_common_main()
       #             config, which file to copy from (can be empty)
       #
       copy)
-         local field
-         local from
-         local config
-
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          field="$1"
          [ -z "${field}" ] && log_error "empty field argument" && ${USAGE}
