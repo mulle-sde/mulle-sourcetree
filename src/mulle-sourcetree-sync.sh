@@ -571,9 +571,12 @@ _sourcetree_sync_share()
    # if there are no nodelines that's OK, we still want to do zombification
    # but if there's also no database then just bail
    #
-   local nodelines
+   local _configfile
+   local _fallback_configfile
 
-   if ! nodelines="`cfg_read "${config}" `"
+   __cfg_common_configfile "${config}"
+
+   if ! __cfg_resolve_configfile
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
 
@@ -590,6 +593,10 @@ _sourcetree_sync_share()
          return 127
       fi
    fi
+
+   local nodelines
+
+   nodelines="`__cfg_read`"
 
    local need_db='NO'
 
@@ -613,7 +620,7 @@ _sourcetree_sync_share()
    if [ "${need_db}" = 'YES' ]
    then
       db_set_dbtype "${database}" "${style}"
-      db_set_update "${database}"
+      db_set_update "${database}" "${_configfile}"
       db_set_shareddir "${database}" "${MULLE_SOURCETREE_STASH_DIR}"
       #
       # do a flat update first and remove what we don't have
@@ -689,7 +696,7 @@ _sourcetree_sync_share()
    then
       db_bury_zombies "${database}"
       db_clear_update "${database}"
-      db_set_ready "${database}"
+      db_set_ready "${database}" "${_configfile}"
    fi
 }
 
@@ -759,9 +766,12 @@ _sourcetree_sync_recurse()
    # if there are no nodelines that's OK, we still want to do zombification
    # but if there's also no database then just bail
    #
-   local nodelines
+   local _configfile
+   local _fallback_configfile
 
-   if ! nodelines="`cfg_read "${config}" `"
+   __cfg_common_configfile "${config}"
+
+   if ! __cfg_resolve_configfile
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! db_dir_exists "${database}"
@@ -771,10 +781,14 @@ _sourcetree_sync_recurse()
       fi
    fi
 
+   local nodelines
+
+   nodelines="`__cfg_read`"
+
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
    db_set_dbtype "${database}" "${style}"
-   db_set_update "${database}"
+   db_set_update "${database}" "${_configfile}"
 
    db_clear_shareddir "${database}"
 
@@ -810,7 +824,7 @@ _sourcetree_sync_recurse()
    db_bury_zombies "${database}"
 
    db_clear_update "${database}"
-   db_set_ready "${database}"
+   db_set_ready "${database}" "${_configfile}"
 }
 
 
@@ -845,11 +859,15 @@ _sourcetree_sync_flat()
 
    #
    # if there are no nodelines that's OK, we still want to do zombification
-   # but if there's also no database then just bail
+   # but if there's also no database then just bail. We remember the actual
+   # config that was used, to make it easier to debug symlink problems later
    #
-   local nodelines
+   local _configfile
+   local _fallback_configfile
 
-   if ! nodelines="`cfg_read "${config}" `"
+   __cfg_common_configfile "${config}"
+
+   if ! __cfg_resolve_configfile
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! db_dir_exists "${database}"
@@ -859,10 +877,14 @@ _sourcetree_sync_flat()
       fi
    fi
 
+   local nodelines
+
+   nodelines="`__cfg_read`"
+
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
    db_set_dbtype "${database}" "${style}"
-   db_set_update "${database}"
+   db_set_update "${database}" "${_configfile}"
 
    db_clear_shareddir "${database}"
    db_zombify_nodes "${database}"
@@ -887,7 +909,7 @@ _sourcetree_sync_flat()
    db_bury_zombies "${database}"
 
    db_clear_update "${database}"
-   db_set_ready "${database}"
+   db_set_ready "${database}" "${_configfile}"
 }
 
 

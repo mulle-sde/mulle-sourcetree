@@ -139,16 +139,45 @@ Options:
    -m <value>       : marks to match (e.g. build)
    -q <value>       : qualifier for marks to match (e.g. MATCHES build)
    --cd             : change directory to node's working directory
+   --comments       : also walk comment nodes
    --lenient        : allow shell command to error
    --backwards      : walk tree nodes backwards, rarely useful
    --in-order       : walk tree depth first  (Root, Left, Right
    --no-dedupe      : walk all nodes in the tree (very slow)
+   --bequeath       : ignore bequeath marks (this is erroneously inverted)
    --pre-order      : walk tree in pre-order  (Root, Left, Right)
    --breadth-first  : walk tree breadth first (first all top levels)
    --post-order     : walk tree depth first for all siblings (Left, Right, Root)
    --walk-db        : walk over information contained in the database instead
 EOF
-  exit 1
+
+   if [ "${MULLE_FLAG_LOG_VERBOSE}" = 'YES' ]
+   then
+      cat <<EOF >&2
+
+[Callback] Options:
+   --declare-function <f>      : declare a function to be used as a callback
+   --callback-qualifier <q>    : qualifier to filter node, by default same as -q
+   --callback-root             : callback for root node
+   --cd                        : enter config directory before callback
+   --configuration             : specify as Debug or Release
+   --dedupe-mode <m>           : set deduplication mode (see sourcecode)
+   --descend-qualifier <q>     : qualifier to use for descending nodes
+   --did-descend-callback <c>  : callback for the descend (default)
+   --did-walk-callback <c>     : callback after walk is done
+   --eval                      : evaluate callback
+   --max-walk-level            : restrict callbacks to max recursion depth
+   --min-walk-level            : restrict callbacks to min recursion depth
+   --no-callback-root          : don't execute callbacks for root level
+   --no-callback-trace         : don't trace callbacks
+   --no-cd                     : don't change directory for callback (default)
+   --no-comments               : ignore comment nodes
+   --no-eval                   : don't eval callback (default)
+   --will-descend-callback <c> : callback before descending
+EOF
+   fi
+
+   exit 1
 }
 
 
@@ -1810,6 +1839,13 @@ sourcetree_walk_main()
             shift
 
             OPTION_QUALIFIER="$1"
+         ;;
+
+         --declare-function)
+            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            shift
+
+            eval "$1" || fail "Callback \"${input}\" could not be parsed"
          ;;
 
          --callback-qualifier)

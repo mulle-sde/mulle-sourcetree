@@ -724,6 +724,7 @@ nodemarks_filter_with_qualifier()
       return 0
    fi
 
+   local _closer
    local _s
 
    _s="${qualifier}"
@@ -848,17 +849,17 @@ nodemark_no_cmake_inherit_consistency_check()
 
    if nodemarks_disable "${marks}" cmake-searchpath
    then
-      log_warning "\"${address}\" mark (no-cmake-searchpath) is made superflous by no-cmake-inherit"
+      log_warning "\"${address}\": mark (no-cmake-searchpath) is made superflous by no-cmake-inherit"
    fi
 
    if nodemarks_disable "${marks}" cmake-dependency
    then
-      log_warning "\"${address}\" mark (no-cmake-dependency) is made superflous by no-cmake-inherit"
+      log_warning "\"${address}\": mark (no-cmake-dependency) is made superflous by no-cmake-inherit"
    fi
 
    if nodemarks_disable "${marks}" cmake-loader
    then
-      log_warning "\"${address}\" mark (no-cmake-loader) is made superflous by no-cmake-inherit"
+      log_warning "\"${address}\": mark (no-cmake-loader) is made superflous by no-cmake-inherit"
    fi
 }
 

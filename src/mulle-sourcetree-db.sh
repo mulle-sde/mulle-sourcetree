@@ -234,7 +234,7 @@ db_memorize()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    local uuid="$2"
    local nodeline="$3"
@@ -621,7 +621,7 @@ db_fetch_all_uuids()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    ( cd "${_databasedir}" ; ls -1 ) 2> /dev/null
 }
@@ -634,7 +634,7 @@ db_fetch_all_nodelines()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    local i
 
@@ -659,7 +659,7 @@ db_fetch_uuid_for_address()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    local address="$2"
 
@@ -683,7 +683,7 @@ r_db_fetch_uuid_for_evaledurl()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    local searchurl="$2"
 
@@ -724,7 +724,7 @@ r_db_fetch_uuid_for_evaledurl()
 #    local _database
 #    local _databasedir
 #
-#    __db_common_databasedir "$@"
+#    __db_common_databasedir "$1"
 #
 #    local searchurl="$2"
 #
@@ -766,7 +766,7 @@ db_fetch_all_filenames()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    (
       shell_enable_nullglob
@@ -863,7 +863,7 @@ db_get_dbtype()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    # for -e tests
    _db_get_dbtype "${_databasedir}"
@@ -877,7 +877,7 @@ db_set_dbtype()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    local dbtype="$2"
 
@@ -895,7 +895,7 @@ db_clear_dbtype()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    remove_file_if_present "${_databasedir}/.db_type"
 }
@@ -928,7 +928,7 @@ db_dir_exists()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    if [ -d "${_databasedir}" ]
    then
@@ -941,10 +941,28 @@ db_dir_exists()
 }
 
 
+__r_db_environment()
+{
+   printf -v RVAL "%s\n%s" "${_databasedir}" "${MULLE_SOURCETREE_STASH_DIR}"
+}
+
+
 __db_environment()
 {
-   printf "%s\n" "${_databasedir}
-${MULLE_SOURCETREE_STASH_DIR}"
+   printf "%s\n%s\n" "${_databasedir}" "${MULLE_SOURCETREE_STASH_DIR}"
+}
+
+
+db_print_db_done()
+{
+   __db_environment
+
+   local line
+
+   for line in "$@"
+   do
+      printf "%s\n" "${line}"
+   done
 }
 
 
@@ -955,10 +973,9 @@ db_environment()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
-   printf "%s\n" "${_databasedir}
-${MULLE_SOURCETREE_STASH_DIR}"
+   __db_environment
 }
 
 
@@ -969,7 +986,7 @@ db_exists()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    [ -d "${_databasedir}" ]
 }
@@ -982,27 +999,39 @@ db_is_ready()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
+   shift
 
    local dbdonefile
 
    dbdonefile="${_databasedir}/.db_done"
 
-   local oldenvironment
-   local environment
+   local text
 
-   if ! oldenvironment="`cat "${dbdonefile}" 2> /dev/null`"
+   if ! text="`cat "${dbdonefile}" 2> /dev/null `"
    then
       log_debug "\"${dbdonefile}\" not found (${_databasedir})"
       return 1
    fi
-   environment="`__db_environment`"
 
-   if [ "${oldenvironment}" != "${environment}" ]
+   local expect
+
+   if [ $# -eq 0 ]
+   then
+      text="`head -2 <<< "${text}" `"
+      __r_db_environment
+      expect="${RVAL}"
+   else
+      expect="`db_print_db_done "$@" `"
+   fi
+
+   if [ "${text}" != "${expect}" ]
    then
       log_debug "\"${_database}\" was made in a different environment. Needs reset"
-      log_debug "Current environment : ${environment}"
-      log_debug "Old environment     : ${oldenvironment}"
+      log_debug "DBdonefile          : \"${dbdonefile}\""
+      log_debug "Current environment :\n${expect}"
+      log_debug "Old environment     :\n${text}"
+
       return 2
    fi
 
@@ -1010,6 +1039,8 @@ db_is_ready()
 }
 
 
+
+# caller may add some lines to the __deb_environment
 db_set_ready()
 {
    log_entry "db_set_ready" "$@"
@@ -1017,10 +1048,12 @@ db_set_ready()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
+
+   shift
 
    mkdir_if_missing "${_databasedir}"
-   redirect_exekutor "${_databasedir}/.db_done" __db_environment
+   redirect_exekutor "${_databasedir}/.db_done" db_print_db_done "$@"
 }
 
 
@@ -1032,7 +1065,7 @@ db_clear_ready()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    remove_file_if_present "${_databasedir}/.db_done"
 }
@@ -1045,7 +1078,7 @@ db_get_timestamp()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    if [ -f "${_databasedir}/.db_done" ]
    then
@@ -1064,7 +1097,7 @@ db_is_updating()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    if [ -f "${_databasedir}/.db_update" ]
    then
@@ -1077,6 +1110,19 @@ db_is_updating()
 }
 
 
+db_print_db_update()
+{
+   __db_environment
+
+   local line
+
+   for line in "$@"
+   do
+      printf "%s\n" "${line}"
+   done
+}
+
+
 db_set_update()
 {
    log_entry "db_set_update" "$@"
@@ -1084,11 +1130,12 @@ db_set_update()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
+
+   shift
 
    mkdir_if_missing "${_databasedir}"
-   redirect_exekutor "${_databasedir}/.db_update" \
-      echo "# intentionally left blank"
+   redirect_exekutor "${_databasedir}/.db_update" db_print_db_update "$*"
 }
 
 
@@ -1099,7 +1146,7 @@ db_clear_update()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    remove_file_if_present "${_databasedir}/.db_update"
 }
@@ -1114,7 +1161,7 @@ db_set_shareddir()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    local shareddir="$2"
 
@@ -1134,7 +1181,7 @@ db_clear_shareddir()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    remove_file_if_present "${_databasedir}/.db_stashdir"
 }
@@ -1149,7 +1196,7 @@ db_get_shareddir()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    if [ ! -f "${_databasedir}/.db_stashdir" ]
    then
@@ -1300,7 +1347,7 @@ db_has_graveyard()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    [ -d "${_databasedir}/../graveyard" ]
 }
@@ -1313,7 +1360,7 @@ db_graveyard_dir()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    printf "%s\n" "${_databasedir}/../graveyard"
 }
@@ -1341,7 +1388,7 @@ db_reset()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    if ! db_dir_exists "${_database}"
    then
@@ -1452,7 +1499,7 @@ db_zombify_nodes()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    local owner="$2"
 
@@ -1494,7 +1541,7 @@ db_zombify_nodelines()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    log_fluff "Marking nodelines as zombies for now (${_databasedir})"
 
@@ -1573,7 +1620,7 @@ db_bury_zombie()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    local uuid="$2"
 
@@ -1699,7 +1746,7 @@ db_bury_zombie_nodelines()
    local _database
    local _databasedir
 
-   __db_common_databasedir "$@"
+   __db_common_databasedir "$1"
 
    local zombiedir
 

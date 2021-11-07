@@ -1133,6 +1133,7 @@ _r_do_actions_with_nodeline()
       return 2
    fi
 
+
    local _evaledurl
    local _evalednodetype
    local _evaledbranch
@@ -1482,7 +1483,10 @@ do_actions_with_nodelines_parallel()
 
       if [ ! -z "${nodeline}" ]
       then
-         _parallel_execute do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+         _parallel_execute do_actions_with_nodeline "${nodeline}" \
+                                                    "${style}" \
+                                                    "${config}" \
+                                                    "${database}"
       fi
    done
 

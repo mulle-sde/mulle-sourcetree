@@ -124,6 +124,7 @@ print_commands()
    sync           : synchronize the project tree with the sourcetree [default]"
 
    HIDDEN_COMMANDS="\
+   config         : manipulate sourcetree config files
    craftorder     : emit nodes that are marked \"build\", in dependency order
    dbstatus       : query state of the database
    desecrate      : remove all graveyards
@@ -482,21 +483,17 @@ main()
 
    local SOURCETREE_START
    local SOURCETREE_SCOPE
+   local SOURCETREE_CONFIG_NAMES
 
    #
    # get default scope from environment
    # if empty, will default to "default"
    #
-   local scope 
-   local names
 
-   scope="${FLAG_SCOPE:-${MULLE_SOURCETREE_SCOPE}}"
-   names="${FLAG_CONFIG_NAMES:-${MULLE_SOURCETREE_CONFIG_NAMES}}"
-
-   sourcetree_environment "${scope}" \
+   sourcetree_environment "${FLAG_SCOPE:-${MULLE_SOURCETREE_SCOPE}}" \
                           "${FLAG_SHARE_DIR}" \
                           "${FLAG_CONFIG_DIR}" \
-                          "${names}" \
+                          "${FLAG_CONFIG_NAMES:-${MULLE_SOURCETREE_CONFIG_NAMES}}" \
                           "${FLAG_USE_FALLBACK}" \
                           "${MULLE_FLAG_DEFER}"
 
@@ -565,6 +562,12 @@ main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-${cmd}.sh"
 
          sourcetree_${cmd}_main "$@"
+      ;;
+
+      config)
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+
+         sourcetree_config_main "$@"
       ;;
 
       desecrate)

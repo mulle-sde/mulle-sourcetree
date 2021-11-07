@@ -5,6 +5,7 @@ src/mulle-sourcetree-callback.sh \
 src/mulle-sourcetree-cfg.sh \
 src/mulle-sourcetree-clean.sh \
 src/mulle-sourcetree-commands.sh \
+src/mulle-sourcetree-config.sh \
 src/mulle-sourcetree-craftorder.sh \
 src/mulle-sourcetree-db.sh \
 src/mulle-sourcetree-dbstatus.sh \

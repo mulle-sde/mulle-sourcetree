@@ -1,9 +1,9 @@
 #! /bin/sh 
 
 # per project settings, if available
-if [ -f .mulle/etc/sourcetree/graph-environment ]
+if [ -f .mulle/etc/sourcetree/graph/environment ]
 then
-   . .mulle/etc/sourcetree/graph-environment
+   . .mulle/etc/sourcetree/graph/environment
 fi
 
 GRAPH_LIBRARIES="${GRAPH_LIBRARIES:-NO}"

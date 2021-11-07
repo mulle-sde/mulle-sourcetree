@@ -42,6 +42,10 @@ sourcetree_config_environment()
    local scope="$4"
    local mode="$5"
 
+   [ -z "${MULLE_SOURCETREE_ETC_DIR}" ]     && internal_fail "MULLE_SOURCETREE_ETC_DIR is empty"
+   [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ]   && internal_fail "MULLE_SOURCETREE_SHARE_DIR is empty"
+   [ -z "${MULLE_SOURCETREE_PROJECT_DIR}" ] && internal_fail "MULLE_SOURCETREE_PROJECT_DIR is empty"
+
    SOURCETREE_CONFIG_NAMES="${config_names:-config}"
 
    if [ ! -z "${config_dir}" ]
@@ -55,7 +59,8 @@ sourcetree_config_environment()
 
    if [ "${use_fallback}" = 'YES' ]
    then
-      SOURCETREE_CONFIG_DIR="${SOURCETREE_FALLBACK_CONFIG_FILENAME}"
+      SOURCETREE_CONFIG_DIR="${config_dir#${MULLE_SOURCETREE_PROJECT_DIR}/}"
+      SOURCETREE_CONFIG_DIR="${SOURCETREE_CONFIG_DIR:-${SOURCETREE_FALLBACK_CONFIG_DIR}}"
       SOURCETREE_FALLBACK_CONFIG_DIR=""
    fi
 

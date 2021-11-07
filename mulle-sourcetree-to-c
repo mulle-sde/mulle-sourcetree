@@ -120,9 +120,9 @@ Usage:
       platform   : to produce \`#ifndef __APPLE__\` and such
 
 Flags:
-   --stdout      : Emit to stdout instead
    --import      : Emit import files
    --no-import   : Don't emit import files
+   --stdout      : Emit to stdout instead
    --unames      : List known unames and their known cpp equivalent
 
 Environment:

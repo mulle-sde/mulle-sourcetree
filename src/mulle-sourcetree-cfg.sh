@@ -100,8 +100,11 @@ __cfg_common_configfile()
       r_filepath_concat "${SOURCETREE_CONFIG_DIR}" "${name}"
       filename="${RVAL}"
 
-      r_filepath_concat "${SOURCETREE_FALLBACK_CONFIG_DIR}" "${name}"
-      fallback_filename="${RVAL}"
+      if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_DIR}" ]
+      then
+         r_filepath_concat "${SOURCETREE_FALLBACK_CONFIG_DIR}" "${name}"
+         fallback_filename="${RVAL}"
+      fi
 
       _configfile=""
       _fallback_configfile=""
@@ -344,27 +347,36 @@ cfg_timestamp()
 }
 
 
-#
-# can receive a _configfile (for walking)
-#
-__cfg_read()
+__cfg_resolve_configfile()
 {
    if [ -f "${_configfile}" ]
    then
-      log_debug "Read config file \"${_configfile}\" (${PWD#${MULLE_USER_PWD}/})"
-      egrep -s -v '^#' "${_configfile}"
-      return $?
+      _configfile="${_configfile}"
+      return 0
    fi
 
    if [ ! -z "${_fallback_configfile}" ] && [ -f "${_fallback_configfile}" ]
    then
-      log_debug "Read config file \"${_fallback_configfile}\" (${PWD#${MULLE_USER_PWD}/})"
-      egrep -s -v '^#' "${_fallback_configfile}"
-      return $?
+      _configfile="${_fallback_configfile}"
+      return 0
    fi
 
-   log_debug "No config file \"${_configfile}\" or \"${_fallback_configfile}\" found (${PWD#${MULLE_USER_PWD}/})"
+   log_debug "No config file \"${_configfile#${MULLE_USER_PWD}/}\" or \
+\"${_fallback_configfile#${MULLE_USER_PWD}/}\" found (${PWD#${MULLE_USER_PWD}/})"
+   _configfile=
    return 1
+}
+
+
+#
+# egrep return values 0: has lines
+#                     1: no lines
+#                     2: error
+#
+__cfg_read()
+{
+   log_debug "Read config file \"${_configfile#${MULLE_USER_PWD}/}\" (${PWD#${MULLE_USER_PWD}/})"
+   egrep -s -v '^#' "${_configfile}"
 }
 
 
@@ -376,6 +388,11 @@ cfg_read()
    local _fallback_configfile
 
    __cfg_common_configfile "$1"
+
+   if ! __cfg_resolve_configfile
+   then
+      return 1
+   fi
 
    __cfg_read
 }
