@@ -196,6 +196,13 @@ main()
 {
    MULLE_SOURCETREE_FLAGS="$@"
 
+   case "${MULLE_UNAME}" in 
+      mingw)
+         log_info "This test doesn't run on mingw because it has no symlinks"
+         return 0
+      ;;
+   esac
+   
    _options_mini_main "$@" && set -x
 
    local directory
