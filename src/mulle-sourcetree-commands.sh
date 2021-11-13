@@ -1315,6 +1315,7 @@ sourcetree_remove_node()
 # TODO: make this more stringent maybe no-- vs no-os-
 #       so we can scope this nicer ?
 KNOWN_MARKS="\
+no-actual-link
 no-all-load
 no-bequeath
 no-build
