@@ -472,7 +472,7 @@ output_file()
    log_verbose "mulle-sourcetree-to-c writes ${C_RESET_BOLD}${filename}"
 
    r_mkdir_parent_if_missing "${filename}"
-   exekutor chmod a+w "${filename}"  2> /dev/null
+   [ -f "${filename}" ] && exekutor chmod a+w "${filename}" || return 1  
    if redirect_exekutor "${filename}" printf "%s\n" "${text}"
    then
       exekutor chmod a-w "${filename}"

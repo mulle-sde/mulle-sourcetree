@@ -1358,7 +1358,8 @@ output_file()
 
    r_dirname "${filename}"
    mkdir_if_missing "${RVAL}"
-   exekutor chmod a+w "${filename}"  2> /dev/null
+
+   [ -f "${filename}" ] && exekutor chmod a+w "${filename}" || return 1  
    r_mkdir_parent_if_missing "${filename}"
    if redirect_exekutor "${filename}" printf "%s\n" "${text}"
    then

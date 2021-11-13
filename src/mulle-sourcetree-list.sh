@@ -646,6 +646,16 @@ sourcetree_list_main()
             fi
          ;;
 
+         -m|--output-marks)
+            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+            then
+               OPTION_FORMAT="%a;%m\\n"
+            else
+               r_sourcetree_add_format "${RVAL}" "%m"
+               OPTION_FORMAT="${RVAL}"
+            fi
+         ;;
+
          -r)
             FLAG_SOURCETREE_MODE="share"
          ;;
