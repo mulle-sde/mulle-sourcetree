@@ -1115,7 +1115,7 @@ emit_cmake_dependency()
 #
 # Generated from sourcetree: ${uuid};${address};${marks};${aliases}
 # Disable with : \`mulle-sourcetree mark ${address} ${disabler}\`
-# Disable for this platform: \`mulle-sourcetree mark ${address} no-cmake-platform-${MULLE_UNAME}\`
+# Disable for this platform: \`mulle-sourcetree mark ${address} no-cmake-platform-\${MULLE_UNAME}\`
 #
 EOF
 
