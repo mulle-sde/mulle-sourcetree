@@ -1449,7 +1449,7 @@ sourcetree_mark_node()
 
    if ! oldnodeline="`sourcetree_get_nodeline "${input}"`"
    then
-      log_warning "Not found"
+      log_warning "Node \"${input}\" not found"
       return 2
    fi
 
