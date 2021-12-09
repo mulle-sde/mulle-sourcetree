@@ -397,12 +397,21 @@ emit_c_header()
    # we use mulle-sourcetree directly
    local headers
 
+   # if mulle-sourcetree fails with 127 its ok
+   local rval 
+
    headers="`exekutor mulle-sourcetree list \
                                        --format "%_;%a;%m;%i={include,,-------}\\n" \
                                        --marks "${filter_marks}" \
                                        --no-bequeath \
                                        --output-format raw \
-                                       --no-output-header`" || return 1
+                                       --no-output-header`"
+   rval=$?
+
+   if [ $rval -ne 0 -a $rval -ne 127 ]
+   then 
+      return $rval 
+   fi
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
@@ -472,13 +481,17 @@ output_file()
    log_verbose "mulle-sourcetree-to-c writes ${C_RESET_BOLD}${filename}"
 
    r_mkdir_parent_if_missing "${filename}"
-   [ -f "${filename}" ] && exekutor chmod a+w "${filename}" || return 1  
+   if [ -f "${filename}" ] 
+   then 
+      exekutor chmod a+w "${filename}" || _fatal "Can't unprotect \"${filename}\"" 
+   fi
    if redirect_exekutor "${filename}" printf "%s\n" "${text}"
    then
       exekutor chmod a-w "${filename}"
       return 0
    fi
 
+   log_error "Failed to write \"${filename}\""
    return 1
 }
 
@@ -922,8 +935,8 @@ main()
    PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR:-.}"
    PROJECT_DIALECT="${PROJECT_DIALECT:-c}"
 
-   c_include "${PROJECT_NAME}" "${PROJECT_DOWNCASE_IDENTIFIER}" || exit 1
-   c_include_private "${PROJECT_NAME}" "${PROJECT_DOWNCASE_IDENTIFIER}" || exit 1
+   c_include "${PROJECT_NAME}" "${PROJECT_DOWNCASE_IDENTIFIER}"         || _fatal "c_include failed"
+   c_include_private "${PROJECT_NAME}" "${PROJECT_DOWNCASE_IDENTIFIER}" || _fatal "c_include_private failed"
 
    if [ "${PROJECT_DIALECT}" = "objc" ]
    then
@@ -932,13 +945,19 @@ main()
          OPTION_IMPORT='YES'
       fi
 
-      objc_import "${PROJECT_NAME}" "${PROJECT_IDENTIFIER}" || exit 1
-      objc_import_private "${PROJECT_NAME}" "${PROJECT_IDENTIFIER}" || exit 1
+      objc_import "${PROJECT_NAME}" "${PROJECT_IDENTIFIER}"         || _fatal "objc_import failed"
+      objc_import_private "${PROJECT_NAME}" "${PROJECT_IDENTIFIER}" || _fatal "objc_import_private failed"
    fi
 
    :
 }
 
+
+_fatal()
+{
+   echo "$0 fatal error: $*" >&2
+   exit 1
+}
 
 _init()
 {
@@ -953,8 +972,7 @@ _init()
    then
       MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env "libexec-dir" 2> /dev/null`"
       [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && \
-         echo "mulle-bashfunctions-env not installed" >&2 && \
-         exit 1
+         _fatal "mulle-bashfunctions-env not installed"
    fi
 
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1

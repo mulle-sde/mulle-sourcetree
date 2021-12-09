@@ -229,6 +229,7 @@ _descend_db_nodeline()
    if _style_for_${style} ${rval}
    then
       _sourcetree_sync_${_style} "${_config}" "${_database}"
+      return $?
    fi
 }
 
@@ -335,6 +336,13 @@ it is empty (${PWD#${MULLE_USER_PWD}/})"
       fi
 
       _descend_db_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+      rval=$?
+
+      # 127 is not really an error in a descendant 
+      if [ $rval -ne 0 -a $rval -ne 127 ]
+      then
+         return $rval
+      fi
    done
 
    IFS="${DEFAULT_IFS}" ; shell_enable_glob
@@ -449,6 +457,7 @@ _sync_nodeline_only_share()
    if [ ! -z "${_url}" ] && nodemarks_enable "${_marks}" "share"
    then
       do_actions_with_nodeline "${nodeline}" "share" "${config}" "${database}"
+      return $?
    fi
 }
 
@@ -480,7 +489,7 @@ _sourcetree_sync_only_share()
    if ! nodelines="`cfg_read "${config}" `"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
-      return 4
+      return 127
    fi
 
    local nodeline
@@ -582,6 +591,7 @@ _sourcetree_sync_share()
 
       if [ "${database}" = '/' ]
       then
+         log_debug "It's the root \"${database}\" so nothing more to do."
          db_clear_update "${database}"
          db_set_ready "${database}"
          return 127
@@ -638,14 +648,14 @@ _sourcetree_sync_share()
    then
       do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
-      log_debug "Parallel update of ${config}: ${rval}"
+      log_debug "Parallel share update of ${config}: ${rval}"
    else
       do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
-      log_debug "Update of ${config}: ${rval}"
+      log_debug "Share update of ${config}: ${rval}"
    fi
-   [ $rval -eq 0 ] || return 1
 
+   [ $rval -eq 0 ] || return 1
 
    #
    # Here we should bury all the zombies, that stemmed from the 
@@ -723,6 +733,8 @@ sourcetree_sync_share()
          fail "\"${MULLE_VIRTUAL_ROOT}${startpoint}\" is not reachable from \
 the sourcetree root (${MULLE_VIRTUAL_ROOT})"
       fi
+   else
+      log_debug "sourcetree sync of ${config} failed"
    fi
    return $rval
 }
@@ -805,11 +817,11 @@ _sourcetree_sync_recurse()
    then
       do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
-      log_debug "Parallel update of ${config}: ${rval}"
+      log_debug "Parallel recurse update of ${config}: ${rval}"
    else
       do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
-      log_debug "Update of ${config}: ${rval}"
+      log_debug "Recurse update of ${config}: ${rval}"
    fi
 
    [ $rval -eq 0 ] || return 1
@@ -898,11 +910,11 @@ _sourcetree_sync_flat()
    then
       do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
-      log_debug "Parallel update of ${config}: ${rval}"
+      log_debug "Parallel flat update of ${config}: ${rval}"
    else
       do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
-      log_debug "Update of ${config}: ${rval}"
+      log_debug "Flat update of ${config}: ${rval}"
    fi
    [ $rval -eq 0 ] || return 1
 
@@ -972,7 +984,7 @@ sourcetree_sync_start()
    "sourcetree_sync_${style}" "${SOURCETREE_START}" "${SOURCETREE_START}"
    rval=$?
 
-   if [ $rval -eq 127 -a "${OPTION_LENIENT}" = 'YES' ]
+   if [ $rval -eq 127 ]
    then
       # it's OK we can live with that
       log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
