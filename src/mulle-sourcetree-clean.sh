@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_CLEAN_SH="included"
 
 
-sourcetree_clean_usage()
+sourcetree::clean::usage()
 {
    [ $# -ne 0 ] && log_error "$*"
 
@@ -66,9 +66,9 @@ EOF
 #  D - delete directory
 #  F - delete file
 #
-walk_clean()
+sourcetree::clean::walk()
 {
-   log_entry "${C_RESET}walk_clean${C_DEBUG}" "${NODE_FILENAME}" "${NODE_MARKS}"
+   log_entry "${C_RESET}sourcetree::clean::walk${C_DEBUG}" "${NODE_FILENAME}" "${NODE_MARKS}"
 
    case "${NODE_TYPE}" in
       none)
@@ -80,7 +80,7 @@ walk_clean()
    local filename
    local marks
 
-   filename="`db_fetch_filename_for_uuid "${WALK_DATASOURCE}" "${NODE_UUID}" `"
+   filename="`sourcetree::db::fetch_filename_for_uuid "${WALK_DATASOURCE}" "${NODE_UUID}" `"
 
    if [ -z "${filename}" ]
    then
@@ -94,7 +94,7 @@ walk_clean()
    #
    # the actual desired filename for a config file is pretty complicated though
    #
-   if nodemarks_disable "${marks}" "delete"
+   if sourcetree::nodemarks::disable "${marks}" "delete"
    then
       log_fluff "\"${filename}\" is protected from delete"
       echo "P ${filename}"
@@ -122,22 +122,22 @@ walk_clean()
 }
 
 
-sourcetree_clean_bury()
+sourcetree::clean::bury()
 {
    local filename="$1"
 
    local uuid
 
-   r_node_uuidgen
+   sourcetree::node::r_uuidgen
    uuid="${RVAL}"
 
-   db_bury "${SOURCETREE_START}" "${uuid}" "${filename}"
+   sourcetree::db::bury "${SOURCETREE_START}" "${uuid}" "${filename}"
 }
 
 
-sourcetree_clean()
+sourcetree::clean::do()
 {
-   log_entry "sourcetree_clean" "$@"
+   log_entry "sourcetree::clean::do" "$@"
 
    local mode="$1"
 
@@ -170,12 +170,12 @@ sourcetree_clean()
    # callbackqualifier
    # descendqualifier
    # mode
-   commands="`walk_db_uuids "ALL" \
+   commands="`sourcetree::walk::walk_db_uuids "ALL" \
                             "descend-skip-symlink" \
                             "" \
                             "" \
                             "${mode},no-dbcheck,no-trace,dedupe-filename" \
-                            "walk_clean" `"
+                            "sourcetree::clean::walk" `"
 
 
    log_debug "COMMANDS: ${commands}"
@@ -228,7 +228,7 @@ sourcetree_clean()
       case "${line}" in
          D*|F*)
             # doesn't work well in parallel for reasons to be determined
-            sourcetree_clean_bury "${filename}"
+            sourcetree::clean::bury "${filename}"
          ;;
 
          L*)
@@ -244,9 +244,9 @@ sourcetree_clean()
 }
 
 
-sourcetree_clean_main()
+sourcetree::clean::main()
 {
-   log_entry "sourcetree_clean_main" "$@"
+   log_entry "sourcetree::clean::main" "$@"
 
    local OPTION_WALK_DB="DEFAULT"
    local OPTION_IS_UPTODATE='NO'
@@ -261,7 +261,7 @@ sourcetree_clean_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_clean_usage
+            sourcetree::clean::usage
          ;;
 
          --config)
@@ -299,7 +299,7 @@ sourcetree_clean_main()
          ;;
 
          -*)
-            sourcetree_clean_usage "Unknown clean option $1"
+            sourcetree::clean::usage "Unknown clean option $1"
          ;;
 
          *)
@@ -310,7 +310,7 @@ sourcetree_clean_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_clean_usage "Superflous arguments $*"
+   [ "$#" -eq 0 ] || sourcetree::clean::usage "Superflous arguments $*"
 
 
    if [ -z "${MULLE_PATH_SH}" ]
@@ -356,7 +356,7 @@ sourcetree_clean_main()
 
    if [ "${OPTION_CLEAN_FS}" != 'NO' ]
    then
-      if ! r_cfg_exists "${SOURCETREE_START}"
+      if ! sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
       then
          log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
       fi
@@ -364,7 +364,7 @@ sourcetree_clean_main()
       local rval
 
       rval=0
-      if db_exists "${SOURCETREE_START}"
+      if sourcetree::db::exists "${SOURCETREE_START}"
       then
 
          # shellcheck source=mulle-sourcetree-walk.sh
@@ -380,7 +380,7 @@ sourcetree_clean_main()
             mode="${RVAL}"
          fi
 
-         sourcetree_clean "${mode}"
+         sourcetree::clean::do "${mode}"
       else
          log_verbose "Already clean"
       fi
@@ -400,7 +400,7 @@ sourcetree_clean_main()
 
    if [ "${OPTION_CLEAN_CONFIG_FILE}" = 'YES' ]
    then
-      cfg_file_remove "${SOURCETREE_START}"
+      sourcetree::cfg::file_remove "${SOURCETREE_START}"
    fi
 }
 

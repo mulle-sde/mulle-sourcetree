@@ -35,31 +35,31 @@ MULLE_SOURCETREE_DB_SH="included"
 #
 #
 #
-_db_nodeline()
+sourcetree::db::_nodeline()
 {
    head -1
 }
 
 
-_db_owner()
+sourcetree::db::_owner()
 {
    sed -n '2p'
 }
 
 
-_db_filename()
+sourcetree::db::_filename()
 {
    sed -n '3p'
 }
 
 
-_db_evaledurl()
+sourcetree::db::_evaledurl()
 {
    tail -1
 }
 
 
-__db_common_sharedir()
+sourcetree::db::__common_sharedir()
 {
    case "${MULLE_SOURCETREE_STASH_DIR}" in
       /*)
@@ -71,7 +71,7 @@ __db_common_sharedir()
                ;;
 
                /*//)
-                  __db_common_sharedir "${1%/}"
+                  sourcetree::db::__common_sharedir "${1%/}"
                ;;
 
                /*/)
@@ -91,7 +91,7 @@ __db_common_sharedir()
 }
 
 
-__db_common___rootdir()
+sourcetree::db::__common___rootdir()
 {
    case "$1" in
       "/")
@@ -99,7 +99,7 @@ __db_common___rootdir()
       ;;
 
       /*//)
-         __db_common___rootdir "${1%/}"
+         sourcetree::db::__common___rootdir "${1%/}"
       ;;
 
       /*/)
@@ -117,16 +117,16 @@ __db_common___rootdir()
 }
 
 
-__db_common__rootdir()
+sourcetree::db::__common__rootdir()
 {
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
-   if __db_common_sharedir "$1"
+   if sourcetree::db::__common_sharedir "$1"
    then
       return
    fi
 
-   __db_common___rootdir "$1"
+   sourcetree::db::__common___rootdir "$1"
 }
 
 
@@ -134,7 +134,7 @@ __db_common__rootdir()
 # local _database
 # local _databasedir
 #
-__db_common_databasedir()
+sourcetree::db::__common_databasedir()
 {
    [ -z "${SOURCETREE_DB_FILENAME}" ] && internal_fail "SOURCETREE_DB_FILENAME is not set"
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
@@ -186,7 +186,7 @@ __db_common_databasedir()
 #
 # local _uuid
 #
-__db_common_uuid()
+sourcetree::db::__common_uuid()
 {
    _uuid="$1"
 
@@ -204,14 +204,14 @@ __db_common_uuid()
 # local _databasedir
 # local _uuid
 #
-__db_common_databasedir_uuid()
+sourcetree::db::__common_databasedir_uuid()
 {
-   __db_common_databasedir "$1"
-   __db_common_uuid "$2"
+   sourcetree::db::__common_databasedir "$1"
+   sourcetree::db::__common_uuid "$2"
 }
 
 
-__db_common_dbfilepath()
+sourcetree::db::__common_dbfilepath()
 {
    local databasedir="$1"
    local uuid="$2"
@@ -227,14 +227,14 @@ __db_common_dbfilepath()
 }
 
 
-db_memorize()
+sourcetree::db::memorize()
 {
-   log_entry "db_memorize" "$@"
+   log_entry "sourcetree::db::memorize" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local uuid="$2"
    local nodeline="$3"
@@ -285,19 +285,19 @@ ${evaledurl}"
 }
 
 
-db_recall()
+sourcetree::db::recall()
 {
-   log_entry "db_recall" "$@"
+   log_entry "sourcetree::db::recall" "$@"
 
    local _database
    local _databasedir
    local _uuid
 
-   __db_common_databasedir_uuid "$@"
+   sourcetree::db::__common_databasedir_uuid "$@"
 
    local dbfilepath
 
-   if ! __db_common_dbfilepath "${_databasedir}" "${_uuid}"
+   if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       return 1
    fi
@@ -306,19 +306,19 @@ db_recall()
 }
 
 
-db_forget()
+sourcetree::db::forget()
 {
-   log_entry "db_forget" "$@"
+   log_entry "sourcetree::db::forget" "$@"
 
    local _database
    local _databasedir
    local _uuid
 
-   __db_common_databasedir_uuid "$@"
+   sourcetree::db::__common_databasedir_uuid "$@"
 
    local dbfilepath
 
-   if __db_common_dbfilepath "${_databasedir}" "${_uuid}"
+   if sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       log_debug "Forgetting about uuid \"${_uuid}\" ($_databasedir)"
       remove_file_if_present "${dbfilepath}"
@@ -332,15 +332,15 @@ db_forget()
 # it must have been ascertained that filename is not in use by other nodes
 # filename is relative to _database here
 #
-db_bury()
+sourcetree::db::bury()
 {
-   log_entry "db_bury" "$@"
+   log_entry "sourcetree::db::bury" "$@"
 
    local _database
    local _databasedir
    local _uuid
 
-   __db_common_databasedir_uuid "$@"
+   sourcetree::db::__common_databasedir_uuid "$@"
 
    local filename="$3"
 
@@ -356,7 +356,7 @@ db_bury()
 
    local _rootdir
 
-   __db_common__rootdir "${_database}"
+   sourcetree::db::__common__rootdir "${_database}"
 
    case "${filename}" in
       /*)
@@ -438,7 +438,7 @@ ${C_RESET_BOLD} rm -rf .mulle/var kitchen stash dependency"
       local otheruuid
       local othergravepath
 
-      r_node_uuidgen
+      sourcetree::node::r_uuidgen
       otheruuid="${RVAL}"
       othergravepath="${graveyard}/${otheruuid}"
 
@@ -478,9 +478,9 @@ ${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \
 #
 # the owner is unused it seems
 #
-__db_parse_dbentry()
+sourcetree::db::__parse_dbentry()
 {
-   log_entry "__db_parse_dbentry" "$@"
+   log_entry "sourcetree::db::__parse_dbentry" "$@"
 
    local dbentry="$1"
 
@@ -517,38 +517,38 @@ evaledurl : ${evaledurl}"
 #
 #    local dbentry
 #
-#    dbentry="`db_recall "${_database}" "${uuid}"`"
-#    __db_parse_dbentry "${dbentry}"
+#    dbentry="`sourcetree::db::recall "${_database}" "${uuid}"`"
+#    sourcetree::db::__parse_dbentry "${dbentry}"
 # }
 
 
-db_get__rootdir()
+sourcetree::db::get__rootdir()
 {
    local _rootdir
 
-   __db_common__rootdir "$1"
+   sourcetree::db::__common__rootdir "$1"
    printf "%s\n" "${_rootdir}"
 }
 
 
-db_fetch_nodeline_for_uuid()
+sourcetree::db::fetch_nodeline_for_uuid()
 {
-   log_entry "db_fetch_nodeline_for_uuid" "$@"
+   log_entry "sourcetree::db::fetch_nodeline_for_uuid" "$@"
 
    local _database
    local _databasedir
    local _uuid
 
-   __db_common_databasedir_uuid "$@"
+   sourcetree::db::__common_databasedir_uuid "$@"
 
    local dbfilepath
 
-   if ! __db_common_dbfilepath "${_databasedir}" "${_uuid}"
+   if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       return 1
    fi
 
-   _db_nodeline <"${dbfilepath}"
+   sourcetree::db::_nodeline <"${dbfilepath}"
 }
 
 
@@ -560,81 +560,81 @@ db_fetch_nodeline_for_uuid()
 #   local _databasedir
 #   local uuid
 #
-#   __db_common_databasedir_uuid "$@"
+#   sourcetree::db::__common_databasedir_uuid "$@"
 #
 #   local dbfilepath
 #
-#   if ! __db_common_dbfilepath "${_databasedir}" "${uuid}"
+#   if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${uuid}"
 #   then
 #      return 1
 #   fi
 #
-#   _db_owner < "${dbfilepath}"
+#   sourcetree::db::_owner < "${dbfilepath}"
 #}
 
-db_fetch_filename_for_uuid()
+sourcetree::db::fetch_filename_for_uuid()
 {
-   log_entry "db_fetch_filename_for_uuid" "$@"
+   log_entry "sourcetree::db::fetch_filename_for_uuid" "$@"
 
    local _database
    local _databasedir
    local _uuid
 
-   __db_common_databasedir_uuid "$@"
+   sourcetree::db::__common_databasedir_uuid "$@"
 
    local dbfilepath
 
-   if ! __db_common_dbfilepath "${_databasedir}" "${_uuid}"
+   if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       return 1
    fi
 
-   _db_filename < "${dbfilepath}"
+   sourcetree::db::_filename < "${dbfilepath}"
 }
 
 
-db_fetch_evaledurl_for_uuid()
+sourcetree::db::fetch_evaledurl_for_uuid()
 {
-   log_entry "db_fetch_evaledurl_for_uuid" "$@"
+   log_entry "sourcetree::db::fetch_evaledurl_for_uuid" "$@"
 
    local _database
    local _databasedir
    local _uuid
 
-   __db_common_databasedir_uuid "$@"
+   sourcetree::db::__common_databasedir_uuid "$@"
 
    local dbfilepath
 
-   if ! __db_common_dbfilepath "${_databasedir}" "${_uuid}"
+   if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       return 1
    fi
 
-   _db_evaledurl < "${dbfilepath}"
+   sourcetree::db::_evaledurl < "${dbfilepath}"
 }
 
 
-db_fetch_all_uuids()
+sourcetree::db::fetch_all_uuids()
 {
-   log_entry "db_fetch_all_uuids" "$@"
+   log_entry "sourcetree::db::fetch_all_uuids" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    ( cd "${_databasedir}" ; ls -1 ) 2> /dev/null
 }
 
 
-db_fetch_all_nodelines()
+sourcetree::db::fetch_all_nodelines()
 {
-   log_entry "db_fetch_all_nodelines" "$@"
+   log_entry "sourcetree::db::fetch_all_nodelines" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local i
 
@@ -652,14 +652,14 @@ db_fetch_all_nodelines()
 }
 
 
-db_fetch_uuid_for_address()
+sourcetree::db::fetch_uuid_for_address()
 {
-   log_entry "db_fetch_uuid_for_address" "$@"
+   log_entry "sourcetree::db::fetch_uuid_for_address" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local address="$2"
 
@@ -676,14 +676,14 @@ db_fetch_uuid_for_address()
 }
 
 
-r_db_fetch_uuid_for_evaledurl()
+sourcetree::db::r_fetch_uuid_for_evaledurl()
 {
-   log_entry "r_db_fetch_uuid_for_evaledurl" "$@"
+   log_entry "sourcetree::db::r_fetch_uuid_for_evaledurl" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local searchurl="$2"
 
@@ -703,7 +703,7 @@ r_db_fetch_uuid_for_evaledurl()
    do
       IFS="${DEFAULT_IFS}"
 
-      evaledurl="`_db_evaledurl < "${candidate}" `"
+      evaledurl="`sourcetree::db::_evaledurl < "${candidate}" `"
       if [ "${searchurl}" = "${evaledurl}" ]
       then
          r_basename "${candidate}"
@@ -724,7 +724,7 @@ r_db_fetch_uuid_for_evaledurl()
 #    local _database
 #    local _databasedir
 #
-#    __db_common_databasedir "$1"
+#    sourcetree::db::__common_databasedir "$1"
 #
 #    local searchurl="$2"
 #
@@ -745,7 +745,7 @@ r_db_fetch_uuid_for_evaledurl()
 #       do
 #          IFS="${DEFAULT_IFS}"
 #
-#          filename="`_db_filename < "${candidate}" `"
+#          filename="`sourcetree::db::_filename < "${candidate}" `"
 #          if [ "${searchfilename}" = "${filename}" ]
 #          then
 #             printf "%s\n" "${candidate}"
@@ -759,14 +759,14 @@ r_db_fetch_uuid_for_evaledurl()
 # }
 
 
-db_fetch_all_filenames()
+sourcetree::db::fetch_all_filenames()
 {
-   log_entry "db_fetch_all_filenames" "$@"
+   log_entry "sourcetree::db::fetch_all_filenames" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    (
       shell_enable_nullglob
@@ -775,7 +775,7 @@ db_fetch_all_filenames()
 
       for i in "${_databasedir}"/*
       do
-         _db_filename < "${i}"
+         sourcetree::db::_filename < "${i}"
       done
    )
 }
@@ -784,14 +784,14 @@ db_fetch_all_filenames()
 #
 # the user will use filename to retrieve stuff later
 #
-db_set_memo()
+sourcetree::db::set_memo()
 {
-   log_entry "db_set_memo" "$@"
+   log_entry "sourcetree::db::set_memo" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local filename
 
@@ -806,14 +806,14 @@ db_set_memo()
 }
 
 
-db_add_memo()
+sourcetree::db::add_memo()
 {
-   log_entry "db_add_memo" "$@"
+   log_entry "sourcetree::db::add_memo" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local nodelines="$2"
 
@@ -821,15 +821,15 @@ db_add_memo()
 }
 
 
-db_add_missing()
+sourcetree::db::add_missing()
 {
-   log_entry "db_add_missing" "$@"
+   log_entry "sourcetree::db::add_missing" "$@"
 
    local _database
    local _databasedir
    local _uuid
 
-   __db_common_databasedir_uuid "$@"
+   sourcetree::db::__common_databasedir_uuid "$@"
 
    local nodeline="$3"
 
@@ -841,9 +841,9 @@ db_add_missing()
 # dbtype
 #
 
-_db_get_dbtype()
+sourcetree::db::_get_dbtype()
 {
-   log_entry "_db_get_dbtype" "$@"
+   log_entry "sourcetree::db::_get_dbtype" "$@"
 
    local databasedir="$1"
 
@@ -856,28 +856,28 @@ _db_get_dbtype()
 }
 
 
-db_get_dbtype()
+sourcetree::db::get_dbtype()
 {
-   log_entry "db_get_dbtype" "$@"
+   log_entry "sourcetree::db::get_dbtype" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    # for -e tests
-   _db_get_dbtype "${_databasedir}"
+   sourcetree::db::_get_dbtype "${_databasedir}"
 }
 
 
-db_set_dbtype()
+sourcetree::db::set_dbtype()
 {
-   log_entry "db_set_dbtype" "$@"
+   log_entry "sourcetree::db::set_dbtype" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local dbtype="$2"
 
@@ -888,24 +888,24 @@ db_set_dbtype()
 }
 
 
-db_clear_dbtype()
+sourcetree::db::clear_dbtype()
 {
-   log_entry "db_clear_dbtype" "$@"
+   log_entry "sourcetree::db::clear_dbtype" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    remove_file_if_present "${_databasedir}/.db_type"
 }
 
 
-db_is_recurse()
+sourcetree::db::is_recurse()
 {
-   log_entry "db_is_recurse" "$@"
+   log_entry "sourcetree::db::is_recurse" "$@"
 
-   case "`db_get_dbtype "$@"`" in
+   case "`sourcetree::db::get_dbtype "$@"`" in
       share|recurse)
          return 0
       ;;
@@ -921,14 +921,14 @@ db_is_recurse()
 # if there is some kind of .db file there we assume that's a _database
 # otherwise it's just a graveyard
 #
-db_dir_exists()
+sourcetree::db::dir_exists()
 {
-   log_entry "db_dir_exists" "$@"
+   log_entry "sourcetree::db::dir_exists" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    if [ -d "${_databasedir}" ]
    then
@@ -941,21 +941,21 @@ db_dir_exists()
 }
 
 
-__r_db_environment()
+sourcetree::db::__r_environment()
 {
    printf -v RVAL "%s\n%s" "${_databasedir}" "${MULLE_SOURCETREE_STASH_DIR}"
 }
 
 
-__db_environment()
+sourcetree::db::__environment()
 {
    printf "%s\n%s\n" "${_databasedir}" "${MULLE_SOURCETREE_STASH_DIR}"
 }
 
 
-db_print_db_done()
+sourcetree::db::print_db_done()
 {
-   __db_environment
+   sourcetree::db::__environment
 
    local line
 
@@ -966,40 +966,40 @@ db_print_db_done()
 }
 
 
-db_environment()
+sourcetree::db::environment()
 {
-   log_entry "db_is_ready" "$@"
+   log_entry "sourcetree::db::is_ready" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
-   __db_environment
+   sourcetree::db::__environment
 }
 
 
-db_exists()
+sourcetree::db::exists()
 {
-   log_entry "db_exists" "$@"
+   log_entry "sourcetree::db::exists" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    [ -d "${_databasedir}" ]
 }
 
 
-db_is_ready()
+sourcetree::db::is_ready()
 {
-   log_entry "db_is_ready" "$@"
+   log_entry "sourcetree::db::is_ready" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
    shift
 
    local dbdonefile
@@ -1019,10 +1019,10 @@ db_is_ready()
    if [ $# -eq 0 ]
    then
       text="`head -2 <<< "${text}" `"
-      __r_db_environment
+      sourcetree::db::__r_environment
       expect="${RVAL}"
    else
-      expect="`db_print_db_done "$@" `"
+      expect="`sourcetree::db::print_db_done "$@" `"
    fi
 
    if [ "${text}" != "${expect}" ]
@@ -1041,44 +1041,44 @@ db_is_ready()
 
 
 # caller may add some lines to the __deb_environment
-db_set_ready()
+sourcetree::db::set_ready()
 {
-   log_entry "db_set_ready" "$@"
+   log_entry "sourcetree::db::set_ready" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    shift
 
    mkdir_if_missing "${_databasedir}"
-   redirect_exekutor "${_databasedir}/.db_done" db_print_db_done "$@"
+   redirect_exekutor "${_databasedir}/.db_done" sourcetree::db::print_db_done "$@"
 }
 
 
 # never
-db_clear_ready()
+sourcetree::db::clear_ready()
 {
-   log_entry "db_clear_ready" "$@"
+   log_entry "sourcetree::db::clear_ready" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    remove_file_if_present "${_databasedir}/.db_done"
 }
 
 
-db_get_timestamp()
+sourcetree::db::get_timestamp()
 {
-   log_entry "db_get_timestamp" "$@"
+   log_entry "sourcetree::db::get_timestamp" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    if [ -f "${_databasedir}/.db_done" ]
    then
@@ -1090,14 +1090,14 @@ db_get_timestamp()
 #
 # update
 #
-db_is_updating()
+sourcetree::db::is_updating()
 {
-   log_entry "db_is_updating" "$@"
+   log_entry "sourcetree::db::is_updating" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    if [ -f "${_databasedir}/.db_update" ]
    then
@@ -1110,9 +1110,9 @@ db_is_updating()
 }
 
 
-db_print_db_update()
+sourcetree::db::print_db_update()
 {
-   __db_environment
+   sourcetree::db::__environment
 
    local line
 
@@ -1123,45 +1123,45 @@ db_print_db_update()
 }
 
 
-db_set_update()
+sourcetree::db::set_update()
 {
-   log_entry "db_set_update" "$@"
+   log_entry "sourcetree::db::set_update" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    shift
 
    mkdir_if_missing "${_databasedir}"
-   redirect_exekutor "${_databasedir}/.db_update" db_print_db_update "$*"
+   redirect_exekutor "${_databasedir}/.db_update" sourcetree::db::print_db_update "$*"
 }
 
 
-db_clear_update()
+sourcetree::db::clear_update()
 {
-   log_entry "db_clear_update" "$@"
+   log_entry "sourcetree::db::clear_update" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    remove_file_if_present "${_databasedir}/.db_update"
 }
 
 
-db_set_shareddir()
+sourcetree::db::set_shareddir()
 {
-   log_entry "db_set_shareddir" "$@"
+   log_entry "sourcetree::db::set_shareddir" "$@"
 
    [ $# -eq 2 ] || internal_fail "api error"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local shareddir="$2"
 
@@ -1172,31 +1172,31 @@ db_set_shareddir()
 }
 
 
-db_clear_shareddir()
+sourcetree::db::clear_shareddir()
 {
-   log_entry "db_clear_shareddir" "$@"
+   log_entry "sourcetree::db::clear_shareddir" "$@"
 
    [ $# -eq 1 ] || internal_fail "api error"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    remove_file_if_present "${_databasedir}/.db_stashdir"
 }
 
 
-db_get_shareddir()
+sourcetree::db::get_shareddir()
 {
-   log_entry "db_get_shareddir" "$@"
+   log_entry "sourcetree::db::get_shareddir" "$@"
 
    [ $# -eq 1 ] || internal_fail "api error"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    if [ ! -f "${_databasedir}/.db_stashdir" ]
    then
@@ -1209,13 +1209,13 @@ db_get_shareddir()
 #
 # If a previous update crashed, we want to let the user know.
 #
-db_ensure_consistency()
+sourcetree::db::ensure_consistency()
 {
-   log_entry "db_ensure_consistency" "$@"
+   log_entry "sourcetree::db::ensure_consistency" "$@"
 
    local database="$1"
 
-   if db_is_updating "${database}" && [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
+   if sourcetree::db::is_updating "${database}" && [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
    then
       log_error "A previous update was incomplete.
 Suggested resolution:
@@ -1236,16 +1236,16 @@ Well, do ya, punk?"
 #
 # if DB is "" clean, then anything goes.
 #
-db_ensure_compatible_dbtype()
+sourcetree::db::ensure_compatible_dbtype()
 {
-   log_entry "db_ensure_compatible_dbtype" "$@"
+   log_entry "sourcetree::db::ensure_compatible_dbtype" "$@"
 
    local database="$1"
    local dbtype="$2"
 
    local actualdbtype
 
-   actualdbtype="`db_get_dbtype "${database}"`"
+   actualdbtype="`sourcetree::db::get_dbtype "${database}"`"
    if [ -z "${actualdbtype}" -o "${actualdbtype}" = "${dbtype}" ]
    then
       return
@@ -1274,23 +1274,23 @@ If you want to change that to \"${dbtype}\" do:
 
 
 # sets external variables!!
-_db_set_default_mode()
+sourcetree::db::_set_default_mode()
 {
-   log_entry "_db_set_default_mode" "$@"
+   log_entry "sourcetree::db::_set_default_mode" "$@"
 
    local database="$1"
    local usertype="$2"
 
    local actualdbtype
 
-   actualdbtype="`db_get_dbtype "${database}"`"
+   actualdbtype="`sourcetree::db::get_dbtype "${database}"`"
 
    local _rootdir
 
    # que ??
    if [ ! -z "${actualdbtype}"  ]
    then
-      __db_common__rootdir "${database}"
+      sourcetree::db::__common__rootdir "${database}"
    fi
 
    local dbtype
@@ -1340,39 +1340,39 @@ _db_set_default_mode()
 }
 
 
-db_has_graveyard()
+sourcetree::db::has_graveyard()
 {
-   log_entry "db_has_graveyard" "$@"
+   log_entry "sourcetree::db::has_graveyard" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    [ -d "${_databasedir}/../graveyard" ]
 }
 
 
-db_graveyard_dir()
+sourcetree::db::graveyard_dir()
 {
-   log_entry "db_has_graveyard" "$@"
+   log_entry "sourcetree::db::has_graveyard" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    printf "%s\n" "${_databasedir}/../graveyard"
 }
 
 
-db_is_graveyard()
+sourcetree::db::is_graveyard()
 {
-   log_entry "db_is_graveyard" "$@"
+   log_entry "sourcetree::db::is_graveyard" "$@"
 
    local database="$1"
 
-   if ! db_has_graveyard "${database}"
+   if ! sourcetree::db::has_graveyard "${database}"
    then
       return 1
    fi
@@ -1381,16 +1381,16 @@ db_is_graveyard()
 }
 
 
-db_reset()
+sourcetree::db::reset()
 {
-   log_entry "db_reset" "$@"
+   log_entry "sourcetree::db::reset" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
-   if ! db_dir_exists "${_database}"
+   if ! sourcetree::db::dir_exists "${_database}"
    then
       return 0
    fi
@@ -1413,7 +1413,7 @@ db_reset()
 #
 # zombie
 #
-__db_zombiedir()
+sourcetree::db::__zombiedir()
 {
    local databasedir="$1"
 
@@ -1421,7 +1421,7 @@ __db_zombiedir()
 }
 
 
-__db_zombiefile()
+sourcetree::db::__zombiefile()
 {
    local databasedir="$1"
    local uuid="$2"
@@ -1430,37 +1430,37 @@ __db_zombiefile()
 }
 
 
-db_is_uuid_alive()
+sourcetree::db::is_uuid_alive()
 {
-   log_entry "db_is_uuid_alive" "$@"
+   log_entry "sourcetree::db::is_uuid_alive" "$@"
 
    local _database
    local _databasedir
    local _uuid
 
-   __db_common_databasedir_uuid "$@"
+   sourcetree::db::__common_databasedir_uuid "$@"
 
    local _zombiefile
 
-   __db_zombiefile "${_databasedir}" "${_uuid}"
+   sourcetree::db::__zombiefile "${_databasedir}" "${_uuid}"
 
    [ ! -e "${_zombiefile}" ]
 }
 
 
-db_set_uuid_alive()
+sourcetree::db::set_uuid_alive()
 {
-   log_entry "db_set_uuid_alive" "$@"
+   log_entry "sourcetree::db::set_uuid_alive" "$@"
 
    local _database
    local _databasedir
    local _uuid
 
-   __db_common_databasedir_uuid "$@"
+   sourcetree::db::__common_databasedir_uuid "$@"
 
    local _zombiefile
 
-   __db_zombiefile "${_databasedir}" "${_uuid}"
+   sourcetree::db::__zombiefile "${_databasedir}" "${_uuid}"
    if [ ! -e "${_zombiefile}" ]
    then
       return 1
@@ -1475,16 +1475,16 @@ db_set_uuid_alive()
 }
 
 
-db_is_filename_inuse()
+sourcetree::db::is_filename_inuse()
 {
-   log_entry "db_is_filename_inuse" "$@"
+   log_entry "sourcetree::db::is_filename_inuse" "$@"
 
    local database="$1"
    local filename="$2"
 
    local inuse
 
-   inuse="`db_fetch_all_filenames "${database}"`"
+   inuse="`sourcetree::db::fetch_all_filenames "${database}"`"
    fgrep -q -s -x "${filename}" <<< "${inuse}"
 }
 
@@ -1492,14 +1492,14 @@ db_is_filename_inuse()
 #
 # The owner thing is never used IRL though
 #
-db_zombify_nodes()
+sourcetree::db::zombify_nodes()
 {
-   log_entry "db_zombify_nodes" "$@"
+   log_entry "sourcetree::db::zombify_nodes" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local owner="$2"
 
@@ -1507,7 +1507,7 @@ db_zombify_nodes()
 
    local zombiedir
 
-   __db_zombiedir "${_databasedir}"
+   sourcetree::db::__zombiedir "${_databasedir}"
    rmdir_safer "${zombiedir}"
 
    local filename
@@ -1516,7 +1516,7 @@ db_zombify_nodes()
    shell_enable_nullglob
    for filename in "${_databasedir}"/*
    do
-      if [ ! -z "${owner}" ] && [ "`_db_owner < "${filename}"`" != "${owner}" ]
+      if [ ! -z "${owner}" ] && [ "`sourcetree::db::_owner < "${filename}"`" != "${owner}" ]
       then
          continue
       fi
@@ -1534,20 +1534,20 @@ db_zombify_nodes()
 }
 
 
-db_zombify_nodelines()
+sourcetree::db::zombify_nodelines()
 {
-   log_entry "db_zombify_nodelines" "$@"
+   log_entry "sourcetree::db::zombify_nodelines" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    log_fluff "Marking nodelines as zombies for now (${_databasedir})"
 
    local zombiedir
 
-   __db_zombiedir "${_databasedir}"
+   sourcetree::db::__zombiedir "${_databasedir}"
    rmdir_safer "${zombiedir}"
 
    if [ -z "${nodelines}" ]
@@ -1575,9 +1575,9 @@ db_zombify_nodelines()
 
       if [ ! -z "${nodeline}" ]
       then
-         nodeline_parse "${nodeline}"  # memo: _marks unused
+         sourcetree::nodeline::parse "${nodeline}"  # memo: _marks unused
 
-         if __db_common_dbfilepath "${_databasedir}" "${_uuid}"
+         if sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
          then
             exekutor cp ${OPTION_COPYMOVEFLAGS} "${dbfilepath}" "${zombiedir}/"
          fi
@@ -1587,9 +1587,9 @@ db_zombify_nodelines()
 }
 
 
-_db_bury_zombiefile()
+sourcetree::db::_bury_zombiefile()
 {
-   log_entry "_db_bury_zombiefile" "$@"
+   log_entry "sourcetree::db::_bury_zombiefile" "$@"
 
    local database="$1"
    local zombiefile="$2"
@@ -1601,9 +1601,9 @@ _db_bury_zombiefile()
 
    entry="`cat "${zombiefile}"`" || exit 1
 
-   __db_parse_dbentry "${entry}"
+   sourcetree::db::__parse_dbentry "${entry}"
 
-   db_safe_bury_dbentry "${database}" "${nodeline}" "${owner}" "${filename}"
+   sourcetree::db::safe_bury_dbentry "${database}" "${nodeline}" "${owner}" "${filename}"
 
    remove_file_if_present "${zombiefile}"
 }
@@ -1613,14 +1613,14 @@ _db_bury_zombiefile()
 # a zombie remembers its associate file
 # this will be buried
 #
-db_bury_zombie()
+sourcetree::db::bury_zombie()
 {
-   log_entry "db_bury_zombie" "$@"
+   log_entry "sourcetree::db::bury_zombie" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local uuid="$2"
 
@@ -1628,20 +1628,20 @@ db_bury_zombie()
 
    local _zombiefile
 
-   __db_zombiefile "${_databasedir}" "${uuid}"
+   sourcetree::db::__zombiefile "${_databasedir}" "${uuid}"
 
    if [ -e "${_zombiefile}" ]
    then
-      _db_bury_zombiefile "${_database}" "${_zombiefile}"
+      sourcetree::db::_bury_zombiefile "${_database}" "${_zombiefile}"
    else
       log_fluff "There is no zombie for \"${uuid}\""
    fi
 }
 
 
-db_safe_bury_dbentry()
+sourcetree::db::safe_bury_dbentry()
 {
-   log_entry "db_safe_bury_dbentry" "$@"
+   log_entry "sourcetree::db::safe_bury_dbentry" "$@"
 
    local database="$1"
    local nodeline="$2"
@@ -1659,9 +1659,9 @@ db_safe_bury_dbentry()
    local _userinfo
    local _uuid
 
-   nodeline_parse "${nodeline}"     # memo: _marks unused
+   sourcetree::nodeline::parse "${nodeline}"     # memo: _marks unused
 
-   db_forget "${database}" "${_uuid}"
+   sourcetree::db::forget "${database}" "${_uuid}"
 
    case "${_marks}" in
       *no-delete|*no-delete,*)
@@ -1670,28 +1670,28 @@ db_safe_bury_dbentry()
       ;;
    esac
 
-   if db_is_filename_inuse "${database}" "${filename}"
+   if sourcetree::db::is_filename_inuse "${database}" "${filename}"
    then
       log_fluff "Another node is using \"${filename}\" now"
       return
    fi
 
-   db_bury "${database}" "${_uuid}" "${filename}"
+   sourcetree::db::bury "${database}" "${_uuid}" "${filename}"
 }
 
 
-db_bury_zombies()
+sourcetree::db::bury_zombies()
 {
-   log_entry "db_bury_zombies" "$@"
+   log_entry "sourcetree::db::bury_zombies" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local zombiedir
 
-   __db_zombiedir "${_databasedir}"
+   sourcetree::db::__zombiedir "${_databasedir}"
 
    local zombiefile
 
@@ -1701,7 +1701,7 @@ db_bury_zombies()
 
       for zombiefile in `ls -1 "${zombiedir}/"* 2> /dev/null`
       do
-         _db_bury_zombiefile "${_database}" "${zombiefile}"
+         sourcetree::db::_bury_zombiefile "${_database}" "${zombiefile}"
       done
    fi
 
@@ -1709,18 +1709,18 @@ db_bury_zombies()
 }
 
 
-db_bury_flat_zombies()
+sourcetree::db::bury_flat_zombies()
 {
-   log_entry "db_bury_flat_zombies" "$@"
+   log_entry "sourcetree::db::bury_flat_zombies" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local zombiedir
 
-   __db_zombiedir "${_databasedir}"
+   sourcetree::db::__zombiedir "${_databasedir}"
 
    local zombiefile
 
@@ -1730,27 +1730,27 @@ db_bury_flat_zombies()
 
       for zombiefile in `ls -1 "${zombiedir}/"* 2> /dev/null`
       do
-         if [ "`_db_owner <"${zombiefile}" `" = "$1" ]
+         if [ "`sourcetree::db::_owner <"${zombiefile}" `" = "$1" ]
          then
-            _db_bury_zombiefile "${_database}" "${zombiefile}"
+            sourcetree::db::_bury_zombiefile "${_database}" "${zombiefile}"
          fi
       done
    fi
 }
 
 
-db_bury_zombie_nodelines()
+sourcetree::db::bury_zombie_nodelines()
 {
-   log_entry "db_bury_zombie_nodelines" "$@"
+   log_entry "sourcetree::db::bury_zombie_nodelines" "$@"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "$1"
+   sourcetree::db::__common_databasedir "$1"
 
    local zombiedir
 
-   __db_zombiedir "${_databasedir}"
+   sourcetree::db::__zombiedir "${_databasedir}"
 
    local _branch
    local _address
@@ -1772,12 +1772,12 @@ db_bury_zombie_nodelines()
 
       if [ ! -z "${nodeline}" ]
       then
-         nodeline_parse "${nodeline}"     # memo: _marks unused
+         sourcetree::nodeline::parse "${nodeline}"     # memo: _marks unused
 
          zombiefile="${zombiedir}/${_uuid}"
          if [ -e "${zombiefile}" ]
          then
-            _db_bury_zombiefile "${_database}" "${zombiefile}"
+            sourcetree::db::_bury_zombiefile "${_database}" "${zombiefile}"
          fi
       fi
    done
@@ -1788,18 +1788,18 @@ db_bury_zombie_nodelines()
 }
 
 
-db_state_description()
+sourcetree::db::state_description()
 {
-   log_entry "db_state_description" "$@"
+   log_entry "sourcetree::db::state_description" "$@"
 
    local database="${1:-/}"
 
    local dbstate
 
    dbstate="absent"
-   if db_dir_exists "${database}"
+   if sourcetree::db::dir_exists "${database}"
    then
-      db_is_ready "${database}"
+      sourcetree::db::is_ready "${database}"
       case "$?" in
          0)
             dbstate="ready"
@@ -1819,11 +1819,11 @@ db_state_description()
       esac
 
       local state
-      state="`db_get_dbtype "${database}"`"
+      state="`sourcetree::db::get_dbtype "${database}"`"
 
       r_comma_concat "${dbstate}" "${state}"
       dbstate="${RVAL}"
-      if db_has_graveyard "${database}"
+      if sourcetree::db::has_graveyard "${database}"
       then
          r_comma_concat "${dbstate}" "graveyard"
          dbstate="${RVAL}"
@@ -1845,9 +1845,9 @@ db_state_description()
 #  3: skip this node
 #  4: skip this node, unless we are deleting it
 #
-r_db_update_determine_share_filename()
+sourcetree::db::r_share_filename()
 {
-   log_entry "r_db_update_determine_share_filename" "$@"
+   log_entry "sourcetree::db::r_share_filename" "$@"
 
    local address="$1"
    local evaledurl="$2"
@@ -1891,7 +1891,7 @@ r_db_update_determine_share_filename()
       local otheruuid
       local check
 
-      r_db_fetch_uuid_for_evaledurl "/" "${evaledurl}"
+      sourcetree::db::r_fetch_uuid_for_evaledurl "/" "${evaledurl}"
       otheruuid="${RVAL}"
 
       if [ ! -z "${otheruuid}" ] 

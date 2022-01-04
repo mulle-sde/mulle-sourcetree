@@ -33,12 +33,12 @@ MULLE_SOURCETREE_CALLBACK_SH="included"
 
 
 #
-# "cheat" and read global _ values defined in _visit_node and friends
+# "cheat" and read global _ values defined in sourcetree::walk::_visit_node and friends
 # w/o passing them explicitly from mulle-sourcetree-walk
 #
-__call_callback()
+sourcetree::callback::call()
 {
-   log_entry "__call_callback" "$@"
+   log_entry "sourcetree::callback::call" "$@"
 
    local datasource="$1"; shift
    local virtual="$1"; shift

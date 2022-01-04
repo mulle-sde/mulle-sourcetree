@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_DOTDUMP_SH="included"
 
 
-sourcetree_dotdump_usage()
+sourcetree::dotdump::usage()
 {
     cat <<EOF >&2
 Usage:
@@ -52,38 +52,38 @@ EOF
 }
 
 
-html_escape()
+sourcetree::dotdump::html_escape()
 {
    tr '[&<>]' '.' <<< "$*"
 }
 
 
-html_print_title()
+sourcetree::dotdump::html_print_title()
 {
-   log_entry "html_print_title" "$@"
+   log_entry "sourcetree::dotdump::html_print_title" "$@"
 
    local title="$1"
    local fontcolor="$2"
    local bgcolor="$3"
 
-   title="`html_escape "${title}"`"
-   fontcolor="`html_escape "${fontcolor}"`"
-   bgcolor="`html_escape "${bgcolor}"`"
+   title="`sourcetree::dotdump::html_escape "${title}"`"
+   fontcolor="`sourcetree::dotdump::html_escape "${fontcolor}"`"
+   bgcolor="`sourcetree::dotdump::html_escape "${bgcolor}"`"
 
    echo "<TR><TD BGCOLOR=\"${bgcolor}\" COLSPAN=\"2\"><FONT COLOR=\"${fontcolor}\">${title:-&nbsp;}</FONT></TD></TR>"
 }
 
 
-html_print_row()
+sourcetree::dotdump::html_print_row()
 {
-   log_entry "html_print_row" "$@"
+   log_entry "sourcetree::dotdump::html_print_row" "$@"
 
    local key="$1"
    local value="$2"
    local defaultvalue="$3"
 
-   key="`html_escape "${key}"`"
-   value="`html_escape "${value}"`"
+   key="`sourcetree::dotdump::html_escape "${key}"`"
+   value="`sourcetree::dotdump::html_escape "${value}"`"
    if [ "${value}" != "${defaultvalue}" ]
    then
       echo "<TR><TD>${key}</TD><TD>${value}</TD></TR>"
@@ -91,9 +91,9 @@ html_print_row()
 }
 
 
-html_print_node()
+sourcetree::dotdump::html_print_node()
 {
-   log_entry "html_print_node" "$@"
+   log_entry "sourcetree::dotdump::html_print_node" "$@"
 
    local identifier="$1"; shift
    local isshared="$1"; shift
@@ -155,19 +155,19 @@ html_print_node()
 
 
    RVAL="<TABLE>"
-   r_concat "${RVAL}" "`html_print_title "${title}" "${fontcolor}" "${bgcolor}"`"
-   r_concat "${RVAL}" "`html_print_row "address" "${address}"`"
-   r_concat "${RVAL}" "`html_print_row "nodetype" "${nodetype}"`"
-   r_concat "${RVAL}" "`html_print_row "userinfo" "${userinfo}"`"
-   r_concat "${RVAL}" "`html_print_row "marks" "${marks}"`"
-   r_concat "${RVAL}" "`html_print_row "url" "${url}"`"
-   r_concat "${RVAL}" "`html_print_row "branch" "${branch}"`"
-   r_concat "${RVAL}" "`html_print_row "tag" "${tag}"`"
-   #      html="$(add_line "${html}" "`html_print_row "uuid" "${uuid}"`"")"
-   r_concat "${RVAL}" "`html_print_row "fetchoptions" "${fetchoptions}"`"
+   r_concat "${RVAL}" "`sourcetree::dotdump::html_print_title "${title}" "${fontcolor}" "${bgcolor}"`"
+   r_concat "${RVAL}" "`sourcetree::dotdump::html_print_row "address" "${address}"`"
+   r_concat "${RVAL}" "`sourcetree::dotdump::html_print_row "nodetype" "${nodetype}"`"
+   r_concat "${RVAL}" "`sourcetree::dotdump::html_print_row "userinfo" "${userinfo}"`"
+   r_concat "${RVAL}" "`sourcetree::dotdump::html_print_row "marks" "${marks}"`"
+   r_concat "${RVAL}" "`sourcetree::dotdump::html_print_row "url" "${url}"`"
+   r_concat "${RVAL}" "`sourcetree::dotdump::html_print_row "branch" "${branch}"`"
+   r_concat "${RVAL}" "`sourcetree::dotdump::html_print_row "tag" "${tag}"`"
+   #      html="$(add_line "${html}" "`sourcetree::dotdump::html_print_row "uuid" "${uuid}"`"")"
+   r_concat "${RVAL}" "`sourcetree::dotdump::html_print_row "fetchoptions" "${fetchoptions}"`"
    if [ ! -z "${MULLE_ORIGINATOR}" ]
    then
-      r_concat "${RVAL}" "`html_print_row "original" "${MULLE_ORIGINATOR}"`"
+      r_concat "${RVAL}" "`sourcetree::dotdump::html_print_row "original" "${MULLE_ORIGINATOR}"`"
    fi
    r_concat "${RVAL}" "</TABLE>"
 
@@ -187,9 +187,9 @@ html_print_node()
 #  ready
 #  reset
 #
-r_get_fs_status()
+sourcetree::dotdump::r_get_fs_status()
 {
-   log_entry "r_get_fs_status" "$@"
+   log_entry "sourcetree::dotdump::r_get_fs_status" "$@"
 
    local destination="$1"
 
@@ -231,21 +231,21 @@ r_get_fs_status()
       ;;
    esac
 
-   if ! r_cfg_exists "${datasource}"
+   if ! sourcetree::cfg::r_config_exists "${datasource}"
    then
       log_debug "${destination} has no cfg (is a folder)"
       RVAL="folder"
       return
    fi
 
-   if ! db_dir_exists "${datasource}"
+   if ! sourcetree::db::dir_exists "${datasource}"
    then
       log_debug "${datasource} has no db (but is a sourcetree)"
       RVAL="config"
       return
    fi
 
-   db_is_ready "${datasource}"
+   sourcetree::db::is_ready "${datasource}"
    case $? in
       1)
          log_debug "\"${datasource}\" db not ready"
@@ -265,9 +265,9 @@ r_get_fs_status()
 }
 
 
-print_node()
+sourcetree::dotdump::print_node()
 {
-   log_entry "print_node" "$@"
+   log_entry "sourcetree::dotdump::print_node" "$@"
 
    local foldertype="$1"
    local destination="$2"
@@ -295,7 +295,7 @@ print_node()
    local color
    local state
 
-   r_get_fs_status "${destination}"
+   sourcetree::dotdump::r_get_fs_status "${destination}"
    state="${RVAL}"
 
    if [ "${isshared}" = 'NO' ]
@@ -401,9 +401,9 @@ label=\"${RVAL}\"]"
 }
 
 
-walk_dotdump()
+sourcetree::dotdump::walk()
 {
-   log_entry "walk_dotdump" "$@"
+   log_entry "sourcetree::dotdump::walk" "$@"
 
    local url="${NODE_URL}"
    local address="${NODE_ADDRESS}"
@@ -480,7 +480,7 @@ walk_dotdump()
       then
          component="/"
       fi
-      label="`html_escape "${component}"`" # yeah...
+      label="`sourcetree::dotdump::html_escape "${component}"`" # yeah...
 
       r_filepath_concat "${relative}" "${component}"
       relative="${RVAL}"
@@ -554,7 +554,7 @@ walk_dotdump()
       r_basename "${destination}"
       title="${RVAL}"
 
-      html_print_node "${identifier}" \
+      sourcetree::dotdump::html_print_node "${identifier}" \
                       "${isshared}"   \
                       "${title}" \
                       "${url}" \
@@ -567,7 +567,7 @@ walk_dotdump()
                       "${userinfo}" \
                       "${uuid}"
    else
-      print_node "default" \
+      sourcetree::dotdump::print_node "default" \
                  "${destination}" \
                  "${identifier}" \
                  "${address}" \
@@ -576,22 +576,22 @@ walk_dotdump()
 
    IFS="${DEFAULT_IFS}"
 
-   log_entry "walk_dotdump done"
+   log_entry "sourcetree::dotdump::walk done"
 
    :
 }
 
 
-walk_dotdump_finished()
+sourcetree::dotdump::walk_finished()
 {
    log_debug "[†] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
-   emit_remaining_directories "${TOEMIT_DIRECTORIES}"
+   sourcetree::dotdump::emit_remaining_directories "${TOEMIT_DIRECTORIES}"
 }
 
 
-emit_root()
+sourcetree::dotdump::emit_root()
 {
-   log_entry "emit_root" "$@"
+   log_entry "sourcetree::dotdump::emit_root" "$@"
 
    local title
 
@@ -599,7 +599,7 @@ emit_root()
    then
       title="${ROOT_IDENTIFIER#\"}"
       title="${title%\"}"
-      html_print_node "${ROOT_IDENTIFIER}" \
+      sourcetree::dotdump::html_print_node "${ROOT_IDENTIFIER}" \
                       'NO' \
                       "${title}" \
                       "${url}" \
@@ -609,7 +609,7 @@ emit_root()
                       "root"
    else
       r_basename "${PWD}"
-      print_node "root" \
+      sourcetree::dotdump::print_node "root" \
                  "." \
                  "${ROOT_IDENTIFIER}" \
                  "${RVAL}" \
@@ -618,9 +618,9 @@ emit_root()
 }
 
 
-emit_remaining_directories()
+sourcetree::dotdump::emit_remaining_directories()
 {
-   log_entry "emit_remaining_directories" "$@"
+   log_entry "sourcetree::dotdump::emit_remaining_directories" "$@"
 
    local directories="$1"
 
@@ -634,7 +634,7 @@ emit_remaining_directories()
 
       name="$(sed 's/^.\(.*\).$/\1/' <<< "${identifier}")"
 
-      print_node "other" \
+      sourcetree::dotdump::print_node "other" \
                  "${name}" \
                  "${identifier}"  \
                  "${name}" \
@@ -644,9 +644,9 @@ emit_remaining_directories()
 }
 
 
-sourcetree_dotdump_body()
+sourcetree::dotdump::do_body()
 {
-   log_entry "sourcetree_dotdump_body" "$@"
+   log_entry "sourcetree::dotdump::do_body" "$@"
 
    local mode="$1"
 
@@ -667,38 +667,38 @@ sourcetree_dotdump_body()
 
    case ",${mode}," in
       *,walkdb,*)
-         DID_WALK_CALLBACK=walk_dotdump_finished \
-            walk_db_uuids "ALL" \
+         DID_WALK_CALLBACK=sourcetree::dotdump::walk_finished \
+            sourcetree::walk::walk_db_uuids "ALL" \
                           "" \
                           "" \
                           "" \
                           "${mode}" \
-                          "walk_dotdump"
+                          "sourcetree::dotdump::walk"
       ;;
 
       *)
-         DID_WALK_CALLBACK=walk_dotdump_finished \
-            walk_config_uuids "ALL" \
+         DID_WALK_CALLBACK=sourcetree::dotdump::walk_finished \
+            sourcetree::walk::walk_config_uuids "ALL" \
                               "" \
                               "" \
                               "" \
                               "${mode}" \
-                              "walk_dotdump"
+                              "sourcetree::dotdump::walk"
       ;;
    esac || return 1
 
 
-   emit_root
+   sourcetree::dotdump::emit_root
 }
 
 
-sourcetree_dotdump()
+sourcetree::dotdump::do()
 {
-   log_entry "sourcetree_dotdump" "$@"
+   log_entry "sourcetree::dotdump::do" "$@"
 
    local output
 
-   output="`sourcetree_dotdump_body "$@"`" || return 1
+   output="`sourcetree::dotdump::do_body "$@"`" || return 1
 
    cat <<EOF
 digraph sourcetree
@@ -720,9 +720,9 @@ EOF
 
 
 
-sourcetree_dotdump_main()
+sourcetree::dotdump::main()
 {
-   log_entry "sourcetree_dotdump_main" "$@"
+   log_entry "sourcetree::dotdump::main" "$@"
 
    local OPTION_MARKS="ANY"
    local OPTION_PERMISSIONS="" # empty!
@@ -736,7 +736,7 @@ sourcetree_dotdump_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_dotdump_usage
+            sourcetree::dotdump::usage
          ;;
 
          --walk-db|--walk-db-dir)
@@ -797,7 +797,7 @@ sourcetree_dotdump_main()
 
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown dotdump option $1"
-            sourcetree_dotdump_usage
+            sourcetree::dotdump::usage
          ;;
 
          *)
@@ -808,7 +808,7 @@ sourcetree_dotdump_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_dotdump_usage
+   [ "$#" -eq 0 ] || sourcetree::dotdump::usage
 
    local mode
 
@@ -821,7 +821,7 @@ sourcetree_dotdump_main()
 
    if [ "${OPTION_WALK_DB}" = 'YES' ]
    then
-      if ! db_dir_exists "${SOURCETREE_START}"
+      if ! sourcetree::db::dir_exists "${SOURCETREE_START}"
       then
          log_info "There is no ${SOURCETREE_DB_FILENAME} here"
       fi
@@ -829,24 +829,24 @@ sourcetree_dotdump_main()
       r_comma_concat "${mode}" "walkdb"
       mode="${RVAL}"
    else
-      if ! r_cfg_exists "${SOURCETREE_START}"
+      if ! sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
       then
          log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
       fi
    fi
 
-   if ! db_is_ready "${SOURCETREE_START}"
+   if ! sourcetree::db::is_ready "${SOURCETREE_START}"
    then
       log_warning "Sync has not run yet (mode=${SOURCETREE_MODE})"
    fi
 
-   sourcetree_dotdump "${mode}"
+   sourcetree::dotdump::do "${mode}"
 }
 
 
-sourcetree_dotdump_initialize()
+sourcetree::dotdump::initialize()
 {
-   log_entry "sourcetree_dotdump_initialize"
+   log_entry "sourcetree::dotdump::initialize"
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
@@ -864,6 +864,6 @@ sourcetree_dotdump_initialize()
 }
 
 
-sourcetree_dotdump_initialize
+sourcetree::dotdump::initialize
 
 :

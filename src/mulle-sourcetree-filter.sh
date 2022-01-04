@@ -33,7 +33,7 @@ MULLE_SOURCETREE_FILTER_SH="included"
 
 
 
-sourcetree_filter_usage()
+sourcetree::filter::usage()
 {
    if [ "$#" -ne 0 ]
    then
@@ -59,19 +59,19 @@ EOF
 }
 
 
-sourcetree_filter_main()
+sourcetree::filter::main()
 {
-   log_entry "sourcetree_filter_main" "$@"
+   log_entry "sourcetree::filter::main" "$@"
 
    while :
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_filter_usage
+            sourcetree::filter::usage
          ;;
 
          -*)
-            sourcetree_filter_usage "Unknown option \"$1\""
+            sourcetree::filter::usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -82,12 +82,12 @@ sourcetree_filter_main()
       shift
    done
 
-   [ $# -eq 2 ] || sourcetree_filter_usage
+   [ $# -eq 2 ] || sourcetree::filter::usage
 
    # shellcheck source=src/mulle-sourcetree-fix.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"
 
-   if nodemarks_filter_with_qualifier "$@"
+   if sourcetree::nodemarks::filter_with_qualifier "$@"
    then
       echo 'YES'
    else

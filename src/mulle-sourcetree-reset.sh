@@ -32,27 +32,8 @@
 MULLE_SOURCETREE_RESET_SH="included"
 
 
-sourcetree_db_reset()
-{
-   log_entry "sourcetree_db_reset" "$@"
 
-   local database="${1:-/}"
-
-   log_verbose "Reset database \"${database}\""
-
-   db_reset "${database}"
-}
-
-
-walk_reset()
-{
-   log_entry "walk_reset" "$@"
-
-   sourcetree_db_reset "/${WALK_VIRTUAL_ADDRESS}"
-}
-
-
-sourcetree_reset_usage()
+sourcetree::reset::usage()
 {
    [ "$#" -ne 0 ] && log_error "$1"
    
@@ -73,10 +54,30 @@ EOF
   exit 1
 }
 
-
-sourcetree_reset_main()
+sourcetree::reset::db()
 {
-   log_entry "sourcetree_reset_main" "$@"
+   log_entry "sourcetree::reset::db" "$@"
+
+   local database="${1:-/}"
+
+   log_verbose "Reset database \"${database}\""
+
+   sourcetree::db::reset "${database}"
+}
+
+
+sourcetree::reset::walk()
+{
+   log_entry "sourcetree::reset::walk" "$@"
+
+   sourcetree::reset::db "/${WALK_VIRTUAL_ADDRESS}"
+}
+
+
+
+sourcetree::reset::main()
+{
+   log_entry "sourcetree::reset::main" "$@"
 
    local OPTION_REMOVE_GRAVEYARD="DEFAULT"
 
@@ -84,7 +85,7 @@ sourcetree_reset_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_reset_usage
+            sourcetree::reset::usage
          ;;
 
          -g|--remove-graveyard)
@@ -97,7 +98,7 @@ sourcetree_reset_main()
 
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown reset option $1"
-            sourcetree_reset_usage
+            sourcetree::reset::usage
          ;;
 
          *)
@@ -108,7 +109,7 @@ sourcetree_reset_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_reset_usage
+   [ "$#" -eq 0 ] || sourcetree::reset::usage
 
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
@@ -118,11 +119,11 @@ sourcetree_reset_main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
       fi
 
-      sourcetree_walk_internal "${SOURCETREE_MODE},pre-order,skip-symlink,walkdb,no-dbcheck,no-trace" \
-            walk_reset
+      sourcetree::walk::walk_internal "${SOURCETREE_MODE},pre-order,skip-symlink,walkdb,no-dbcheck,no-trace" \
+            sourcetree::reset::walk
    fi
 
-   sourcetree_db_reset "/"
+   sourcetree::reset::db "/"
 }
 
 

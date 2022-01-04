@@ -1,7 +1,13 @@
-#! /usr/bin/env zsh
+#! /usr/bin/env bash
 
 [ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
 
 expect()
 {
@@ -25,35 +31,11 @@ run_mulle_sourcetree()
 }
 
 
-main()
+test_run()
 {
-   MULLE_SOURCETREE_FLAGS="$@"
-
-   _options_mini_main "$@" && set -x
-
-   set -e
-
-   local directory
-
-   r_make_tmp_directory || exit 1
-   directory="${RVAL}"
-   cd "${directory}"
-   r_physicalpath "${directory}"
-   MULLE_VIRTUAL_ROOT="${RVAL}"
-
-   mkdir_if_missing "${directory}/a"
-   mkdir_if_missing "${directory}/a/b"
-
-   cd "${directory}"
-
-   if [ -f ".mulle/etc/sourcetree/config" ]
-   then
-      internal_fail "config should not exist"
-   fi
-
    if ! run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "a"
    then
-      internal_fail "add internal_failed unexpectedly"
+      internal_fail "add failed unexpectedly"
    fi
 
    if run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "a"
@@ -78,12 +60,12 @@ main()
 
    if ! run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "b"
    then
-      internal_fail "add of b internal_failed unexpectedly"
+      internal_fail "add of b failed unexpectedly"
    fi
 
    if ! run_mulle_sourcetree -N remove "a"
    then
-      internal_fail "remove \"a\" internal_failed unexpectedly"
+      internal_fail "remove \"a\" failed unexpectedly"
    fi
 
    if run_mulle_sourcetree -N remove "a"
@@ -98,28 +80,103 @@ main()
 
    if [ ! -f ".mulle/etc/sourcetree/config" ]
    then
-      internal_fail "config should still exist now"
+      internal_fail "config still exist now"
    fi
+}
+
+
+main()
+{
+   MULLE_SOURCETREE_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   set -e
+
+   local directory
+
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
+   cd "${directory}"
+   r_physicalpath "${directory}"
+   MULLE_VIRTUAL_ROOT="${RVAL}"
+
+   mkdir_if_missing "${directory}/a"
+   mkdir_if_missing "${directory}/a/b"
+
+   cd "${directory}"
+
+
+   if [ -f ".mulle/etc/sourcetree/config" ]
+   then
+      internal_fail "#1.1 config should not exist"
+   fi
+
+   test_run
 
    if ! run_mulle_sourcetree -N remove "b"
    then
-      internal_fail "remove \"a\" internal_failed unexpectedly"
+      internal_fail "remove \"b\" failed unexpectedly"
+   fi
+
+   # there is no fallback, the sourcetree should be gone
+   if [ -d ".mulle/etc/sourcetree" ]
+   then
+      internal_fail "#1.2 config should not exist now"
+   fi
+
+   log_verbose "----- #1 PASSED -----"
+
+   test_run
+
+   # create a bogus fallback sourcetree, do it now after test_run otherwise
+   # mulle-sourcettree will still clobber it, because as soon as
+   # contents are identical, it's superflous
+
+   mkdir_if_missing ".mulle/share/sourcetree"
+   redirect_exekutor ".mulle/share/sourcetree/config" echo "ignore;comment"
+
+   if ! run_mulle_sourcetree -N remove "b"
+   then
+      internal_fail "remove \"b\" failed unexpectedly"
    fi
 
    # this has changes, the sourcetree stays to clobber share
    if [ ! -f ".mulle/etc/sourcetree/config" ]
    then
-      internal_fail "config should still exist"
+      internal_fail "#2.1 config should exist now"
    fi
 
-   log_verbose "----- #1 PASSED -----"
+   rmdir_safer ".mulle/share/sourcetree"
+
+   log_verbose "----- #2 PASSED -----"
+
+   mkdir_if_missing ".mulle/share/sourcetree"
+   exekutor echo "ignore;comment" ".mulle/share/sourcetree/config"
+
+   test_run
+
+   if ! run_mulle_sourcetree -N remove "b"
+   then
+      internal_fail "remove \"b\" failed unexpectedly"
+   fi
+
+   if [ -f ".mulle/etc/sourcetree/config" ]
+   then
+      internal_fail "#3.1 config should not exist now"
+   fi
+
+   rmdir_safer ".mulle/share/sourcetree"
+
+   log_verbose "----- #3 PASSED -----"
+
 
    #
    # add a git url
    #
    if ! run_mulle_sourcetree -N add "https://a.com/a.git"
    then
-      internal_fail "add URL, internal_failed unexpectedly"
+      internal_fail "add URL, failed unexpectedly"
    fi
 
    log_verbose "Informational output"
@@ -131,12 +188,12 @@ main()
 
    if [ "${nodetype}" != "git" ] || [ "${address}" != "a" ] || [ "${url}" != "https://a.com/a.git" ]
    then
-      internal_fail "#1 did not work (${address};${nodetype};${url})"
+      internal_fail "#4.1 did not work (${address};${nodetype};${url})"
    fi
 
    if ! run_mulle_sourcetree -N add -u "https://a.com/a.git" b
    then
-      internal_fail "add URL, internal_failed unexpectedly"
+      internal_fail "add URL, failed unexpectedly"
    fi
 
    log_verbose "Informational output"
@@ -148,14 +205,14 @@ main()
 
    if [ "${nodetype}" != "git" ] || [ "${address}" != "b" ] || [ "${url}" != "https://a.com/a.git" ]
    then
-      internal_fail "#2 did not work (${address};${nodetype};${url})"
+      internal_fail "#4.2 did not work (${address};${nodetype};${url})"
    fi
 
-   log_verbose "----- #2 PASSED -----"
+   log_verbose "----- #4 PASSED -----"
 
    if ! run_mulle_sourcetree -N add --nodetype symlink --url "/a.com/a" c
    then
-      internal_fail "add URL, internal_failed unexpectedly"
+      internal_fail "add URL, failed unexpectedly"
    fi
 
    log_verbose "Informational output"
@@ -167,10 +224,10 @@ main()
 
    if [ "${nodetype}" != "symlink" ] || [ "${address}" != "c" ] || [ "${url}" != "/a.com/a" ]
    then
-      internal_fail "#3 did not work (${address};${nodetype};${url})"
+      internal_fail "#5 did not work (${address};${nodetype};${url})"
    fi
 
-   log_verbose "----- #3 PASSED -----"
+   log_verbose "----- #5 PASSED -----"
 
    log_info "----- ALL PASSED -----"
 
@@ -180,10 +237,6 @@ main()
 
 init()
 {
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
-
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
 }
 

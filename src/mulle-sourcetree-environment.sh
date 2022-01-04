@@ -32,9 +32,9 @@
 MULLE_SOURCETREE_ENVIRONMENT_SH="included"
 
 
-sourcetree_config_environment()
+sourcetree::environment::config()
 {
-   log_entry "sourcetree_config_environment" "$@"
+   log_entry "sourcetree::environment::config" "$@"
 
    local config_dir="$1"
    local config_names="$2"
@@ -87,9 +87,9 @@ sourcetree_config_environment()
 }
 
 
-sourcetree_minimal_environment()
+sourcetree::environment::minimal()
 {
-   log_entry "sourcetree_minimal_environment" "$@"
+   log_entry "sourcetree::environment::minimal" "$@"
 
    local directory="$1"
 
@@ -122,9 +122,9 @@ sourcetree_minimal_environment()
 }
 
 
-sourcetree_basic_environment()
+sourcetree::environment::basic()
 {
-   log_entry "sourcetree_basic_environment" "$@"
+   log_entry "sourcetree::environment::basic" "$@"
 
    local directory="$1"
    local config_dir="$2"
@@ -133,7 +133,7 @@ sourcetree_basic_environment()
    local scope="$5"
    local mode="$6"
 
-   sourcetree_minimal_environment "${directory}"
+   sourcetree::environment::minimal "${directory}"
 
    # no share in sourcetree operation
    # MULLE_SOURCETREE_SHARE_DIR="${MULLE_SOURCETREE_PROJECT_DIR}/.mulle/share/sourcetree"
@@ -148,7 +148,7 @@ sourcetree_basic_environment()
                --search-here \
                mulle-tool-env sourcetree` || exit 1
 
-   sourcetree_config_environment "${config_dir}" \
+   sourcetree::environment::config "${config_dir}" \
                                  "${config_names}" \
                                  "${use_fallback}" \
                                  "${scope}" \
@@ -168,9 +168,9 @@ sourcetree_basic_environment()
 }
 
 
-sourcetree_environment()
+sourcetree::environment::default()
 {
-   log_entry "sourcetree_environment" "$@"
+   log_entry "sourcetree::environment::default" "$@"
 
    local option_scope="$1"
    local option_sharedir="$2"
@@ -180,7 +180,7 @@ sourcetree_environment()
    local defer="$6"
    local mode="$7"
 
-   sourcetree_basic_environment "" \
+   sourcetree::environment::basic "" \
                                 "${option_configdir}" \
                                 "${option_confignames}" \
                                 "${option_use_fallback}" \
@@ -193,14 +193,14 @@ sourcetree_environment()
 
       cd "${MULLE_VIRTUAL_ROOT}" || fail "failed to cd to \"${MULLE_VIRTUAL_ROOT}\""
 
-      _set_sourcetree_global "${MULLE_SOURCETREE_PROJECT_DIR}"
+      sourcetree::environment::_set_sourcetree_global "${MULLE_SOURCETREE_PROJECT_DIR}"
    else
-      _set_sourcetree_global "${MULLE_SOURCETREE_PROJECT_DIR}"
+      sourcetree::environment::_set_sourcetree_global "${MULLE_SOURCETREE_PROJECT_DIR}"
 
       #
       # Todo: the defer thing is probably old junk
       #
-      if ! cfg_defer_if_needed "${defer:-NEAREST}"
+      if ! sourcetree::cfg::defer_if_needed "${defer:-NEAREST}"
       then
          # could be an add, so can't really quit here
          if [ "${defer}" = "PARENT" ]
@@ -215,13 +215,13 @@ sourcetree_environment()
    # was probably to have a common stash directory for multiple projects.
    # TODO: get rid of this ?
    #
-   _set_share_dir "${option_sharedir}"
+   sourcetree::environment::_set_share_dir "${option_sharedir}"
 }
 
 
-_set_sourcetree_global()
+sourcetree::environment::_set_sourcetree_global()
 {
-   log_entry "_set_sourcetree_global" "$@"
+   log_entry "sourcetree::environment::_set_sourcetree_global" "$@"
 
    local physicalpwd="$1"
 
@@ -254,9 +254,9 @@ Use -e if this is desired."
 }
 
 
-_set_share_dir()
+sourcetree::environment::_set_share_dir()
 {
-   log_entry "_set_share_dir" "$@"
+   log_entry "sourcetree::environment::_set_share_dir" "$@"
 
    local usershare_dir="$1"
 
@@ -275,11 +275,11 @@ _set_share_dir()
       # this will override the ENVIRONMENT for consistency
       # but only if the .db is not some trash w/o a config
       #
-      if r_cfg_exists "${SOURCETREE_START}"
+      if sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
       then
          local share_dir
 
-         if share_dir="`db_get_shareddir "${SOURCETREE_START}"`"
+         if share_dir="`sourcetree::db::get_shareddir "${SOURCETREE_START}"`"
          then
             if [ -d "${share_dir}" ]
             then
@@ -322,7 +322,7 @@ _set_share_dir()
 
 
 
-sourcetree_initialize()
+sourcetree::environment::initialize()
 {
    if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
    then
@@ -353,8 +353,8 @@ sourcetree_initialize()
       # shellcheck source=mulle-sourcetree-cfg.sh
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh" || exit 1
    fi
-
-   :
 }
 
-sourcetree_initialize
+sourcetree::environment::initialize
+
+:

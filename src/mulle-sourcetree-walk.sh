@@ -33,7 +33,7 @@ MULLE_SOURCETREE_WALK_SH="included"
 
 
 
-sourcetree_walk_usage()
+sourcetree::walk::usage()
 {
    [ $# -ne 0 ] && log_error "$*"
 
@@ -187,9 +187,9 @@ EOF
 # Possible permissions: "symlink,missing"
 # Useful for craftorder it would seem
 #
-_callback_permissions()
+sourcetree::walk::_callback_permissions()
 {
-   log_entry "_callback_permissions" "$@"
+   log_entry "sourcetree::walk::_callback_permissions" "$@"
 
    local filename="$1"
    local marks="$2"
@@ -250,14 +250,14 @@ fetched, skipped"
       ;;
    esac
 
-   log_debug "_callback_permissions \"${filename}\" returns with 0"
+   log_debug "sourcetree::walk::_callback_permissions \"${filename}\" returns with 0"
    return 0
 }
 
 
-_descend_permissions()
+sourcetree::walk::_descend_permissions()
 {
-   log_entry "_descend_permissions" "$@"
+   log_entry "sourcetree::walk::_descend_permissions" "$@"
 
    local filename="$1"
    local marks="$2"
@@ -322,9 +322,9 @@ fetched, skipped"
 }
 
 
-_callback_nodetypes()
+sourcetree::walk::_callback_nodetypes()
 {
-   log_entry "_callback_nodetypes" "$@"
+   log_entry "sourcetree::walk::_callback_nodetypes" "$@"
 
    local nodetype="$1"; shift
 
@@ -333,23 +333,23 @@ _callback_nodetypes()
    r_expanded_string "${nodetype}"
    evalednodetype="${RVAL}"
 
-   nodetype_filter "${evalednodetype}" "$@"
+   sourcetree::node::type_filter "${evalednodetype}" "$@"
 }
 
 
-_callback_filter()
+sourcetree::walk::_callback_filter()
 {
-   log_entry "_callback_filter" "$@"
+   log_entry "sourcetree::walk::_callback_filter" "$@"
 
-   nodemarks_filter_with_qualifier "$@"
+   sourcetree::nodemarks::filter_with_qualifier "$@"
 }
 
 
-_descend_filter()
+sourcetree::walk::_descend_filter()
 {
-   log_entry "_descend_filter" "$@"
+   log_entry "sourcetree::walk::_descend_filter" "$@"
 
-   nodemarks_filter_with_qualifier "$@"
+   sourcetree::nodemarks::filter_with_qualifier "$@"
 }
 
 
@@ -359,7 +359,7 @@ _descend_filter()
 #
 # local _old
 #
-__docd_preamble()
+sourcetree::walk::__docd_preamble()
 {
    local directory="$1"
 
@@ -368,7 +368,7 @@ __docd_preamble()
 }
 
 
-__docd_postamble()
+sourcetree::walk::__docd_postamble()
 {
    exekutor cd "${_old}"
 }
@@ -390,9 +390,9 @@ __docd_postamble()
 # Special return value 121 signals callbackqualifier was the reason
 # this can be used by callers to not check for optimization purposes
 #
-_visit_callback()
+sourcetree::walk::_visit_callback()
 {
-   log_entry "_visit_callback" "$@"
+   log_entry "sourcetree::walk::_visit_callback" "$@"
 
    local datasource="$1"
    local virtual="$2"
@@ -409,7 +409,7 @@ _visit_callback()
 
    if [ ! -z "${callbackqualifier}" ]
    then
-      if ! _callback_filter "${_marks}" "${callbackqualifier}"
+      if ! sourcetree::walk::_callback_filter "${_marks}" "${callbackqualifier}"
       then
          log_fluff "Node \"${_address}\" marks \"${_marks}\" don't jive with qualifier \"${callbackqualifier//$'\n'/ }\""
          return 121  # the 1 indicates that the filter was the reason (can be reused by descend maybe)
@@ -418,7 +418,7 @@ _visit_callback()
 
    if [ ! -z "${filternodetypes}" ]
    then
-      if ! _callback_nodetypes "${_nodetype}" "${filternodetypes}"
+      if ! sourcetree::walk::_callback_nodetypes "${_nodetype}" "${filternodetypes}"
       then
          log_fluff "Node \"${_address}\": \"${_nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
          return 0
@@ -427,7 +427,7 @@ _visit_callback()
 
    if [ ! -z "${filterpermissions}" ]
    then
-      if ! _callback_permissions "${_filename}" "${_marks}" "${filterpermissions}"
+      if ! sourcetree::walk::_callback_permissions "${_filename}" "${_marks}" "${filterpermissions}"
       then
          # filter should have fluffed already
          log_debug "Node \"${_address}\" with filename \"${_filename}\" \
@@ -456,10 +456,10 @@ doesn't jive with permissions \"${filterpermissions}\""
 
          if [ -d "${_filename}" ]
          then
-            __docd_preamble "${_filename}"
-               __call_callback "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
+            sourcetree::walk::__docd_preamble "${_filename}"
+               sourcetree::callback::call "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
                rval=$?
-            __docd_postamble
+            sourcetree::walk::__docd_postamble
             log_debug "callback returned $rval"
          else
             log_fluff "\"${_filename}\" not there, so no callback"
@@ -467,7 +467,7 @@ doesn't jive with permissions \"${filterpermissions}\""
       ;;
 
       *)
-         __call_callback "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
+         sourcetree::callback::call "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
          rval=$?
          log_debug "callback returned $rval"
       ;;
@@ -491,9 +491,9 @@ doesn't jive with permissions \"${filterpermissions}\""
 # callback
 # ...
 #
-_visit_descend()
+sourcetree::walk::_visit_descend()
 {
-   log_entry "_visit_descend" "$@"
+   log_entry "sourcetree::walk::_visit_descend" "$@"
 
    local datasource="$1"
    local virtual="$2"
@@ -508,7 +508,7 @@ _visit_descend()
    local descendqualifier="$6"
    local mode="$7"
 
-   if nodemarks_disable "${_marks}" "descend"
+   if sourcetree::nodemarks::disable "${_marks}" "descend"
    then
       log_debug "Do not recurse on \"${virtual}/${_destination}\" due to \
 no-descend mark"
@@ -517,7 +517,7 @@ no-descend mark"
 
    if [ ! -z "${descendqualifier}" ]
    then
-      if ! _descend_filter "${_marks}" "${descendqualifier}"
+      if ! sourcetree::walk::_descend_filter "${_marks}" "${descendqualifier}"
       then
          log_debug "Node \"${_address}\" marks \"${_marks}\" don't jive \
 with \"${descendqualifier}\""
@@ -527,7 +527,7 @@ with \"${descendqualifier}\""
 
    if [ ! -z "${filterpermissions}" ]
    then
-      if ! _descend_permissions "${_filename}" \
+      if ! sourcetree::walk::_descend_permissions "${_filename}" \
                                 "${_marks}" \
                                 "${filterpermissions}"
       then
@@ -558,16 +558,16 @@ to WILL_DESCEND_CALLBACK"
 
    local rval
 
-   log_fluff "Descend into \"${datasource}\""
+   log_fluff "Descend into \"${next_datasource}\""
 
    case ",${mode}," in
       *,walkdb,*)
-         _walk_db_uuids "$@"
+         sourcetree::walk::_walk_db_uuids "$@"
          rval=$?
       ;;
 
       *)
-         _walk_config_uuids "$@"
+         sourcetree::walk::_walk_config_uuids "$@"
          rval=$?
       ;;
    esac
@@ -594,9 +594,9 @@ returns $rval"
 # 1 must visit
 # 0 check lineid
 #
-r_get_dedupe_lineid_from_node()
+sourcetree::walk::r_get_dedupe_lineid_from_node()
 {
-   log_entry "r_get_dedupe_lineid_from_node" "$@"
+   log_entry "sourcetree::walk::r_get_dedupe_lineid_from_node" "$@"
 
    local mode="$1"
 
@@ -627,7 +627,7 @@ ${_raw_userinfo}"
          #
          # remove some marks which are inessential for link dupe detection
          # with the '*' on the left side
-         r_sourcetree_remove_marks "${_marks}" "no-require,no-public,no-header"
+         sourcetree::list::r_remove_marks "${_marks}" "no-require,no-public,no-header"
          RVAL="${_address};${_nodetype};${RVAL};\
 ${_url};${_branch};${_tag};${_fetchoptions};\
 ${_raw_userinfo}"
@@ -701,13 +701,13 @@ ${_raw_userinfo}"
 # 1 has not visited it
 # 2 has not visited, should dedupe
 #
-r_walk_has_visited()
+sourcetree::walk::r_has_visited()
 {
    local mode="$1"
 
    local lineid
 
-   if ! r_get_dedupe_lineid_from_node "${mode}"
+   if ! sourcetree::walk::r_get_dedupe_lineid_from_node "${mode}"
    then
       RVAL=""
       return 1
@@ -725,7 +725,7 @@ r_walk_has_visited()
 }
 
 
-walk_remember_visit()
+sourcetree::walk::remember_visit()
 {
    local lineid="$1"
 
@@ -734,13 +734,13 @@ walk_remember_visit()
 }
 
 
-walk_remove_from_visited()
+sourcetree::walk::remove_from_visited()
 {
    local mode="$1"
 
    local lineid
 
-   if ! r_get_dedupe_lineid_from_node "${mode}"
+   if ! sourcetree::walk::r_get_dedupe_lineid_from_node "${mode}"
    then
       # not deduping anyway
       return
@@ -764,9 +764,9 @@ walk_remove_from_visited()
 # callback
 # ...
 #
-_visit_node()
+sourcetree::walk::_visit_node()
 {
-   log_entry "_visit_node" "$2/${_address}"
+   log_entry "sourcetree::walk::_visit_node" "$2/${_address}"
 
    local datasource="$1"
    local virtual="$2"
@@ -797,14 +797,14 @@ _visit_node()
    # don't dedupe in-flat post-flat and breadth-flat
    case ",${mode}," in
       *,in-flat,*|*,post-flat,*|*,breadth-flat,*|*,flat,*|*,pre-order,*)
-         r_walk_has_visited "${mode}"
+         sourcetree::walk::r_has_visited "${mode}"
          case $? in
             0) # has visited
                return
             ;;
 
             2) # dedupe
-               walk_remember_visit "${RVAL}"
+               sourcetree::walk::remember_visit "${RVAL}"
             ;;
          esac
       ;;
@@ -815,7 +815,7 @@ _visit_node()
    case ",${mode}," in
       *,flat,*|*,in-flat,*|*,post-flat,*|*,breadth-flat,*)
          log_debug "No descend"
-         _visit_callback "$@"
+         sourcetree::walk::_visit_callback "$@"
          rval=$?
       ;;
 
@@ -823,7 +823,7 @@ _visit_node()
          log_debug "In-order descend into ${next_datasource}"
 
          # this is on the second pass, the callback will have been called already
-         _visit_descend "$@"
+         sourcetree::walk::_visit_descend "$@"
          rval=$?
       ;;
 
@@ -831,18 +831,18 @@ _visit_node()
          log_debug "Post-order descend into ${next_datasource}"
 
          # this is on the first pass, the callback will be called later
-         _visit_descend "$@"
+         sourcetree::walk::_visit_descend "$@"
          rval=$?
       ;;
 
       *,pre-order,*)
-         _visit_callback "$@"
+         sourcetree::walk::_visit_callback "$@"
          rval=$?
 
          #
          # we don't need to check the  descendqualifier if its the same
          # as the callbackqualifier and it has already failed in
-         # _visit_callback
+         # sourcetree::walk::_visit_callback
          #
          if [ $rval -eq 121 ]
          then
@@ -856,7 +856,7 @@ _visit_node()
          if [ $rval -eq 0 ]
          then
             log_debug "Pre-order descend into ${next_datasource}"
-            _visit_descend "$@"
+            sourcetree::walk::_visit_descend "$@"
             rval=$?
          fi
       ;;
@@ -866,7 +866,7 @@ _visit_node()
       # here
       *,breadth-order,*)
          log_debug "Breadth-first descend into ${next_datasource}"
-         _visit_descend "$@"
+         sourcetree::walk::_visit_descend "$@"
          rval=$?
       ;;
 
@@ -883,9 +883,9 @@ _visit_node()
 }
 
 
-_walk_share_node()
+sourcetree::walk::_share_node()
 {
-   log_entry "_walk_share_node" "$2/${_address}"
+   log_entry "sourcetree::walk::_share_node" "$2/${_address}"
 
    local datasource="$1"
    local virtual="$2"
@@ -977,7 +977,7 @@ doesn't exist yet"
       fi
    fi
 
-   _visit_node "${datasource}" \
+   sourcetree::walk::_visit_node "${datasource}" \
                "${MULLE_SOURCETREE_STASH_DIR}" \
                "${next_datasource}" \
                "${next_virtual}" \
@@ -1000,9 +1000,9 @@ doesn't exist yet"
 # callback
 # ...
 #
-walk_nodeline()
+sourcetree::walk::walk_nodeline()
 {
-#   log_entry "walk_nodeline" "$@"
+#   log_entry "sourcetree::walk::walk_nodeline" "$@"
 
    local nodeline="$1"; shift
    local mode="$7"
@@ -1026,7 +1026,7 @@ walk_nodeline()
    local _raw_userinfo
    local _uuid
 
-   nodeline_parse "${nodeline}"  # !!
+   sourcetree::nodeline::parse "${nodeline}"  # !!
 
    #
    # if we have a comment, ignore, unless comments are enabled but
@@ -1062,7 +1062,7 @@ walk_nodeline()
          if [ ${WALK_LEVEL} -gt 0 ]
          then
             # node marked as no-bequeath   : ignore
-            if nodemarks_disable "${_marks}" "bequeath"
+            if sourcetree::nodemarks::disable "${_marks}" "bequeath"
             then
                log_debug "Do not act on non-toplevel \"${virtual}/${_destination}\" with no-bequeath mark"
                return 0
@@ -1086,9 +1086,9 @@ walk_nodeline()
       ;;
 
       *,share,*)
-         if nodemarks_enable "${_marks}" "share"
+         if sourcetree::nodemarks::enable "${_marks}" "share"
          then
-            _walk_share_node "$@"
+            sourcetree::walk::_share_node "$@"
             return $?
          fi
 
@@ -1140,7 +1140,7 @@ walk_nodeline()
 
    next_datasource="${datasource}${_destination}/"
 
-   _visit_node "${datasource}" \
+   sourcetree::walk::_visit_node "${datasource}" \
                "${virtual}" \
                "${next_datasource}" \
                "${next_virtual}" \
@@ -1153,9 +1153,9 @@ walk_nodeline()
 }
 
 
-_print_walk_info()
+sourcetree::walk::_print_info()
 {
-#   log_entry "_print_walk_info" "$@"
+#   log_entry "sourcetree::walk::_print_info" "$@"
 
    local datasource="$1"
    local nodelines="$2"
@@ -1212,9 +1212,9 @@ _print_walk_info()
 # ------------|---------------------------------------------------------
 #
 #
-_walk_nodelines()
+sourcetree::walk::_walk_nodelines()
 {
-   log_entry "_walk_nodelines" "$@"
+   log_entry "sourcetree::walk::_walk_nodelines" "$@"
 
    local nodelines="$1"; shift
 
@@ -1226,7 +1226,7 @@ _walk_nodelines()
    local descendqualifier="$1"; shift
    local mode="$1" ; shift
 
-   _print_walk_info "${datasource}" "${nodelines}" "${mode}"
+   sourcetree::walk::_print_info "${datasource}" "${nodelines}" "${mode}"
 
    case ",${mode}," in
       *,backwards,*)
@@ -1251,7 +1251,7 @@ _walk_nodelines()
 
             [ -z "${nodeline}" ] && continue
 
-            walk_nodeline "${nodeline}" \
+            sourcetree::walk::walk_nodeline "${nodeline}" \
                           "${datasource}" \
                           "${virtual}" \
                           "${filternodetypes}" \
@@ -1274,7 +1274,7 @@ _walk_nodelines()
 
       [ -z "${nodeline}" ] && continue
 
-      walk_nodeline "${nodeline}" \
+      sourcetree::walk::walk_nodeline "${nodeline}" \
                     "${datasource}" \
                     "${virtual}" \
                     "${filternodetypes}" \
@@ -1292,7 +1292,7 @@ _walk_nodelines()
             tmpmode="${RVAL}"
 
 
-            walk_nodeline "${nodeline}" \
+            sourcetree::walk::walk_nodeline "${nodeline}" \
                           "${datasource}" \
                           "${virtual}" \
                           "${filternodetypes}" \
@@ -1320,7 +1320,7 @@ _walk_nodelines()
 
             [ -z "${nodeline}" ] && continue
 
-            walk_nodeline "${nodeline}" \
+            sourcetree::walk::walk_nodeline "${nodeline}" \
                           "${datasource}" \
                           "${virtual}" \
                           "${filternodetypes}" \
@@ -1338,7 +1338,7 @@ _walk_nodelines()
 }
 
 
-walk_dedupe()
+sourcetree::walk::dedupe()
 {
    local datasource="$1"
    local mode="$2"
@@ -1363,7 +1363,7 @@ walk_dedupe()
 }
 
 
-walk_remove_from_deduped()
+sourcetree::walk::remove_from_deduped()
 {
    local datasource="$1"
 
@@ -1390,22 +1390,22 @@ walk_remove_from_deduped()
 # mode
 # ...
 #
-_walk_config_uuids()
+sourcetree::walk::_walk_config_uuids()
 {
-   log_entry "_walk_config_uuids" "$@"
+   log_entry "sourcetree::walk::_walk_config_uuids" "$@"
 
    local datasource="$1"
    local virtual="$2"
    local mode="$7"
 
-   if walk_dedupe "${datasource}" "${mode}"
+   if sourcetree::walk::dedupe "${datasource}" "${mode}"
    then
       return 0
    fi
 
    local nodelines
 
-   if ! nodelines="`cfg_read "${datasource}" `"
+   if ! nodelines="`sourcetree::cfg::read "${datasource}" `"
    then
       log_debug "Config \"${datasource#${MULLE_USER_PWD}/}\" does not exist"
       return 0
@@ -1418,13 +1418,13 @@ _walk_config_uuids()
    fi
 
    log_debug "Walking config \"${datasource#${MULLE_USER_PWD}/}\" nodes"
-   _walk_nodelines "${nodelines}" "$@"
+   sourcetree::walk::_walk_nodelines "${nodelines}" "$@"
 }
 
 
-walk_config_uuids()
+sourcetree::walk::walk_config_uuids()
 {
-   log_entry "walk_config_uuids" "$@"
+   log_entry "sourcetree::walk::walk_config_uuids" "$@"
 
    local VISITED
    local WALKED
@@ -1436,7 +1436,7 @@ walk_config_uuids()
 
    WALKED=
    VISITED=
-   _walk_config_uuids "${SOURCETREE_START}" "" "$@"
+   sourcetree::walk::_walk_config_uuids "${SOURCETREE_START}" "" "$@"
    rval=$?
 
    # on 2, which is preempt we dont call the callback
@@ -1451,7 +1451,7 @@ walk_config_uuids()
 
 
 #
-# walk_db_uuids
+# sourcetree::walk::walk_db_uuids
 #
 #
 # datasource
@@ -1466,15 +1466,15 @@ walk_config_uuids()
 # callback
 # ...
 #
-_walk_db_uuids()
+sourcetree::walk::_walk_db_uuids()
 {
-   log_entry "_walk_db_uuids" "$@"
+   log_entry "sourcetree::walk::_walk_db_uuids" "$@"
 
    local datasource="$1"
    local virtual="$2"
    local mode="$7"
 
-   if walk_dedupe "${datasource}" "${mode}"
+   if sourcetree::walk::dedupe "${datasource}" "${mode}"
    then
       return 0
    fi
@@ -1484,7 +1484,7 @@ _walk_db_uuids()
       ;;
 
       *)
-         if r_cfg_exists "${datasource}" && ! db_is_ready "${datasource}"
+         if sourcetree::cfg::r_config_exists "${datasource}" && ! sourcetree::db::is_ready "${datasource}"
          then
             fail "The sourcetree at \"${datasource}\" is not updated fully \
 yet, can not proceed"
@@ -1494,7 +1494,7 @@ yet, can not proceed"
 
    local nodelines
 
-   nodelines="`db_fetch_all_nodelines "${datasource}" `"  || exit 1
+   nodelines="`sourcetree::db::fetch_all_nodelines "${datasource}" `"  || exit 1
    if [ -z "${nodelines}" ]
    then
       log_fluff "Database \"${datasource}\" has no nodes"
@@ -1502,13 +1502,13 @@ yet, can not proceed"
    fi
 
    log_fluff "Walking database \"${datasource}\" nodes"
-   _walk_nodelines "${nodelines}" "$@"
+   sourcetree::walk::_walk_nodelines "${nodelines}" "$@"
 }
 
 
-walk_db_uuids()
+sourcetree::walk::walk_db_uuids()
 {
-   log_entry "walk_db_uuids" "$@"
+   log_entry "sourcetree::walk::walk_db_uuids" "$@"
 
    # this is a subshell, so that the callback max call "exit"
    # to preempt walking
@@ -1520,7 +1520,7 @@ walk_db_uuids()
 
    WALKED=
    VISITED=
-   _walk_db_uuids "${SOURCETREE_START}" "" "$@"
+   sourcetree::walk::_walk_db_uuids "${SOURCETREE_START}" "" "$@"
    rval=$?
 
    if [ ! -z "${DID_WALK_CALLBACK}" ]
@@ -1533,9 +1533,9 @@ walk_db_uuids()
 }
 
 
-_visit_root_callback()
+sourcetree::walk::_visit_root_callback()
 {
-   log_entry "_visit_root_callback" "$@"
+   log_entry "sourcetree::walk::_visit_root_callback" "$@"
 
    local _address="."
    local _branch
@@ -1548,7 +1548,7 @@ _visit_root_callback()
    local _userinfo
    local _uuid
 
-   _visit_callback "" \
+   sourcetree::walk::_visit_callback "" \
                    "${SOURCETREE_START}" \
                    "" \
                    "" \
@@ -1559,9 +1559,9 @@ _visit_root_callback()
 }
 
 
-sourcetree_walk()
+sourcetree::walk::do()
 {
-   log_entry "sourcetree_walk" "$@"
+   log_entry "sourcetree::walk::do" "$@"
 
    local mode="$5"
    local callback="$6"
@@ -1591,7 +1591,7 @@ sourcetree_walk()
       *,callroot,*)
          case ",${mode}," in
             *,pre-order,*|*,breadth-order,*)
-               _visit_root_callback "${mode}" "${callback}" "$@"
+               sourcetree::walk::_visit_root_callback "${mode}" "${callback}" "$@"
                rval=$?
             ;;
          esac
@@ -1602,12 +1602,12 @@ sourcetree_walk()
    then
       case ",${mode}," in
          *,walkdb,*)
-            walk_db_uuids "$@"
+            sourcetree::walk::walk_db_uuids "$@"
             rval=$?
          ;;
 
          *)
-            walk_config_uuids "$@"
+            sourcetree::walk::walk_config_uuids "$@"
             rval=$?
          ;;
       esac
@@ -1622,7 +1622,7 @@ sourcetree_walk()
                ;;
 
                *)
-                  _visit_root_callback "${mode}" "${callback}" "$@"
+                  sourcetree::walk::_visit_root_callback "${mode}" "${callback}" "$@"
                   rval=$?
                ;;
             esac
@@ -1635,22 +1635,22 @@ sourcetree_walk()
       return 0
    fi
 
-   log_debug "sourcetree_walk rval=$rval"
+   log_debug "sourcetree::walk::do rval=$rval"
    return $rval
 }
 
 
-sourcetree_walk_internal()
+sourcetree::walk::walk_internal()
 {
-   log_entry "sourcetree_walk_internal" "$@"
+   log_entry "sourcetree::walk::walk_internal" "$@"
 
-   sourcetree_walk "" "" "" "" "$@"
+   sourcetree::walk::do "" "" "" "" "$@"
 }
 
 
-sourcetree_walk_main()
+sourcetree::walk::main()
 {
-   log_entry "sourcetree_walk_main" "$@"
+   log_entry "sourcetree::walk::main" "$@"
 
    local MULLE_ROOT_DIR
 
@@ -1683,11 +1683,11 @@ sourcetree_walk_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_walk_usage
+            sourcetree::walk::usage
          ;;
 
          --configuration)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
 
             CONFIGURATION="$1"
@@ -1750,7 +1750,7 @@ sourcetree_walk_main()
          ;;
 
          --dedupe|--dedupe-mode)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
 
             OPTION_DEDUPE_MODE="$1"
@@ -1789,35 +1789,35 @@ sourcetree_walk_main()
          ;;
 
          --will-descend-callback|--will-recurse-callback)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
 
             WILL_DESCEND_CALLBACK="$1"
          ;;
 
          --did-descend-callback|--did-recurse-callback)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
 
             DID_DESCEND_CALLBACK="$1"
          ;;
 
          --did-walk-callback)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
 
             DID_WALK_CALLBACK="$1"
          ;;
 
          --min-walk-level)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
 
             OPTION_MIN_WALK_LEVEL="$1"
          ;;
 
          --max-walk-level)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
 
             OPTION_MAX_WALK_LEVEL="$1"
@@ -1827,7 +1827,7 @@ sourcetree_walk_main()
          # filter flags
          #
          -m|--marks)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
 
             r_comma_concat "${OPTION_MARKS}" "$1"
@@ -1842,7 +1842,7 @@ sourcetree_walk_main()
          ;;
 
          --declare-function)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
 
             eval "$1" || fail "Callback \"${input}\" could not be parsed"
@@ -1863,21 +1863,21 @@ sourcetree_walk_main()
          ;;
 
          -n|--nodetypes)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
 
             OPTION_NODETYPES="$1"
          ;;
 
          -p|--perm*)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
 
             OPTION_PERMISSIONS="$1"
          ;;
 
          -*)
-            sourcetree_walk_usage "Unknown walk option $1"
+            sourcetree::walk::usage "Unknown walk option $1"
          ;;
 
          *)
@@ -1890,7 +1890,7 @@ sourcetree_walk_main()
 
    [ $# -gt 1 ] && \
       shift && \
-      sourcetree_walk_usage "Superflous arguments \"$*\". Pass callback \
+      sourcetree::walk::usage "Superflous arguments \"$*\". Pass callback \
 as one string and use quotes."
 
    local mode
@@ -2032,7 +2032,7 @@ ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
    #
    OPTION_CALLBACK_QUALIFIER="${OPTION_CALLBACK_QUALIFIER:-${OPTION_QUALIFIER}}"
 
-   sourcetree_walk "${OPTION_NODETYPES}" \
+   sourcetree::walk::do "${OPTION_NODETYPES}" \
                    "${OPTION_PERMISSIONS}" \
                    "${OPTION_CALLBACK_QUALIFIER}" \
                    "${OPTION_DESCEND_QUALIFIER}" \
@@ -2042,9 +2042,9 @@ ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
 }
 
 
-sourcetree_walk_initialize()
+sourcetree::walk::initialize()
 {
-   log_entry "sourcetree_walk_initialize"
+   log_entry "sourcetree::walk::initialize"
 
    if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
    then
@@ -2064,7 +2064,7 @@ sourcetree_walk_initialize()
 }
 
 
-sourcetree_walk_initialize
+sourcetree::walk::initialize
 
 :
 

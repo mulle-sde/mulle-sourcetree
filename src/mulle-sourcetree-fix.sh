@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_FIX_SH="included"
 
 
-sourcetree_fix_usage()
+sourcetree::fix::usage()
 {
    [ "$#" -ne 0 ] && log_error "$1"
 
@@ -49,9 +49,9 @@ EOF
 }
 
 
-locate_sourcetree()
+sourcetree::fix::locate_sourcetree()
 {
-   log_entry "locate_sourcetree" "$@"
+   log_entry "sourcetree::fix::locate_sourcetree" "$@"
 
    local start="$1"
 
@@ -80,9 +80,9 @@ locate_sourcetree()
 }
 
 
-r_locate_fix_file()
+sourcetree::fix::r_locate_fix_file()
 {
-   log_entry "r_locate_fix_file" "$@"
+   log_entry "sourcetree::fix::r_locate_fix_file" "$@"
 
    local start="$1"
    local address="$2"
@@ -122,7 +122,7 @@ r_locate_fix_file()
 
       nodeline="`rexekutor egrep -s -v '^#' "${found}"`"
 
-      r_nodeline_get_address "${nodeline}"
+      sourcetree::nodeline::r_get_address "${nodeline}"
       fix="${RVAL}"
 
       if [ "${fix}" = "${address}" ]
@@ -157,9 +157,9 @@ r_locate_fix_file()
 }
 
 
-_fixup_address_change()
+sourcetree::fix::_fixup_address_change()
 {
-   log_entry "_fixup_address_change" "$@"
+   log_entry "sourcetree::fix::_fixup_address_change" "$@"
 
    local datasource="$1"
    local address="$2"
@@ -178,9 +178,9 @@ _fixup_address_change()
 }
 
 
-_fixup_manual_removal()
+sourcetree::fix::_fixup_manual_removal()
 {
-   log_entry "_fixup_manual_removal" "$@"
+   log_entry "sourcetree::fix::_fixup_manual_removal" "$@"
 
    local datasource="$1"
    local address="$2"
@@ -192,9 +192,9 @@ _fixup_manual_removal()
 }
 
 
-_fixup_dir_exists()
+sourcetree::fix::_fixup_dir_exists()
 {
-   log_entry "_fixup_dir_exists" "$@"
+   log_entry "sourcetree::fix::_fixup_dir_exists" "$@"
 
    local datasource="$1"
    local filename="$2"
@@ -213,7 +213,7 @@ _fixup_dir_exists()
       return
    fi
 
-   r_nodeline_get_address "${nodeline}"
+   sourcetree::nodeline::r_get_address "${nodeline}"
    fix="${RVAL}"
    if [ "${address}" = "${fix}" ]  # looks good
    then
@@ -226,11 +226,11 @@ _fixup_dir_exists()
 
    local fixfile
 
-   r_locate_fix_file "${PWD}" "${address}"
+   sourcetree::fix::r_locate_fix_file "${PWD}" "${address}"
    fixfile="${RVAL}"
    if [ -z "${fixfile}" ]
    then
-      r_locate_fix_file "${MULLE_VIRTUAL_ROOT}" "${address}"
+      sourcetree::fix::r_locate_fix_file "${MULLE_VIRTUAL_ROOT}" "${address}"
       fixfile="${RVAL}"
    fi
 
@@ -240,13 +240,13 @@ _fixup_dir_exists()
       return 1
    fi
 
-   _fixup_address_change "${datasource}" "${address}" "${fixfile}"
+   sourcetree::fix::_fixup_address_change "${datasource}" "${address}" "${fixfile}"
 }
 
 
-_fixup_dir_not_found()
+sourcetree::fix::_fixup_dir_not_found()
 {
-   log_entry "_fixup_dir_not_found" "$@"
+   log_entry "sourcetree::fix::_fixup_dir_not_found" "$@"
 
    local datasource="$1"
    local filename="$2"
@@ -254,22 +254,22 @@ _fixup_dir_not_found()
 
    local fixfile
 
-   r_locate_fix_file "${MULLE_VIRTUAL_ROOT}" "${address}"
+   sourcetree::fix::r_locate_fix_file "${MULLE_VIRTUAL_ROOT}" "${address}"
    fixfile="${RVAL}"
 
    if [ -z "${fixfile}" ]
    then
-      _fixup_manual_removal "${datasource}" "${address}"
+      sourcetree::fix::_fixup_manual_removal "${datasource}" "${address}"
       return 0
    fi
 
-   _fixup_address_change "${datasource}" "${address}" "${fixfile}"
+   sourcetree::fix::_fixup_address_change "${datasource}" "${address}" "${fixfile}"
 }
 
 
-walk_fix()
+sourcetree::fix::walk()
 {
-   log_entry "walk_fix" "$@"
+   log_entry "sourcetree::fix::walk" "$@"
 
    local datasource
    local filename
@@ -284,47 +284,47 @@ walk_fix()
       if [ -d "${filename}" ]
       then
          log_fluff "Destination \"${filename}\" exists."
-         _fixup_dir_exists "${datasource}" "${filename}" "${address}"
+         sourcetree::fix::_fixup_dir_exists "${datasource}" "${filename}" "${address}"
       else
          log_warning "${filename} is a file, not sure what to do"
       fi
    else
       log_verbose "Destination \"${filename}\" doesn't exist."
 
-      _fixup_dir_not_found "${datasource}" "${filename}" "${address}"
+      sourcetree::fix::_fixup_dir_not_found "${datasource}" "${filename}" "${address}"
    fi
 }
 
 
-sourcetree_fix()
+sourcetree::fix::do()
 {
-   log_entry "sourcetree_fix" "$@"
+   log_entry "sourcetree::fix::do" "$@"
 
    local mode="$1"
 
-   walk_config_uuids "ALL" \
+   sourcetree::walk::walk_config_uuids "ALL" \
                      "" \
                      "" \
                      "" \
                      "${mode}" \
-                     "walk_fix"
+                     "sourcetree::fix::walk"
 }
 
 
-sourcetree_fix_main()
+sourcetree::fix::main()
 {
-   log_entry "sourcetree_fix_main" "$@"
+   log_entry "sourcetree::fix::main" "$@"
 
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_fix_usage
+            sourcetree::fix::usage
          ;;
 
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown fix option $1"
-            sourcetree_fix_usage
+            sourcetree::fix::usage
          ;;
 
          *)
@@ -335,7 +335,7 @@ sourcetree_fix_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_fix_usage
+   [ "$#" -eq 0 ] || sourcetree::fix::usage
 
    if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
    then
@@ -343,12 +343,12 @@ sourcetree_fix_main()
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
    fi
 
-   if ! r_cfg_exists "${SOURCETREE_START}"
+   if ! sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
    then
       log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
    fi
 
-   if ! db_is_ready "${SOURCETREE_START}"
+   if ! sourcetree::db::is_ready "${SOURCETREE_START}"
    then
       fail "The sourcetree isn't updated. Can't fix config entries"
    fi
@@ -363,6 +363,6 @@ sourcetree_fix_main()
    fi
 
    log_info "Run sourcetree fix"
-   sourcetree_fix "${mode}"
+   sourcetree::fix::do "${mode}"
 }
 

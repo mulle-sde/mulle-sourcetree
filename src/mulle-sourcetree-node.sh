@@ -32,9 +32,9 @@
 MULLE_SOURCETREE_NODE_SH="included"
 
 
-r_node_uuidgen()
+sourcetree::node::r_uuidgen()
 {
-   log_entry "r_node_uuidgen" "$@"
+   log_entry "sourcetree::node::r_uuidgen" "$@"
 
    #
    # ensure that case doesn't change on linux, uuidgen is lowercase
@@ -47,9 +47,9 @@ r_node_uuidgen()
 }
 
 
-r_node_sanitized_address()
+sourcetree::node::r_sanitized_address()
 {
-   log_entry "r_node_sanitized_address" "$@"
+   log_entry "sourcetree::node::r_sanitized_address" "$@"
 
    local address="$1"
 
@@ -76,14 +76,14 @@ r_node_sanitized_address()
 }
 
 
-r_node_sanitized_marks()
+sourcetree::node::r_sanitized_marks()
 {
    local marks="$1"
 
-   nodemarks_check_consistency "${marks}" "${_address}"
+   sourcetree::nodemarks::check_consistency "${marks}" "${_address}"
 
-   r_nodemarks_simplify "${_marks}"
-   r_nodemarks_sort "${RVAL}"
+   sourcetree::nodemarks::r_simplify "${_marks}"
+   sourcetree::nodemarks::sort "${RVAL}"
 }
 
 
@@ -91,7 +91,7 @@ r_node_sanitized_marks()
 # This function sets values of variables that should be declared
 # in the caller!
 #
-#   # node_augment
+#   # sourcetree::node::augment
 #
 #   local _branch
 #   local _address
@@ -103,13 +103,13 @@ r_node_sanitized_marks()
 #   local _raw_userinfo
 #   local _uuid
 #
-node_augment()
+sourcetree::node::augment()
 {
    local mode="$1"
 
    if [ -z "${_uuid}" ]
    then
-      r_node_uuidgen
+      sourcetree::node::r_uuidgen
       _uuid="${RVAL}"
    fi
 
@@ -127,13 +127,13 @@ node_augment()
 
          before="${_marks}"
 
-         r_nodemarks_remove "${before}" "share"
+         sourcetree::nodemarks::r_remove "${before}" "share"
          after="${RVAL}"
-         r_nodemarks_remove "${after}" "delete"
+         sourcetree::nodemarks::r_remove "${after}" "delete"
          after="${RVAL}"
-         r_nodemarks_remove "${after}" "update"
+         sourcetree::nodemarks::r_remove "${after}" "update"
          after="${RVAL}"
-         r_nodemarks_add "${after}" "require"
+         sourcetree::nodemarks::r_add "${after}" "require"
          after="${RVAL}"
 
          if [ "${before}" != "${after}" ]
@@ -157,12 +157,12 @@ necessary marks \"no-delete,no-update,no-share,require\""
       ;;
 
       *)
-         r_node_sanitized_address "${_address}"
+         sourcetree::node::r_sanitized_address "${_address}"
          _address="${RVAL}" || exit 1
       ;;
    esac
 
-   r_node_sanitized_marks "${_marks}"
+   sourcetree::node::r_sanitized_marks "${_marks}"
    _marks="${RVAL}"
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
@@ -190,15 +190,23 @@ necessary marks \"no-delete,no-update,no-share,require\""
    [ -z "${_address## }" ]  && internal_fail "_address is empty"
 
    # does not work
-   [ "${_address}" = "." ]  && fail "Node address is '.'"
+   case "${_address}" in
+      '.')
+         fail "Node address is '.'"
+      ;;
+
+      'c')
+         log_warning "\"c\" as a node address might trip up cmake, as it generates a C_LIBRARY definition."
+      ;;
+   esac
 
    :
 }
 
 
-_r_node_to_nodeline()
+sourcetree::node::_r_to_nodeline()
 {
-   log_entry "_r_node_to_nodeline" "$@"
+   log_entry "sourcetree::node::_r_to_nodeline" "$@"
 
    if [ ! -z "${_userinfo}" ]
    then
@@ -256,9 +264,9 @@ ${_raw_userinfo}"
 #
 # this is unformatted
 #
-r_node_to_nodeline()
+sourcetree::node::r_to_nodeline()
 {
-   log_entry "r_node_to_nodeline" "$@"
+   log_entry "sourcetree::node::r_to_nodeline" "$@"
 
    case "${_url}" in
       *";"*)
@@ -342,22 +350,22 @@ r_node_to_nodeline()
       ;;
    esac
 
-   _r_node_to_nodeline "$@"
+   sourcetree::node::_r_to_nodeline "$@"
 }
 
 
-node_to_nodeline()
+sourcetree::node::to_nodeline()
 {
-   log_entry "node_to_nodeline" "$@"
+   log_entry "sourcetree::node::to_nodeline" "$@"
 
-   r_node_to_nodeline "$@"
+   sourcetree::node::r_to_nodeline "$@"
    [ ! -z "${RVAL}" ] && printf "%s\n" "${RVAL}"
 }
 
 
-nodetype_filter()
+sourcetree::node::type_filter()
 {
-   log_entry "nodetype_filter" "$@"
+   log_entry "sourcetree::node::type_filter" "$@"
 
    local nodetype="$1"
    local filter="$2"
@@ -391,9 +399,9 @@ nodetype_filter()
 # returns _formatstring
 # and key in RVAL
 #
-_r_get_format_key()
+sourcetree::node::_r_get_format_key()
 {
-   log_entry "_r_get_format_key" "$@"
+   log_entry "sourcetree::node::_r_get_format_key" "$@"
 
    local formatstring="$1"
 
@@ -419,7 +427,7 @@ _r_get_format_key()
 # specify indentfor ':' with parameter
 # use sed to shift the output to right or left
 #
-node_printf_format_help()
+sourcetree::node::printf_format_help()
 {
    local i="$1"
 
@@ -452,9 +460,9 @@ EOF
 #  local _evaledbranch
 #  local _evaledtag
 #  local _evaledfetchoptions
-node_evaluate_values()
+sourcetree::node::__evaluate_values()
 {
-   log_entry "node_evaluate_values" "$@"
+   log_entry "sourcetree::node::__evaluate_values" "$@"
 
    r_expanded_string "${_nodetype}"
    _evalednodetype="${RVAL}"
@@ -476,9 +484,9 @@ node_evaluate_values()
 }
 
 
-node_printf()
+sourcetree::node::printf()
 {
-   log_entry "node_printf" "$@"
+   log_entry "sourcetree::node::printf" "$@"
 
    local mode="$1"
    local formatstring="$2"
@@ -487,10 +495,10 @@ node_printf()
 
    local sep
 
-   r_get_sep "${mode}"
+   sourcetree::nodeline::r_get_sep "${mode}"
    sep="${RVAL}"
 
-   r_get_formatstring "${mode}" "${formatstring}" "${sep}"
+   sourcetree::nodeline::r_get_formatstring "${mode}" "${formatstring}" "${sep}"
    formatstring="${RVAL}"
 
    case ",${mode}," in
@@ -505,7 +513,7 @@ node_printf()
    local _evaledtag
    local _evaledfetchoptions
 
-   node_evaluate_values
+   sourcetree::node::__evaluate_values
 
    local _url="${_url}"
    local _nodetype="${_nodetype}"
@@ -578,14 +586,14 @@ node_printf()
                *)
             if [ ! -z "${_raw_userinfo}" -a -z "${_userinfo}" ]
             then
-                     r_nodeline_raw_userinfo_parse "${_raw_userinfo}"
+                     sourcetree::nodeline::r_raw_userinfo_parse "${_raw_userinfo}"
                      _userinfo="${RVAL}"
             fi
 
             extended='NO'
             if [ "${formatstring:2:2}" = "={" ]
             then
-               _r_get_format_key "${formatstring}"
+               sourcetree::node::_r_get_format_key "${formatstring}"
                key="${RVAL}"
                formatstring="${_formatstring}"
                extended='YES'
@@ -669,7 +677,7 @@ node_printf()
             switch=""
             if [ "${formatstring:2:1}" = "=" ]
             then
-               _r_get_format_key "${formatstring}"
+               sourcetree::node::_r_get_format_key "${formatstring}"
                key="${RVAL}"
                formatstring="${_formatstring}"
                switch=""

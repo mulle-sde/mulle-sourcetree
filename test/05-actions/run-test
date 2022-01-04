@@ -1,6 +1,13 @@
-#! /usr/bin/env bash
+#! /bin/sh
 
 [ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
 
 
 expect_actions()
@@ -57,31 +64,31 @@ update_actions_for_nodelines()
    local _userinfo
    local _uuid
 
-   nodeline_parse "${nodeline}" # !!
+   sourcetree::nodeline::parse "${nodeline}" # !!
 
    local previousfilename
    local filename
 
    filename="${_address}"
-   r_nodeline_get_address "${previousnodeline}"
+   sourcetree::nodeline::r_get_address "${previousnodeline}"
    previousfilename="${RVAL}"
 
    # just _address as filename ?
-   r_update_actions_for_node "${style}" \
-                             "${nodeline}" \
-                             "${filename}" \
-                             "${previousnodeline}" \
-                             "${previousfilename}" \
-                             "/" \
-                             "/" \
-                             \
-                             "${_address}" \
-                             "${_nodetype}" \
-                             "${_marks}" \
-                             "${_uuid}" \
-                             "${_url}" \
-                             "${_branch}" \
-                             "${_tag}"
+   sourcetree::action::r_update_actions_for_node "${style}" \
+                                                 "${nodeline}" \
+                                                 "${filename}" \
+                                                 "${previousnodeline}" \
+                                                 "${previousfilename}" \
+                                                 "/" \
+                                                 "/" \
+                                                 \
+                                                 "${_address}" \
+                                                 "${_nodetype}" \
+                                                 "${_marks}" \
+                                                 "${_uuid}" \
+                                                 "${_url}" \
+                                                 "${_branch}" \
+                                                 "${_tag}"
    echo "${RVAL}"
 }
 
@@ -94,7 +101,7 @@ run_git_tests()
    local uuid
    local uuid2
 
-   r_node_uuidgen
+   sourcetree::node::r_uuidgen
    uuid="${RVAL}"
 
    old="ringo/starr;git;;${uuid};https://github.com/mulle-nat/mulle-c11.git;release"
@@ -105,7 +112,7 @@ run_git_tests()
    expect_actions "${actions}" "fetch"
    log_verbose "----- #1 PASSED -----"
 
-   r_node_uuidgen
+   sourcetree::node::r_uuidgen
    uuid2="${RVAL}"
 
    # uuid change is bug
@@ -188,7 +195,7 @@ run_tar_tests()
    local old
    local new
 
-   r_node_uuidgen
+   sourcetree::node::r_uuidgen
    uuid="${RVAL}"
 
    # into empty is simple
@@ -255,10 +262,6 @@ main()
 
 init()
 {
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
-
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 

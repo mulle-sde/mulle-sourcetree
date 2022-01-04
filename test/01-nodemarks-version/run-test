@@ -1,6 +1,13 @@
-#! /usr/bin/env bash
+#! /bin/sh
 
 [ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
 
 
 main()
@@ -11,62 +18,62 @@ main()
 
    # absent version mark matches everything
 
-   nodemarks_version_match "${_marks}" "version-darwin" ">=" "0.0.0" ; [ $? -eq 2 ] || internal_fail "Absent version >= 0.0.0"
-   nodemarks_version_match "${_marks}" "version-darwin" "=" "0.0.0"  ; [ $? -eq 2 ] || internal_fail "Absent version =  0.0.0"
-   nodemarks_version_match "${_marks}" "version-darwin" "!=" "0.0.0" ; [ $? -eq 2 ] || internal_fail "Absent version != 0.0.0"
-   nodemarks_version_match "${_marks}" "version-darwin" "<>" "0.0.0" ; [ $? -eq 2 ] || internal_fail "Absent version <> 0.0.0"
-   nodemarks_version_match "${_marks}" "version-darwin" "<=" "0.0.0" ; [ $? -eq 2 ] || internal_fail "Absent version <= 0.0.0"
-   nodemarks_version_match "${_marks}" "version-darwin" ">" "0.0.0"  ; [ $? -eq 2 ] || internal_fail "Absent version >  0.0.0"
-   nodemarks_version_match "${_marks}" "version-darwin" "<" "0.0.0"  ; [ $? -eq 2 ] || internal_fail "Absent version <  0.0.0"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" ">=" "0.0.0" ; [ $? -eq 2 ] || internal_fail "Absent version >= 0.0.0"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "=" "0.0.0"  ; [ $? -eq 2 ] || internal_fail "Absent version =  0.0.0"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "!=" "0.0.0" ; [ $? -eq 2 ] || internal_fail "Absent version != 0.0.0"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<>" "0.0.0" ; [ $? -eq 2 ] || internal_fail "Absent version <> 0.0.0"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<=" "0.0.0" ; [ $? -eq 2 ] || internal_fail "Absent version <= 0.0.0"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" ">" "0.0.0"  ; [ $? -eq 2 ] || internal_fail "Absent version >  0.0.0"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<" "0.0.0"  ; [ $? -eq 2 ] || internal_fail "Absent version <  0.0.0"
 
    log_verbose "----- #1 PASSED -----"
 
 
-   _marks="`nodemarks_add "${_marks}" "version-darwin-0.0.0"`" || exit 1
+   _marks="`sourcetree::nodemarks::add "${_marks}" "version-darwin-0.0.0"`" || exit 1
 
-   nodemarks_version_match "${_marks}" "version-darwin" ">=" "0.0.0" || internal_fail "Version 0.0.0 >= 0.0.0 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "=" "0.0.0"  || internal_fail "Version 0.0.0 =  0.0.0 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "!=" "0.0.0" && internal_fail "Version 0.0.0 != 0.0.0 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "<>" "0.0.0" && internal_fail "Version 0.0.0 <> 0.0.0 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "<=" "0.0.0" || internal_fail "Version 0.0.0 <= 0.0.0 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" ">" "0.0.0"  && internal_fail "Version 0.0.0 >  0.0.0 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "<" "0.0.0"  && internal_fail "Version 0.0.0 <  0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" ">=" "0.0.0" || internal_fail "Version 0.0.0 >= 0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "=" "0.0.0"  || internal_fail "Version 0.0.0 =  0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "!=" "0.0.0" && internal_fail "Version 0.0.0 != 0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<>" "0.0.0" && internal_fail "Version 0.0.0 <> 0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<=" "0.0.0" || internal_fail "Version 0.0.0 <= 0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" ">" "0.0.0"  && internal_fail "Version 0.0.0 >  0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<" "0.0.0"  && internal_fail "Version 0.0.0 <  0.0.0 mismatch"
 
    log_verbose "----- #2 PASSED -----"
 
    # should remove old version
 
-   _marks="`nodemarks_add "${_marks}" "version-darwin-1.2.3"`"    || exit 1
+   _marks="`sourcetree::nodemarks::add "${_marks}" "version-darwin-1.2.3"`"    || exit 1
 
    [ "${_marks}" = "version-darwin-1.2.3" ] || internal_fail "did not remove old version"
 
-   nodemarks_version_match "${_marks}" "version-darwin" ">=" "0.0.0" || internal_fail "Version 1.2.3 >= 0.0.0 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "=" "0.0.0"  && internal_fail "Version 1.2.3 =  0.0.0 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "!=" "0.0.0" || internal_fail "Version 1.2.3 != 0.0.0 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "<>" "0.0.0" || internal_fail "Version 1.2.3 <> 0.0.0 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "<=" "0.0.0" && internal_fail "Version 1.2.3 <= 0.0.0 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" ">" "0.0.0"  || internal_fail "Version 1.2.3 >  0.0.0 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "<" "0.0.0"  && internal_fail "Version 1.2.3 <  0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" ">=" "0.0.0" || internal_fail "Version 1.2.3 >= 0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "=" "0.0.0"  && internal_fail "Version 1.2.3 =  0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "!=" "0.0.0" || internal_fail "Version 1.2.3 != 0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<>" "0.0.0" || internal_fail "Version 1.2.3 <> 0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<=" "0.0.0" && internal_fail "Version 1.2.3 <= 0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" ">" "0.0.0"  || internal_fail "Version 1.2.3 >  0.0.0 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<" "0.0.0"  && internal_fail "Version 1.2.3 <  0.0.0 mismatch"
 
    log_verbose "----- #3 PASSED -----"
 
-   nodemarks_version_match "${_marks}" "version-darwin" ">=" "1.2.3" || internal_fail "Version 1.2.3 >= 1.2.3 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "=" "1.2.3"  || internal_fail "Version 1.2.3 =  1.2.3 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "!=" "1.2.3" && internal_fail "Version 1.2.3 != 1.2.3 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "<>" "1.2.3" && internal_fail "Version 1.2.3 <> 1.2.3 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "<=" "1.2.3" || internal_fail "Version 1.2.3 <= 1.2.3 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" ">" "1.2.3"  && internal_fail "Version 1.2.3 >  1.2.3 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "<" "1.2.3"  && internal_fail "Version 1.2.3 <  1.2.3 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" ">=" "1.2.3" || internal_fail "Version 1.2.3 >= 1.2.3 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "=" "1.2.3"  || internal_fail "Version 1.2.3 =  1.2.3 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "!=" "1.2.3" && internal_fail "Version 1.2.3 != 1.2.3 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<>" "1.2.3" && internal_fail "Version 1.2.3 <> 1.2.3 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<=" "1.2.3" || internal_fail "Version 1.2.3 <= 1.2.3 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" ">" "1.2.3"  && internal_fail "Version 1.2.3 >  1.2.3 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<" "1.2.3"  && internal_fail "Version 1.2.3 <  1.2.3 mismatch"
 
    log_verbose "----- #4 PASSED -----"
 
-   nodemarks_version_match "${_marks}" "version-darwin" ">=" "3.2.1" && internal_fail "Version 1.2.3 >= 3.2.1 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "=" "3.2.1"  && internal_fail "Version 1.2.3 =  3.2.1 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "!=" "3.2.1" || internal_fail "Version 1.2.3 != 3.2.1 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "<>" "3.2.1" || internal_fail "Version 1.2.3 <> 3.2.1 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "<=" "3.2.1" || internal_fail "Version 1.2.3 <= 3.2.1 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" ">" "3.2.1"  && internal_fail "Version 1.2.3 >  3.2.1 mismatch"
-   nodemarks_version_match "${_marks}" "version-darwin" "<" "3.2.1"  || internal_fail "Version 1.2.3 <  3.2.1 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" ">=" "3.2.1" && internal_fail "Version 1.2.3 >= 3.2.1 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "=" "3.2.1"  && internal_fail "Version 1.2.3 =  3.2.1 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "!=" "3.2.1" || internal_fail "Version 1.2.3 != 3.2.1 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<>" "3.2.1" || internal_fail "Version 1.2.3 <> 3.2.1 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<=" "3.2.1" || internal_fail "Version 1.2.3 <= 3.2.1 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" ">" "3.2.1"  && internal_fail "Version 1.2.3 >  3.2.1 mismatch"
+   sourcetree::nodemarks::version_match "${_marks}" "version-darwin" "<" "3.2.1"  || internal_fail "Version 1.2.3 <  3.2.1 mismatch"
 
    log_verbose "----- #5 PASSED -----"
 
@@ -77,10 +84,6 @@ main()
 
 init()
 {
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
-
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 

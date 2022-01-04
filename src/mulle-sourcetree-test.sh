@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_TEST_SH="included"
 
 
-sourcetree_test_usage()
+sourcetree::test::usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -57,11 +57,11 @@ EOF
 }
 
 
-sourcetree_test_main()
+sourcetree::test::main()
 {
-   log_entry "sourcetree_test_main" "$@"
+   log_entry "sourcetree::test::main" "$@"
 
-   [ $# -ne 2 ] && sourcetree_test_usage
+   [ $# -ne 2 ] && sourcetree::test::usage
 
    if [ -z "${MULLE_SOURCETREE_NODEMARKS_SH}" ]
    then
@@ -69,10 +69,10 @@ sourcetree_test_main()
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
    fi
 
-   assert_sane_nodemarks "$1"
-   assert_sane_nodemark  "$2"
+   sourcetree::nodemarks::assert_sane "$1"
+   sourcetree::nodemarks::assert_sane_nodemark  "$2"
 
-   if nodemarks_enable "$1" "$2"
+   if sourcetree::nodemarks::enable "$1" "$2"
    then
       log_info "YES"
       return 0

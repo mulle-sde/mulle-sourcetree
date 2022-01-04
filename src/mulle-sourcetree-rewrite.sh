@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_REWRITE_SH="included"
 
 
-sourcetree_rewrite_usage()
+sourcetree::rewrite::usage()
 {
    [ "$#" -ne 0 ] && log_error "$1"
 
@@ -55,9 +55,9 @@ EOF
 #
 # this cleans up the marks and resorts them
 #
-cfg_rewrite()
+sourcetree::rewrite::do()
 {
-   log_entry "cfg_rewrite" "$@"
+   log_entry "sourcetree::rewrite::do" "$@"
 
    local config="$1"
 
@@ -65,7 +65,7 @@ cfg_rewrite()
    local nodeline
    local output
 
-   nodelines="`cfg_read "${config}"`" || exit 1
+   nodelines="`sourcetree::cfg::read "${config}"`" || exit 1
 
    [ -z "${nodelines}" ] && return 0
 
@@ -85,9 +85,9 @@ cfg_rewrite()
    do
       IFS="${DEFAULT_IFS}"; shell_enable_glob
 
-      nodeline_parse "${nodeline}"  # memo: :_marks used raw
+      sourcetree::nodeline::parse "${nodeline}"  # memo: :_marks used raw
 
-      r_node_sanitized_marks "${_marks}"
+      sourcetree::node::r_sanitized_marks "${_marks}"
       _marks="${RVAL}"
 
       if [ "${_marks}" != "${RVAL}" ]
@@ -96,19 +96,19 @@ cfg_rewrite()
       fi
       _marks="${RVAL}"
 
-      _r_node_to_nodeline
+      sourcetree::node::_r_to_nodeline
       r_add_line "${output}" "${RVAL}"
       output="${RVAL}"
    done
    IFS="${DEFAULT_IFS}"; shell_enable_glob
 
-   cfg_write "${config}" "${output}"
+   sourcetree::cfg::write "${config}" "${output}"
 }
 
 
-sourcetree_rewrite_main()
+sourcetree::rewrite::main()
 {
-   log_entry "sourcetree_rewrite_main" "$@"
+   log_entry "sourcetree::rewrite::main" "$@"
 
    local OPTION_REMOVE_GRAVEYARD="DEFAULT"
 
@@ -116,12 +116,12 @@ sourcetree_rewrite_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_rewrite_usage
+            sourcetree::rewrite::usage
          ;;
 
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown rewrite option $1"
-            sourcetree_rewrite_usage
+            sourcetree::rewrite::usage
          ;;
 
          *)
@@ -132,16 +132,16 @@ sourcetree_rewrite_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_rewrite_usage
+   [ "$#" -eq 0 ] || sourcetree::rewrite::usage
 
    log_info "Rewriting marks for sourcetree"
-   cfg_rewrite "/" || exit 1
+   sourcetree::rewrite::do "/" || exit 1
 }
 
 
-sourcetree_rewrite_initialize()
+sourcetree::rewrite::initialize()
 {
-   log_entry "sourcetree_rewrite_initialize"
+   log_entry "sourcetree::rewrite::initialize"
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
@@ -174,7 +174,7 @@ sourcetree_rewrite_initialize()
 }
 
 
-sourcetree_rewrite_initialize
+sourcetree::rewrite::initialize
 
 :
 

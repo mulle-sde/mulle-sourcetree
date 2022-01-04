@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_SYNC_SH="included"
 
 
-sourcetree_sync_usage()
+sourcetree::sync::usage()
 {
     cat <<EOF >&2
 Usage:
@@ -78,14 +78,14 @@ EOF
 # local _filename
 # local _database
 #
-_get_db_descendinfo()
+sourcetree::sync::_get_db_descendinfo()
 {
-   log_entry "_get_db_descendinfo" "$@"
+   log_entry "sourcetree::sync::_get_db_descendinfo" "$@"
 
    local database="$1"
    local uuid="$2"
 
-   _filename="`db_fetch_filename_for_uuid "${database}" "${uuid}" `"
+   _filename="`sourcetree::db::fetch_filename_for_uuid "${database}" "${uuid}" `"
 
    [ -z "${_filename}" ] && internal_fail "corrupted db, better clean it"
 
@@ -99,9 +99,9 @@ _get_db_descendinfo()
 # local _filename
 # local _database
 #
-_get_config_descendinfo()
+sourcetree::sync::_get_config_descendinfo()
 {
-   log_entry "_get_config_descendinfo" "$@"
+   log_entry "sourcetree::sync::_get_config_descendinfo" "$@"
 
    local config="$1"
    local address="$2"
@@ -121,14 +121,14 @@ _get_config_descendinfo()
 #     : 4 symlink
 #
 # input: parsed nodeline + filename
-_check_descend_nodeline()
+sourcetree::sync::_check_descend_nodeline()
 {
-   log_entry "_check_descend_nodeline" "$@"
+   log_entry "sourcetree::sync::_check_descend_nodeline" "$@"
 
    local filename="$1"
    local marks="$2"
 
-   if nodemarks_disable "${marks}" "descend"
+   if sourcetree::nodemarks::disable "${marks}" "descend"
    then
       log_fluff "Node \"${filename}\" is marked no-descend"
       return 1
@@ -137,7 +137,7 @@ _check_descend_nodeline()
    #
    # usually database is in config, except when we update with share
    # and the node is shared. But this switch is not done here
-   # but in do_actions_with_nodeline
+   # but in sourcetree::action::do_actions_with_nodeline
    #
    if [ -L "${filename}" ]
    then
@@ -158,7 +158,7 @@ a directory"
          return 1
       fi
 
-      if nodemarks_enable "${marks}" "share"
+      if sourcetree::nodemarks::enable "${marks}" "share"
       then
          log_fluff "Destination \"${filename}\" does not exist."
       else
@@ -173,9 +173,9 @@ a directory"
 }
 
 
-_descend_db_nodeline()
+sourcetree::sync::_descend_db_nodeline()
 {
-   log_entry "_descend_db_nodeline" "$@"
+   log_entry "sourcetree::sync::_descend_db_nodeline" "$@"
 
    [ "$#" -ne 4 ] && internal_fail "api error"
 
@@ -199,13 +199,13 @@ _descend_db_nodeline()
    local _url
    local _uuid
 
-   nodeline_parse "${nodeline}"  # ??
+   sourcetree::nodeline::parse "${nodeline}"  # ??
 
    local _filename
    local _config
    local _database
 
-   _get_db_descendinfo "${database}" "${_uuid}"
+   sourcetree::sync::_get_db_descendinfo "${database}" "${_uuid}"
 
    # remove duplicate marker from _filename
    _filename="${_filename%#*}"
@@ -223,20 +223,20 @@ _descend_db_nodeline()
    local _style
    local rval
 
-   _check_descend_nodeline "${_filename}" "${_marks}"
+   sourcetree::sync::_check_descend_nodeline "${_filename}" "${_marks}"
    rval=$?
 
-   if _style_for_${style} ${rval}
+   if sourcetree::sync::_style_for_${style} ${rval}
    then
-      _sourcetree_sync_${_style} "${_config}" "${_database}"
+      sourcetree::sync::_sync_${_style} "${_config}" "${_database}"
       return $?
    fi
 }
 
 
-_descend_config_nodeline()
+sourcetree::sync::_descend_config_nodeline()
 {
-   log_entry "_descend_config_nodeline" "$@"
+   log_entry "sourcetree::sync::_descend_config_nodeline" "$@"
 
    [ "$#" -ne 4 ] && internal_fail "api error"
 
@@ -246,8 +246,8 @@ _descend_config_nodeline()
    local config="$1"
    local database="$2"
 
-   [ -z "${nodeline}" ]   && internal_fail "nodeline is empty"
-   [ -z "${style}" ]      && internal_fail "style is empty"
+   [ -z "${nodeline}" ] && internal_fail "nodeline is empty"
+   [ -z "${style}" ]    && internal_fail "style is empty"
 
    local _branch
    local _address
@@ -260,13 +260,13 @@ _descend_config_nodeline()
    local _url
    local _uuid
 
-   nodeline_parse "${nodeline}"  # !!
+   sourcetree::nodeline::parse "${nodeline}"  # !!
 
    local _filename
    local _config
    local _database
 
-   _get_config_descendinfo "${config}" "${_address}"
+   sourcetree::sync::_get_config_descendinfo "${config}" "${_address}"
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
@@ -278,11 +278,11 @@ _descend_config_nodeline()
       log_trace2 "newdatabase        : ${_database}"
    fi
 
-   _check_descend_nodeline "${_filename}"
+   sourcetree::sync::_check_descend_nodeline "${_filename}"
 
    [ $? -ne 0 ] && return 1
 
-   _sourcetree_sync_${style} "${_config}" "${_database}"
+   sourcetree::sync::_sync_${style} "${_config}" "${_database}"
 }
 
 
@@ -290,9 +290,9 @@ _descend_config_nodeline()
 # A flat update has run. Now walk over the DB entries (actually existing
 # stuff at proper position) and recursively do the inferior sourcetrees
 #
-_descend_db_nodelines()
+sourcetree::sync::_descend_db_nodelines()
 {
-   log_entry "_descend_db_nodelines" "$@"
+   log_entry "sourcetree::sync::_descend_db_nodelines" "$@"
 
    local style="$1"; shift
 
@@ -301,7 +301,7 @@ _descend_db_nodelines()
 
    local nodelines
 
-   nodelines="`db_fetch_all_nodelines "${database}" `" || exit 1
+   nodelines="`sourcetree::db::fetch_all_nodelines "${database}" `" || exit 1
    if [ -z "${nodelines}" ]
    then
       log_fluff "No \"${style}\" update of database \"${database:-ROOT}\" as \
@@ -335,7 +335,7 @@ it is empty (${PWD#${MULLE_USER_PWD}/})"
          VISITED="${RVAL}"
       fi
 
-      _descend_db_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+      sourcetree::sync::_descend_db_nodeline "${nodeline}" "${style}" "${config}" "${database}"
       rval=$?
 
       # 127 is not really an error in a descendant 
@@ -353,9 +353,9 @@ it is empty (${PWD#${MULLE_USER_PWD}/})"
 # A flat update has run. Now walk over the DB entries (actually existing
 # stuff at proper position) and recursively do the inferior sourcetrees
 #
-_descend_config_nodelines()
+sourcetree::sync::_descend_config_nodelines()
 {
-   log_entry "_descend_config_nodelines" "$@"
+   log_entry "sourcetree::sync::_descend_config_nodelines" "$@"
 
    local style="$1"; shift
 
@@ -364,7 +364,7 @@ _descend_config_nodelines()
 
    local nodelines
 
-   nodelines="`cfg_read "${config}" `"
+   nodelines="`sourcetree::cfg::read "${config}" `"
    if [ -z "${nodelines}" ]
    then
       log_fluff "No\"${style}\" update of config \"${config:-ROOT}\" as it \
@@ -377,14 +377,11 @@ nodelines \"${nodelines}\" from config \"${config:-ROOT}\" (${PWD#${MULLE_USER_P
 
    local nodeline
 
-   shell_disable_glob; IFS=$'\n'
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
-
+   .foreachline nodeline in ${nodelines}
+   .do
       if [ -z "${nodeline}" ]
       then
-         continue
+         .continue
       fi
 
       # needed for root database only
@@ -393,16 +390,14 @@ nodelines \"${nodelines}\" from config \"${config:-ROOT}\" (${PWD#${MULLE_USER_P
          if find_line "${VISITED}" "${nodeline}"
          then
             log_fluff "\${nodeline}\" was already visited"
-            continue
+            .continue
          fi
          r_add_line "${VISITED}" "${nodeline}"
          VISITED="${RVAL}"
       fi
 
-      _descend_config_nodeline "${nodeline}" "${style}" "${config}" "${database}"
-   done
-
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+      sourcetree::sync::_descend_config_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+   .done
 }
 
 
@@ -414,7 +409,7 @@ nodelines \"${nodelines}\" from config \"${config:-ROOT}\" (${PWD#${MULLE_USER_P
 # config     : config relative to MULLE_VIRTUAL_ROOT
 # database   : prefix relative to MULLE_VIRTUAL_ROOT
 #
-_style_for_only_share()
+sourcetree::sync::_style_for_only_share()
 {
    local rval="$1"
 
@@ -429,9 +424,9 @@ _style_for_only_share()
 }
 
 
-_sync_nodeline_only_share()
+sourcetree::sync::_sync_nodeline_only_share()
 {
-   log_entry "_sync_nodeline_only_share" "$@"
+   log_entry "sourcetree::sync::_sync_nodeline_only_share" "$@"
 
    local nodeline="$1"
    local config="$2"
@@ -452,19 +447,19 @@ _sync_nodeline_only_share()
    local _url
    local _uuid
 
-   nodeline_parse "${nodeline}" # !!!
+   sourcetree::nodeline::parse "${nodeline}" # !!!
 
-   if [ ! -z "${_url}" ] && nodemarks_enable "${_marks}" "share"
+   if [ ! -z "${_url}" ] && sourcetree::nodemarks::enable "${_marks}" "share"
    then
-      do_actions_with_nodeline "${nodeline}" "share" "${config}" "${database}"
+      sourcetree::action::do_actions_with_nodeline "${nodeline}" "share" "${config}" "${database}"
       return $?
    fi
 }
 
 
-_sourcetree_sync_only_share()
+sourcetree::sync::_sync_only_share()
 {
-   log_entry "_sourcetree_sync_only_share" "$@"
+   log_entry "sourcetree::sync::_sync_only_share" "$@"
 
    local config="$1"
    local database="$2"
@@ -486,7 +481,7 @@ _sourcetree_sync_only_share()
    #
    local nodelines
 
-   if ! nodelines="`cfg_read "${config}" `"
+   if ! nodelines="`sourcetree::cfg::read "${config}" `"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       return 127
@@ -516,13 +511,13 @@ _sourcetree_sync_only_share()
          VISITED="${RVAL}"
       fi
 
-      _sync_nodeline_only_share "${nodeline}" "${config}" "${database}"
+      sourcetree::sync::_sync_nodeline_only_share "${nodeline}" "${config}" "${database}"
    done
    IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
-   _descend_config_nodelines "only_share" "${config}" "${database}" || return 1
+   sourcetree::sync::_descend_config_nodelines "only_share" "${config}" "${database}" || return 1
 }
 
 
@@ -534,7 +529,7 @@ _sourcetree_sync_only_share()
 # database   : prefix relative to MULLE_VIRTUAL_ROOT
 #
 
-_style_for_share()
+sourcetree::sync::_style_for_share()
 {
    local rval="$1"
 
@@ -558,9 +553,9 @@ _style_for_share()
 # config     : config relative to MULLE_VIRTUAL_ROOT
 # database   : prefix relative to MULLE_VIRTUAL_ROOT
 #
-_sourcetree_sync_share()
+sourcetree::sync::_sync_share()
 {
-   log_entry "_sourcetree_sync_share" "$@"
+   log_entry "sourcetree::sync::_sync_share" "$@"
 
    local config="$1"
    local database="$2"
@@ -583,21 +578,21 @@ _sourcetree_sync_share()
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "${config}"
+   sourcetree::cfg::__common_configfile "${config}"
 
-   if ! __cfg_resolve_configfile
+   if ! sourcetree::cfg::__resolve_configfile
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
 
       if [ "${database}" = '/' ]
       then
          log_debug "It's the root \"${database}\" so nothing more to do."
-         db_clear_update "${database}"
-         db_set_ready "${database}"
+         sourcetree::db::clear_update "${database}"
+         sourcetree::db::set_ready "${database}"
          return 127
       fi
 
-      if ! db_dir_exists "${database}"
+      if ! sourcetree::db::dir_exists "${database}"
       then
          log_debug "There is also no database \"${database}\" so nothing to do."
          return 127
@@ -606,7 +601,7 @@ _sourcetree_sync_share()
 
    local nodelines
 
-   nodelines="`__cfg_read`"
+   nodelines="`sourcetree::cfg::__read`"
 
    local need_db='NO'
 
@@ -629,13 +624,13 @@ _sourcetree_sync_share()
 
    if [ "${need_db}" = 'YES' ]
    then
-      db_set_dbtype "${database}" "${style}"
-      db_set_update "${database}" "${_configfile}"
-      db_set_shareddir "${database}" "${MULLE_SOURCETREE_STASH_DIR}"
+      sourcetree::db::set_dbtype "${database}" "${style}"
+      sourcetree::db::set_update "${database}" "${_configfile}"
+      sourcetree::db::set_shareddir "${database}" "${MULLE_SOURCETREE_STASH_DIR}"
       #
       # do a flat update first and remove what we don't have
       #
-      db_zombify_nodes "${database}"
+      sourcetree::db::zombify_nodes "${database}"
    fi
 
    local count
@@ -646,11 +641,11 @@ _sourcetree_sync_share()
 
    if [ "${OPTION_PARALLEL}" = 'YES' -a ${count} -gt 1 ]
    then
-      do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
+      sourcetree::action::do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
       log_debug "Parallel share update of ${config}: ${rval}"
    else
-      do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
+      sourcetree::action::do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
       log_debug "Share update of ${config}: ${rval}"
    fi
@@ -662,7 +657,7 @@ _sourcetree_sync_share()
    # flat part of our config, so that we get rid of them and don't traverse
    # an outdated database.
    #
-   db_bury_flat_zombies "${database}"
+   sourcetree::db::bury_flat_zombies "${database}"
 
    #
    # In the share case, we have done the flat and the recurse part already
@@ -676,15 +671,15 @@ _sourcetree_sync_share()
 
       log_fluff "Process root updates additions if any"
 
-      before="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`"  \
+      before="`sourcetree::db::fetch_all_nodelines "${database}" | LC_ALL=C sort`"  \
       || return 1
 
-      _descend_db_nodelines "share" "${config}" "${database}" \
+      sourcetree::sync::_descend_db_nodelines "share" "${config}" "${database}" \
       || return 1
 
       while :
       do
-         nodelines="`db_fetch_all_nodelines "${database}" | LC_ALL=C sort`" \
+         nodelines="`sourcetree::db::fetch_all_nodelines "${database}" | LC_ALL=C sort`" \
          || exit 1
 
          if [ "${nodelines}" = "${before}" ]
@@ -694,26 +689,26 @@ _sourcetree_sync_share()
 
          log_debug "Redo root because lines have changed"
 
-         _descend_db_nodelines "share" "${config}" "${database}" || return 1
+         sourcetree::sync::_descend_db_nodelines "share" "${config}" "${database}" || return 1
 
          before="${nodelines}"
       done
    else
-      _descend_db_nodelines "share" "${config}" "${database}" || return 1
+      sourcetree::sync::_descend_db_nodelines "share" "${config}" "${database}" || return 1
    fi
 
    if [ "${need_db}" = 'YES' ]
    then
-      db_bury_zombies "${database}"
-      db_clear_update "${database}"
-      db_set_ready "${database}" "${_configfile}"
+      sourcetree::db::bury_zombies "${database}"
+      sourcetree::db::clear_update "${database}"
+      sourcetree::db::set_ready "${database}" "${_configfile}"
    fi
 }
 
 
-sourcetree_sync_share()
+sourcetree::sync::sync_share()
 {
-   log_entry "sourcetree_sync_share" "$@"
+   log_entry "sourcetree::sync::sync_share" "$@"
 
    local config="$1"
    local database="$2"
@@ -721,7 +716,7 @@ sourcetree_sync_share()
    local UPDATED
    local rval
 
-   _sourcetree_sync_share "${config}" "${database}"
+   sourcetree::sync::_sync_share "${config}" "${database}"
    rval=$?
 
    if [ $rval -eq 0 ]
@@ -734,7 +729,7 @@ sourcetree_sync_share()
 the sourcetree root (${MULLE_VIRTUAL_ROOT})"
       fi
    else
-      log_debug "sourcetree sync of ${config} failed"
+      log_debug "sourcetree sync of ${config} failed ($rval)"
    fi
    return $rval
 }
@@ -744,7 +739,7 @@ the sourcetree root (${MULLE_VIRTUAL_ROOT})"
 # RECURSE UPDATE
 ####
 
-_style_for_recurse()
+sourcetree::sync::_style_for_recurse()
 {
    local rval="$1"
 
@@ -763,9 +758,9 @@ _style_for_recurse()
 # config     : config relative to MULLE_VIRTUAL_ROOT
 # database   : prefix relative to MULLE_VIRTUAL_ROOT
 #
-_sourcetree_sync_recurse()
+sourcetree::sync::_sync_recurse()
 {
-   log_entry "_sourcetree_sync_recurse" "$@"
+   log_entry "sourcetree::sync::_sync_recurse" "$@"
 
    local config="$1"
    local database="$2"
@@ -781,12 +776,12 @@ _sourcetree_sync_recurse()
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "${config}"
+   sourcetree::cfg::__common_configfile "${config}"
 
-   if ! __cfg_resolve_configfile
+   if ! sourcetree::cfg::__resolve_configfile
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
-      if ! db_dir_exists "${database}"
+      if ! sourcetree::db::dir_exists "${database}"
       then
          log_debug "There is also no database \"${database}\""
          return 127
@@ -795,17 +790,17 @@ _sourcetree_sync_recurse()
 
    local nodelines
 
-   nodelines="`__cfg_read`"
+   nodelines="`sourcetree::cfg::__read`"
 
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
-   db_set_dbtype "${database}" "${style}"
-   db_set_update "${database}" "${_configfile}"
+   sourcetree::db::set_dbtype "${database}" "${style}"
+   sourcetree::db::set_update "${database}" "${_configfile}"
 
-   db_clear_shareddir "${database}"
+   sourcetree::db::clear_shareddir "${database}"
 
    # zombify everything
-   db_zombify_nodes "${database}"
+   sourcetree::db::zombify_nodes "${database}"
 
    local count
    local rval
@@ -815,39 +810,39 @@ _sourcetree_sync_recurse()
 
    if [ "${OPTION_PARALLEL}" = 'YES' -a ${count} -gt 1 ]
    then
-      do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
+      sourcetree::action::do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
       log_debug "Parallel recurse update of ${config}: ${rval}"
    else
-      do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
+      sourcetree::action::do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
       log_debug "Recurse update of ${config}: ${rval}"
    fi
 
    [ $rval -eq 0 ] || return 1
 
-   db_bury_zombie_nodelines "${database}" "${nodelines}"
+   sourcetree::db::bury_zombie_nodelines "${database}" "${nodelines}"
 
    # until now, it was just like flat. Now recurse through nodelines.
 
-   _descend_db_nodelines "recurse" "${config}" "${database}"  || return 1
+   sourcetree::sync::_descend_db_nodelines "recurse" "${config}" "${database}"  || return 1
 
    # bury rest of zombies
-   db_bury_zombies "${database}"
+   sourcetree::db::bury_zombies "${database}"
 
-   db_clear_update "${database}"
-   db_set_ready "${database}" "${_configfile}"
+   sourcetree::db::clear_update "${database}"
+   sourcetree::db::set_ready "${database}" "${_configfile}"
 }
 
 
-sourcetree_sync_recurse()
+sourcetree::sync::sync_recurse()
 {
-   log_entry "sourcetree_sync_recurse" "$@"
+   log_entry "sourcetree::sync::sync_recurse" "$@"
 
    local config="$1"
    local database="$2"
 
-   _sourcetree_sync_recurse "${config}" "${database}"
+   sourcetree::sync::_sync_recurse "${config}" "${database}"
 }
 
 
@@ -858,9 +853,9 @@ sourcetree_sync_recurse()
 # config     : config relative to MULLE_VIRTUAL_ROOT
 # database   : prefix relative to MULLE_VIRTUAL_ROOT
 #
-_sourcetree_sync_flat()
+sourcetree::sync::_sync_flat()
 {
-   log_entry "_sourcetree_sync_flat" "$@"
+   log_entry "sourcetree::sync::_sync_flat" "$@"
 
    local config="$1"
    local database="$2"
@@ -877,12 +872,12 @@ _sourcetree_sync_flat()
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "${config}"
+   sourcetree::cfg::__common_configfile "${config}"
 
-   if ! __cfg_resolve_configfile
+   if ! sourcetree::cfg::__resolve_configfile
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
-      if ! db_dir_exists "${database}"
+      if ! sourcetree::db::dir_exists "${database}"
       then
          log_debug "There is also no database \"${database}\""
          return 127
@@ -891,15 +886,15 @@ _sourcetree_sync_flat()
 
    local nodelines
 
-   nodelines="`__cfg_read`"
+   nodelines="`sourcetree::cfg::__read`"
 
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
-   db_set_dbtype "${database}" "${style}"
-   db_set_update "${database}" "${_configfile}"
+   sourcetree::db::set_dbtype "${database}" "${style}"
+   sourcetree::db::set_update "${database}" "${_configfile}"
 
-   db_clear_shareddir "${database}"
-   db_zombify_nodes "${database}"
+   sourcetree::db::clear_shareddir "${database}"
+   sourcetree::db::zombify_nodes "${database}"
 
    local count
 
@@ -908,31 +903,31 @@ _sourcetree_sync_flat()
 
    if [ "${OPTION_PARALLEL}" = 'YES' -a ${count} -gt 1 ]
    then
-      do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
+      sourcetree::action::do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
       log_debug "Parallel flat update of ${config}: ${rval}"
    else
-      do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
+      sourcetree::action::do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
       rval=$?
       log_debug "Flat update of ${config}: ${rval}"
    fi
    [ $rval -eq 0 ] || return 1
 
-   db_bury_zombies "${database}"
+   sourcetree::db::bury_zombies "${database}"
 
-   db_clear_update "${database}"
-   db_set_ready "${database}" "${_configfile}"
+   sourcetree::db::clear_update "${database}"
+   sourcetree::db::set_ready "${database}" "${_configfile}"
 }
 
 
-sourcetree_sync_flat()
+sourcetree::sync::sync_flat()
 {
-   log_entry "sourcetree_sync_flat" "$@"
+   log_entry "sourcetree::sync::sync_flat" "$@"
 
    local config="$1"
    local database="$2"
 
-   _sourcetree_sync_flat "${config}" "${database}"
+   sourcetree::sync::_sync_flat "${config}" "${database}"
 }
 
 
@@ -955,9 +950,9 @@ sourcetree_sync_flat()
 #            for nodes marked share and again (local) databases for those
 #            marked no-share like in recurse. The shares are stored in root.
 #
-sourcetree_sync_start()
+sourcetree::sync::start()
 {
-   log_entry "sourcetree_sync_start" "$@" "(${PWD#${MULLE_USER_PWD}/})"
+   log_entry "sourcetree::sync::start" "$@" "(${PWD#${MULLE_USER_PWD}/})"
 
    local style
    local startpoint
@@ -976,26 +971,26 @@ sourcetree_sync_start()
       ;;
    esac
 
-   db_ensure_consistency "${SOURCETREE_START}"
-   db_ensure_compatible_dbtype "${SOURCETREE_START}" "${style}"
+   sourcetree::db::ensure_consistency "${SOURCETREE_START}"
+   sourcetree::db::ensure_compatible_dbtype "${SOURCETREE_START}" "${style}"
 
    local  rval
 
-   "sourcetree_sync_${style}" "${SOURCETREE_START}" "${SOURCETREE_START}"
+   sourcetree::sync::sync_${style} "${SOURCETREE_START}" "${SOURCETREE_START}"
    rval=$?
 
-   if [ $rval -eq 127 ]
+   # this is checked by 17-minions
+   if [ $rval -eq 127 -a "${OPTION_LENIENT}" = 'YES' ]
    then
       # it's OK we can live with that
-      log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
+      log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\"), but that's OK"
       return 0
    fi
-
    return $rval
 }
 
 
-warn_dry_run()
+sourcetree::sync::warn_dry_run()
 {
    if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" = 'YES' ]
    then
@@ -1010,9 +1005,9 @@ edits have been made to the configuration.
 }
 
 
-sourcetree_sync_main()
+sourcetree::sync::main()
 {
-   log_entry "sourcetree_sync_main" "$@"
+   log_entry "sourcetree::sync::main" "$@"
 
    local OPTION_FIX="DEFAULT"
    local OPTION_OVERRIDE_BRANCH
@@ -1035,7 +1030,7 @@ sourcetree_sync_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_sync_usage
+            sourcetree::sync::usage
          ;;
 
          #
@@ -1139,7 +1134,7 @@ sourcetree_sync_main()
          #
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown sync option $1"
-            sourcetree_sync_usage
+            sourcetree::sync::usage
          ;;
 
          *)
@@ -1155,15 +1150,15 @@ sourcetree_sync_main()
 
    [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
 
-   warn_dry_run
+   sourcetree::sync::warn_dry_run
 
-   sourcetree_sync_start
+   sourcetree::sync::start
 }
 
 
-sourcetree_sync_initialize()
+sourcetree::sync::initialize()
 {
-   log_entry "sourcetree_sync_initialize" "$@"
+   log_entry "sourcetree::sync::initialize" "$@"
 
    if [ -z "${MULLE_STRING_SH}" ]
    then
@@ -1179,6 +1174,6 @@ sourcetree_sync_initialize()
 }
 
 
-sourcetree_sync_initialize
+sourcetree::sync::initialize
 
 :

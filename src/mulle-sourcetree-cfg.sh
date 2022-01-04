@@ -44,7 +44,7 @@ MULLE_SOURCETREE_CFG_SH="included"
 #
 # Not sure of fallback should be even be set for "write"
 #
-__cfg_common_configfile()
+sourcetree::cfg::__common_configfile()
 {
    [ -z "${SOURCETREE_CONFIG_NAMES}" ] \
       && internal_fail "SOURCETREE_CONFIG_NAMES is not set"
@@ -123,7 +123,7 @@ __cfg_common_configfile()
                _configfile="$1${filename}"
                if [ ! -z "${fallback_filename}" ]
                then
-                  fallback_filename="$1${fallback_filename}"
+                  _fallback_configfile="$1${fallback_filename}"
                fi
             ;;
 
@@ -225,11 +225,10 @@ __cfg_common_configfile()
    IFS="${DEFAULT_IFS}"
 
    [ -z "${_configfile}" ] && internal_fail "_configfile must not be empty"
-
 }
 
 
-__cfg_common_rootdir()
+sourcetree::cfg::__common_rootdir()
 {
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
@@ -283,11 +282,11 @@ __cfg_common_rootdir()
 }
 
 
-cfg_rootdir()
+sourcetree::cfg::rootdir()
 {
    local _rootdir
 
-   __cfg_common_rootdir "$1"
+   sourcetree::cfg::__common_rootdir "$1"
    printf "%s\n" "${_rootdir}"
 }
 
@@ -295,14 +294,14 @@ cfg_rootdir()
 #
 # these can be prefixed for external queries
 #
-r_cfg_exists()
+sourcetree::cfg::r_config_exists()
 {
-   log_entry "r_cfg_exists" "$@"
+   log_entry "sourcetree::cfg::r_config_exists" "$@"
 
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "$1"
+   sourcetree::cfg::__common_configfile "$1"
 
    if [ -f "${_configfile}" ]
    then
@@ -324,14 +323,14 @@ r_cfg_exists()
 }
 
 
-cfg_timestamp()
+sourcetree::cfg::timestamp()
 {
-   log_entry "cfg_timestamp" "$@"
+   log_entry "sourcetree::cfg::timestamp" "$@"
 
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "$1"
+   sourcetree::cfg::__common_configfile "$1"
 
    if [ -f "${_configfile}" ]
    then
@@ -347,7 +346,7 @@ cfg_timestamp()
 }
 
 
-__cfg_resolve_configfile()
+sourcetree::cfg::__resolve_configfile()
 {
    if [ -f "${_configfile}" ]
    then
@@ -373,41 +372,47 @@ __cfg_resolve_configfile()
 #                     1: no lines
 #                     2: error
 #
-__cfg_read()
+sourcetree::cfg::__read()
 {
    log_debug "Read config file \"${_configfile#${MULLE_USER_PWD}/}\" (${PWD#${MULLE_USER_PWD}/})"
    egrep -s -v '^#' "${_configfile}"
 }
 
-
-cfg_read()
+sourcetree::cfg::__fallback_read()
 {
-   log_entry "cfg_read" "$@"
+   log_debug "Read fallback config file \"${_fallback_configfile#${MULLE_USER_PWD}/}\" (${PWD#${MULLE_USER_PWD}/})"
+   egrep -s -v '^#' "${_fallback_configfile}"
+}
+
+
+sourcetree::cfg::read()
+{
+   log_entry "sourcetree::cfg::read" "$@"
 
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "$1"
+   sourcetree::cfg::__common_configfile "$1"
 
-   if ! __cfg_resolve_configfile
+   if ! sourcetree::cfg::__resolve_configfile
    then
       return 1
    fi
 
-   __cfg_read
+   sourcetree::cfg::__read
 }
 
 
-cfg_write()
+sourcetree::cfg::write()
 {
-   log_entry "cfg_write" "$@"
+   log_entry "sourcetree::cfg::write" "$@"
 
    [ -z "${MULLE_SOURCETREE_ETC_DIR}" ] && internal_fail "MULLE_SOURCETREE_ETC_DIR is empty"
 
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "$1" "w"
+   sourcetree::cfg::__common_configfile "$1" "w"
    shift
 
    r_mkdir_parent_if_missing "${_configfile}"
@@ -419,9 +424,9 @@ cfg_write()
 }
 
 
-cfg_get_nodeline()
+sourcetree::cfg::get_nodeline()
 {
-   log_entry "cfg_get_nodeline" "$@"
+   log_entry "sourcetree::cfg::get_nodeline" "$@"
 
    local projectdir="$1"
    local address="$2"
@@ -429,56 +434,56 @@ cfg_get_nodeline()
 
    local nodelines
 
-   nodelines="`cfg_read "${projectdir}"`"
-   nodeline_find "${nodelines}" "${address}" "${fuzzy}"
+   nodelines="`sourcetree::cfg::read "${projectdir}"`"
+   sourcetree::nodeline::find "${nodelines}" "${address}" "${fuzzy}"
 }
 
 
-cfg_get_nodeline_by_url()
+sourcetree::cfg::get_nodeline_by_url()
 {
-   log_entry "cfg_get_nodeline_by_url" "$@"
+   log_entry "sourcetree::cfg::get_nodeline_by_url" "$@"
 
    local projectdir="$1"
    local url="$2"
 
    local nodelines
 
-   nodelines="`cfg_read "${projectdir}"`"
-   nodeline_find_by_url "${nodelines}" "${url}"
+   nodelines="`sourcetree::cfg::read "${projectdir}"`"
+   sourcetree::nodeline::find_by_url "${nodelines}" "${url}"
 }
 
 
-cfg_get_nodeline_by_uuid()
+sourcetree::cfg::get_nodeline_by_uuid()
 {
-   log_entry "cfg_get_nodeline_by_uuid" "$@"
+   log_entry "sourcetree::cfg::get_nodeline_by_uuid" "$@"
 
    local projectdir="$1"
    local uuid="$2"
 
    local nodelines
 
-   nodelines="`cfg_read "${projectdir}"`"
-   nodeline_find_by_uuid "${nodelines}" "${uuid}"
+   nodelines="`sourcetree::cfg::read "${projectdir}"`"
+   sourcetree::nodeline::find_by_uuid "${nodelines}" "${uuid}"
 }
 
 
-cfg_get_nodeline_by_evaled_url()
+sourcetree::cfg::get_nodeline_by_evaled_url()
 {
-   log_entry "cfg_get_nodeline_by_evaled_url" "$@"
+   log_entry "sourcetree::cfg::get_nodeline_by_evaled_url" "$@"
 
    local projectdir="$1"
    local url="$2"
 
    local nodelines
 
-   nodelines="`cfg_read "${projectdir}"`"
-   nodeline_find_by_evaled_url "${nodelines}" "${url}"
+   nodelines="`sourcetree::cfg::read "${projectdir}"`"
+   sourcetree::nodeline::find_by_evaled_url "${nodelines}" "${url}"
 }
 
 
-cfg_has_duplicate()
+sourcetree::cfg::has_duplicate()
 {
-   log_entry "cfg_has_duplicate" "$@"
+   log_entry "sourcetree::cfg::has_duplicate" "$@"
 
    local projectdir="$1"
    local uuid="$2"
@@ -486,8 +491,8 @@ cfg_has_duplicate()
 
    local nodelines
 
-   nodelines="`cfg_read "${projectdir}"`"
-   nodeline_has_duplicate "${nodelines}" "${address}" "${uuid}"
+   nodelines="`sourcetree::cfg::read "${projectdir}"`"
+   sourcetree::nodeline::has_duplicate "${nodelines}" "${address}" "${uuid}"
 }
 
 
@@ -495,9 +500,9 @@ cfg_has_duplicate()
 # local _configfile
 # local _fallback_configfile
 #
-_cfg_copy_to_etc_if_needed()
+sourcetree::cfg::_copy_to_etc_if_needed()
 {
-   log_entry "_cfg_copy_to_etc_if_needed" "$@"
+   log_entry "sourcetree::cfg::_copy_to_etc_if_needed" "$@"
 
    if [ ! -f "${_configfile}" -a -f "${_fallback_configfile}" ]
    then
@@ -508,16 +513,16 @@ _cfg_copy_to_etc_if_needed()
 }
 
 
-cfg_remove_nodeline()
+sourcetree::cfg::remove_nodeline()
 {
-   log_entry "cfg_remove_nodeline" "$@"
+   log_entry "sourcetree::cfg::remove_nodeline" "$@"
 
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "$1" "w"
+   sourcetree::cfg::__common_configfile "$1" "w"
 
-   _cfg_copy_to_etc_if_needed
+   sourcetree::cfg::_copy_to_etc_if_needed
 
    local address="$2"
 
@@ -535,16 +540,16 @@ cfg_remove_nodeline()
 }
 
 
-cfg_remove_nodeline_by_uuid()
+sourcetree::cfg::remove_nodeline_by_uuid()
 {
-   log_entry "cfg_remove_nodeline_by_uuid" "$@"
+   log_entry "sourcetree::cfg::remove_nodeline_by_uuid" "$@"
 
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "$1" "w"
+   sourcetree::cfg::__common_configfile "$1" "w"
 
-   _cfg_copy_to_etc_if_needed
+   sourcetree::cfg::_copy_to_etc_if_needed
 
    local uuid="$2"
 
@@ -563,14 +568,14 @@ cfg_remove_nodeline_by_uuid()
 }
 
 
-cfg_file_remove()
+sourcetree::cfg::file_remove()
 {
-   log_entry "cfg_file_remove" "$@"
+   log_entry "sourcetree::cfg::file_remove" "$@"
 
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "$1" "w"
+   sourcetree::cfg::__common_configfile "$1" "w"
 
    remove_file_if_present "${_configfile}"
 }
@@ -579,44 +584,67 @@ cfg_file_remove()
 #
 # This is in a fallback situation probably not the best idea, because then
 # you couldn't remove everything. Depends though. So lets say if there is
-# a fallback, then we don't otherwise we do.
+# a fallback, then we don't otherwise we do. We can also remove if the
+# fallback is identical to what we have now (win!)
 #
-cfg_file_remove_if_empty()
+sourcetree::cfg::remove_if_empty_and_no_fallback_exists()
 {
-   log_entry "cfg_file_remove_if_empty" "$@"
+   log_entry "sourcetree::cfg::remove_if_empty_and_no_fallback_exists" "$@"
 
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "$1" "w"
+   sourcetree::cfg::__common_configfile "$1" "w"
 
-   if [ -z "${_fallback_configfile}" ]
+   local current_contents
+
+   current_contents="`sourcetree::cfg::__read`"
+
+   # if we have a fallback, then _configfile is not needed if the contents
+   # are identical
+   if [ ! -z "${_fallback_configfile}" ]
    then
-      if [ -z "`__cfg_read`" ]
+      local fallback_contents
+
+      fallback_contents="`sourcetree::cfg::__fallback_read`"
+      if [ "${current_contents}" != "${fallback_contents}" ]
       then
-         remove_file_if_present "${_configfile}"
+         return
+      fi
+      log_debug "Safe to remove as contents of fallback and config are identical"
+   else
+      log_debug "No fallback configured"
+
+      # With no fallback an empty _configfile is not needed
+      if [ ! -z "${current_contents}" ]
+      then
+         return
       fi
    fi
+
+   remove_file_if_present "${_configfile}"
+   r_dirname "${_configfile}"
+   rmdir_if_empty "${RVAL}"
 }
 
 
-cfg_change_nodeline()
+sourcetree::cfg::change_nodeline()
 {
-   log_entry "cfg_change_nodeline" "$@"
+   log_entry "sourcetree::cfg::change_nodeline" "$@"
 
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "$1" "w"
+   sourcetree::cfg::__common_configfile "$1" "w"
 
-   _cfg_copy_to_etc_if_needed
+   sourcetree::cfg::_copy_to_etc_if_needed
 
    local oldnodeline="$2"
    local newnodeline="$3"
 
    if [ "${MULLE_FLAG_LOG_DEBUG}" = 'YES' ]
    then
-      r_nodeline_diff "${oldnodeline}" "${newnodeline}"
+      sourcetree::nodeline::r_diff "${oldnodeline}" "${newnodeline}"
       log_debug "diff ${RVAL}"
    fi
 
@@ -643,9 +671,9 @@ cfg_change_nodeline()
 # returned path is always physical
 # SOURCETREE_START should probably be passed in
 #
-cfg_search_for_configfile()
+sourcetree::cfg::search_for_configfile()
 {
-   log_entry "cfg_search_for_configfile" "$@"
+   log_entry "sourcetree::cfg::search_for_configfile" "$@"
 
    local physdirectory="$1"
    local ceiling="$2"
@@ -693,7 +721,7 @@ from \"${physdirectory}\" to \"${physceiling}\""
 
       while :
       do
-         __cfg_common_configfile "${SOURCETREE_START}"
+         sourcetree::cfg::__common_configfile "${SOURCETREE_START}"
 
          if [ ! -z "${_configfile}" -o ! -z "${_fallback_configfile}" ]
          then
@@ -724,9 +752,9 @@ from \"${physdirectory}\" to \"${physceiling}\""
 # ROOT:    get the outermost enveloping sourcetree (can be PWD)
 #
 #
-cfg_determine_working_directory()
+sourcetree::cfg::determine_working_directory()
 {
-   log_entry "cfg_determine_working_directory" "$@"
+   log_entry "sourcetree::cfg::determine_working_directory" "$@"
 
    local defer="$1"
    local physpwd="$2"
@@ -764,7 +792,7 @@ cfg_determine_working_directory()
 
    case "${defer}" in
       'NONE')
-         if r_cfg_exists "${SOURCETREE_START}"
+         if sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
          then
             pwd -P
             return 0
@@ -775,7 +803,7 @@ cfg_determine_working_directory()
       ;;
 
       'NEAREST')
-         if ! cfg_search_for_configfile "${physpwd}" "${ceiling}"
+         if ! sourcetree::cfg::search_for_configfile "${physpwd}" "${ceiling}"
          then
             log_debug "No nearest config found or db found"
             return 1
@@ -785,7 +813,7 @@ cfg_determine_working_directory()
 
       # used for touching parent configs in a sourcetree
       'PARENT')
-         directory="`cfg_search_for_configfile "${physpwd}" "/"`"
+         directory="`sourcetree::cfg::search_for_configfile "${physpwd}" "/"`"
          if [ $? -ne 0 ]
          then
             log_debug "No config found or db found"
@@ -802,7 +830,7 @@ cfg_determine_working_directory()
          r_dirname "${directory}"
          parent="${RVAL}"
 
-         cfg_search_for_configfile "${parent}" "/"
+         sourcetree::cfg::search_for_configfile "${parent}" "/"
          if [ $? -eq 0 ]
          then
             log_debug "Actual parent found"
@@ -814,7 +842,7 @@ cfg_determine_working_directory()
       ;;
 
       'ROOT')
-         directory="`cfg_search_for_configfile "${physpwd}" "${ceiling}"`"
+         directory="`sourcetree::cfg::search_for_configfile "${physpwd}" "${ceiling}"`"
          if [ $? -ne 0 ]
          then
             log_debug "No config found"
@@ -831,7 +859,7 @@ cfg_determine_working_directory()
                break
             fi
 
-            directory="`cfg_search_for_configfile "${parent}" "${ceiling}" `"
+            directory="`sourcetree::cfg::search_for_configfile "${parent}" "${ceiling}" `"
             if [ $? -ne 0 ]
             then
                break
@@ -843,7 +871,7 @@ cfg_determine_working_directory()
       ;;
 
       'VIRTUAL')
-         directory="`cfg_search_for_configfile "/" "${ceiling}" `"
+         directory="`sourcetree::cfg::search_for_configfile "/" "${ceiling}" `"
          if [ $? -ne 0 ]
          then
             log_debug "No config found in MULLE_VIRTUAL_ROOT ($MULLE_VIRTUAL_ROOT}"
@@ -862,12 +890,12 @@ cfg_determine_working_directory()
 }
 
 
-cfg_get_parent()
+sourcetree::cfg::get_parent()
 {
    local start="$1"
 
    start="${start:-${MULLE_SOURCETREE_PROJECT_DIR}}"
-   cfg_determine_working_directory "PARENT" "${start}"
+   sourcetree::cfg::determine_working_directory "PARENT" "${start}"
 }
 
 
@@ -877,26 +905,27 @@ cfg_get_parent()
 # upwards. Not 100% sure that this is still very useful (but: in a normal
 # configuration, you don't have a parent anyway)
 #
-cfg_touch_parents()
+sourcetree::cfg::touch_parents()
 {
-   log_entry "cfg_touch_parents" "$@"
+   log_entry "sourcetree::cfg::touch_parents" "$@"
 
    local _rootdir
 
-   __cfg_common_rootdir "$@"
+   sourcetree::cfg::__common_rootdir "$@"
 
    local parent
    local _configfile
    local _fallback_configfile
 
-   while parent="`cfg_get_parent "${_rootdir}" `"
+   while parent="`sourcetree::cfg::get_parent "${_rootdir}" `"
    do
       [ "${parent}" = "${_rootdir}" ] \
          && internal_fail "${parent} endless loop"
 
-      __cfg_common_configfile "${SOURCETREE_START}"
+      sourcetree::cfg::__common_configfile "${SOURCETREE_START}"
 
-      if [ ! -z "${_configfile}" ]
+      # don't touch the fallback
+      if [ -f "${_configfile}" ]
       then
          exekutor touch -f "${_configfile}"
       fi
@@ -906,9 +935,9 @@ cfg_touch_parents()
 }
 
 
-cfg_defer_if_needed()
+sourcetree::cfg::defer_if_needed()
 {
-   log_entry "cfg_defer_if_needed" "$@"
+   log_entry "sourcetree::cfg::defer_if_needed" "$@"
 
    local defer="$1"
 
@@ -916,7 +945,7 @@ cfg_defer_if_needed()
    local physpwd
 
    physpwd="${MULLE_SOURCETREE_PROJECT_DIR}"
-   if directory="`cfg_determine_working_directory "${defer}" "${physpwd}"`"
+   if directory="`sourcetree::cfg::determine_working_directory "${defer}" "${physpwd}"`"
    then
       if [ "${directory}" != "${physpwd}" ]
       then
@@ -929,9 +958,9 @@ cfg_defer_if_needed()
 }
 
 
-r_cfg_absolute_filename()
+sourcetree::cfg::r_absolute_filename()
 {
-   log_entry "r_cfg_absolute_filename" "$@"
+   log_entry "sourcetree::cfg::r_absolute_filename" "$@"
 
    local config="$1"
    local address="$2"

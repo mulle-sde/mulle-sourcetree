@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_CONFIG_SH="included"
 
 
-sourcetree_config_usage()
+sourcetree::config::usage()
 {
    [ $# -ne 0 ] && log_error "$*"
 
@@ -78,7 +78,7 @@ EOF
 }
 
 
-sourcetree_config_list_usage()
+sourcetree::config::list_usage()
 {
    [ $# -ne 0 ] && log_error "$*"
 
@@ -95,7 +95,28 @@ EOF
 }
 
 
-sourcetree_config_copy_usage()
+sourcetree::config::name_usage()
+{
+   [ $# -ne 0 ] && log_error "$*"
+
+   cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} [flags] config name [options]
+
+   List the currently active sourcetree configuration name.
+
+Tip:
+   Use the --config-names and --config-scope flags to address a specific
+   config file.
+
+Options:
+   -h  : help
+EOF
+}
+
+
+
+sourcetree::config::copy_usage()
 {
    [ $# -ne 0 ] && log_error "$*"
 
@@ -115,7 +136,7 @@ EOF
 }
 
 
-sourcetree_config_remove_usage()
+sourcetree::config::remove_usage()
 {
    [ $# -ne 0 ] && log_error "$*"
 
@@ -138,9 +159,9 @@ EOF
 }
 
 
-r_sourcetree_config_find()
+sourcetree::config::r_find()
 {
-   log_entry "r_sourcetree_config_find" "$@"
+   log_entry "sourcetree::config::r_find" "$@"
 
    local config_names="$1"
    local config_scope="$2"
@@ -215,9 +236,9 @@ r_sourcetree_config_find()
 }
 
 
-sourcetree_config_list_main()
+sourcetree::config::list_main()
 {
-   log_entry "sourcetree_config_list_main" "$@"
+   log_entry "sourcetree::config::list_main" "$@"
 
    local OPTION_ALL
 
@@ -225,7 +246,7 @@ sourcetree_config_list_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_config_list_usage
+            sourcetree::config::list_usage
          ;;
 
          -a|--all)
@@ -233,7 +254,7 @@ sourcetree_config_list_main()
          ;;
 
          -*)
-            sourcetree_config_list_usage "Unknown config list option $1"
+            sourcetree::config::list_usage "Unknown config list option $1"
          ;;
 
          *)
@@ -244,7 +265,7 @@ sourcetree_config_list_main()
       shift
    done
 
-   [ $# -ne 0 ] && sourcetree_config_list_usage "Superflous arguments $*"
+   [ $# -ne 0 ] && sourcetree::config::list_usage "Superflous arguments $*"
 
    local filename
    local found
@@ -292,7 +313,7 @@ sourcetree_config_list_main()
    #
    #
    #
-   if r_sourcetree_config_find "${SOURCETREE_CONFIG_NAMES}" \
+   if sourcetree::config::r_find "${SOURCETREE_CONFIG_NAMES}" \
                                "${SOURCETREE_SCOPE}"
    then
       printf "%s\n" "${RVAL#${MULLE_USER_PWD}/}"
@@ -303,9 +324,9 @@ sourcetree_config_list_main()
 
 
 # scopeless name or names without etc or share
-sourcetree_config_name_main()
+sourcetree::config::name_main()
 {
-   log_entry "sourcetree_config_name_main" "$@"
+   log_entry "sourcetree::config::name_main" "$@"
 
    local OPTION_ALL
    local OPTION_SEPARATOR=$'\n'
@@ -314,7 +335,7 @@ sourcetree_config_name_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_config_name_usage
+            sourcetree::config::name_usage
          ;;
 
          -a|--all)
@@ -322,14 +343,14 @@ sourcetree_config_name_main()
          ;;
 
          --separator)
-            [ $# -eq 1 ] && sourcetree_config_name_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::config::name_usage "Missing argument to \"$1\""
             shift
 
             OPTION_SEPARATOR="$1"
          ;;
 
          -*)
-            sourcetree_config_name_usage "Unknown config list option $1"
+            sourcetree::config::name_usage "Unknown config list option $1"
          ;;
 
          *)
@@ -340,7 +361,7 @@ sourcetree_config_name_main()
       shift
    done
 
-   [ $# -ne 0 ] && sourcetree_config_name_usage "Superflous arguments $*"
+   [ $# -ne 0 ] && sourcetree::config::name_usage "Superflous arguments $*"
 
    local filename
    local found
@@ -397,8 +418,8 @@ sourcetree_config_name_main()
       return 1
    fi
 
-   if r_sourcetree_config_find "${SOURCETREE_CONFIG_NAMES}" \
-                               "${SOURCETREE_SCOPE}"
+   if sourcetree::config::r_find "${SOURCETREE_CONFIG_NAMES}" \
+                                 "${SOURCETREE_SCOPE}"
    then
       r_extensionless_basename "${RVAL}"
       printf "%s\n" "${RVAL}"
@@ -409,15 +430,15 @@ sourcetree_config_name_main()
 }
 
 
-sourcetree_config_copy_main()
+sourcetree::config::copy_main()
 {
-   log_entry "sourcetree_config_copy_main" "$@"
+   log_entry "sourcetree::config::copy_main" "$@"
 
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_config_copy_usage
+            sourcetree::config::copy_usage
          ;;
 
          -a|--all)
@@ -425,7 +446,7 @@ sourcetree_config_copy_main()
          ;;
 
          -*)
-            sourcetree_config_copy_usage "Unknown config copy option $1"
+            sourcetree::config::copy_usage "Unknown config copy option $1"
          ;;
 
          *)
@@ -436,8 +457,8 @@ sourcetree_config_copy_main()
       shift
    done
 
-   [ $# -eq 0 ] && sourcetree_config_copy_usage "Missing destination argument"
-   [ $# -gt 1 ] && shift && sourcetree_config_copy_usage "Superflous arguments $*"
+   [ $# -eq 0 ] && sourcetree::config::copy_usage "Missing destination argument"
+   [ $# -gt 1 ] && shift && sourcetree::config::copy_usage "Superflous arguments $*"
 
    local destination="$1"
 
@@ -482,7 +503,7 @@ sourcetree_config_copy_main()
       fail "\"${destination_file#${MULLE_USER_PWD}/}\" already exists"
    fi
 
-   if ! r_sourcetree_config_find "${SOURCETREE_CONFIG_NAMES}" "${SOURCETREE_SCOPE}"
+   if ! sourcetree::config::r_find "${SOURCETREE_CONFIG_NAMES}" "${SOURCETREE_SCOPE}"
    then
       local text
 
@@ -505,19 +526,19 @@ sourcetree_config_copy_main()
 }
 
 
-sourcetree_config_remove_main()
+sourcetree::config::remove_main()
 {
-   log_entry "sourcetree_config_remove_main" "$@"
+   log_entry "sourcetree::config::remove_main" "$@"
 
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_config_remove_usage
+            sourcetree::config::remove_usage
          ;;
 
          -*)
-            sourcetree_config_remove_usage "Unknown config copy option $1"
+            sourcetree::config::remove_usage "Unknown config copy option $1"
          ;;
 
          *)
@@ -528,9 +549,9 @@ sourcetree_config_remove_main()
       shift
    done
 
-   [ $# -ne 0 ] && sourcetree_config_remove_usage "Superflous argument $*"
+   [ $# -ne 0 ] && sourcetree::config::remove_usage "Superflous argument $*"
 
-   if ! r_sourcetree_config_find "${SOURCETREE_CONFIG_NAMES}" "${SOURCETREE_SCOPE}"
+   if ! sourcetree::config::r_find "${SOURCETREE_CONFIG_NAMES}" "${SOURCETREE_SCOPE}"
    then
       local text
 
@@ -549,8 +570,7 @@ sourcetree_config_remove_main()
    log_verbose "${RVAL#${MULLE_USER_PWD}/} found"
 
    #
-   # if in share, we gotta create an empty file, to effectively hide
-   # it
+   # if in share, we gotta create an empty file, to effectively hide it
    #
    local name
 
@@ -564,19 +584,19 @@ sourcetree_config_remove_main()
 }
 
 
-sourcetree_config_main()
+sourcetree::config::main()
 {
-   log_entry "sourcetree_config_main" "$@"
+   log_entry "sourcetree::config::main" "$@"
 
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_config_usage
+            sourcetree::config::usage
          ;;
 
          -*)
-            sourcetree_config_usage "Unknown config option $1"
+            sourcetree::config::usage "Unknown config option $1"
          ;;
 
          *)
@@ -605,11 +625,11 @@ sourcetree_config_main()
    cmd="${cmd:-list}"
    case "${cmd}" in
       name|copy|list|remove)
-         sourcetree_config_${cmd}_main "$@"
+         sourcetree::config::${cmd}_main "$@"
       ;;
 
       *)
-         sourcetree_config_usage "Unknown command \"${cmd}\""
+         sourcetree::config::usage "Unknown command \"${cmd}\""
       ;;
    esac
 }

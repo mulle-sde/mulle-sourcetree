@@ -1,6 +1,13 @@
-#! /usr/bin/env bash
+#! /bin/sh
 
 [ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
 
 
 expect()
@@ -36,25 +43,25 @@ main()
    local sourcenodeline
 
    # just store some cruft in nodeline, easier for testing
-   db_memorize "/" 1 "text" "" "/filename"
+   sourcetree::db::memorize "/" 1 "text" "" "/filename"
 
-   nodeline="`db_fetch_nodeline_for_uuid "/" 1`"
+   nodeline="`sourcetree::db::fetch_nodeline_for_uuid "/" 1`"
    expect "${nodeline}" "text"
-   nodeline="`db_fetch_filename_for_uuid "/" 1`"
+   nodeline="`sourcetree::db::fetch_filename_for_uuid "/" 1`"
    expect "${nodeline}" "/filename"
    log_verbose "----- #1 PASSED -----"
 
-   db_memorize "/" 2 "other" "owner" "/owner/other"
+   sourcetree::db::memorize "/" 2 "other" "owner" "/owner/other"
 
-   nodeline="`db_fetch_nodeline_for_uuid "/" 1`"
+   nodeline="`sourcetree::db::fetch_nodeline_for_uuid "/" 1`"
    expect "${nodeline}" "text"
-   nodeline="`db_fetch_nodeline_for_uuid "/" 2`"
+   nodeline="`sourcetree::db::fetch_nodeline_for_uuid "/" 2`"
    expect "${nodeline}" "other"
-   nodeline="`db_fetch_filename_for_uuid "/" 2`"
+   nodeline="`sourcetree::db::fetch_filename_for_uuid "/" 2`"
    expect "${nodeline}" "/owner/other"
    log_verbose "----- #2 PASSED -----"
 
-   if db_fetch_nodeline_for_uuid "/" 3
+   if sourcetree::db::fetch_nodeline_for_uuid "/" 3
    then
       internal_fail "did find something unexpectedly"
    fi
@@ -64,12 +71,12 @@ main()
    #
    # forget one
    #
-   if ! db_forget "/" 2
+   if ! sourcetree::db::forget "/" 2
    then
       internal_fail "could not forget 2"
    fi
 
-   if db_fetch_nodeline_for_uuid "/" 2
+   if sourcetree::db::fetch_nodeline_for_uuid "/" 2
    then
       internal_fail "did not forget"
    fi
@@ -80,36 +87,36 @@ main()
    #
    # for zombiefication we need a proper nodeline
    # with a _nodetype
-   if ! db_forget "/" 1
+   if ! sourcetree::db::forget "/" 1
    then
       internal_fail "did not forget"
    fi
 
-   db_memorize "/" 1 "_address;git;;1" "the_owner" "${PWD}/the_owner/_address"
+   sourcetree::db::memorize "/" 1 "_address;git;;1" "the_owner" "${PWD}/the_owner/_address"
 
    mkdir -p the_owner/_address
 
    #
    # zombify but keeping it alive
    #
-   if ! db_zombify_nodes "/"
+   if ! sourcetree::db::zombify_nodes "/"
    then
       internal_fail "internal_failed to zombify"
    fi
 
-   if ! db_fetch_nodeline_for_uuid "/" 1 > /dev/null
+   if ! sourcetree::db::fetch_nodeline_for_uuid "/" 1 > /dev/null
    then
       internal_fail "zombie doesn't respond anymore"
    fi
 
-   db_set_uuid_alive "/" 1
+   sourcetree::db::set_uuid_alive "/" 1
 
-   if ! db_bury_zombies "/"
+   if ! sourcetree::db::bury_zombies "/"
    then
       internal_fail "internal_failed to bury"
    fi
 
-   if ! db_fetch_nodeline_for_uuid "/" 1 > /dev/null
+   if ! sourcetree::db::fetch_nodeline_for_uuid "/" 1 > /dev/null
    then
       internal_fail "alive node unfairly reaped before its time"
    fi
@@ -121,22 +128,22 @@ main()
    #
    # zombify and bury
    #
-   if ! db_zombify_nodes "/"
+   if ! sourcetree::db::zombify_nodes "/"
    then
       internal_fail "internal_failed to zombify"
    fi
 
-   if ! db_fetch_nodeline_for_uuid "/" 1 > /dev/null
+   if ! sourcetree::db::fetch_nodeline_for_uuid "/" 1 > /dev/null
    then
       internal_fail "zombie doesn't respond anymore"
    fi
 
-   if ! db_bury_zombies "/"
+   if ! sourcetree::db::bury_zombies "/"
    then
       internal_fail "internal_failed to bury"
    fi
 
-   if db_fetch_nodeline_for_uuid "/" 1
+   if sourcetree::db::fetch_nodeline_for_uuid "/" 1
    then
       internal_fail "survived the zombie apocalypse"
    fi
@@ -153,10 +160,6 @@ main()
 
 init()
 {
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
-
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 

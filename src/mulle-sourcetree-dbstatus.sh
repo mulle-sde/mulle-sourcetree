@@ -29,10 +29,10 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_STATUS_SH="included"
+MULLE_SOURCETREE_DBSTATUS_SH="included"
 
 
-sourcetree_dbstatus_usage()
+sourcetree::dbstatus::usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -51,11 +51,11 @@ EOF
 }
 
 
-sourcetree_dbstatus_main()
+sourcetree::dbstatus::main()
 {
-   log_entry "sourcetree_dbstatus_main" "$@"
+   log_entry "sourcetree::dbstatus::main" "$@"
 
-   [ "$#" -eq 0 ] || sourcetree_dbstatus_usage
+   [ "$#" -eq 0 ] || sourcetree::status::usage
 
    if [ -z "${MULLE_SOURCETREE_CFG_SH}" ]
    then
@@ -70,12 +70,12 @@ sourcetree_dbstatus_main()
    local _configfile
    local _fallback_configfile
 
-   __cfg_common_configfile "${SOURCETREE_START}"
+   sourcetree::cfg::__common_configfile "${SOURCETREE_START}"
 
    local _database
    local _databasedir
 
-   __db_common_databasedir "/"
+   sourcetree::db::__common_databasedir "/"
 
    dbdonefile="${_databasedir}/.db_done"
 
@@ -100,7 +100,7 @@ sourcetree_dbstatus_main()
       return 2
    fi
 
-   if ! db_is_ready "${SOURCETREE_START}"
+   if ! sourcetree::db::is_ready "${SOURCETREE_START}"
    then
       log_info "Needs sync as database is not ready"
       return 2

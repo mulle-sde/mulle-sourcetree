@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_WRAP_SH="included"
 
 
-sourcetree_wrap_usage()
+sourcetree::wrap::usage()
 {
     cat <<EOF >&2
 Usage:
@@ -46,13 +46,13 @@ EOF
 }
 
 
-sourcetree_wrap_config()
+sourcetree::wrap::config()
 {
    local config="$1"
 
    local nodelines
 
-   nodelines="`cfg_read "${config}"`"
+   nodelines="`sourcetree::cfg::read "${config}"`"
 
    local nodeline
 #
@@ -84,7 +84,7 @@ sourcetree_wrap_config()
          continue
       fi
 
-      nodeline_parse "${nodeline}"  # memo: _marks not used
+      sourcetree::nodeline::parse "${nodeline}"  # memo: _marks not used
 
       r_de_camel_case_upcase_identifier "${_address}"
       identifier="${RVAL}"
@@ -172,7 +172,7 @@ sourcetree_wrap_config()
          ;;
       esac
 
-      r_node_to_nodeline
+      sourcetree::node::r_to_nodeline
 
       r_add_line "${rewritten_nodelines}" "${RVAL}"
       rewritten_nodelines="${RVAL}"
@@ -186,25 +186,25 @@ sourcetree_wrap_config()
       return
    fi
 
-   cfg_write "${config}" "${rewritten_nodelines}"
+   sourcetree::cfg::write "${config}" "${rewritten_nodelines}"
    log_verbose "Wrote changed sourcetree config"
 }
 
 
-sourcetree_wrap_main()
+sourcetree::wrap::main()
 {
-   log_entry "sourcetree_wrap_main" "$@"
+   log_entry "sourcetree::wrap::main" "$@"
 
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_wrap_usage
+            sourcetree::wrap::usage
          ;;
 
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown wrap option $1"
-            sourcetree_wrap_usage
+            sourcetree::wrap::usage
          ;;
 
          *)
@@ -215,16 +215,16 @@ sourcetree_wrap_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_wrap_usage
+   [ "$#" -eq 0 ] || sourcetree::wrap::usage
 
    log_info "Create new environment wraps for sourcetree"
-   sourcetree_wrap_config "/" || exit 1
+   sourcetree::wrap::config "/" || exit 1
 }
 
 
-sourcetree_wrap_initialize()
+sourcetree::wrap::initialize()
 {
-   log_entry "sourcetree_wrap_initialize"
+   log_entry "sourcetree::wrap::initialize"
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
@@ -264,7 +264,7 @@ sourcetree_wrap_initialize()
 }
 
 
-sourcetree_wrap_initialize
+sourcetree::wrap::initialize
 
 :
 

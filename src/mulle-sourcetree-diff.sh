@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_DIFF_SH="included"
 
 
-sourcetree_diff_usage()
+sourcetree::diff::usage()
 {
    [ $# -ne 0 ] && log_error "$*"
 
@@ -52,9 +52,9 @@ EOF
 }
 
 
-r_commalist_add()
+sourcetree::diff::r_commalist_add()
 {
-   log_entry "r_commalist_add" "$@"
+   log_entry "sourcetree::diff::r_commalist_add" "$@"
 
    local list="$1"
    local value="$2"
@@ -69,9 +69,9 @@ r_commalist_add()
 }
 
 
-r_commalist_remove()
+sourcetree::diff::r_commalist_remove()
 {
-   log_entry "r_commalist_remove" "$@"
+   log_entry "sourcetree::diff::r_commalist_remove" "$@"
 
    local list="$1"
    local value="$2"
@@ -83,9 +83,9 @@ r_commalist_remove()
 }
 
 
-r_sourcetree_diff_configs()
+sourcetree::diff::r_diff_configs()
 {
-   log_entry "r_sourcetree_diff_configs" "$@"
+   log_entry "sourcetree::diff::r_diff_configs" "$@"
 
    local config_a="$1"
    local config_b="$2"
@@ -102,7 +102,7 @@ r_sourcetree_diff_configs()
    config_a="${RVAL}"
    if [ -d "${config_a}" ]
    then
-      a_nodelines="`cfg_read "#${config_a}" `" || fail "Can't read config of \"$1\""
+      a_nodelines="`sourcetree::cfg::read "#${config_a}" `" || fail "Can't read config of \"$1\""
    else
       a_nodelines="`egrep -s -v '^#' "${config_a}" `" || fail "Can't read config file \"$1\""
    fi
@@ -115,7 +115,7 @@ r_sourcetree_diff_configs()
    config_b="${RVAL}"
    if [ -d "${config_b}" ]
    then
-      b_nodelines="`cfg_read "#${config_b}" `" || fail "Can't read config of \"$2\""
+      b_nodelines="`sourcetree::cfg::read "#${config_b}" `" || fail "Can't read config of \"$2\""
    else
       b_nodelines="`egrep -s -v '^#' "${config_b}" `" || fail "Can't read config file \"$2\""
    fi
@@ -152,22 +152,22 @@ r_sourcetree_diff_configs()
          continue
       fi
 
-      nodeline_parse "${a_nodeline}"  # memo: :_marks used raw
+      sourcetree::nodeline::parse "${a_nodeline}"  # memo: :_marks used raw
 
       b_nodeline=
       # now that we have a line, try to match uuid first, address second
-      if r_nodeline_find_by_uuid "${b_nodelines}" "${_uuid}"
+      if sourcetree::nodeline::r_find_by_uuid "${b_nodelines}" "${_uuid}"
       then
          b_nodeline="${RVAL}"
       else
-         if r_nodeline_find "${b_nodelines}" "${_address}"
+         if sourcetree::nodeline::r_find "${b_nodelines}" "${_address}"
          then
             b_nodeline="${RVAL}"
          else
             # this line is new in 'a'
             case "${mode}" in
                'summary')
-                  r_commalist_add "${list}" "INSERT"
+                  sourcetree::diff::r_commalist_add "${list}" "INSERT"
                ;;
 
                'long-diff')
@@ -187,7 +187,7 @@ r_sourcetree_diff_configs()
       r_add_line "${matched}" "${b_nodeline}"
       matched="${RVAL}"
 
-      r_nodeline_diff "${a_nodeline}" "${b_nodeline}" "field"
+      sourcetree::nodeline::r_diff "${a_nodeline}" "${b_nodeline}" "field"
       changedfields="${RVAL}"
       # can happen if only UUID differ
       if [ -z "${changedfields}" ]
@@ -202,24 +202,24 @@ r_sourcetree_diff_configs()
 
       case "${mode}" in
          'summary')
-            r_commalist_remove "${changedfields}" "marks"
-            r_commalist_remove "${RVAL}" "userinfo"
+            sourcetree::diff::r_commalist_remove "${changedfields}" "marks"
+            sourcetree::diff::r_commalist_remove "${RVAL}" "userinfo"
             changedfields="${RVAL}"
             if [ -z "${changedfields}" ]
             then
-               r_commalist_add "${list}" "MODIFY"
+               sourcetree::diff::r_commalist_add "${list}" "MODIFY"
             else
-               r_commalist_add "${list}" "UPDATE"
+               sourcetree::diff::r_commalist_add "${list}" "UPDATE"
             fi
          ;;
 
          'diff')
-            r_nodeline_diff "${a_nodeline}" "${b_nodeline}" "diff"
+            sourcetree::nodeline::r_diff "${a_nodeline}" "${b_nodeline}" "diff"
             r_add_line "${list}" "<> ${_address} ${RVAL}"
          ;;
 
          'long-diff')
-            r_nodeline_diff "${a_nodeline}" "${b_nodeline}" "diff"
+            sourcetree::nodeline::r_diff "${a_nodeline}" "${b_nodeline}" "diff"
             r_add_line "${list}" "<> ${RVAL}"
          ;;
       esac
@@ -233,7 +233,7 @@ r_sourcetree_diff_configs()
       then
          case "${mode}" in
             'summary')
-               r_commalist_add "${list}" "DELETE"
+               sourcetree::diff::r_commalist_add "${list}" "DELETE"
             ;;
 
             'long-diff')
@@ -241,7 +241,7 @@ r_sourcetree_diff_configs()
             ;;
 
             'diff')
-               r_nodeline_get_address "${b_nodeline}"
+               sourcetree::nodeline::r_get_address "${b_nodeline}"
                r_add_line "${list}" "- ${RVAL}"
             ;;
          esac
@@ -255,9 +255,9 @@ r_sourcetree_diff_configs()
 }
 
 
-sourcetree_diff_main()
+sourcetree::diff::main()
 {
-   log_entry "sourcetree_diff_main" "$@"
+   log_entry "sourcetree::diff::main" "$@"
 
    local OPTION_MODE=diff
 
@@ -265,7 +265,7 @@ sourcetree_diff_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_diff_usage
+            sourcetree::diff::usage
          ;;
 
          --summary)
@@ -273,7 +273,7 @@ sourcetree_diff_main()
          ;;
 
          -*)
-            sourcetree_diff_usage "Unknown clean option $1"
+            sourcetree::diff::usage "Unknown clean option $1"
          ;;
 
          *)
@@ -284,12 +284,12 @@ sourcetree_diff_main()
       shift
    done
 
-   [ $# -eq 0 ] && sourcetree_diff_usage "Missing argument"
+   [ $# -eq 0 ] && sourcetree::diff::usage "Missing argument"
 
    local other="$1"
    shift
 
-   [ $# -gt 1 ] && shift && sourcetree_diff_usage "Superflous arguments $*"
+   [ $# -gt 1 ] && shift && sourcetree::diff::usage "Superflous arguments $*"
 
 
    local config
@@ -301,7 +301,7 @@ sourcetree_diff_main()
       other="$1"
    fi
 
-   r_sourcetree_diff_configs "${config}" "${other}" "${OPTION_MODE}"
+   sourcetree::diff::r_diff_configs "${config}" "${other}" "${OPTION_MODE}"
    if ! [ -z "${RVAL}" ]
    then
       printf "%s\n" "${RVAL}"

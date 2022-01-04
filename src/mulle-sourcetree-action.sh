@@ -32,9 +32,9 @@
 MULLE_SOURCETREE_ACTION_SH="included"
 
 
-r_mulle_fetch_eval_options()
+sourcetree::action::r_fetch_eval_options()
 {
-   log_entry "r_mulle_fetch_eval_options" "$@"
+   log_entry "sourcetree::action::r_fetch_eval_options" "$@"
 
    local options
 
@@ -106,9 +106,9 @@ r_mulle_fetch_eval_options()
 ##
 ## CLONE
 ##
-_has_system_include()
+sourcetree::action::has_system_include()
 {
-   log_entry "_has_system_include" "$@"
+   log_entry "sourcetree::action::has_system_include" "$@"
 
    local _uuid="$1"
 
@@ -195,9 +195,9 @@ _has_system_include()
 # }
 
 
-_do_fetch_operation()
+sourcetree::action::_do_fetch_operation()
 {
-   log_entry "_do_fetch_operation" "$@"
+   log_entry "sourcetree::action::_do_fetch_operation" "$@"
 
    local _address="$1"        # address of this node
    shift
@@ -216,7 +216,7 @@ _do_fetch_operation()
 
    [ $# -eq 9 ] || internal_fail "fail"
 
-   if [ "${OPTION_CHECK_USR_LOCAL_INCLUDE}" = 'YES' ] && _has_system_include "${_uuid}"
+   if [ "${OPTION_CHECK_USR_LOCAL_INCLUDE}" = 'YES' ] && sourcetree::action::has_system_include "${_uuid}"
    then
       log_info "${C_MAGENTA}${C_BOLD}${_uuid}${C_INFO} is a system library, so not fetching it"
       return 1
@@ -241,7 +241,7 @@ _do_fetch_operation()
 
    local options
 
-   r_mulle_fetch_eval_options
+   sourcetree::action::r_fetch_eval_options
    options="${RVAL}"
 
    #
@@ -288,22 +288,22 @@ _do_fetch_operation()
    #
    if [ "${MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH}" = 'YES' ]
    then
-      if nodemarks_disable "${_marks}" "platform-${MULLE_UNAME}"
+      if sourcetree::nodemarks::disable "${_marks}" "platform-${MULLE_UNAME}"
       then
-         log_warning "${C_RESET_BOLD}${_address#${MULLE_USER_PWD}/}${C_WARNING} \
-not fetched as ${C_MAGENTA}${C_BOLD}platform-${MULLE_UNAME}${C_WARNING} is \
+         log_info "${C_RESET_BOLD}${_address#${MULLE_USER_PWD}/}${C_INFO} \
+not fetched as ${C_MAGENTA}${C_BOLD}platform-${MULLE_UNAME}${C_INFO} is \
 disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
          return
       fi
    fi
 
-   sourcetree_sync_operation "${opname}" "${options}" \
-                                         "${_url}" \
-                                         "${destination}" \
-                                         "${_branch}" \
-                                         "${_tag}" \
-                                         "${_nodetype}" \
-                                         "${_fetchoptions}"
+   sourcetree::fetch::sync_operation "${opname}" "${options}" \
+                                                 "${_url}" \
+                                                 "${destination}" \
+                                                 "${_branch}" \
+                                                 "${_tag}" \
+                                                 "${_nodetype}" \
+                                                 "${_fetchoptions}"
    rval="$?"
    case $rval in
       0)
@@ -321,7 +321,7 @@ disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
       ;;
    esac
 
-   if nodemarks_disable "${_marks}" "readwrite"
+   if sourcetree::nodemarks::disable "${_marks}" "readwrite"
    then
       log_verbose "Write protecting \"${_address}\""
       exekutor find "${_address}" -type f -exec chmod a-w {} \;
@@ -336,15 +336,15 @@ disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
 }
 
 
-do_operation()
+sourcetree::action::do_operation()
 {
-   log_entry "do_operation" "$@"
+   log_entry "sourcetree::action::do_operation" "$@"
 
    local opname="$1" ; shift
 
    if [ "${opname}" = "fetch" ]
    then
-      _do_fetch_operation "$@"
+      sourcetree::action::_do_fetch_operation "$@"
       return $?
    fi
 
@@ -370,10 +370,10 @@ do_operation()
 
    local options
 
-   r_mulle_fetch_eval_options
+   sourcetree::action::r_fetch_eval_options
    options="${RVAL}"
 
-   sourcetree_sync_operation "${opname}" "${options}" \
+   sourcetree::fetch::sync_operation "${opname}" "${options}" \
                                          "${_url}" \
                                          "${destination}" \
                                          "${_branch}" \
@@ -383,9 +383,9 @@ do_operation()
 }
 
 
-update_safe_move_node()
+sourcetree::action::update_safe_move_node()
 {
-   log_entry "update_safe_move_node" "$@"
+   log_entry "sourcetree::action::update_safe_move_node" "$@"
 
    local previousfilename="$1"
    local filename="$2"
@@ -394,7 +394,7 @@ update_safe_move_node()
    [ -z "${previousfilename}" ] && internal_fail "empty previousfilename"
    [ -z "${filename}" ]         && internal_fail "empty filename"
 
-   if nodemarks_disable "${_marks}" "delete"
+   if sourcetree::nodemarks::disable "${_marks}" "delete"
    then
       fail "Can't move node ${_url} from to \"${previousfilename}\" \
 to \"${filename}\" as it is marked no-delete"
@@ -410,9 +410,9 @@ to \"${filename}\" as it is marked no-delete"
 }
 
 
-update_safe_remove_node()
+sourcetree::action::update_safe_remove_node()
 {
-   log_entry "update_safe_remove_node" "$@"
+   log_entry "sourcetree::action::update_safe_remove_node" "$@"
 
    local filename="$1"
    local _marks="$2"
@@ -422,36 +422,36 @@ update_safe_remove_node()
    [ -z "${filename}" ] && internal_fail "empty filename"
    [ -z "${_uuid}" ]    && internal_fail "empty _uuid"
 
-   if nodemarks_disable "${_marks}" "delete"
+   if sourcetree::nodemarks::disable "${_marks}" "delete"
    then
       fail "Can't remove \"${filename}\" as it is marked no-delete"
    fi
 
-   db_bury "${database}" "${_uuid}" "${filename}"
-   db_forget "${database}" "${_uuid}"
+   sourcetree::db::bury "${database}" "${_uuid}" "${filename}"
+   sourcetree::db::forget "${database}" "${_uuid}"
 }
 
 
-update_safe_clobber()
+sourcetree::action::update_safe_clobber()
 {
-   log_entry "update_safe_clobber" "$@"
+   log_entry "sourcetree::action::update_safe_clobber" "$@"
 
    local filename="$1"
    local database="$2"
 
    [ -z "${filename}" ] && internal_fail "empty filename"
 
-   r_node_uuidgen
-   db_bury "${database}" "${RVAL}" "${filename}"
+   sourcetree::node::r_uuidgen
+   sourcetree::db::bury "${database}" "${RVAL}" "${filename}"
 }
 
 
 ##
 ## this produces actions, does not care about _marks
 ##
-r_update_actions_for_node()
+sourcetree::action::r_update_actions_for_node()
 {
-   log_entry "r_update_actions_for_node" "$@"
+   log_entry "sourcetree::action::r_update_actions_for_node" "$@"
 
    local style="$1"
    local newnodeline="$2"
@@ -478,7 +478,7 @@ r_update_actions_for_node()
    #
    local sanitized
 
-   r_node_sanitized_address "${newaddress}"
+   sourcetree::node::r_sanitized_address "${newaddress}"
    sanitized="${RVAL}"
    if [ "${newaddress}" != "${sanitized}" ]
    then
@@ -533,7 +533,7 @@ chickening out"
          #    at this point in time, that should have already been checked
          #    against
 
-         if nodemarks_disable "${newmarks}" "delete"
+         if sourcetree::nodemarks::disable "${newmarks}" "delete"
          then
             case "${newnodetype}" in
                local)
@@ -567,7 +567,7 @@ As node is marked \"no-delete\" just remember it."
          fi
 
          log_fluff "Node is new, but \"${newfilename#${MULLE_USER_PWD}/}\" exists. Clobber it."
-         update_safe_clobber "${newfilename}" "${database}"
+         sourcetree::action::update_safe_clobber "${newfilename}" "${database}"
          ACTIONS="remember"
       else
          if [ -z "${_url}" ]
@@ -636,14 +636,14 @@ sourcetree \"${pretty_config}\" is missing, so fetch"
    local _raw_userinfo
    local _uuid
 
-   nodeline_parse "${previousnodeline}"  # memo: _marks not used
+   sourcetree::nodeline::parse "${previousnodeline}"  # memo: _marks not used
 
    if [ "${_uuid}" != "${newuuid}" ]
    then
       internal_fail "uuid \"${newuuid}\" wrong (expected \"${_uuid}\")"
    fi
 
-   r_node_sanitized_address "${_address}"
+   sourcetree::node::r_sanitized_address "${_address}"
    sanitized="${RVAL}"
    if [ "${_address}" != "${sanitized}" ]
    then
@@ -753,7 +753,7 @@ in URL related info."
 
       r_expanded_string "${_nodetype}"
       evalednodetype="${RVAL}"
-      r_sourcetree_list_operations "${evalednodetype}"
+      sourcetree::fetch::r_list_operations "${evalednodetype}"
       available="${RVAL}" || return 1
    fi
 
@@ -832,15 +832,15 @@ fetch"
 # uses variables from enclosing function
 # just here for readability and to pipe stdout into stderr
 #
-__update_perform_item()
+sourcetree::action::__update_perform_item()
 {
-   log_entry "__update_perform_item"
+   log_entry "sourcetree::action::__update_perform_item"
 
    [ -z "${filename}" ] && internal_fail "filename is empty"
 
    case "${item}" in
       "checkout"|"upgrade"|"set-url")
-         if ! do_operation "${item}" "${_address}" \
+         if ! sourcetree::action::do_operation "${item}" "${_address}" \
                                      "${_url}" \
                                      "${filename}" \
                                      "${_branch}" \
@@ -854,7 +854,7 @@ __update_perform_item()
             # as these are shortcuts to remove/fetch, but the
             # fetch part didn't work out we need to remove
             # the previousaddress
-            update_safe_remove_node "${previousfilename}" "${_marks}" "${_uuid}" "${database}"
+            sourcetree::action::update_safe_remove_node "${previousfilename}" "${_marks}" "${_uuid}" "${database}"
             log_fluff "Failed to ${item} ${_url}" # operation should have errored already
             exit 1
          fi
@@ -863,7 +863,7 @@ __update_perform_item()
       ;;
 
       "fetch")
-         do_operation "fetch" "${_address}" \
+         sourcetree::action::do_operation "fetch" "${_address}" \
                               "${_url}" \
                               "${filename}" \
                               "${_branch}" \
@@ -899,18 +899,17 @@ __update_perform_item()
                       log_verbose "Removing old symlink \"${filename}\""
                       exekutor rm -f "${filename}" >&2
                   else
-                     update_safe_clobber "${database}" "${filename}"
+                     sourcetree::action::update_safe_clobber "${database}" "${filename}"
                   fi
                fi
 
-               if nodemarks_disable "${_marks}" "require" ||
-                  nodemarks_disable "${_marks}" "require-os-${MULLE_UNAME}"
+               if sourcetree::nodemarks::disable "${_marks}" "require" ||
+                  sourcetree::nodemarks::disable "${_marks}" "require-os-${MULLE_UNAME}"
                then
                   log_info "${C_MAGENTA}${C_BOLD}${filename}${C_INFO} is not required."
 
-                  db_add_missing "${database}" "${_uuid}" "${nodeline}"
-                  _skip='YES'
-                  return 1
+                  sourcetree::db::add_missing "${database}" "${_uuid}" "${nodeline}"
+                  return 4
                fi
 
                fail "The fetch of \"${_address}\" failed and it is required."
@@ -932,16 +931,16 @@ which must be upgraded to be usable."
       ;;
 
       "move")
-         update_safe_move_node "${previousfilename}" "${filename}" "${_marks}"
+         sourcetree::action::update_safe_move_node "${previousfilename}" "${filename}" "${_marks}"
          _remember='YES'
       ;;
 
       "clobber")
-         update_safe_clobber "${filename}" "${database}"
+         sourcetree::action::update_safe_clobber "${filename}" "${database}"
       ;;
 
       "remove")
-         update_safe_remove_node "${previousfilename}" "${_marks}" "${_uuid}" "${database}"
+         sourcetree::action::update_safe_remove_node "${previousfilename}" "${_marks}" "${_uuid}" "${database}"
       ;;
 
       *)
@@ -959,9 +958,9 @@ which must be upgraded to be usable."
 # _skip
 # _nodetype
 
-__update_perform_actions()
+sourcetree::action::__update_perform_actions()
 {
-   log_entry "__update_perform_actions" "$@"
+   log_entry "sourcetree::action::__update_perform_actions" "$@"
 
    local style="$1"
    local nodeline="$2"
@@ -982,12 +981,12 @@ __update_perform_actions()
    local _raw_userinfo
    local _uuid
 
-   nodeline_parse "${nodeline}"     # !!
+   sourcetree::nodeline::parse "${nodeline}"     # !!
 
    local actionitems
    local dbfilename
 
-   r_update_actions_for_node "${style}" \
+   sourcetree::action::r_update_actions_for_node "${style}" \
                              "${nodeline}" \
                              "${filename}" \
                              "${previousnodeline}" \
@@ -1018,11 +1017,25 @@ __update_perform_actions()
    do
       shell_enable_glob
 
-      if ! __update_perform_item # this will exit on fail
-      then
-         rval=1
-         break
-      fi
+      # if this returns 4 its fine (like a non-required dependency)
+      sourcetree::action::__update_perform_item # this will exit on fail
+      rval=$?
+      case $rval in
+         0)
+            continue
+         ;;
+
+         4)
+            _skip='YES'
+            rval=0
+            break
+         ;;
+
+         *)
+            rval=1
+            break
+         ;;
+      esac
    done
    shell_enable_glob
 
@@ -1030,9 +1043,9 @@ __update_perform_actions()
 }
 
 
-_memorize_node_in_db()
+sourcetree::action::_memorize_node_in_db()
 {
-   log_entry "_memorize_node_in_db" "$@"
+   log_entry "sourcetree::action::_memorize_node_in_db" "$@"
 
    local database="$1"
    local config="$2"
@@ -1040,7 +1053,7 @@ _memorize_node_in_db()
 #
    local nodeline
 
-   r_node_to_nodeline
+   sourcetree::node::r_to_nodeline
    nodeline="${RVAL}"
 
    local _evaledurl
@@ -1049,12 +1062,12 @@ _memorize_node_in_db()
    local _evaledtag
    local _evaledfetchoptions
 
-   node_evaluate_values
+   sourcetree::node::__evaluate_values
 
    log_debug "${C_INFO}Remembering ${_address} located at \"${filename}\" \
 in \"${database}\"..."
 
-   db_memorize "${database}" \
+   sourcetree::db::memorize "${database}" \
                "${_uuid}" \
                "${nodeline}" \
                "${config}" \
@@ -1063,9 +1076,9 @@ in \"${database}\"..."
 }
 
 
-write_fix_info()
+sourcetree::action::write_fix_info()
 {
-   log_entry "write_fix_info" "$@"
+   log_entry "sourcetree::action::write_fix_info" "$@"
 
    local nodeline="$1"
    local filename="$2"
@@ -1100,9 +1113,9 @@ ${nodeline}"
 }
 
 
-_r_do_actions_with_nodeline()
+sourcetree::action::_r_do_actions_with_nodeline()
 {
-   log_entry "_r_do_actions_with_nodeline" "$@"
+   log_entry "sourcetree::action::_r_do_actions_with_nodeline" "$@"
 
    local nodeline="$1"
    local style="$2"
@@ -1125,9 +1138,9 @@ _r_do_actions_with_nodeline()
    local _raw_userinfo
    local _uuid
 
-   nodeline_parse "${nodeline}"  # !!
+   sourcetree::nodeline::parse "${nodeline}"  # !!
 
-   if nodemarks_disable "${_marks}" "fs"
+   if sourcetree::nodemarks::disable "${_marks}" "fs"
    then
       log_fluff "\"${_address}\" is marked as no-fs, so nothing to update"
       return 2
@@ -1140,7 +1153,7 @@ _r_do_actions_with_nodeline()
    local _evaledtag
    local _evaledfetchoptions
 
-   node_evaluate_values
+   sourcetree::node::__evaluate_values
 
    if [ "${_evalednodetype}" = 'comment' ]
    then
@@ -1155,9 +1168,9 @@ _r_do_actions_with_nodeline()
    local filename
 
    if [ ! -z "${_evaledurl}" -a "${style}" = "share" ] \
-      && nodemarks_enable "${_marks}" "share"
+      && sourcetree::nodemarks::enable "${_marks}" "share"
    then
-      r_db_update_determine_share_filename "${_address%#*}" \
+      sourcetree::db::r_share_filename "${_address%#*}" \
                                            "${_evaledurl}" \
                                            "${_evalednodetype}" \
                                            "${_marks}" \
@@ -1188,7 +1201,7 @@ _r_do_actions_with_nodeline()
       esac
       database='/'
    else
-      r_cfg_absolute_filename "${config}" "${_address%#*}" "${style}"
+      sourcetree::cfg::r_absolute_filename "${config}" "${_address%#*}" "${style}"
       filename="${RVAL}"
    fi
 
@@ -1201,12 +1214,12 @@ _r_do_actions_with_nodeline()
 
    [ -z "${database}" ] && internal_fail "A share-only update gone wrong"
 
-   if nodemarks_disable "${_marks}" "update"
+   if sourcetree::nodemarks::disable "${_marks}" "update"
    then
       if [ ! -e "${filename}"  ]
       then
-         if nodemarks_disable "${_marks}" "require" ||
-            nodemarks_disable "${_marks}" "require-os-${MULLE_UNAME}"
+         if sourcetree::nodemarks::disable "${_marks}" "require" ||
+            sourcetree::nodemarks::disable "${_marks}" "require-os-${MULLE_UNAME}"
          then
             log_fluff "\"${_address}\" is marked as no-update and doesn't exist, \
 but it is not required"
@@ -1225,7 +1238,7 @@ but it is not required"
          filename="${RVAL}"
       fi
 
-      _memorize_node_in_db "${database}" "${config}" "${filename}"
+      sourcetree::action::_memorize_node_in_db "${database}" "${config}" "${filename}"
       RVAL="${_uuid}"
       return 0
    fi
@@ -1244,10 +1257,10 @@ but it is not required"
    #
    local otheruuid
 
-   otheruuid="`db_fetch_uuid_for_address "${database}" "${_address}"`"
+   otheruuid="`sourcetree::db::fetch_uuid_for_address "${database}" "${_address}"`"
    if [ ! -z "${otheruuid}" ]
    then
-      if db_is_uuid_alive "${database}" "${otheruuid}"
+      if sourcetree::db::is_uuid_alive "${database}" "${otheruuid}"
       then
          if [ "${otheruuid}" != "${_uuid}" ]
          then
@@ -1273,14 +1286,14 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    local previousfilename
    local previousaddress
 
-   previousnodeline="`db_fetch_nodeline_for_uuid "${database}" "${_uuid}"`"
+   previousnodeline="`sourcetree::db::fetch_nodeline_for_uuid "${database}" "${_uuid}"`"
 
    #
    # find out, where it was previously located
    #
    if [ ! -z "${previousnodeline}" ]
    then
-      previousfilename="`db_fetch_filename_for_uuid "${database}" "${_uuid}"`"
+      previousfilename="`sourcetree::db::fetch_filename_for_uuid "${database}" "${_uuid}"`"
 
       [ -z "${previousfilename}" ] && internal_fail "corrupted db"
    else
@@ -1308,7 +1321,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    then
       log_debug "Skip update of \"${filename}\" since it's a symlink."
 
-      _memorize_node_in_db "${database}" "${config}" "${filename}"
+      sourcetree::action::_memorize_node_in_db "${database}" "${config}" "${filename}"
       RVAL="${_uuid}"
       return 0
    fi
@@ -1321,7 +1334,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    local _skip
 
    # this actually exits on fail
-   if ! __update_perform_actions "${style}" \
+   if ! sourcetree::action::__update_perform_actions "${style}" \
                                  "${nodeline}" \
                                  "${filename}" \
                                  "${previousnodeline}" \
@@ -1352,12 +1365,12 @@ nodetype        : ${_nodetype}"
          filename="${RVAL}"
       fi
 
-      _memorize_node_in_db "${database}" "${config}" "${filename}"
+      sourcetree::action::_memorize_node_in_db "${database}" "${config}" "${filename}"
 
       if [ "${OPTION_FIX}" != 'NO' ] && [ -d "${filename}" ]
       then
          # we memorize the original config nodeline for easier comparison
-         write_fix_info "${nodeline}" "${filename}"
+         sourcetree::action::write_fix_info "${nodeline}" "${filename}"
       fi
    else
       log_debug "Don't need to remember \"${nodeline}\" (should be unchanged)"
@@ -1368,9 +1381,9 @@ nodetype        : ${_nodetype}"
 }
 
 
-do_actions_with_nodeline()
+sourcetree::action::do_actions_with_nodeline()
 {
-   log_entry "do_actions_with_nodeline" "$@"
+   log_entry "sourcetree::action::do_actions_with_nodeline" "$@"
 
 #   local nodeline="$1"
 #   local style="$2"
@@ -1380,7 +1393,7 @@ do_actions_with_nodeline()
    local uuid 
    local rval 
 
-   _r_do_actions_with_nodeline "$@"
+   sourcetree::action::_r_do_actions_with_nodeline "$@"
    rval=$?
 
    case $rval in
@@ -1394,9 +1407,9 @@ do_actions_with_nodeline()
 
    uuid="${RVAL}"
    # this could be executed in parallel ?
-   if ! db_set_uuid_alive "${database}" "${uuid}"
+   if ! sourcetree::db::set_uuid_alive "${database}" "${uuid}"
    then
-      if db_set_uuid_alive "/" "${uuid}"
+      if sourcetree::db::set_uuid_alive "/" "${uuid}"
       then
          log_fluff "${uuid} is alive as no zombie is present"
       fi
@@ -1404,9 +1417,9 @@ do_actions_with_nodeline()
 }
 
 
-do_actions_with_nodelines()
+sourcetree::action::do_actions_with_nodelines()
 {
-   log_entry "do_actions_with_nodelines" "$@"
+   log_entry "sourcetree::action::do_actions_with_nodelines" "$@"
 
    local nodelines="$1"
    local style="$2"
@@ -1434,7 +1447,7 @@ do_actions_with_nodelines()
 
       [ -z "${nodeline}" ] && continue 
 
-      if ! do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+      if ! sourcetree::action::do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
       then
          rval=1
          break
@@ -1447,9 +1460,9 @@ do_actions_with_nodelines()
 }
 
 
-do_actions_with_nodelines_parallel()
+sourcetree::action::do_actions_with_nodelines_parallel()
 {
-   log_entry "do_actions_with_nodelines_parallel" "$@"
+   log_entry "sourcetree::action::do_actions_with_nodelines_parallel" "$@"
 
    local nodelines="$1"
    local style="$2"
@@ -1483,7 +1496,7 @@ do_actions_with_nodelines_parallel()
 
       if [ ! -z "${nodeline}" ]
       then
-         _parallel_execute do_actions_with_nodeline "${nodeline}" \
+         _parallel_execute sourcetree::action::do_actions_with_nodeline "${nodeline}" \
                                                     "${style}" \
                                                     "${config}" \
                                                     "${database}"
@@ -1499,9 +1512,9 @@ do_actions_with_nodelines_parallel()
 }
 
 
-sourcetree_action_initialize()
+sourcetree::action::initialize()
 {
-   log_entry "sourcetree_action_initialize"
+   log_entry "sourcetree::action::initialize"
 
    if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
    then
@@ -1525,6 +1538,6 @@ sourcetree_action_initialize()
 }
 
 
-sourcetree_action_initialize
+sourcetree::action::initialize
 
 :

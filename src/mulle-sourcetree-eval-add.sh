@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_EVAL_ADD_SH="included"
 
 
-sourcetree_eval_add_usage()
+sourcetree::eval_add::usage()
 {
    [ "$#" -ne 0 ] && log_error "$1"
 
@@ -50,9 +50,9 @@ EOF
 }
 
 
-sourcetree_append_add_command()
+sourcetree::eval_add::append_add()
 {
-   log_entry "sourcetree_append_add_command" "$@"
+   log_entry "sourcetree::eval_add::append_add" "$@"
 
    local arguments_list="$1"
    local arguments="$2"
@@ -73,9 +73,9 @@ sourcetree_append_add_command()
 
 
 # like mulle_sde_init add_to_sourcetree but no templating
-sourcetree_eval_add_commands()
+sourcetree::eval_add::commands()
 {
-   log_entry "sourcetree_eval_add_commands" "$@"
+   log_entry "sourcetree::eval_add::commands" "$@"
 
    local lines="$1"
    local filename="$2"
@@ -110,24 +110,24 @@ sourcetree_eval_add_commands()
             ;;
          esac
 
-         sourcetree_append_add_command "${arguments_list}" "${arguments}${line}"
+         sourcetree::eval_add::append_add "${arguments_list}" "${arguments}${line}"
          arguments_list="${RVAL}"
          arguments=
       done
 
-      sourcetree_append_add_command "${arguments_list}" "${arguments}"
+      sourcetree::eval_add::append_add "${arguments_list}" "${arguments}"
       arguments_list="${RVAL}"
 
       for arguments in ${arguments_list}
       do
          # This is somewhat dangerous as we
          # are evaluating possibly hostile code here, but only as arguments
-         # to sourcetree_add_main and the executable bits $( and ` should have
+         # to sourcetree::commands::add_main and the executable bits $( and ` should have
          # been taken care of.  We use a subshell for slightly improved peace
          # of mind
          #
          (
-            eval_exekutor sourcetree_add_main "${arguments}"
+            eval_exekutor sourcetree::commands::add_main "${arguments}"
          ) || fail "\"${filename}\" has malformed contents: ${arguments}"
       done
    ) || exit 1
@@ -136,9 +136,9 @@ sourcetree_eval_add_commands()
 
 
 
-sourcetree_eval_add_main()
+sourcetree::eval_add::main()
 {
-   log_entry "sourcetree_eval_add_main" "$@"
+   log_entry "sourcetree::eval_add::main" "$@"
 
    local OPTION_FILENAME
 
@@ -146,12 +146,12 @@ sourcetree_eval_add_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_eval_add_usage
+            sourcetree::eval_add::usage
          ;;
 
          --filename)
             [ $# -eq 1 ] \
-               && sourcetree_eval_add_usage "Missing argument to \"$1\""
+               && sourcetree::eval_add::usage "Missing argument to \"$1\""
             shift
 
             OPTION_FILENAME="$1"
@@ -163,7 +163,7 @@ sourcetree_eval_add_main()
          ;;
 
          -*)
-            sourcetree_eval_add_usage "Unknown option $1"
+            sourcetree::eval_add::usage "Unknown option $1"
          ;;
 
          *)
@@ -174,17 +174,17 @@ sourcetree_eval_add_main()
       shift
    done
 
-   [ "$#" -eq 0  ] && sourcetree_eval_add_usage "Missing command line text"
-   [ "$#" -gt 1  ] && shift && sourcetree_eval_add_usage "Superflous input \"$*\""
+   [ "$#" -eq 0  ] && sourcetree::eval_add::usage "Missing command line text"
+   [ "$#" -gt 1  ] && shift && sourcetree::eval_add::usage "Superflous input \"$*\""
 
-   sourcetree_eval_add_commands "$1" \
+   sourcetree::eval_add::commands "$1" \
                                 "${OPTION_FILENAME:-<input>}"
 }
 
 
-sourcetree_eval_add_initialize()
+sourcetree::eval_add::initialize()
 {
-   log_entry "sourcetree_eval_add_initialize"
+   log_entry "sourcetree::eval_add::initialize"
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
@@ -202,6 +202,6 @@ sourcetree_eval_add_initialize()
 }
 
 
-sourcetree_eval_add_initialize
+sourcetree::eval_add::initialize
 
 :

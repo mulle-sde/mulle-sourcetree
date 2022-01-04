@@ -1,7 +1,13 @@
-#! /usr/bin/env zsh
+#! /usr/bin/env bash
 
 [ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
 
 expect()
 {
@@ -49,14 +55,14 @@ run_test()
 
    _uuid="`uuidgen`"
    (
-      do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release" "flat" "/" "/"
+      sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
    [ -f "ringo/starr/VERSION" ] || fail "ringo/starr/VERSION not there ($PWD)"
    log_verbose "----- #1 PASSED -----"
 
    (
-      do_actions_with_nodeline "ringo/star;git;;${_uuid};${repos}/a;release" "flat" "/" "/"
+      sourcetree::action::do_actions_with_nodeline "ringo/star;git;;${_uuid};${repos}/a;release" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
    [ -f "ringo/starr/VERSION" ] && fail "ringo/starr/VERSION not gone ($PWD)"
@@ -64,14 +70,14 @@ run_test()
    log_verbose "----- #2 PASSED -----"
 
    (
-      do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;not_there" "flat" "/" "/"
+      sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;not_there" "flat" "/" "/"
    ) && fail "worked unexpectedly"
 
    [ -f "ringo/star/VERSION" ]    && fail "branch not_there should have wiped ringo/star/VERSION"
    log_verbose "----- #3 PASSED -----"
 
    (
-      do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release;2.0.0" "flat" "/" "/"
+      sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release;2.0.0" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
    [ `cat ringo/starr/VERSION` = 2.0.0 ] || fail "Wrong checkout"
@@ -79,7 +85,7 @@ run_test()
    log_verbose "----- #4 PASSED -----"
 
    (
-      do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release;1.0.0" "flat" "/" "/"
+      sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release;1.0.0" "flat" "/" "/"
    ) || fail "failed unexpectedly"
 
    [ `cat ringo/starr/VERSION` = 1.0.0 ] || fail "Wrong checkout"
@@ -130,10 +136,6 @@ main()
 
 init()
 {
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions-env libexec-dir`" || exit 1
-
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 

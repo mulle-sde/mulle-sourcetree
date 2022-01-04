@@ -32,26 +32,7 @@
 MULLE_SOURCETREE_STATUS_SH="included"
 
 
-sourcetree_dbstatus_usage()
-{
-   [ $# -ne 0 ] && log_error "$1"
-
-   cat <<EOF >&2
-Usage:
-   ${MULLE_USAGE_NAME} dbstatus
-
-   Tests if a database is up to date.
-
-Returns:
-    0 : yes
-    1 : error
-    2 : no
-EOF
-  exit 1
-}
-
-
-sourcetree_status_usage()
+sourcetree::status::usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -93,9 +74,9 @@ EOF
 # 2 : needs update
 # 3 : there is no sourcetree
 #
-sourcetree_is_uptodate()
+sourcetree::status::is_uptodate()
 {
-   log_entry "sourcetree_is_uptodate" "$@"
+   log_entry "sourcetree::status::is_uptodate" "$@"
 
    local datasource="$1"
 
@@ -104,14 +85,14 @@ sourcetree_is_uptodate()
    local configtimestamp
    local dbtimestamp
 
-   configtimestamp="`cfg_timestamp "${datasource}"`"
+   configtimestamp="`sourcetree::cfg::timestamp "${datasource}"`"
    if [ -z "${configtimestamp}" ]
    then
       log_fluff "No timestamp available for \"${datasource}\""
       return 3
    fi
 
-   dbtimestamp="`db_get_timestamp "${datasource}"`"
+   dbtimestamp="`sourcetree::db::get_timestamp "${datasource}"`"
 
    log_debug "Timestamps: config=${configtimestamp} db=${dbtimestamp:-0}"
 
@@ -129,16 +110,16 @@ sourcetree_is_uptodate()
 # ensure that databases produced last time are
 # compatible
 #
-sourcetree_is_db_compatible()
+sourcetree::status::is_db_compatible()
 {
-   log_entry "sourcetree_is_db_compatible" "$@"
+   log_entry "sourcetree::status::is_db_compatible" "$@"
 
    local database="$1"
    local mode="$2"
 
    local dbtype
 
-   dbtype="`db_get_dbtype "${database}"`"
+   dbtype="`sourcetree::db::get_dbtype "${database}"`"
    case ",${mode}," in
       *,flat,*)
          case "${dbtype}" in
@@ -187,9 +168,9 @@ sourcetree_is_db_compatible()
 # outdated=8
 # unready=9
 #
-r_emit_status()
+sourcetree::status::r_emit()
 {
-   log_entry "r_emit_status" "$@"
+   log_entry "sourcetree::status::r_emit" "$@"
 
    local address="$1"
    local directory="$2"
@@ -274,7 +255,7 @@ r_emit_status()
       log_trace2 "filename:       ${filename}"
    fi
 
-   if nodemarks_enable "${marks}" "fs"
+   if sourcetree::nodemarks::enable "${marks}" "fs"
    then
       fs="missing"
       configexists='NO'
@@ -319,8 +300,8 @@ r_emit_status()
             fs="broken"
          fi
 
-         if nodemarks_disable "${marks}" "require" ||
-            nodemarks_disable "${marks}" "require-os-${MULLE_UNAME}"
+         if sourcetree::nodemarks::disable "${marks}" "require" ||
+            sourcetree::nodemarks::disable "${marks}" "require-os-${MULLE_UNAME}"
          then
             #
             # if we say not uptodate here, it will retrigger
@@ -391,7 +372,7 @@ ${configexists};${dbexists}" #;${filename}"
                return 6
             fi
 
-            if ! sourcetree_is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
+            if ! sourcetree::status::is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
             then
                log_fluff "#8 Database \"${datasource}\" is not compatible with \
 \"${SOURCETREE_MODE}\" (${PWD#${MULLE_USER_PWD}/})"
@@ -400,7 +381,7 @@ ${configexists};${dbexists}" #;${filename}"
                return 8
             fi
 
-            if ! db_is_ready "${datasource}"
+            if ! sourcetree::db::is_ready "${datasource}"
             then
                log_fluff "#9 Database \"${datasource}\" is not ready"
                RVAL="${output_address};unready;${fs};\
@@ -408,7 +389,7 @@ ${configexists};${dbexists}" #;${filename}"
                return 9
             fi
 
-            if db_is_updating "${datasource}"
+            if sourcetree::db::is_updating "${datasource}"
             then
                log_fluff "#7: \"${filename}\" is marked as updating (${PWD#${MULLE_USER_PWD}/})"
                RVAL="${output_address};updating;${fs};\
@@ -416,7 +397,7 @@ ${configexists};${dbexists}" #;${filename}"
                return 7
             fi
 
-            if ! sourcetree_is_uptodate "${datasource}"
+            if ! sourcetree::status::is_uptodate "${datasource}"
             then
                log_fluff "#6: Database \"${datasource}\" is dirty (${PWD#${MULLE_USER_PWD}/})"
                RVAL="${output_address};dirty;${fs};\
@@ -439,13 +420,13 @@ ${configexists};${dbexists}" #;${filename}"
 }
 
 
-walk_status()
+sourcetree::status::walk()
 {
-   log_entry "walk_status" "$@"
+   log_entry "sourcetree::status::walk" "$@"
 
    local rval
 
-   r_emit_status "${NODE_ADDRESS}" \
+   sourcetree::status::r_emit "${NODE_ADDRESS}" \
                  "${WALK_VIRTUAL_ADDRESS}" \
                  "${WALK_DATASOURCE}" \
                  "${NODE_MARKS}" \
@@ -492,9 +473,9 @@ walk_status()
 }
 
 
-sourcetree_status()
+sourcetree::status::do()
 {
-   log_entry "sourcetree_status" "$@"
+   log_entry "sourcetree::status::do" "$@"
 
    local mode="$1"
 
@@ -504,15 +485,15 @@ sourcetree_status()
 
    # empty parameters means local
    # output an entry for root node
-   r_emit_status "" "" "" "" "${mode}" ""
+   sourcetree::status::r_emit "" "" "" "" "${mode}" ""
    output="${RVAL}"
 
-   output2="`walk_config_uuids "ALL" \
+   output2="`sourcetree::walk::walk_config_uuids "ALL" \
                                 "" \
                                 "" \
                                 "" \
                                 "${mode}" \
-                                "walk_status"`"
+                                "sourcetree::status::walk"`"
    rval="$?"
    if [ $rval -eq 2 ]
    then
@@ -577,9 +558,9 @@ sourcetree_status()
 }
 
 
-sourcetree_status_main()
+sourcetree::status::main()
 {
-   log_entry "sourcetree_status_main" "$@"
+   log_entry "sourcetree::status::main" "$@"
 
    local OPTION_MARKS="ANY"
    local OPTION_PERMISSIONS=""
@@ -596,7 +577,7 @@ sourcetree_status_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_status_usage
+            sourcetree::status::usage
          ;;
 
          --all)
@@ -667,7 +648,7 @@ sourcetree_status_main()
          ;;
 
          -*)
-            sourcetree_status_usage "Unknown option $1"
+            sourcetree::status::usage "Unknown option $1"
          ;;
 
          *)
@@ -678,15 +659,15 @@ sourcetree_status_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_status_usage "superflous arguments \"$*\""
+   [ "$#" -eq 0 ] || sourcetree::status::usage "superflous arguments \"$*\""
 
-   if ! r_cfg_exists "${SOURCETREE_START}"
+   if ! sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
    then
       log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
       return 0
    fi
 
-   if ! db_is_ready "${SOURCETREE_START}"
+   if ! sourcetree::db::is_ready "${SOURCETREE_START}"
    then
       if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
       then
@@ -728,7 +709,7 @@ sourcetree_status_main()
       fi
    fi
 
-   sourcetree_status "${mode}"
+   sourcetree::status::do "${mode}"
    rval=$?
 
    case $rval in
@@ -756,9 +737,9 @@ sourcetree_status_main()
 }
 
 
-sourcetree_status_initialize()
+sourcetree::status::initialize()
 {
-   log_entry "sourcetree_status_initialize"
+   log_entry "sourcetree::status::initialize"
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
@@ -777,6 +758,6 @@ sourcetree_status_initialize()
 }
 
 
-sourcetree_status_initialize
+sourcetree::status::initialize
 
 :

@@ -32,9 +32,9 @@
 MULLE_SOURCETREE_FETCH_SH="included"
 
 
-r_sourcetree_guess_address()
+sourcetree::fetch::r_guess_address()
 {
-   log_entry "r_sourcetree_guess_address" "$@"
+   log_entry "sourcetree::fetch::r_guess_address" "$@"
 
    local evaledurl="$1"
    local evalednodetype="${2:-local}"
@@ -68,9 +68,9 @@ default address for url ($evaledurl)"
 #
 # returns "local" if the URL is found on the local filesystem
 # this doesn't distinguish then between
-r_sourcetree_guess_nodetype()
+sourcetree::fetch::r_guess_nodetype()
 {
-   log_entry "r_sourcetree_guess_nodetype" "$@"
+   log_entry "sourcetree::fetch::r_guess_nodetype" "$@"
 
    local url="$1"
 
@@ -122,9 +122,9 @@ nodetype from url ($evaledurl)"
 #
 # resolves the url actually
 #
-r_sourcetree_resolve_url_with_tag()
+sourcetree::fetch::r_resolve_url_with_tag()
 {
-   log_entry "r_sourcetree_resolve_url_with_tag" "$@"
+   log_entry "sourcetree::fetch::r_resolve_url_with_tag" "$@"
 
    local url="$1"
    local tag="$2"
@@ -167,9 +167,9 @@ r_sourcetree_resolve_url_with_tag()
 }
 
 
-sourcetree_sync_operation()
+sourcetree::fetch::sync_operation()
 {
-   log_entry "sourcetree_sync_operation" "$@"
+   log_entry "sourcetree::fetch::sync_operation" "$@"
 
    local opname="$1"
    local options="$2"
@@ -196,7 +196,7 @@ sourcetree_sync_operation()
    local _evaledtag
    local _evaledfetchoptions
 
-   node_evaluate_values
+   sourcetree::node::__evaluate_values
 
    # we check how the values would be, if there are no variables
    # replaced. to get the default value.
@@ -248,7 +248,7 @@ sourcetree_sync_operation()
    then
       if [ "${MULLE_SOURCETREE_RESOLVE_TAG}" = 'YES' ]
       then
-         if r_sourcetree_resolve_url_with_tag "${_evaledurl}" \
+         if sourcetree::fetch::r_resolve_url_with_tag "${_evaledurl}" \
                                               "${_evaledtag}" \
                                               "${_evalednodetype}"
          then
@@ -344,7 +344,7 @@ MULLE_SOURCETREE_RESOLVE_TAG is NO"
 #         then
 #            _evaledurl="${localurl}"
 #
-#            r_sourcetree_guess_nodetype "${localurl}"
+#            sourcetree::fetch::r_guess_nodetype "${localurl}"
 #            localnodetype="${RVAL}"
 #
 #            log_fluff "A ${localnodetype} matched at \"${localurl}\""
@@ -395,9 +395,9 @@ MULLE_SOURCETREE_RESOLVE_TAG is NO"
 }
 
 
-r_sourcetree_list_operations()
+sourcetree::fetch::r_list_operations()
 {
-   log_entry "r_sourcetree_list_operations" "$@"
+   log_entry "sourcetree::fetch::r_list_operations" "$@"
 
    local nodetype="$1"
 
@@ -450,9 +450,9 @@ r_sourcetree_list_operations()
 
 
 
-sourcetree_fetch_initialize()
+sourcetree::fetch::initialize()
 {
-   log_entry "sourcetree_fetch_initialize" "$@"
+   log_entry "sourcetree::fetch::initialize" "$@"
 
    if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
    then
@@ -468,6 +468,6 @@ sourcetree_fetch_initialize()
 }
 
 
-sourcetree_fetch_initialize
+sourcetree::fetch::initialize
 
 :

@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_REUUID_SH="included"
 
 
-sourcetree_reuuid_usage()
+sourcetree::reuuid::usage()
 {
    [ "$#" -ne 0 ] && log_error "$1"
 
@@ -52,9 +52,9 @@ EOF
 
 
 
-cfg_reuuid()
+sourcetree::reuuid::do()
 {
-   log_entry "cfg_reuuid" "$@"
+   log_entry "sourcetree::reuuid::do" "$@"
 
    local config="$1"
 
@@ -62,7 +62,7 @@ cfg_reuuid()
    local nodeline
    local output
 
-   nodelines="`cfg_read "${config}"`" || exit 1
+   nodelines="`sourcetree::cfg::read "${config}"`" || exit 1
 
    [ -z "${nodelines}" ] && return 0
 
@@ -83,24 +83,24 @@ cfg_reuuid()
    do
       IFS="${DEFAULT_IFS}"; shell_enable_glob
 
-      nodeline_parse "${nodeline}"  # memo: :_marks used raw
+      sourcetree::nodeline::parse "${nodeline}"  # memo: :_marks used raw
 
-      r_node_uuidgen
+      sourcetree::node::r_uuidgen
       _uuid="${RVAL}"
 
-      _r_node_to_nodeline
+      sourcetree::node::_r_to_nodeline
       r_add_line "${output}" "${RVAL}"
       output="${RVAL}"
    done
    IFS="${DEFAULT_IFS}"; shell_enable_glob
 
-   cfg_write "${config}" "${output}"
+   sourcetree::cfg::write "${config}" "${output}"
 }
 
 
-sourcetree_reuuid_main()
+sourcetree::reuuid::main()
 {
-   log_entry "sourcetree_reuuid_main" "$@"
+   log_entry "sourcetree::reuuid::main" "$@"
 
    local OPTION_REMOVE_GRAVEYARD="DEFAULT"
 
@@ -108,12 +108,12 @@ sourcetree_reuuid_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_reuuid_usage
+            sourcetree::reuuid::usage
          ;;
 
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown reuuid option $1"
-            sourcetree_reuuid_usage
+            sourcetree::reuuid::usage
          ;;
 
          *)
@@ -124,18 +124,18 @@ sourcetree_reuuid_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_reuuid_usage
+   [ "$#" -eq 0 ] || sourcetree::reuuid::usage
 
    log_info "Create new UUIDs for sourcetree"
-   cfg_reuuid "/" || exit 1
+   sourcetree::reuuid::do "/" || exit 1
 
    log_info "${C_VERBOSE}Don't forget to \`reset\` affected databases"
 }
 
 
-sourcetree_reuuid_main()
+sourcetree::reuuid::main()
 {
-   log_entry "sourcetree_reuuid_main" "$@"
+   log_entry "sourcetree::reuuid::main" "$@"
 
    local OPTION_REMOVE_GRAVEYARD="DEFAULT"
 
@@ -143,12 +143,12 @@ sourcetree_reuuid_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_reuuid_usage
+            sourcetree::reuuid::usage
          ;;
 
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown reuuid option $1"
-            sourcetree_reuuid_usage
+            sourcetree::reuuid::usage
          ;;
 
          *)
@@ -159,18 +159,18 @@ sourcetree_reuuid_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_reuuid_usage
+   [ "$#" -eq 0 ] || sourcetree::reuuid::usage
 
    log_info "Create new UUIDs for sourcetree"
-   cfg_reuuid "/" || exit 1
+   sourcetree::reuuid::do "/" || exit 1
 
    log_info "${C_VERBOSE}Don't forget to \`reset\` affected databases"
 }
 
 
-sourcetree_reuuid_initialize()
+sourcetree::reuuid::initialize()
 {
-   log_entry "sourcetree_reuuid_initialize"
+   log_entry "sourcetree::reuuid::initialize"
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
@@ -203,7 +203,7 @@ sourcetree_reuuid_initialize()
 }
 
 
-sourcetree_reuuid_initialize
+sourcetree::reuuid::initialize
 
 :
 

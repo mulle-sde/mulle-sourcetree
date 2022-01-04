@@ -58,19 +58,19 @@ url               : url of the node
 userinfo          : userinfo for node"
 
 
-sourcetree_print_common_keys()
+sourcetree::commands::print_common_keys()
 {
    printf "%s\n" "${SOURCETREE_COMMON_KEYS}" | sed "s|^|$*|" | sort
 }
 
 
-sourcetree_print_common_options()
+sourcetree::commands::print_common_options()
 {
    printf "%s\n" "${SOURCETREE_COMMON_OPTIONS}" | sed "s|^|$*|" | sort
 }
 
 
-sourcetree_add_usage()
+sourcetree::commands::add_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -102,7 +102,7 @@ EOF
 }
 
 
-sourcetree_copy_usage()
+sourcetree::commands::copy_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -140,12 +140,12 @@ Examples:
 
 Fields:
 EOF
-   sourcetree_print_common_keys  "   " >&2
+   sourcetree::commands::print_common_keys  "   " >&2
    exit 1
 }
 
 
-sourcetree_duplicate_usage()
+sourcetree::commands::duplicate_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -165,13 +165,13 @@ Example:
 
 Options:
 EOF
-   sourcetree_print_common_options "   " >&2
+   sourcetree::commands::print_common_options "   " >&2
    echo >&2
    exit 1
 }
 
 
-sourcetree_remove_usage()
+sourcetree::commands::remove_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -191,7 +191,7 @@ EOF
 }
 
 
-sourcetree_knownmarks_usage()
+sourcetree::commands::knownmarks_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -207,7 +207,7 @@ EOF
 }
 
 
-sourcetree_info_usage()
+sourcetree::commands::info_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -225,7 +225,7 @@ EOF
 }
 
 
-sourcetree_mark_usage()
+sourcetree::commands::mark_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -277,7 +277,7 @@ EOF
 }
 
 
-sourcetree_rename_usage()
+sourcetree::commands::rename_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -295,7 +295,7 @@ EOF
 }
 
 
-sourcetree_rename_mark_usage()
+sourcetree::commands::rename_marks_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -320,7 +320,7 @@ EOF
 }
 
 
-sourcetree_unmark_usage()
+sourcetree::commands::unmark_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -354,7 +354,7 @@ EOF
 }
 
 
-sourcetree_move_usage()
+sourcetree::commands::move_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -370,7 +370,7 @@ EOF
 }
 
 
-sourcetree_set_usage()
+sourcetree::commands::set_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -384,14 +384,14 @@ Usage:
 
 Keys:
 EOF
-  sourcetree_print_common_keys "   " >&2
+  sourcetree::commands::print_common_keys "   " >&2
   echo >&2
 
   exit 1
 }
 
 
-sourcetree_get_usage()
+sourcetree::commands::get_usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -423,9 +423,9 @@ EOF
 #
 #  nodetype
 #
-r_sourcetree_typeguess_node()
+sourcetree::commands::r_typeguess_node()
 {
-   log_entry "r_sourcetree_typeguess_node" "$@"
+   log_entry "sourcetree::commands::r_typeguess_node" "$@"
 
    local input="$1"
    local nodetype="$2"
@@ -442,14 +442,14 @@ r_sourcetree_typeguess_node()
    #
    if [ -z "${nodetype}" -a ! -z "${url}" ]
    then
-      r_sourcetree_guess_nodetype "${url}"
+      sourcetree::fetch::r_guess_nodetype "${url}"
       nodetype="${RVAL}"
       guesssource="${url}"
    fi
 
    if [ -z "${nodetype}" -a ! -z "${input}" ]
    then
-      r_sourcetree_guess_nodetype "${input}"
+      sourcetree::fetch::r_guess_nodetype "${input}"
       nodetype="${RVAL}"
    fi
 
@@ -495,9 +495,9 @@ r_sourcetree_typeguess_node()
 #   _address
 #   _url
 #
-_sourcetree_nameguess_node()
+sourcetree::commands::_nameguess_node()
 {
-   log_entry "_sourcetree_nameguess_node" "$@"
+   log_entry "sourcetree::commands::_nameguess_node" "$@"
 
    local input="$1"
    local nodetype="$2"
@@ -515,7 +515,7 @@ _sourcetree_nameguess_node()
 
    original_address="${_address}"
 
-   r_sourcetree_typeguess_node "${input}" "${nodetype}" "${url}"
+   sourcetree::commands::r_typeguess_node "${input}" "${nodetype}" "${url}"
    _nodetype="${RVAL}"
 
    if [ -z "${_address}" ]
@@ -563,7 +563,7 @@ _sourcetree_nameguess_node()
       local _evaledtag
       local _evaledfetchoptions
 
-      node_evaluate_values
+      sourcetree::node::__evaluate_values
 
       if [ "${_evalednodetype}" = "local" -o "${_evalednodetype}" = "none" ]
       then
@@ -577,7 +577,7 @@ _sourcetree_nameguess_node()
          return
       fi
 
-      r_sourcetree_guess_address "${_evaledurl}" "${_evalednodetype}"
+      sourcetree::fetch::r_guess_address "${_evaledurl}" "${_evalednodetype}"
       _address="${RVAL}"
 
       log_debug "4) _url set to \"${_url}\""
@@ -588,9 +588,9 @@ _sourcetree_nameguess_node()
 }
 
 # cmd
-sourcetree_nameguess_node()
+sourcetree::commands::nameguess_node()
 {
-   log_entry "sourcetree_nameguess_node" "$@"
+   log_entry "sourcetree::commands::nameguess_node" "$@"
 
    local input="$1"
 
@@ -598,15 +598,15 @@ sourcetree_nameguess_node()
    local _url
    local _nodetype
 
-   _sourcetree_nameguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
+   sourcetree::commands::_nameguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
 
    printf "%s\n" "${_address}"
 }
 
 
-sourcetree_typeguess_node()
+sourcetree::commands::typeguess_node()
 {
-   log_entry "sourcetree_typeguess_node" "$@"
+   log_entry "sourcetree::commands::typeguess_node" "$@"
 
    local input="$1"
 
@@ -614,18 +614,18 @@ sourcetree_typeguess_node()
    local _url
    local _nodetype
 
-   r_sourcetree_typeguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
+   sourcetree::commands::r_typeguess_node "${input}" "${OPTION_NODETYPE}" "${OPTION_URL}"
    printf "%s\n" "${RVAL}"
 }
 
 
-sourcetree_assert_sane_mark()
+sourcetree::commands::assert_sane_mark()
 {
-   log_entry "sourcetree_assert_sane_mark" "$@"
+   log_entry "sourcetree::commands::assert_sane_mark" "$@"
 
    local mark="$1"
 
-   assert_sane_nodemark "${mark}"
+   sourcetree::nodemarks::assert_sane_nodemark "${mark}"
 
    case "${mark}" in
       no-*|only-*|version-*)
@@ -641,9 +641,9 @@ sourcetree_assert_sane_mark()
 #
 # retrieve node line from user input which has previously beed
 #
-sourcetree_get_nodeline_address_url_uuid()
+sourcetree::commands::get_nodeline_address_url_uuid()
 {
-   log_entry "sourcetree_get_nodeline_address_url_uuid" "$@"
+   log_entry "sourcetree::commands::get_nodeline_address_url_uuid" "$@"
 
    local address="$1"
    local url="$2"
@@ -651,23 +651,23 @@ sourcetree_get_nodeline_address_url_uuid()
 
    if [ ! -z "${uuid}" ]
    then
-      cfg_get_nodeline_by_uuid "${SOURCETREE_START}" "${uuid}"
+      sourcetree::cfg::get_nodeline_by_uuid "${SOURCETREE_START}" "${uuid}"
       return $?
    fi
 
    if [ ! -z "${address}" ]
    then
-      cfg_get_nodeline "${SOURCETREE_START}" "${address}" "${OPTION_MATCH}"
+      sourcetree::cfg::get_nodeline "${SOURCETREE_START}" "${address}" "${OPTION_MATCH}"
       return $?
    fi
 
 
-   if cfg_get_nodeline_by_url "${SOURCETREE_START}" "${SOURCETREE_START}" "${url}" > /dev/null
+   if sourcetree::cfg::get_nodeline_by_url "${SOURCETREE_START}" "${SOURCETREE_START}" "${url}" > /dev/null
    then
       return 0
    fi
 
-   cfg_get_nodeline_by_evaled_url "${SOURCETREE_START}" "${url}"
+   sourcetree::cfg::get_nodeline_by_evaled_url "${SOURCETREE_START}" "${url}"
 }
 
 
@@ -678,7 +678,7 @@ sourcetree_get_nodeline_address_url_uuid()
 #   local _address
 #   local _url
 #   local _nodetype
-_sourcetree_guess_address_url_uuid()
+sourcetree::commands::_guess_address_url_uuid()
 {
    _uuid=
    _url=
@@ -703,9 +703,9 @@ _sourcetree_guess_address_url_uuid()
 }
 
 
-sourcetree_get_nodeline()
+sourcetree::commands::get_nodeline()
 {
-   log_entry "sourcetree_get_nodeline" "$@"
+   log_entry "sourcetree::commands::get_nodeline" "$@"
 
    local input="$1"
    local warn="${2:-YES}"
@@ -716,9 +716,9 @@ sourcetree_get_nodeline()
    local _url
    local _address
 
-   _sourcetree_guess_address_url_uuid "${input}"
+   sourcetree::commands::_guess_address_url_uuid "${input}"
 
-   if ! sourcetree_get_nodeline_address_url_uuid "${_address}" "${_url}" "${_uuid}"
+   if ! sourcetree::commands::get_nodeline_address_url_uuid "${_address}" "${_url}" "${_uuid}"
    then
       if [ "${warn}" = 'NO' ]
       then
@@ -729,9 +729,9 @@ sourcetree_get_nodeline()
 }
 
 
-sourcetree_change_nodeline_uuid()
+sourcetree::commands::change_nodeline_uuid()
 {
-   log_entry "sourcetree_change_nodeline_uuid" "$@"
+   log_entry "sourcetree::commands::change_nodeline_uuid" "$@"
 
    local oldnodeline="$1"
    local newnodeline="$2"
@@ -743,14 +743,14 @@ sourcetree_change_nodeline_uuid()
       return
    fi
 
-   cfg_change_nodeline "${SOURCETREE_START}" "${oldnodeline}" "${newnodeline}"
-   cfg_touch_parents "${SOURCETREE_START}"
+   sourcetree::cfg::change_nodeline "${SOURCETREE_START}" "${oldnodeline}" "${newnodeline}"
+   sourcetree::cfg::touch_parents "${SOURCETREE_START}"
 
    local verifynodelines
    local verifynodeline
 
-   verifynodelines="`cfg_read "${SOURCETREE_START}"`"
-   r_nodeline_find_by_uuid "${verifynodelines}" "${uuid}"
+   verifynodelines="`sourcetree::cfg::read "${SOURCETREE_START}"`"
+   sourcetree::nodeline::r_find_by_uuid "${verifynodelines}" "${uuid}"
    verifynodeline="${RVAL}"
 
    if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" != 'YES' ]
@@ -766,14 +766,14 @@ ${newnodeline}
       fi
    fi
 
-   r_nodeline_get_address "${newnodeline}"
+   sourcetree::nodeline::r_get_address "${newnodeline}"
    log_info "Changed ${C_MAGENTA}${C_BOLD}${RVAL}${C_INFO}"
 }
 
 
-_sourcetree_append_new_node()
+sourcetree::commands::_append_new_node()
 {
-   log_entry "_sourcetree_append_new_node" "$@"
+   log_entry "sourcetree::commands::_append_new_node" "$@"
 
    local contents
    local appended
@@ -796,7 +796,7 @@ _sourcetree_append_new_node()
    #
    # now just some sanity checks and save it
    #
-   if cfg_get_nodeline "${SOURCETREE_START}" "${_address}" > /dev/null
+   if sourcetree::cfg::get_nodeline "${SOURCETREE_START}" "${_address}" > /dev/null
    then
       if [ "${OPTION_IF_MISSING}" = 'YES' ]
       then
@@ -804,7 +804,7 @@ _sourcetree_append_new_node()
       fi
       if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
       then
-         if r_cfg_exists "${SOURCETREE_START}"
+         if sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
          then
             fail "A node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} already exists \
 in the sourcetree (${RVAL#${MULLE_USER_PWD}/}). Use -f to skip this check."
@@ -820,15 +820,15 @@ in the sourcetree (${RVAL#${MULLE_USER_PWD}/}). Use -f to skip this check."
 #      mode="${RVAL}"
 #   fi
 
-   node_augment  # safe by default
+   sourcetree::node::augment  # safe by default
 
-   contents="`cfg_read "${SOURCETREE_START}" `"
-   r_node_to_nodeline
+   contents="`sourcetree::cfg::read "${SOURCETREE_START}" `"
+   sourcetree::node::r_to_nodeline
    r_add_line "${contents}" "${RVAL}"
    appended="${RVAL}"
 
-   cfg_write "${SOURCETREE_START}" "${appended}"
-   cfg_touch_parents "${SOURCETREE_START}"
+   sourcetree::cfg::write "${SOURCETREE_START}" "${appended}"
+   sourcetree::cfg::touch_parents "${SOURCETREE_START}"
 
    log_info "Added ${C_MAGENTA}${C_BOLD}${_address}"
 }
@@ -836,9 +836,9 @@ in the sourcetree (${RVAL#${MULLE_USER_PWD}/}). Use -f to skip this check."
 #
 #
 #
-sourcetree_add_node()
+sourcetree::commands::add()
 {
-   log_entry "sourcetree_add_node" "$@"
+   log_entry "sourcetree::commands::add" "$@"
 
    local input="$1"
 
@@ -873,7 +873,7 @@ sourcetree_add_node()
       ;;
    esac
 
-   assert_sane_nodemarks "${_marks}"
+   sourcetree::nodemarks::assert_sane "${_marks}"
 
    if [ ! -z "${_address}" -a ! -z "${_url}" ]
    then
@@ -884,7 +884,7 @@ sourcetree_add_node()
    # the following code is really poor and inscrutable
    #
 
-   _sourcetree_nameguess_node "${input}" "${_nodetype}" "${_url}"
+   sourcetree::commands::_nameguess_node "${input}" "${_nodetype}" "${_url}"
 
    if [ -z "${_address}" ]
    then
@@ -913,16 +913,16 @@ exists (${PWD#${MULLE_USER_PWD}/})"
       fi
    fi
 
-   _sourcetree_append_new_node
+   sourcetree::commands::_append_new_node
 }
 
 
 #
 # unused currently
 #
-sourcetree_duplicate_node()
+sourcetree::commands::duplicate()
 {
-   log_entry "sourcetree_duplicate_node" "$@"
+   log_entry "sourcetree::commands::duplicate" "$@"
 
    local input="$1"
 
@@ -939,7 +939,7 @@ sourcetree_duplicate_node()
 
    local node
 
-   node="`sourcetree_get_nodeline "${input}"`"
+   node="`sourcetree::commands::get_nodeline "${input}"`"
    if [ -z "${node}" ]
    then
       fail "Node \"${input}\" not found"
@@ -952,14 +952,14 @@ sourcetree_duplicate_node()
    while :
    do
       newname="${input%%#*}#${i}"
-      if [ -z "`cfg_get_nodeline "${SOURCETREE_START}" "${newname}"`" ]
+      if [ -z "`sourcetree::cfg::get_nodeline "${SOURCETREE_START}" "${newname}"`" ]
       then
          break
       fi
       i=$(( i + 1))
    done
 
-   nodeline_parse "${node}" # !!
+   sourcetree::nodeline::parse "${node}" # !!
 
    if [ ! -z "${OPTION_MARKS}" ]
    then
@@ -969,21 +969,21 @@ sourcetree_duplicate_node()
          _marks="${OPTION_MARKS}"
       fi
    else
-      r_nodemarks_remove "${_marks}" "fs"
+      sourcetree::nodemarks::r_remove "${_marks}" "fs"
       _marks="${RVAL}"
    fi
 
    _address="${newname}"
    _uuid=""
 
-   _sourcetree_append_new_node
+   sourcetree::commands::_append_new_node
 }
 
 
 # get mit sed vermutlich einfacher
-sourcetree_line_mover()
+sourcetree::commands::line_mover()
 {
-   log_entry "sourcetree_line_mover" "$@"
+   log_entry "sourcetree::commands::line_mover" "$@"
 
    local nodeline="$1"
    local direction="$2"
@@ -996,7 +996,7 @@ sourcetree_line_mover()
       ;;
 
       *)
-         sourcetree_move_usage "Unknown direction \"${direction}\""
+         sourcetree::commands::move_usage "Unknown direction \"${direction}\""
       ;;
    esac
 
@@ -1067,15 +1067,15 @@ sourcetree_line_mover()
 ###
 ### NODE commands set/get/remove/move
 ###
-sourcetree_set_node()
+sourcetree::commands::set()
 {
-   log_entry "sourcetree_set_node" "$@"
+   log_entry "sourcetree::commands::set" "$@"
 
    local input="$1"; shift
 
    local oldnodeline
 
-   if ! oldnodeline="`sourcetree_get_nodeline "${input}"`"
+   if ! oldnodeline="`sourcetree::commands::get_nodeline "${input}"`"
    then
       return 2
    fi
@@ -1095,9 +1095,9 @@ sourcetree_set_node()
    local _userinfo
    local _uuid
 
-   nodeline_parse "${oldnodeline}"  # !!
+   sourcetree::nodeline::parse "${oldnodeline}"  # !!
 
-   if nodemarks_disable "${_marks}" "set"
+   if sourcetree::nodemarks::disable "${_marks}" "set"
    then
       fail "Node is marked as no-set"
    fi
@@ -1106,7 +1106,7 @@ sourcetree_set_node()
 
    oldaddress="${_address}"
 
-   assert_sane_nodemarks "${_marks}"
+   sourcetree::nodemarks::assert_sane "${_marks}"
 
    # override with options from command options
    _address="${OPTION_ADDRESS:-${_address}}"
@@ -1150,7 +1150,7 @@ sourcetree_set_node()
 
          *)
             log_error "Unknown keyword \"${key}\""
-            sourcetree_set_usage
+            sourcetree::commands::set_usage
          ;;
       esac
    done
@@ -1158,13 +1158,13 @@ sourcetree_set_node()
    if [ "$#" -ne 0 ]
    then
       log_error "Key \"${1}\" without value"
-      sourcetree_set_usage
+      sourcetree::commands::set_usage
    fi
 
-   node_augment "${OPTION_AUGMENTMODE}"
+   sourcetree::node::augment "${OPTION_AUGMENTMODE}"
 
    if [ "${oldaddress}" != "${_address}" ] &&
-      cfg_has_duplicate "${SOURCETREE_START}" "${_uuid}" "${_address}"
+      sourcetree::cfg::has_duplicate "${SOURCETREE_START}" "${_uuid}" "${_address}"
    then
       if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
       then
@@ -1173,14 +1173,14 @@ in the sourcetree (${PWD#${MULLE_USER_PWD}/})"
       fi
    fi
 
-   r_node_to_nodeline
-   sourcetree_change_nodeline_uuid "${oldnodeline}" "${RVAL}" "${_uuid}"
+   sourcetree::node::r_to_nodeline
+   sourcetree::commands::change_nodeline_uuid "${oldnodeline}" "${RVAL}" "${_uuid}"
 }
 
 
-sourcetree_get_node()
+sourcetree::commands::get()
 {
-   log_entry "sourcetree_get_node" "$@"
+   log_entry "sourcetree::commands::get" "$@"
 
    local input="$1"
    local fuzzy="$2"
@@ -1191,9 +1191,9 @@ sourcetree_get_node()
 
    if [ "${fuzzy}" = 'YES' ]
    then
-      nodeline="`cfg_get_nodeline "${SOURCETREE_START}" "${input}" "${fuzzy}" `"
+      nodeline="`sourcetree::cfg::get_nodeline "${SOURCETREE_START}" "${input}" "${fuzzy}" `"
    else
-      nodeline="`sourcetree_get_nodeline "${input}"`"
+      nodeline="`sourcetree::commands::get_nodeline "${input}"`"
    fi
 
    if [ -z "${nodeline}" ]
@@ -1213,7 +1213,7 @@ sourcetree_get_node()
    local _userinfo
    local _uuid
 
-   nodeline_parse "${nodeline}"  # !!
+   sourcetree::nodeline::parse "${nodeline}"  # !!
 
    if [ "$#" -eq 0 ]
    then
@@ -1233,14 +1233,14 @@ sourcetree_get_node()
          ;;
 
          userinfo)
-            r_nodeline_raw_userinfo_parse "${_raw_userinfo}"
+            sourcetree::nodeline::r_raw_userinfo_parse "${_raw_userinfo}"
             _userinfo="${RVAL}"
             rexekutor printf "%s\n" "${_userinfo}"
          ;;
 
          *)
             log_error "unknown keyword \"$1\""
-            sourcetree_get_usage
+            sourcetree::commands::get_usage
          ;;
       esac
       shift
@@ -1248,42 +1248,42 @@ sourcetree_get_node()
 }
 
 
-sourcetree_move_node()
+sourcetree::commands::move()
 {
-   log_entry "sourcetree_move_node" "$@"
+   log_entry "sourcetree::commands::move" "$@"
 
    local input="$1"
    local direction="$2"
 
    local nodeline
 
-   if ! nodeline="`sourcetree_get_nodeline "${input}" 'NO'`"
+   if ! nodeline="`sourcetree::commands::get_nodeline "${input}" 'NO'`"
    then
       fail "No node for \"${input}\" found"
    fi
 
-   if ! moved="`sourcetree_line_mover "${nodeline}" "${direction}" < <( cfg_read "${SOURCETREE_START}" )`"
+   if ! moved="`sourcetree::commands::line_mover "${nodeline}" "${direction}" < <( sourcetree::cfg::read "${SOURCETREE_START}" )`"
    then
       return 1
    fi
 
-   cfg_write "${SOURCETREE_START}" "${moved}"
-   cfg_touch_parents "${SOURCETREE_START}"
+   sourcetree::cfg::write "${SOURCETREE_START}" "${moved}"
+   sourcetree::cfg::touch_parents "${SOURCETREE_START}"
 
-   r_nodeline_get_address "${nodeline}"
+   sourcetree::nodeline::r_get_address "${nodeline}"
    log_info "Moved ${C_MAGENTA}${C_BOLD}${RVAL}${C_INFO} ${direction}"
 }
 
 
-sourcetree_remove_node()
+sourcetree::commands::remove()
 {
-   log_entry "sourcetree_remove_node" "$@"
+   log_entry "sourcetree::commands::remove" "$@"
 
    local input="$1"
 
    local oldnodeline
 
-   if ! nodeline="`sourcetree_get_nodeline "${input}" `"
+   if ! nodeline="`sourcetree::commands::get_nodeline "${input}" `"
    then
       if [ "${OPTION_IF_PRESENT}" = 'YES' ]
       then
@@ -1295,14 +1295,14 @@ sourcetree_remove_node()
 
    local uuid
 
-   r_nodeline_get_uuid "${nodeline}"
+   sourcetree::nodeline::r_get_uuid "${nodeline}"
    uuid="${RVAL}"
 
-   cfg_remove_nodeline_by_uuid "${SOURCETREE_START}" "${uuid}"
-   cfg_file_remove_if_empty "${SOURCETREE_START}"
-   cfg_touch_parents "${SOURCETREE_START}"
+   sourcetree::cfg::remove_nodeline_by_uuid "${SOURCETREE_START}" "${uuid}"
+   sourcetree::cfg::remove_if_empty_and_no_fallback_exists "${SOURCETREE_START}"
+   sourcetree::cfg::touch_parents "${SOURCETREE_START}"
 
-   r_nodeline_get_address "${nodeline}"
+   sourcetree::nodeline::r_get_address "${nodeline}"
    log_info "Removed ${C_MAGENTA}${C_BOLD}${RVAL}"
 }
 
@@ -1371,13 +1371,13 @@ only-platform-mingw
 "
 
 
-_sourcetree_add_mark_known_absent()
+sourcetree::commands::_add_mark_known_absent()
 {
-   log_entry "_sourcetree_add_mark_known_absent" "$@"
+   log_entry "sourcetree::commands::_add_mark_known_absent" "$@"
 
    local mark="$1"
 
-   sourcetree_assert_sane_mark "${mark}"
+   sourcetree::commands::assert_sane_mark "${mark}"
 
    if [ "${OPTION_EXTENDED_MARK}" != 'YES' ]
    then
@@ -1396,20 +1396,20 @@ ${C_RESET_BOLD}   ${MULLE_EXECUTABLE_NAME} mark -e ..."
       fi
    fi
 
-   r_nodemarks_add "${_marks}" "${mark}"
+   sourcetree::nodemarks::r_add "${_marks}" "${mark}"
    _marks="${RVAL}"
 }
 
 
-_sourcetree_remove_mark_known_present()
+sourcetree::commands::_remove_mark_known_present()
 {
-   log_entry "_sourcetree_remove_mark_known_present" "$@"
+   log_entry "sourcetree::commands::_remove_mark_known_present" "$@"
 
    local mark="$1"
 
    local operation
 
-   sourcetree_assert_sane_mark "${mark}"
+   sourcetree::commands::assert_sane_mark "${mark}"
 
    if [ "${OPTION_EXTENDED_MARK}" != 'YES' ]
    then
@@ -1421,33 +1421,33 @@ ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} unmark -e ..."
       fi
    fi
 
-   r_nodemarks_remove "${_marks}" "${mark}"
+   sourcetree::nodemarks::r_remove "${_marks}" "${mark}"
    _marks="${RVAL}"
 }
 
 
-sourcetree_write_nodeline_changed_marks()
+sourcetree::commands::write_nodeline_changed_marks()
 {
    local oldnodeline="$1"
 
-   r_node_sanitized_marks "${_marks}"
+   sourcetree::node::r_sanitized_marks "${_marks}"
    _marks="${RVAL}"
 
-   r_node_to_nodeline
-   sourcetree_change_nodeline_uuid "${oldnodeline}" "${RVAL}" "${_uuid}"
+   sourcetree::node::r_to_nodeline
+   sourcetree::commands::change_nodeline_uuid "${oldnodeline}" "${RVAL}" "${_uuid}"
 }
 
 
-sourcetree_mark_node()
+sourcetree::commands::mark()
 {
-   log_entry "sourcetree_mark_node" "$@"
+   log_entry "sourcetree::commands::mark" "$@"
 
    local input="$1"
    local marks="$2"
 
    local oldnodeline
 
-   if ! oldnodeline="`sourcetree_get_nodeline "${input}"`"
+   if ! oldnodeline="`sourcetree::commands::get_nodeline "${input}"`"
    then
       log_warning "Node \"${input}\" not found"
       return 2
@@ -1468,7 +1468,7 @@ sourcetree_mark_node()
    local mark
    local blurb
 
-   nodeline_parse "${oldnodeline}" # !!
+   sourcetree::nodeline::parse "${oldnodeline}" # !!
 
    # this loop is suboptimal as we are constantly rewriting the line
    # it was added as an afterthought
@@ -1479,30 +1479,30 @@ sourcetree_mark_node()
       IFS="${DEFAULT_IFS}" ; shell_enable_glob
       case "${mark}" in
          no-*|only-*|version-*)
-            if _nodemarks_contain "${_marks}" "${mark}"
+            if sourcetree::nodemarks::_contain "${_marks}" "${mark}"
             then
                log_info "Node \"${_address}\" is already marked as \"${mark}\"."
                continue
             fi
-            _sourcetree_add_mark_known_absent "${mark}"
+            sourcetree::commands::_add_mark_known_absent "${mark}"
             rval=$?
             [ $rval -ne 0 ] && return $rval
          ;;
 
          [a-z_]*)
             blurb='YES'
-            if nodemarks_contain "${_marks}" "no-${mark}"
+            if sourcetree::nodemarks::contain "${_marks}" "no-${mark}"
             then
                blurb='NO'
-               _sourcetree_remove_mark_known_present "no-${mark}"
+               sourcetree::commands::_remove_mark_known_present "no-${mark}"
                rval=$?
                [ $rval -ne 0 ] && return $rval
             fi
 
-            if nodemarks_contain "${_marks}" "only-${mark}"
+            if sourcetree::nodemarks::contain "${_marks}" "only-${mark}"
             then
                blurb='NO'
-               _sourcetree_remove_mark_known_present "only-${mark}"
+               sourcetree::commands::_remove_mark_known_present "only-${mark}"
                rval=$?
                [ $rval -ne 0 ] && return $rval
             fi
@@ -1520,14 +1520,14 @@ sourcetree_mark_node()
       esac
    done
 
-   sourcetree_write_nodeline_changed_marks "${oldnodeline}"
+   sourcetree::commands::write_nodeline_changed_marks "${oldnodeline}"
 }
 
 
 
-sourcetree_unmark_node()
+sourcetree::commands::unmark()
 {
-   log_entry "sourcetree_unmark_node" "$@"
+   log_entry "sourcetree::commands::unmark" "$@"
 
    local input="$1"
    local mark="$2"
@@ -1547,7 +1547,7 @@ sourcetree_unmark_node()
       version-*)
          local oldnodeline
 
-         if ! oldnodeline="`sourcetree_get_nodeline "${input}"`"
+         if ! oldnodeline="`sourcetree::commands::get_nodeline "${input}"`"
          then
             return 2
          fi
@@ -1563,12 +1563,12 @@ sourcetree_unmark_node()
          local _userinfo
          local _uuid
 
-         nodeline_parse "${oldnodeline}" # !!
+         sourcetree::nodeline::parse "${oldnodeline}" # !!
 
-         if nodemarks_contain "${_marks}" "${mark}"
+         if sourcetree::nodemarks::contain "${_marks}" "${mark}"
          then
-            _sourcetree_remove_mark_known_present "${mark}"
-            sourcetree_write_nodeline_changed_marks "${oldnodeline}"
+            sourcetree::commands::_remove_mark_known_present "${mark}"
+            sourcetree::commands::write_nodeline_changed_marks "${oldnodeline}"
             return $?
          fi
          return 2
@@ -1579,13 +1579,13 @@ sourcetree_unmark_node()
       ;;
    esac
 
-   sourcetree_mark_node "${input}" "${mark}"
+   sourcetree::commands::mark "${input}" "${mark}"
 }
 
 
-r_sourcetree_rename_mark_nodeline()
+sourcetree::commands::r_rename_mark_nodeline()
 {
-   log_entry "r_sourcetree_rename_mark_nodeline" "$@"
+   log_entry "sourcetree::commands::r_rename_mark_nodeline" "$@"
 
    local oldnodeline="$1"
 
@@ -1600,7 +1600,7 @@ r_sourcetree_rename_mark_nodeline()
    local _userinfo
    local _uuid
 
-   nodeline_parse "${oldnodeline}" # !!
+   sourcetree::nodeline::parse "${oldnodeline}" # !!
 
    local mark
    local changed
@@ -1626,17 +1626,17 @@ r_sourcetree_rename_mark_nodeline()
    done
    IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
-   r_nodemarks_sort "${changed}"
+   sourcetree::nodemarks::sort "${changed}"
    _marks="${RVAL}"
 
-   r_node_to_nodeline
+   sourcetree::node::r_to_nodeline
 }
 
 
 #
 # copy a field or all from another config, possibly from another project
 #
-sourcetree_get_nodeline_from_config()
+sourcetree::commands::get_nodeline_from_config()
 {
    local config="$1"
    shift
@@ -1648,14 +1648,14 @@ sourcetree_get_nodeline_from_config()
          # hacky
          SOURCETREE_START="#${RVAL}"
       fi
-      sourcetree_get_nodeline "$@"
+      sourcetree::commands::get_nodeline "$@"
    )
 }
 
 
-sourcetree_copy_node()
+sourcetree::commands::copy()
 {
-   log_entry "sourcetree_copy_node" "$@"
+   log_entry "sourcetree::commands::copy" "$@"
 
    local fields="$1"
    local input="$2"
@@ -1664,7 +1664,7 @@ sourcetree_copy_node()
 
    local dst
 
-   if ! dst="`sourcetree_get_nodeline "${input}" `"
+   if ! dst="`sourcetree::commands::get_nodeline "${input}" `"
    then
       if [ "${fields}" != 'ALL' ]
       then
@@ -1681,12 +1681,12 @@ sourcetree_copy_node()
          fail "Can't copy \"${input}\" unto itself"
       fi
 
-      if ! src="`sourcetree_get_nodeline "${from}" `"
+      if ! src="`sourcetree::commands::get_nodeline "${from}" `"
       then
          fail "No node \"${from}\" found, to copy from."
       fi
    else
-      if ! src="`sourcetree_get_nodeline_from_config "${config}" "${from}" `"
+      if ! src="`sourcetree::commands::get_nodeline_from_config "${config}" "${from}" `"
       then
          fail "No node \"${from}\" found, to copy from ${config}."
       fi
@@ -1703,7 +1703,7 @@ sourcetree_copy_node()
    local _userinfo
    local _uuid
 
-   nodeline_parse "${src}"
+   sourcetree::nodeline::parse "${src}"
 
    local memo
    local field
@@ -1714,16 +1714,16 @@ sourcetree_copy_node()
       then
          _uuid=
          _address="${input}"
-         _sourcetree_append_new_node
+         sourcetree::commands::_append_new_node
          return $?
       fi
 
       # clobber all from src for now
-      nodeline_parse "${dst}"
+      sourcetree::nodeline::parse "${dst}"
 
       # keep this
       memo="${_uuid}"
-      nodeline_parse "${src}"
+      sourcetree::nodeline::parse "${src}"
       _uuid="${memo}"
    else
       shell_disable_glob; IFS=","
@@ -1737,49 +1737,49 @@ sourcetree_copy_node()
 
             address)
                memo="${_address}"
-               nodeline_parse "${dst}"
+               sourcetree::nodeline::parse "${dst}"
                _address="${memo}"
             ;;
 
             branch)
                memo="${_branch}"
-               nodeline_parse "${dst}"
+               sourcetree::nodeline::parse "${dst}"
                _branch="${memo}"
             ;;
 
             fetchoptions)
                memo="${_fetchoptions}"
-               nodeline_parse "${dst}"
+               sourcetree::nodeline::parse "${dst}"
                _fetchoptions="${memo}"
             ;;
 
             marks)
                memo="${_marks}"
-               nodeline_parse "${dst}"
+               sourcetree::nodeline::parse "${dst}"
                _marks="${memo}"
             ;;
 
             nodetype)
                memo="${_nodetype}"
-               nodeline_parse "${dst}"
+               sourcetree::nodeline::parse "${dst}"
                _nodetype="${memo}"
             ;;
 
             tag)
                memo="${_tag}"
-               nodeline_parse "${dst}"
+               sourcetree::nodeline::parse "${dst}"
                _tag="${memo}"
             ;;
 
             url)
                memo="${_url}"
-               nodeline_parse "${dst}"
+               sourcetree::nodeline::parse "${dst}"
                _url="${memo}"
             ;;
 
             userinfo)
                memo="${_raw_userinfo}"
-               nodeline_parse "${dst}"
+               sourcetree::nodeline::parse "${dst}"
                _raw_userinfo="${memo}"
             ;;
 
@@ -1795,15 +1795,15 @@ sourcetree_copy_node()
       IFS="${DEFAULT_IFS}"; shell_enable_glob
    fi
 
-   r_node_to_nodeline
-   sourcetree_change_nodeline_uuid "${dst}" "${RVAL}" "${_uuid}"
+   sourcetree::node::r_to_nodeline
+   sourcetree::commands::change_nodeline_uuid "${dst}" "${RVAL}" "${_uuid}"
 }
 
 
 
-sourcetree_rename_marks()
+sourcetree::commands::rename_marks()
 {
-   log_entry "sourcetree_rename_marks" "$@"
+   log_entry "sourcetree::commands::rename_marks" "$@"
 
    local oldmark="$1"
    local newmark="$2"
@@ -1840,14 +1840,14 @@ sourcetree_rename_marks()
    local oldnodeline
    local nodelines
 
-   oldnodelines="`cfg_read "${SOURCETREE_START}"`"
+   oldnodelines="`sourcetree::cfg::read "${SOURCETREE_START}"`"
 
    shell_disable_glob ; IFS=$'\n'
    for oldnodeline in ${oldnodelines}
    do
       IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
-      r_sourcetree_rename_mark_nodeline "${oldnodeline}"
+      sourcetree::commands::r_rename_mark_nodeline "${oldnodeline}"
       r_add_line "${nodelines}" "${RVAL}"
       nodelines="${RVAL}"
    done
@@ -1855,7 +1855,7 @@ sourcetree_rename_marks()
 
    if [ "${nodelines}" != "${oldnodelines}" ]
    then
-      cfg_write "${SOURCETREE_START}" "${nodelines}"
+      sourcetree::cfg::write "${SOURCETREE_START}" "${nodelines}"
    fi
 }
 
@@ -1863,20 +1863,20 @@ sourcetree_rename_marks()
 #
 #
 #
-sourcetree_info_node()
+sourcetree::commands::info()
 {
-   log_entry "sourcetree_info_node" "$@"
+   log_entry "sourcetree::commands::info" "$@"
 
    [ -z "${MULLE_SOURCETREE_LIST_SH}" ] && \
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-list.sh"
 
-   _sourcetree_banner "$@"
+   sourcetree::list::_sourcetree_banner "$@"
 }
 
 
-sourcetree_common_main()
+sourcetree::commands::common()
 {
-   log_entry "sourcetree_common_main" "$@"
+   log_entry "sourcetree::commands::common" "$@"
 
    local ROOT_DIR
 
@@ -1907,13 +1907,13 @@ sourcetree_common_main()
 
          --print-common-keys)
             shift
-            sourcetree_print_common_keys "$@"
+            sourcetree::commands::print_common_keys "$@"
             exit 0
          ;;
 
          --print-common-options)
             shift
-            sourcetree_print_common_options "$@"
+            sourcetree::commands::print_common_options "$@"
             exit 0
          ;;
 
@@ -2053,7 +2053,7 @@ sourcetree_common_main()
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_${COMMAND}_node "${argument}"
+         sourcetree::commands::${COMMAND} "${argument}"
       ;;
 
       get)
@@ -2061,7 +2061,7 @@ sourcetree_common_main()
          input="$1"
          [ -z "${input}" ] && log_error "empty argument" && ${USAGE}
          shift
-         sourcetree_${COMMAND}_node "${input}" "${OPTION_MATCH}" "$@"
+         sourcetree::commands::get "${input}" "${OPTION_MATCH}" "$@"
       ;;
 
       set|remove)
@@ -2069,13 +2069,13 @@ sourcetree_common_main()
          input="$1"
          [ -z "${input}" ] && log_error "empty argument" && ${USAGE}
          shift
-         sourcetree_${COMMAND}_node "${input}" "$@"
+         sourcetree::commands::${COMMAND} "${input}" "$@"
       ;;
 
       info)
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_info_node
+         sourcetree::commands::info
       ;;
 
       knownmarks)
@@ -2092,7 +2092,7 @@ sourcetree_common_main()
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_${COMMAND}_node "${input}" "${argument}"
+         sourcetree::commands::${COMMAND} "${input}" "${argument}"
       ;;
 
       rename_marks)
@@ -2105,7 +2105,7 @@ sourcetree_common_main()
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_rename_marks "${oldmark}" "${newmark}"
+         sourcetree::commands::rename_marks "${oldmark}" "${newmark}"
       ;;
 
       rename)
@@ -2119,7 +2119,7 @@ sourcetree_common_main()
          shift
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_set_node "${input}" address "${newaddress}"
+         sourcetree::commands::set "${input}" address "${newaddress}"
       ;;
 
       #
@@ -2158,147 +2158,147 @@ sourcetree_common_main()
 
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
-         sourcetree_copy_node "${field}" "${input}" "${config}" "${from}"
+         sourcetree::commands::copy "${field}" "${input}" "${config}" "${from}"
       ;;
 
    esac
 }
 
 
-sourcetree_add_main()
+sourcetree::commands::add_main()
 {
-   log_entry "sourcetree_add_main" "$@"
+   log_entry "sourcetree::commands::add_main" "$@"
 
-   USAGE="sourcetree_add_usage"
+   USAGE="sourcetree::commands::add_usage"
    COMMAND="add"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
 
-sourcetree_duplicate_main()
+sourcetree::commands::duplicate_main()
 {
-   log_entry "sourcetree_duplicate_main" "$@"
+   log_entry "sourcetree::commands::duplicate_main" "$@"
 
-   USAGE="sourcetree_duplicate_usage"
+   USAGE="sourcetree::commands::duplicate_usage"
    COMMAND="duplicate"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
 
-sourcetree_rename_main()
+sourcetree::commands::rename_main()
 {
-   log_entry "sourcetree_rename_main" "$@"
+   log_entry "sourcetree::commands::rename_main" "$@"
 
-   USAGE="sourcetree_rename_usage"
+   USAGE="sourcetree::commands::rename_usage"
    COMMAND="rename"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
 
-sourcetree_remove_main()
+sourcetree::commands::remove_main()
 {
-   log_entry "sourcetree_remove_main" "$@"
+   log_entry "sourcetree::commands::remove_main" "$@"
 
-   USAGE="sourcetree_remove_usage"
+   USAGE="sourcetree::commands::remove_usage"
    COMMAND="remove"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
 
-sourcetree_get_main()
+sourcetree::commands::get_main()
 {
-   log_entry "sourcetree_get_main" "$@"
+   log_entry "sourcetree::commands::get_main" "$@"
 
-   USAGE="sourcetree_get_usage"
+   USAGE="sourcetree::commands::get_usage"
    COMMAND="get"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
 
-sourcetree_set_main()
+sourcetree::commands::set_main()
 {
-   log_entry "sourcetree_set_main" "$@"
+   log_entry "sourcetree::commands::set_main" "$@"
 
-   USAGE="sourcetree_set_usage"
+   USAGE="sourcetree::commands::set_usage"
    COMMAND="set"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
-sourcetree_knownmarks_main()
+sourcetree::commands::knownmarks_main()
 {
-   log_entry "sourcetree_knownmarks_main" "$@"
+   log_entry "sourcetree::commands::knownmarks_main" "$@"
 
-   USAGE="sourcetree_knownmarks_usage"
+   USAGE="sourcetree::commands::knownmarks_usage"
    COMMAND="knownmarks"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
-sourcetree_mark_main()
+sourcetree::commands::mark_main()
 {
-   log_entry "sourcetree_mark_main" "$@"
+   log_entry "sourcetree::commands::mark_main" "$@"
 
-   USAGE="sourcetree_mark_usage"
+   USAGE="sourcetree::commands::mark_usage"
    COMMAND="mark"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
-sourcetree_move_main()
+sourcetree::commands::move_main()
 {
-   log_entry "sourcetree_move_main" "$@"
+   log_entry "sourcetree::commands::move_main" "$@"
 
-   USAGE="sourcetree_move_usage"
+   USAGE="sourcetree::commands::move_usage"
    COMMAND="move"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
 # maybe move elsewhere
-sourcetree_rename_marks_main()
+sourcetree::commands::rename_marks_main()
 {
-   log_entry "sourcetree_rename_marks_main" "$@"
+   log_entry "sourcetree::commands::rename_marks_main" "$@"
 
-   USAGE="sourcetree_rename_marks_usage"
+   USAGE="sourcetree::commands::rename_marks_usage"
    COMMAND="rename_marks"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
 # maybe move elsewhere
-sourcetree_copy_main()
+sourcetree::commands::copy_main()
 {
-   log_entry "sourcetree_copy_main" "$@"
+   log_entry "sourcetree::commands::copy_main" "$@"
 
-   USAGE="sourcetree_copy_usage"
+   USAGE="sourcetree::commands::copy_usage"
    COMMAND="copy"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
 
 
-sourcetree_unmark_main()
+sourcetree::commands::unmark_main()
 {
-   log_entry "sourcetree_unmark_main" "$@"
+   log_entry "sourcetree::commands::unmark_main" "$@"
 
-   USAGE="sourcetree_unmark_usage"
+   USAGE="sourcetree::commands::unmark_usage"
    COMMAND="unmark"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
 
-sourcetree_info_main()
+sourcetree::commands::info_main()
 {
-   log_entry "sourcetree_info_main" "$@"
+   log_entry "sourcetree::commands::info_main" "$@"
 
-   USAGE="sourcetree_info_usage"
+   USAGE="sourcetree::commands::info_usage"
    COMMAND="info"
-   sourcetree_common_main "$@"
+   sourcetree::commands::common "$@"
 }
 
 
 #
 # the general idea here was to use mulle-sourcetree as a library too
 #
-sourcetree_commands_initialize()
+sourcetree::commands::initialize()
 {
-   log_entry "sourcetree_commands_initialize"
+   log_entry "sourcetree::commands::initialize"
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
@@ -2351,6 +2351,6 @@ sourcetree_commands_initialize()
 }
 
 
-sourcetree_commands_initialize
+sourcetree::commands::initialize
 
 :

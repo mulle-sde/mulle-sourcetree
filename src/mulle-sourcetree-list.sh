@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_LIST_SH="included"
 
 
-sourcetree_dedupe_mode_help()
+sourcetree::list::dedupe_mode_help()
 {
    cat <<EOF
    address                       : address
@@ -50,7 +50,7 @@ EOF
 }
 
 
-sourcetree_list_usage()
+sourcetree::list::usage()
 {
    [ "$#" -ne 0 ] && log_error "$*"
 
@@ -77,12 +77,12 @@ EOF
 
 Formatting:
 EOF
-      node_printf_format_help >&2
+      sourcetree::node::printf_format_help >&2
       cat <<EOF >&2
 
 Deduping:
 EOF
-      sourcetree_dedupe_mode_help >&2
+      sourcetree::list::dedupe_mode_help >&2
    else
       cat <<EOF >&2
    Use \`mulle-sourcetree -v list help\` to see a list of format characters.
@@ -123,17 +123,17 @@ EOF
 }
 
 
-_sourcetree_banner()
+sourcetree::list::_sourcetree_banner()
 {
-   log_entry "_sourcetree_banner" "$@"
+   log_entry "sourcetree::list::_sourcetree_banner" "$@"
 
    local database="${1:-/}"
 
    local dbstate
    local dbsharedir
 
-   dbstate="`db_state_description "${database}" `"
-   dbsharedir="`db_get_shareddir "${database}" `"
+   dbstate="`sourcetree::db::state_description "${database}" `"
+   dbsharedir="`sourcetree::db::get_shareddir "${database}" `"
 
    printf "%b\n" "${C_INFO}--------------------------------------------------${C_RESET}"
    printf "%b\n" "${C_INFO}Sourcetree   : ${C_RESET_BOLD}${PWD}${C_RESET}"
@@ -159,9 +159,9 @@ ${C_RESET_BOLD}${MULLE_SOURCETREE_STASH_DIR}${C_RESET}"
 }
 
 
-r_sourcetree_remove_marks()
+sourcetree::list::r_remove_marks()
 {
-   log_entry "r_sourcetree_remove_marks" "$@"
+   log_entry "sourcetree::list::r_remove_marks" "$@"
 
    local marks="$1"
    local nomarks="$2"
@@ -172,7 +172,7 @@ r_sourcetree_remove_marks()
    do
       shell_enable_glob; IFS="${DEFAULT_IFS}"
 
-      if ! nodemarks_contain "${nomarks}" "${mark}"
+      if ! sourcetree::nodemarks::contain "${nomarks}" "${mark}"
       then
          r_comma_concat "${RVAL}" "${mark}"
       fi
@@ -181,9 +181,9 @@ r_sourcetree_remove_marks()
 }
 
 
-list_walk_callback()
+sourcetree::list::walk_callback()
 {
-   log_entry "list_walk_callback" "$@"
+   log_entry "sourcetree::list::walk_callback" "$@"
 
    local formatstring="$1"
    local cmdline="$2"
@@ -203,11 +203,11 @@ list_walk_callback()
    local _uuid
    local _raw_userinfo
 
-   nodeline_parse "${nodeline}"  # !!
+   sourcetree::nodeline::parse "${nodeline}"  # !!
 
    if [ ! -z "${OPTION_NO_OUTPUT_MARKS}" ]
    then
-      r_sourcetree_remove_marks "${_marks}" "${OPTION_NO_OUTPUT_MARKS}"
+      sourcetree::list::r_remove_marks "${_marks}" "${OPTION_NO_OUTPUT_MARKS}"
       _marks="${RVAL}"
    fi
 
@@ -218,15 +218,15 @@ list_walk_callback()
       indent="${WALK_INDENT}"
    fi
 
-   if nodemarks_disable "${_marks}" "bequeath" || \
-      nodemarks_disable "${_marks}" "bequeath-os-${MULLE_UNAME}"
+   if sourcetree::nodemarks::disable "${_marks}" "bequeath" || \
+      sourcetree::nodemarks::disable "${_marks}" "bequeath-os-${MULLE_UNAME}"
    then
       if [ "${OPTION_OUTPUT_INDENT}" != 'NO' ]
       then
          indent="-${WALK_INDENT# }"
       fi
       log_verbose "no-bequeath: ${_address}"
-      node_printf "${_mode}" "${formatstring}" "${cmdline}" "${indent}"
+      sourcetree::node::printf "${_mode}" "${formatstring}" "${cmdline}" "${indent}"
    else
       if [ "${_nodetype}" != 'none' ] && find_line "${DUPLICATES}" "${_address}"
       then
@@ -235,20 +235,20 @@ list_walk_callback()
             indent="*${WALK_INDENT# }"
          fi
          log_verbose "Duplicate: ${_address}"
-         node_printf "${_mode}" "${formatstring}" "${cmdline}" "${indent}"
+         sourcetree::node::printf "${_mode}" "${formatstring}" "${cmdline}" "${indent}"
       else
          r_add_line "${DUPLICATES}" "${_address}"
          DUPLICATES="${RVAL}"
 
-         node_printf "${_mode}" "${formatstring}" "${cmdline}" "${indent}"
+         sourcetree::node::printf "${_mode}" "${formatstring}" "${cmdline}" "${indent}"
       fi
    fi
 }
 
 
-_list_sourcetree()
+sourcetree::list::walk()
 {
-   log_entry "_list_sourcetree" "$@"
+   log_entry "sourcetree::list::walk" "$@"
 
    local mode="$1"
    local filternodetypes="$2"
@@ -256,27 +256,27 @@ _list_sourcetree()
    local formatstring="$4"
    local cmdline="$5"
 
-   nodeline_printf_header "${mode}" "${formatstring}"
+   sourcetree::nodeline::printf_header "${mode}" "${formatstring}"
 
    local DUPLICATES
 
    DUPLICATES=""
-   sourcetree_walk "${filternodetypes}" \
+   sourcetree::walk::do "${filternodetypes}" \
                    "" \
                    "${marksqualifier}" \
                    "" \
                    "${mode}" \
-                   list_walk_callback "${formatstring}" "${cmdline}"
+                   sourcetree::list::walk_callback "${formatstring}" "${cmdline}"
 }
 
 
-sourcetree_list_sourcetree()
+sourcetree::list::do()
 {
-   log_entry "sourcetree_list_sourcetree" "$@"
+   log_entry "sourcetree::list::do" "$@"
 
    local mode="$1"
 
-   if ! r_cfg_exists "${SOURCETREE_START}"
+   if ! sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
    then
       if [ -z "${IS_PRINTING}" ]
       then
@@ -287,27 +287,27 @@ sourcetree_list_sourcetree()
 
    if [ "${OPTION_OUTPUT_BANNER}" = 'YES' ]
    then
-      _sourcetree_banner
+      sourcetree::list::_sourcetree_banner
    fi
 
    local result 
    
    case ",${mode}," in
       *,output_column,*)
-         ( _list_sourcetree "$@" ; echo )  | rexecute_column_table_or_cat ';'
+         ( sourcetree::list::walk "$@" ; echo )  | rexecute_column_table_or_cat ';'
       ;;
 
       *)
-         _list_sourcetree "$@"
+         sourcetree::list::walk "$@"
       ;;
    esac
 }
 
 
 # evil global variable stuff
-r_sourcetree_list_convert_marks_to_qualifier()
+sourcetree::list::r_convert_marks_to_qualifier()
 {
-   log_entry "r_sourcetree_list_convert_marks_to_qualifier" "$@"
+   log_entry "sourcetree::list::r_convert_marks_to_qualifier" "$@"
 
    local marks="$1"
    local qualifier="$2"
@@ -326,9 +326,9 @@ r_sourcetree_list_convert_marks_to_qualifier()
 }
 
 
-r_sourcetree_augment_mode_with_output_options()
+sourcetree::list::r_augment_mode_with_output_options()
 {
-   log_entry "r_sourcetree_augment_mode_with_output_options" "$@"
+   log_entry "sourcetree::list::r_augment_mode_with_output_options" "$@"
 
    local mode="$1"
 
@@ -426,9 +426,9 @@ ${C_RESET}   address address-filename address-url filename nodeline
 }
 
 
-r_sourcetree_add_format()
+sourcetree::list::r_add_format()
 {
-   log_entry "r_sourcetree_add_format" "$@"
+   log_entry "sourcetree::list::r_add_format" "$@"
 
    case ";$1;" in
       *\;$2\;*)
@@ -448,7 +448,7 @@ r_sourcetree_add_format()
 }
 
 
-warn_if_sync_outstanding()
+sourcetree::list::warn_if_sync_outstanding()
 {
    local memo 
    local rval 
@@ -461,7 +461,7 @@ warn_if_sync_outstanding()
 
    memo="${MULLE_FLAG_LOG_TERSE}"
    MULLE_FLAG_LOG_TERSE='YES'
-   sourcetree_dbstatus_main
+   sourcetree::dbstatus::main
    rval=$?
    MULLE_FLAG_LOG_TERSE="${memo}"
 
@@ -471,9 +471,9 @@ warn_if_sync_outstanding()
    fi   
 }
 
-sourcetree_list_main()
+sourcetree::list::main()
 {
-   log_entry "sourcetree_list_main" "$@"
+   log_entry "sourcetree::list::main" "$@"
 
    local ROOT_DIR
 
@@ -505,7 +505,7 @@ sourcetree_list_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_list_usage
+            sourcetree::list::usage
          ;;
 
          --bequeath)
@@ -517,14 +517,14 @@ sourcetree_list_main()
          ;;
 
          --config-file)
-            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
 
             OPTION_CONFIG_FILE="$1"
          ;;
 
          --marks)
-            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
 
             # allow to concatenate multiple flags
@@ -533,7 +533,7 @@ sourcetree_list_main()
          ;;
 
          --nodetype|--nodetypes)
-            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
 
             r_comma_concat "${OPTION_NODETYPES}" "$1"
@@ -543,7 +543,7 @@ sourcetree_list_main()
          ;;
 
          --qualifier)
-            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
 
             # allow to concatenate multiple flags
@@ -551,7 +551,7 @@ sourcetree_list_main()
          ;;
 
          --dedupe-mode)
-            [ $# -eq 1 ] && sourcetree_walk_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
 
             OPTION_DEDUPE_MODE="$1"
@@ -562,14 +562,14 @@ sourcetree_list_main()
          ;;
 
          --format)
-            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
 
             OPTION_FORMAT="$1"
          ;;
 
          --output-format)
-            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
 
             case "$1" in
@@ -595,7 +595,7 @@ sourcetree_list_main()
                ;;
 
                *)
-                  sourcetree_list_usage "Unknown output format \"$1\""
+                  sourcetree::list::usage "Unknown output format \"$1\""
                ;;
             esac
          ;;
@@ -618,8 +618,8 @@ sourcetree_list_main()
             then
                OPTION_FORMAT="%a;%t!;%b!\\n"
             else
-               r_sourcetree_add_format "${OPTION_FORMAT}" "%t!"
-               r_sourcetree_add_format "${RVAL}" "%b!"
+               sourcetree::list::r_add_format "${OPTION_FORMAT}" "%t!"
+               sourcetree::list::r_add_format "${RVAL}" "%b!"
                OPTION_FORMAT="${RVAL}"
             fi
          ;;
@@ -629,8 +629,8 @@ sourcetree_list_main()
             then
                OPTION_FORMAT="%a;%t;%b\\n"
             else
-               r_sourcetree_add_format "${OPTION_FORMAT}" "%t"
-               r_sourcetree_add_format "${RVAL}" "%b"
+               sourcetree::list::r_add_format "${OPTION_FORMAT}" "%t"
+               sourcetree::list::r_add_format "${RVAL}" "%b"
                OPTION_FORMAT="${RVAL}"
             fi
          ;;
@@ -640,8 +640,8 @@ sourcetree_list_main()
             then
                OPTION_FORMAT="%a;%n;%m\\n"
             else
-               r_sourcetree_add_format "${OPTION_FORMAT}" "%n"
-               r_sourcetree_add_format "${RVAL}" "%m"
+               sourcetree::list::r_add_format "${OPTION_FORMAT}" "%n"
+               sourcetree::list::r_add_format "${RVAL}" "%m"
                OPTION_FORMAT="${RVAL}"
             fi
          ;;
@@ -651,7 +651,7 @@ sourcetree_list_main()
             then
                OPTION_FORMAT="%a;%m\\n"
             else
-               r_sourcetree_add_format "${RVAL}" "%m"
+               sourcetree::list::r_add_format "${RVAL}" "%m"
                OPTION_FORMAT="${RVAL}"
             fi
          ;;
@@ -665,7 +665,7 @@ sourcetree_list_main()
             then
                OPTION_FORMAT="%a;%m\\n"
             else
-               r_sourcetree_add_format "${OPTION_FORMAT}" "%m"
+               sourcetree::list::r_add_format "${OPTION_FORMAT}" "%m"
                OPTION_FORMAT="${RVAL}"
             fi
             OPTION_NO_OUTPUT_MARKS=NO
@@ -676,8 +676,8 @@ sourcetree_list_main()
             then
                OPTION_FORMAT="%a;%u!;%f\\n"
             else
-               r_sourcetree_add_format "${OPTION_FORMAT}" "%u!"
-               r_sourcetree_add_format "${RVAL}" "%f"
+               sourcetree::list::r_add_format "${OPTION_FORMAT}" "%u!"
+               sourcetree::list::r_add_format "${RVAL}" "%f"
                OPTION_FORMAT="${RVAL}"
             fi
          ;;
@@ -687,8 +687,8 @@ sourcetree_list_main()
             then
                OPTION_FORMAT="%a;%u;%f\\n"
             else
-               r_sourcetree_add_format "${OPTION_FORMAT}" "%u"
-               r_sourcetree_add_format "${RVAL}" "%f"
+               sourcetree::list::r_add_format "${OPTION_FORMAT}" "%u"
+               sourcetree::list::r_add_format "${RVAL}" "%f"
                OPTION_FORMAT="${RVAL}"
             fi
          ;;
@@ -722,7 +722,7 @@ sourcetree_list_main()
          ;;
 
          --output-cmdline)
-            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
 
             OPTION_OUTPUT_CMDLINE="$1"
@@ -757,7 +757,7 @@ sourcetree_list_main()
          ;;
 
          --no-output-marks|--output-no-marks)
-            [ $# -eq 1 ] && sourcetree_list_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
 
             OPTION_NO_OUTPUT_MARKS="$1"
@@ -772,7 +772,7 @@ sourcetree_list_main()
          ;;
 
          -*)
-            sourcetree_list_usage "Unknown option \"$1\""
+            sourcetree::list::usage "Unknown option \"$1\""
          ;;
 
          *)
@@ -785,7 +785,7 @@ sourcetree_list_main()
 
    [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
 
-   [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && sourcetree_list_usage
+   [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && sourcetree::list::usage
 
    if [ "${OPTION_CONFIG_FILE}" != 'DEFAULT' ]
    then
@@ -808,7 +808,7 @@ sourcetree_list_main()
 
    if [ "${FLAG_SOURCETREE_MODE}" = "share" ]
    then
-      warn_if_sync_outstanding
+      sourcetree::list::warn_if_sync_outstanding
    fi
 
    # if mode is not flat, we use output-banner by default
@@ -823,13 +823,13 @@ sourcetree_list_main()
    # generally we use flat, if the user didn't indicate otherwise
    # via flags
    #
-   r_sourcetree_augment_mode_with_output_options "${FLAG_SOURCETREE_MODE:-flat}"
+   sourcetree::list::r_augment_mode_with_output_options "${FLAG_SOURCETREE_MODE:-flat}"
    mode="${RVAL}"
 
    r_comma_concat "${mode}" "comments"
    mode="${RVAL}"
 
-   r_sourcetree_list_convert_marks_to_qualifier "${OPTION_MARKS}" "${OPTION_MARKS_QUALIFIER}" ## UGLY
+   sourcetree::list::r_convert_marks_to_qualifier "${OPTION_MARKS}" "${OPTION_MARKS_QUALIFIER}" ## UGLY
    OPTION_MARKS_QUALIFIER="${RVAL}"
 
    if [ "${OPTION_OUTPUT_FULL}" = 'YES' ]
@@ -842,17 +842,17 @@ sourcetree_list_main()
       fi
    fi
 
-   sourcetree_list_sourcetree "${mode}" \
-                              "${OPTION_NODETYPES}" \
-                              "${OPTION_MARKS_QUALIFIER}" \
-                              "${OPTION_FORMAT}" \
-                              "${OPTION_OUTPUT_CMDLINE}"
+   sourcetree::list::do "${mode}" \
+                        "${OPTION_NODETYPES}" \
+                        "${OPTION_MARKS_QUALIFIER}" \
+                        "${OPTION_FORMAT}" \
+                        "${OPTION_OUTPUT_CMDLINE}"
 }
 
 
-sourcetree_list_initialize()
+sourcetree::list::initialize()
 {
-   log_entry "sourcetree_list_initialize"
+   log_entry "sourcetree::list::initialize"
 
    if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
    then
@@ -862,6 +862,6 @@ sourcetree_list_initialize()
 }
 
 
-sourcetree_list_initialize
+sourcetree::list::initialize
 
 :

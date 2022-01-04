@@ -32,7 +32,7 @@
 MULLE_SOURCETREE_CRAFTORDER_SH="included"
 
 
-sourcetree_craftorder_usage()
+sourcetree::craftorder::usage()
 {
    [ $# -ne 0 ] && log_error "$1"
 
@@ -64,7 +64,7 @@ EOF
 }
 
 
-r_create_craftorder_filename()
+sourcetree::craftorder::r_create_filename()
 {
    local filename="$1"
 
@@ -91,13 +91,13 @@ r_create_craftorder_filename()
 }
 
 
-collect_craftorder_line()
+sourcetree::craftorder::collect_line()
 {
-   log_entry "collect_craftorder_line" "$@"
+   log_entry "sourcetree::craftorder::collect_line" "$@"
 
    local filename
 
-   r_create_craftorder_filename "${_filename}"
+   sourcetree::craftorder::r_create_filename "${_filename}"
    filename="${RVAL}"
 
    rexekutor printf "%s\n" "${filename}"
@@ -106,13 +106,13 @@ collect_craftorder_line()
 }
 
 
-augment_craftorder_line()
+sourcetree::craftorder::augment_line()
 {
-   log_entry "augment_craftorder_line" "$@"
+   log_entry "sourcetree::craftorder::augment_line" "$@"
 
    local filename
 
-   r_create_craftorder_filename "${_filename}"
+   sourcetree::craftorder::r_create_filename "${_filename}"
    filename="${RVAL}"
 
    if ! find_line "${_remainder_collection}" "${filename}"
@@ -157,9 +157,9 @@ augment_craftorder_line()
 }
 
 
-sourcetree_output_craftorder()
+sourcetree::craftorder::output()
 {
-   log_entry "sourcetree_output_craftorder" "$@"
+   log_entry "sourcetree::craftorder::output" "$@"
 
    local collection="$1"
 
@@ -179,9 +179,9 @@ sourcetree_output_craftorder()
 }
 
 
-sourcetree_craftorder_main()
+sourcetree::craftorder::main()
 {
-   log_entry "sourcetree_craftorder_main" "$@"
+   log_entry "sourcetree::craftorder::main" "$@"
 
    local OPTION_CALLBACK
    local OPTION_ABSOLUTE='NO'
@@ -201,7 +201,7 @@ sourcetree_craftorder_main()
    do
       case "$1" in
          -h*|--help|help)
-            sourcetree_craftorder_usage
+            sourcetree::craftorder::usage
          ;;
 
          --output-absolute)
@@ -217,7 +217,7 @@ sourcetree_craftorder_main()
          ;;
 
          --callback)
-            [ $# -eq 1 ] && sourcetree_craftorder_usage "Missing argument to \"$1\""
+            [ $# -eq 1 ] && sourcetree::craftorder::usage "Missing argument to \"$1\""
             shift
 
             local input
@@ -260,7 +260,7 @@ sourcetree_craftorder_main()
          ;;
 
          -*)
-            sourcetree_craftorder_usage "Unknown craftorder option $1"
+            sourcetree::craftorder::usage "Unknown craftorder option $1"
          ;;
 
          *)
@@ -271,7 +271,7 @@ sourcetree_craftorder_main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree_craftorder_usage "Superflous arguments \"$*\""
+   [ "$#" -eq 0 ] || sourcetree::craftorder::usage "Superflous arguments \"$*\""
 
    #
    # First we walk post-order to get the filenames in the proper order
@@ -302,12 +302,12 @@ sourcetree_craftorder_main()
 
    local _craftorder_collection
 
-   _craftorder_collection="`sourcetree_walk "" \
+   _craftorder_collection="`sourcetree::walk::do "" \
                                             "" \
                                             "${qualifier}" \
                                             "${qualifier}" \
                                             "${mode},in-order" \
-                                            "collect_craftorder_line"`"
+                                            "sourcetree::craftorder::collect_line"`"
 
    if [ -z "${_craftorder_collection}" ]
    then
@@ -319,7 +319,7 @@ sourcetree_craftorder_main()
 
    if [ "${OUTPUT_MARKS}" = 'NO' ]
    then
-      sourcetree_output_craftorder "${_craftorder_collection}"
+      sourcetree::craftorder::output "${_craftorder_collection}"
       return 0
    fi
 
@@ -329,12 +329,12 @@ sourcetree_craftorder_main()
    local _augmented_collection
 
    _remainder_collection="${_craftorder_collection}"
-   _augmented_collection="`sourcetree_walk "" \
+   _augmented_collection="`sourcetree::walk::do "" \
                                            "" \
                                            "${qualifier}" \
                                            "${qualifier}" \
                                            "${mode},breadth-order" \
-                                           "augment_craftorder_line"`"
+                                           "sourcetree::craftorder::augment_line"`"
 
    local filename
    local collection
@@ -359,13 +359,13 @@ sourcetree_craftorder_main()
    done
    IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
-   sourcetree_output_craftorder "${lines}"
+   sourcetree::craftorder::output "${lines}"
 }
 
 
-sourcetree_craftorder_initialize()
+sourcetree::craftorder::initialize()
 {
-   log_entry "sourcetree_craftorder_initialize"
+   log_entry "sourcetree::craftorder::initialize"
 
    if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
    then
@@ -381,7 +381,7 @@ sourcetree_craftorder_initialize()
 }
 
 
-sourcetree_craftorder_initialize
+sourcetree::craftorder::initialize
 
 :
 
