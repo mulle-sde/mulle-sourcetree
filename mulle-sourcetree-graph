@@ -14,7 +14,7 @@ case "$1" in
    -h|--help|help)
       cat <<EOF >&2
 Usage:
-   mulle-sourcetree-graph [libraries [dedupe  [level]]]
+   mulle-sourcetree-graph [libraries [dedupe [level]]]
 
    Create a pretty SVG picture of your projects dependencies as they
    are stored in the mulle-sourcetree. The sourcetree must have been synced
@@ -26,6 +26,10 @@ Usage:
    Set libraries to YES to also dump libraries. (${GRAPH_LIBRARIES})
    Set dedupe to NO to show all edges. (${GRAPH_DEDUPE})
    Set max recursion depth (${GRAPH_MAX_LEVEL}). 
+
+   You can have a per-project setting in
+   .mulle/etc/sourcetree/graph/environment set sets the environment variables
+   GRAPH_LIBRARIES, GRAPH_DEDUPE, GRAPH_MAX_LEVEL.
 
 EOF
    exit 1
@@ -47,6 +51,8 @@ level="${1:-${GRAPH_MAX_LEVEL}}"
    echo "   node [ shape=\"box\"; style=\"filled\" ]"
 
    WALK_PARENT="`basename "$PWD" `"
+
+   echo "\"${WALK_PARENT}\"  [ fillcolor=\"yellow\"]"
 
    (
       if [ "${dedupe}" = 'NO' ]
