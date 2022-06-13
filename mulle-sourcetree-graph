@@ -9,12 +9,14 @@ fi
 GRAPH_LIBRARIES="${GRAPH_LIBRARIES:-NO}"
 GRAPH_DEDUPE="${GRAPH_DEDUPE:-YES}"
 GRAPH_MAX_LEVEL="${GRAPH_MAX_LEVEL:-3}"
+GRAPH_DIRECTION="${GRAPH_DIRECTION:-TD}"
+GRAPH_OPTIONS="${GRAPH_OPTIONS:---ignore mulle-objc-list}"
 
 case "$1" in
    -h|--help|help)
       cat <<EOF >&2
 Usage:
-   mulle-sourcetree-graph [libraries [dedupe [level]]]
+   mulle-sourcetree-graph [direction [level [dedupe]]]
 
    Create a pretty SVG picture of your projects dependencies as they
    are stored in the mulle-sourcetree. The sourcetree must have been synced
@@ -23,36 +25,61 @@ Usage:
 
    Needs the "dot" command (graphviz) to be installed.
 
-   Set libraries to YES to also dump libraries. (${GRAPH_LIBRARIES})
-   Set dedupe to NO to show all edges. (${GRAPH_DEDUPE})
-   Set max recursion depth (${GRAPH_MAX_LEVEL}). 
+   You can have permanent per-project settings for GRAPH_LIBRARIES,
+   GRAPH_DEDUPE, GRAPH_MAX_LEVEL, GRAPH_DIRECTION, GRAPH_OPTIONS
 
-   You can have a per-project setting in
-   .mulle/etc/sourcetree/graph/environment set sets the environment variables
-   GRAPH_LIBRARIES, GRAPH_DEDUPE, GRAPH_MAX_LEVEL.
+   Example:
+      mkdir -p .mulle/etc/sourcetree/graph
+      echo "GRAPH_MAX_LEVEL=5" >> .mulle/etc/sourcetree/graph/environment
+
+   You can override GRAPH_DIRECTION, GRAPH_MAX_LEVEL, GRAPH_DEDUPE with
+   arguments on the commandline.
+
+Environment:
+   GRAPH_DIRECTION : set graph direction to TD or LR ($GRAPH_DIRECTION)
+   GRAPH_MAX_LEVEL : set maximum recursion depth (${GRAPH_MAX_LEVEL})
+   GRAPH_DEDUPE    : set to NO to show all edges. (${GRAPH_DEDUPE})
+   GRAPH_LIBRARIES : set to YES to also dump libraries. (${GRAPH_LIBRARIES})
+   GRAPH_OPTIONS   : options for mulle-sourcetree walk (${GRAPH_OPTIONS})
 
 EOF
    exit 1
 esac
 
 
-libraries="${1:-${GRAPH_LIBRARIES}}"
-[ $# -ne 0 ] && shift
-
-dedupe="${1:-${GRAPH_DEDUPE}}"
+direction="${1:-${GRAPH_DIRECTION}}"
 [ $# -ne 0 ] && shift
 
 level="${1:-${GRAPH_MAX_LEVEL}}"
 [ $# -ne 0 ] && shift
 
+dedupe="${1:-${GRAPH_DEDUPE}}"
+[ $# -ne 0 ] && shift
+
+libraries="${GRAPH_LIBRARIES}"
+options="${GRAPH_OPTIONS}"
+
+if [ "${options}" = "NONE" ]
+then
+   options=""
+fi
+
+
+
 ( 
    echo "digraph sourcetree"
    echo "{"
+   echo "   rankdir = ${direction};"
    echo "   node [ shape=\"box\"; style=\"filled\" ]"
 
    WALK_PARENT="`basename "$PWD" `"
 
    echo "\"${WALK_PARENT}\"  [ fillcolor=\"yellow\"]"
+
+   if [ ! -z "${GRAPH_HEADER}" ]
+   then
+      echo "${GRAPH_HEADER}"
+   fi
 
    (
       if [ "${dedupe}" = 'NO' ]
@@ -68,12 +95,14 @@ level="${1:-${GRAPH_MAX_LEVEL}}"
          WALK_PARENT="${WALK_PARENT}" \
             mulle-sourcetree walk ${dedupe} \
                                   --max-walk-level ${level} \
+                                  ${options} \
                                   "$@" \
                                   'echo "\"${WALK_PARENT}\" -> \"${NODE_ADDRESS}\""'
       else
          WALK_PARENT="${WALK_PARENT}" \
             mulle-sourcetree walk --qualifier 'MATCHES fs' \
                                   ${dedupe} \
+                                  ${options} \
                                    --max-walk-level ${level} \
                                   "$@" \
                                   'echo "\"${WALK_PARENT}\" -> \"${NODE_ADDRESS}\""'
@@ -83,6 +112,11 @@ level="${1:-${GRAPH_MAX_LEVEL}}"
    | sort \
    | sort -u \
    | sed 's/^/   /'  \
+
+   if [ ! -z "${GRAPH_FOOTER}" ]
+   then
+      echo "${GRAPH_FOOTER}"
+   fi
 
    echo "}"
 ) \

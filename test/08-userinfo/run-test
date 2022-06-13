@@ -13,7 +13,7 @@ export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
 run_mulle_sourcetree()
 {
    log_fluff "####################################" >&2
-   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS:-} "$@"
    log_fluff "####################################" >&2
 
    (
@@ -21,7 +21,7 @@ run_mulle_sourcetree()
       
       MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
 
-      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS} "$@"
+      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS:-} "$@"
    )
 }
 
@@ -33,7 +33,7 @@ expect()
 
    if [ "${output}" != "${expected}" ]
    then
-      internal_fail "Did expect \"${expected}\" but got \"${output}\""
+      _internal_fail "Did expect \"${expected}\" but got \"${output}\""
    fi
 }
 
@@ -154,64 +154,64 @@ main()
 
    if ! run_mulle_sourcetree -N add  "a"
    then
-      internal_fail "add failed unexpectedly"
+      _internal_fail "add failed unexpectedly"
    fi
 
    _set_sourcetree_userinfo_field "a" "foo" "bar" "NO" || exit 1
    value="`_sde_get_sourcetree_userinfo_field "a" "foo"`"
    if [ "${value}" != "bar" ]
   	then
-      internal_fail "unexpected value \"${value}\""
+      _internal_fail "unexpected value \"${value}\""
   	fi
 
    _set_sourcetree_userinfo_field "a" "foo" "baz" "NO" || exit 1
    value="`_sde_get_sourcetree_userinfo_field "a" "foo"`"
    if [ "${value}" != "baz" ]
   	then
-      internal_fail "unexpected value \"${value}\""
+      _internal_fail "unexpected value \"${value}\""
   	fi
 
    log_verbose "----- #1 PASSED -----"
 
 
-   _set_sourcetree_userinfo_field "a" "foo" "bar" "YES" || internal_fail "unexpected failure"
+   _set_sourcetree_userinfo_field "a" "foo" "bar" "YES" || _internal_fail "unexpected failure"
    value="`_sde_get_sourcetree_userinfo_field "a" "foo"`"
    if [ "${value}" != "baz,bar" ]
   	then
-      internal_fail "unexpected value \"${value}\""
+      _internal_fail "unexpected value \"${value}\""
   	fi
 
-   _set_sourcetree_userinfo_field "a" "foo" "xxx" "YES" ||  internal_fail "unexpected failure"
+   _set_sourcetree_userinfo_field "a" "foo" "xxx" "YES" ||  _internal_fail "unexpected failure"
    value="`_sde_get_sourcetree_userinfo_field "a" "foo"`"
    if [ "${value}" != "baz,bar,xxx" ]
   	then
-      internal_fail "unexpected value \"${value}\""
+      _internal_fail "unexpected value \"${value}\""
   	fi
 
    run_mulle_sourcetree -N list
 
    log_verbose "----- #2 PASSED -----"
 
-   _set_sourcetree_userinfo_field "a" "foobar" "bar" "YES" ||  internal_fail "unexpected failure"
+   _set_sourcetree_userinfo_field "a" "foobar" "bar" "YES" ||  _internal_fail "unexpected failure"
    run_mulle_sourcetree -N list
 
    value="`_sde_get_sourcetree_userinfo_field "a" "foobar"`"
    if [ "${value}" != "bar" ]
   	then
-      internal_fail "unexpected value \"${value}\""
+      _internal_fail "unexpected value \"${value}\""
   	fi
 
-   _set_sourcetree_userinfo_field "a" "foobar" "xxx" "YES" ||  internal_fail "unexpected failure"
+   _set_sourcetree_userinfo_field "a" "foobar" "xxx" "YES" ||  _internal_fail "unexpected failure"
    value="`_sde_get_sourcetree_userinfo_field "a" "foobar"`"
    if [ "${value}" != "bar,xxx" ]
   	then
-      internal_fail "unexpected value \"${value}\""
+      _internal_fail "unexpected value \"${value}\""
   	fi
 
    value="`_sde_get_sourcetree_userinfo_field "a" "foo"`"
    if [ "${value}" != "baz,bar,xxx" ]
   	then
-      internal_fail "unexpected value \"${value}\""
+      _internal_fail "unexpected value \"${value}\""
   	fi
 
    run_mulle_sourcetree -N list
@@ -227,9 +227,9 @@ main()
 
 init()
 {
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" ||  internal_fail "unexpected failure"
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" ||  _internal_fail "unexpected failure"
 
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" ||  internal_fail "unexpected failure"
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" ||  _internal_fail "unexpected failure"
 
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
 }

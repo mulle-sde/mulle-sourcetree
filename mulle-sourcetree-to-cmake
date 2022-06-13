@@ -1,5 +1,12 @@
 #! /bin/sh
 #
+# shellcheck shell=bash
+# shellcheck disable=SC2236
+# shellcheck disable=SC2166
+# shellcheck disable=SC2006
+# shellcheck disable=SC1090
+# shellcheck disable=SC1091
+#
 #   Copyright (c) 2018 Nat! - Mulle kybernetiK
 #   All rights reserved.
 #
@@ -45,7 +52,7 @@ MULLE_EXECUTABLE_VERSION="1.0.0"
 #
 # Figure out MULLE_BASHFUNCTIONS_LIBEXEC_DIR on this machine if needed.
 #
-if [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ]
+if ! [ ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR+x} ]
 then
    MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
    export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
@@ -55,7 +62,7 @@ fi
 # The booter reruns the executable either with bash or zsh, whatever the
 # system provides. On the second run --no-auto-shell will be set first.
 #
-if [ "$1" != --no-auto-shell ]
+if [ "${1:-}" != --no-auto-shell ]
 then
    . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
 else
@@ -71,6 +78,7 @@ fi
 #
 # Do this first to get aliases
 #
+MULLE_EXECUTABLE="${BASH_SOURCE[0]:-${(%):-%x}}"
 . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
 
 ###
@@ -80,7 +88,6 @@ fi
 ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
 ###########################################################################
 
-MULLE_EXECUTABLE="${BASH_SOURCE[0]:-${(%):-%x}}"
 
 
 usage()
@@ -535,9 +542,10 @@ _emit_cmake_find_library()
    local header="$6"
    local indent="$7"
 
-   local Release_libraries # sic
    local Debug_libraries   # sic
-   local i
+   local Release_libraries # sic
+   local RelWithDebug_libraries    # sic
+   local MinSizeRel_libraries # sic
    local quoted_names
    local type
    local name
@@ -569,7 +577,7 @@ _emit_cmake_find_library()
 
       # get appropriate libraries into local variable libraries
       library_key="${type}_libraries"
-      if [ ! -z "${ZSH_VERSION}" ]
+      if [ ${ZSH_VERSION+x} ]
       then
          libraries="${(P)library_key}"
       else
@@ -613,11 +621,19 @@ _emit_cmake_find_library()
 
       case "${preference}" in
          'static')
+            r_concat "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            libraries="${RVAL}"
+
+            # fallback to non CMAKE_DEBUG_POSTFIX
             r_concat "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
             libraries="${RVAL}"
          ;;
 
          'shared')
+            r_concat "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
+            libraries="${RVAL}"
+
+            # fallback to non CMAKE_DEBUG_POSTFIX
             r_concat "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${name}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
             libraries="${RVAL}"
          ;;
@@ -706,7 +722,7 @@ EOF
          then
             library_key="${type}_libraries"
 
-            if [ ! -z "${ZSH_VERSION}" ]
+            if [ ${ZSH_VERSION+x} ]
             then
                libraries="${(P)library_key}"
             else
@@ -1019,10 +1035,10 @@ emit_cmake_dependency()
    local header="$7"
    local disabler="$8"
 
-   [ -z "${emitter}" ] && internal_fail "emitter is empty"
-   [ -z "${uuid}" ] && internal_fail "address is empty"
-   [ -z "${address}" ] && internal_fail "address is empty"
-   [ -z "${containername}" ] && internal_fail "containername is empty"
+   [ -z "${emitter}" ] && _internal_fail "emitter is empty"
+   [ -z "${uuid}" ] && _internal_fail "address is empty"
+   [ -z "${address}" ] && _internal_fail "address is empty"
+   [ -z "${containername}" ] && _internal_fail "containername is empty"
 
    local indent
    local ifstatement

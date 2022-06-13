@@ -13,7 +13,7 @@ export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
 run_mulle_sourcetree()
 {
    log_fluff "####################################" >&2
-   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS:-} "$@"
    log_fluff "####################################" >&2
 
    (
@@ -21,7 +21,7 @@ run_mulle_sourcetree()
       
       MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
 
-      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS} "$@"
+      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS:-} "$@"
    )
 }
 
@@ -89,19 +89,19 @@ run_test1()
 
    if ! run_mulle_sourcetree add --nodetype git --url "file://${repos}/a" "root/a"
    then
-      internal_fail "add failed unexpectedly"
+      _internal_fail "add failed unexpectedly"
    fi
    log_verbose "----- #1 PASSED -----"
 
    if run_mulle_sourcetree fix
    then
-      internal_fail "fix worked unexpectedly"
+      _internal_fail "fix worked unexpectedly"
    fi
    log_verbose "----- #2 PASSED -----"
 
    if ! run_mulle_sourcetree --recurse update  # > /dev/null 2>&1
    then
-      internal_fail "update failed unexpectedly"
+      _internal_fail "update failed unexpectedly"
    fi
    log_verbose "----- #3 PASSED -----"
 
@@ -114,7 +114,7 @@ run_test1()
 
    if ! result="`run_mulle_sourcetree fix`"
    then
-      internal_fail "fix failed unexpectedly"
+      _internal_fail "fix failed unexpectedly"
    fi
 
    expected="mulle-sourcetree set url root/b"
@@ -123,7 +123,7 @@ run_test1()
       ;;
 
       *)
-         internal_fail "got \"${result}\""
+         _internal_fail "got \"${result}\""
       ;;
    esac
    log_verbose "----- #4 PASSED -----"
@@ -133,7 +133,7 @@ run_test1()
 
    if ! result="`run_mulle_sourcetree fix`"
    then
-      internal_fail "fix failed unexpectedly"
+      _internal_fail "fix failed unexpectedly"
    fi
 
    case "${result}" in
@@ -141,7 +141,7 @@ run_test1()
       ;;
 
       *)
-         internal_fail "got \"${result}\""
+         _internal_fail "got \"${result}\""
       ;;
    esac
    log_verbose "----- #5 PASSED -----"
@@ -150,7 +150,7 @@ run_test1()
 
    if ! result="`run_mulle_sourcetree fix`"
    then
-      internal_fail "fix failed unexpectedly"
+      _internal_fail "fix failed unexpectedly"
    fi
 
    case "${result}" in
@@ -158,7 +158,7 @@ run_test1()
       ;;
 
       *)
-         internal_fail "got \"${result}\" ($PWD)"
+         _internal_fail "got \"${result}\" ($PWD)"
       ;;
    esac
    log_verbose "----- #6 PASSED -----"

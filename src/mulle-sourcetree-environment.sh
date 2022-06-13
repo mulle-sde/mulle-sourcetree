@@ -42,9 +42,9 @@ sourcetree::environment::config()
    local scope="$4"
    local mode="$5"
 
-   [ -z "${MULLE_SOURCETREE_ETC_DIR}" ]     && internal_fail "MULLE_SOURCETREE_ETC_DIR is empty"
-   [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ]   && internal_fail "MULLE_SOURCETREE_SHARE_DIR is empty"
-   [ -z "${MULLE_SOURCETREE_PROJECT_DIR}" ] && internal_fail "MULLE_SOURCETREE_PROJECT_DIR is empty"
+   [ -z "${MULLE_SOURCETREE_ETC_DIR}" ]     && _internal_fail "MULLE_SOURCETREE_ETC_DIR is empty"
+   [ -z "${MULLE_SOURCETREE_SHARE_DIR}" ]   && _internal_fail "MULLE_SOURCETREE_SHARE_DIR is empty"
+   [ -z "${MULLE_SOURCETREE_PROJECT_DIR}" ] && _internal_fail "MULLE_SOURCETREE_PROJECT_DIR is empty"
 
    SOURCETREE_CONFIG_NAMES="${config_names:-config}"
 
@@ -68,9 +68,9 @@ sourcetree::environment::config()
    SOURCETREE_MODE="${mode}" # maybe empty for now
 
    is_absolutepath "${SOURCETREE_CONFIG_DIR}" \
-   && internal_fail "SOURCETREE_CONFIG_DIR \"${SOURCETREE_CONFIG_DIR}\" must be relative"
+   && _internal_fail "SOURCETREE_CONFIG_DIR \"${SOURCETREE_CONFIG_DIR}\" must be relative"
    is_absolutepath "${SOURCETREE_FALLBACK_CONFIG_DIR}" \
-   && internal_fail "SOURCETREE_FALLBACK_CONFIG_DIR \"${SOURCETREE_FALLBACK_CONFIG_DIR}\" must be relative"
+   && _internal_fail "SOURCETREE_FALLBACK_CONFIG_DIR \"${SOURCETREE_FALLBACK_CONFIG_DIR}\" must be relative"
 
    if [ -z "${SOURCETREE_FIX_FILENAME}" ]
    then
@@ -181,11 +181,11 @@ sourcetree::environment::default()
    local mode="$7"
 
    sourcetree::environment::basic "" \
-                                "${option_configdir}" \
-                                "${option_confignames}" \
-                                "${option_use_fallback}" \
-                                "${option_scope}" \
-                                "${mode}"
+                                  "${option_configdir}" \
+                                  "${option_confignames}" \
+                                  "${option_use_fallback}" \
+                                  "${option_scope}" \
+                                  "${mode}"
 
    if [ "${defer}" = "VIRTUAL" ]
    then
@@ -243,7 +243,7 @@ Use -e if this is desired."
    #
    # our db is specific to a host
    #
-   [ -z "${MULLE_SOURCETREE_PROJECT_DIR}" ] && internal_fail "MULLE_SOURCETREE_PROJECT_DIR is empty"
+   [ -z "${MULLE_SOURCETREE_PROJECT_DIR}" ] && _internal_fail "MULLE_SOURCETREE_PROJECT_DIR is empty"
 
    # for testing let it be overrideable
    if [ -z "${SOURCETREE_DB_FILENAME}" ]
@@ -260,8 +260,8 @@ sourcetree::environment::_set_share_dir()
 
    local usershare_dir="$1"
 
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT must be defined by now"
-   [ -z "${SOURCETREE_START}" ]   && internal_fail "SOURCETREE_START must be defined by now"
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && _internal_fail "MULLE_VIRTUAL_ROOT must be defined by now"
+   [ -z "${SOURCETREE_START}" ]   && _internal_fail "SOURCETREE_START must be defined by now"
 
    if [ -z "${usershare_dir}" ]
    then

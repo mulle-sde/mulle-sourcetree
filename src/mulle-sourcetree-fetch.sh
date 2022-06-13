@@ -59,7 +59,7 @@ sourcetree::fetch::r_guess_address()
    [ $rval -eq 127 ] \
    && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
-   log_fluff "${MULLE_DOMAIN:-mulle-domain} returned \"${RVAL}\" as \
+   _log_fluff "${MULLE_DOMAIN:-mulle-domain} returned \"${RVAL}\" as \
 default address for url ($evaledurl)"
    return $rval
 }
@@ -113,7 +113,7 @@ sourcetree::fetch::r_guess_nodetype()
    [ $rval -eq 127 ] \
    && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
-   log_fluff "${MULLE_DOMAIN:-mulle-domain} determined \"${RVAL}\" as \
+   _log_fluff "${MULLE_DOMAIN:-mulle-domain} determined \"${RVAL}\" as \
 nodetype from url ($evaledurl)"
    return $rval
 }
@@ -131,7 +131,7 @@ sourcetree::fetch::r_resolve_url_with_tag()
    local scm="$3"
 
    [ "${scm}" = 'comment' ] \
-      && internal_fail "comment should have been ignored previously"
+      && _internal_fail "comment should have been ignored previously"
 
    local type 
    local rval
@@ -174,7 +174,7 @@ sourcetree::fetch::sync_operation()
    local opname="$1"
    local options="$2"
 
-   [ -z "${opname}" ] && internal_fail "opname is empty"
+   [ -z "${opname}" ] && _internal_fail "opname is empty"
 
    local _url="$3"
    local _address="$4"
@@ -259,13 +259,13 @@ sourcetree::fetch::sync_operation()
                ;;
 
                *)
-                  log_warning "Don't know how to modify URL \"${_evaledurl}\" \
+                  _log_warning "Don't know how to modify URL \"${_evaledurl}\" \
 for tag \"${_evaledtag}\". Hope for symlink."
                ;;
             esac
          fi
       else
-         log_fluff "Not resolving tag \"${_evaledtag}\" as \
+         _log_fluff "Not resolving tag \"${_evaledtag}\" as \
 MULLE_SOURCETREE_RESOLVE_TAG is NO"
       fi
    fi
@@ -280,7 +280,7 @@ MULLE_SOURCETREE_RESOLVE_TAG is NO"
       ;;
    esac
 
-   [ -z "${_evaledurl}" ] && internal_fail "URL \"${_url}\" returned as empty"
+   [ -z "${_evaledurl}" ] && _internal_fail "URL \"${_url}\" returned as empty"
 
    MULLE_BRANCH="${_evaledbranch}" \
    MULLE_TAG="${_evaledtag}" \
@@ -318,11 +318,11 @@ MULLE_SOURCETREE_RESOLVE_TAG is NO"
 #      ;;
 #
 #      comment)
-#         internal_fail "comment should have been ignored previously"
+#         _internal_fail "comment should have been ignored previously"
 #      ;;
 #
 #      *)
-#         log_fluff "Looking for local copy of \
+#         _log_fluff "Looking for local copy of \
 #${C_RESET_BOLD}${_evaledurl}${C_INFO}"
 #
 #         cmd2options="${cmdoptions}"
@@ -402,13 +402,13 @@ sourcetree::fetch::r_list_operations()
    local nodetype="$1"
 
    [ "${nodetype}" = 'comment' ] \
-      && internal_fail "comment should have been ignored previously"
+      && _internal_fail "comment should have been ignored previously"
 
    local cachekey
    local cachekey_value
    r_uppercase "${nodetype}"
    cachekey="_SOURCETREE_OPERATIONS_${RVAL}"
-   if [ ! -z "${ZSH_VERSION}" ]
+   if [ ${ZSH_VERSION+x} ]
    then
       cachekey_value="${(P)cachekey}"
    else

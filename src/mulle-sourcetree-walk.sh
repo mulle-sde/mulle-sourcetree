@@ -195,7 +195,7 @@ sourcetree::walk::_callback_permissions()
    local marks="$2"
    local permissions="$3"
 
-   [ -z "${filename}" ] && internal_fail "empty filename"
+   [ -z "${filename}" ] && _internal_fail "empty filename"
 
    # it should be faster to put [ -e ] into each case statement
    case ",${permissions}," in
@@ -209,8 +209,7 @@ sourcetree::walk::_callback_permissions()
       *,warn-noexist,*|*,callback-warn-noexist,*)
          if [ ! -e "${filename}" ]
          then
-            log_warning "Repository expected in \"${filename}\" is not yet \
-fetched"
+            log_warning "Repository expected in \"${filename}\" is not yet fetched"
             return 0
          fi
       ;;
@@ -218,8 +217,7 @@ fetched"
       *,skip-noexist,*|*,callback-skip-noexist,*)
          if [ ! -e "${filename}" ]
          then
-            log_fluff "Repository expected in \"${filename}\" is not yet \
-fetched, skipped"
+            log_fluff "Repository expected in \"${filename}\" is not yet fetched, skipped"
             return 1
          fi
       ;;
@@ -263,7 +261,7 @@ sourcetree::walk::_descend_permissions()
    local marks="$2"
    local permissions="$3"
 
-   [ -z "${filename}" ] && internal_fail "empty filename"
+   [ -z "${filename}" ] && _internal_fail "empty filename"
 
    case ",${permissions}," in
       *,fail-noexist,*|*,descend-fail-noexist,*)
@@ -276,8 +274,7 @@ sourcetree::walk::_descend_permissions()
       *,warn-noexist,*|*,descend-warn-noexist,*)
          if [ ! -e "${filename}" ]
          then
-            log_warning "Repository expected in \"${filename}\" is not yet \
-fetched"
+            log_warning "Repository expected in \"${filename}\" is not yet fetched"
             return 0
          fi
       ;;
@@ -285,8 +282,7 @@ fetched"
       *,skip-noexist,*|*,descend-skip-noexist,*)
          if [ ! -e "${filename}" ]
          then
-            log_fluff "Repository expected in \"${filename}\" is not yet \
-fetched, skipped"
+            log_fluff "Repository expected in \"${filename}\" is not yet fetched, skipped"
             return 1
          fi
       ;;
@@ -430,10 +426,25 @@ sourcetree::walk::_visit_callback()
       if ! sourcetree::walk::_callback_permissions "${_filename}" "${_marks}" "${filterpermissions}"
       then
          # filter should have fluffed already
-         log_debug "Node \"${_address}\" with filename \"${_filename}\" \
+         _log_debug "Node \"${_address}\" with filename \"${_filename}\" \
 doesn't jive with permissions \"${filterpermissions}\""
          return 0
       fi
+   fi
+
+   if [ ! -z "${OPTION_IGNORE}" ]
+   then
+      local ignore
+
+      .foreachpath ignore in ${OPTION_IGNORE}
+      .do
+         case "${_address}" in
+            ${ignore})
+               log_fluff "Node ${_address} ignored by filename ignore list"
+               return 0
+            ;;
+         esac
+      .done
    fi
 
    if [ ${WALK_LEVEL} -lt ${OPTION_MIN_WALK_LEVEL:-0} ]
@@ -510,8 +521,7 @@ sourcetree::walk::_visit_descend()
 
    if sourcetree::nodemarks::disable "${_marks}" "descend"
    then
-      log_debug "Do not recurse on \"${virtual}/${_destination}\" due to \
-no-descend mark"
+      _log_debug "Do not recurse on \"${virtual}/${_destination}\" due to no-descend mark"
       return 0
    fi
 
@@ -519,7 +529,7 @@ no-descend mark"
    then
       if ! sourcetree::walk::_descend_filter "${_marks}" "${descendqualifier}"
       then
-         log_debug "Node \"${_address}\" marks \"${_marks}\" don't jive \
+         _log_debug "Node \"${_address}\" marks \"${_marks}\" don't jive \
 with \"${descendqualifier}\""
          return 0
       fi
@@ -528,10 +538,10 @@ with \"${descendqualifier}\""
    if [ ! -z "${filterpermissions}" ]
    then
       if ! sourcetree::walk::_descend_permissions "${_filename}" \
-                                "${_marks}" \
-                                "${filterpermissions}"
+                                                 "${_marks}" \
+                                                 "${filterpermissions}"
       then
-         log_debug "Node \"${_address}\" with filename \"${_filename}\" \
+         _log_debug "Node \"${_address}\" with filename \"${_filename}\" \
 doesn't jive with permissions \"${filterpermissions}\""
          return 0
       fi
@@ -541,10 +551,25 @@ doesn't jive with permissions \"${filterpermissions}\""
    then
       if ! "${WILL_DESCEND_CALLBACK}" "$@"
       then
-         log_debug "Do not visit on \"${virtual}/${_destination}\" due \
+         _log_debug "Do not visit on \"${virtual}/${_destination}\" due \
 to WILL_DESCEND_CALLBACK"
          return 0
       fi
+   fi
+
+   if [ ! -z "${OPTION_IGNORE}" ]
+   then
+      local ignore
+
+      .foreachpath ignore in ${OPTION_IGNORE}
+      .do
+         case "${_address}" in
+            ${ignore})
+               log_fluff "Node ${_address} ignored by filename ignore list"
+               return 0
+            ;;
+         esac
+      .done
    fi
 
    #
@@ -580,9 +605,7 @@ to WILL_DESCEND_CALLBACK"
    then
       "${DID_DESCEND_CALLBACK}" "$@"
       rval=$?
-      log_debug "DID_DESCEND_CALLBACK of \"${virtual}/${_destination}\" \
-returns $rval"
-
+      log_debug "DID_DESCEND_CALLBACK of \"${virtual}/${_destination}\" returns $rval"
    fi
    return $rval
 }
@@ -685,7 +708,7 @@ ${_raw_userinfo}"
       ;;
 
       *,dedupe-*,*)
-        internal_fail "Unknown dedupe mark in \"${mode}"
+        _internal_fail "Unknown dedupe mark in \"${mode}"
       ;;
    esac
 
@@ -777,20 +800,20 @@ sourcetree::walk::_visit_node()
 
    case "${virtual}" in
       */)
-         internal_fail "virtual \"${virtual}\" not well formed"
+         _internal_fail "virtual \"${virtual}\" not well formed"
       ;;
    esac
 
    case "${datasource}" in
       "//")
-         internal_fail "datasource \"${datasource}\" not well formed"
+         _internal_fail "datasource \"${datasource}\" not well formed"
       ;;
 
       "/"|/*/)
       ;;
 
       *)
-         internal_fail "datasource \"${datasource}\" not well formed"
+         _internal_fail "datasource \"${datasource}\" not well formed"
       ;;
    esac
 
@@ -871,7 +894,7 @@ sourcetree::walk::_visit_node()
       ;;
 
       *)
-         internal_fail "Unknown visit mode"
+         _internal_fail "Unknown visit mode"
       ;;
    esac
 
@@ -899,7 +922,7 @@ sourcetree::walk::_share_node()
    # TODO: this was commented out, not sure anymore why, if this assert
    #       is wrong, comment out and note in comment why
    [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] \
-   && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
+   && _internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
 
    #
    # So the node is shared, so virtual changes
@@ -972,21 +995,20 @@ sourcetree::walk::_share_node()
             ;;
          esac
       else
-         log_debug "Visit \"${next_datasource}\" as \"${_filename}\" \
-doesn't exist yet"
+         log_debug "Visit \"${next_datasource}\" as \"${_filename}\" doesn't exist yet"
       fi
    fi
 
    sourcetree::walk::_visit_node "${datasource}" \
-               "${MULLE_SOURCETREE_STASH_DIR}" \
-               "${next_datasource}" \
-               "${next_virtual}" \
-               "${filternodetypes}" \
-               "${filterpermissions}" \
-               "${callbackqualifier}" \
-               "${descendqualifier}" \
-               "${mode}" \
-               "$@"
+                                 "${MULLE_SOURCETREE_STASH_DIR}" \
+                                 "${next_datasource}" \
+                                 "${next_virtual}" \
+                                 "${filternodetypes}" \
+                                 "${filterpermissions}" \
+                                 "${callbackqualifier}" \
+                                 "${descendqualifier}" \
+                                 "${mode}" \
+                                 "$@"
 }
 
 
@@ -1009,8 +1031,8 @@ sourcetree::walk::walk_nodeline()
 
    # rest are arguments
 
-   [ -z "${nodeline}" ]  && internal_fail "nodeline is empty"
-   [ -z "${mode}" ]      && internal_fail "mode is empty"
+   [ -z "${nodeline}" ]  && _internal_fail "nodeline is empty"
+   [ -z "${mode}" ]      && _internal_fail "mode is empty"
 
    #
    # These values are now defined for all the "_" prefix functions
@@ -1082,7 +1104,7 @@ sourcetree::walk::walk_nodeline()
    #
    case ",${mode}," in
       *,no-share,*)
-         internal_fail "shouldn't exist anymore"
+         _internal_fail "shouldn't exist anymore"
       ;;
 
       *,share,*)
@@ -1141,15 +1163,15 @@ sourcetree::walk::walk_nodeline()
    next_datasource="${datasource}${_destination}/"
 
    sourcetree::walk::_visit_node "${datasource}" \
-               "${virtual}" \
-               "${next_datasource}" \
-               "${next_virtual}" \
-               "${filternodetypes}" \
-               "${filterpermissions}" \
-               "${callbackqualifier}" \
-               "${descendqualifier}" \
-               "${mode}" \
-               "$@"
+                                 "${virtual}" \
+                                 "${next_datasource}" \
+                                 "${next_virtual}" \
+                                 "${filternodetypes}" \
+                                 "${filterpermissions}" \
+                                 "${callbackqualifier}" \
+                                 "${descendqualifier}" \
+                                 "${mode}" \
+                                 "$@"
 }
 
 
@@ -1192,7 +1214,7 @@ sourcetree::walk::_print_info()
       ;;
 
       *)
-         internal_fail "Mode \"${mode}\" lacks walk order"
+         _internal_fail "Mode \"${mode}\" lacks walk order"
       ;;
    esac
 
@@ -1252,14 +1274,14 @@ sourcetree::walk::_walk_nodelines()
             [ -z "${nodeline}" ] && continue
 
             sourcetree::walk::walk_nodeline "${nodeline}" \
-                          "${datasource}" \
-                          "${virtual}" \
-                          "${filternodetypes}" \
-                          "${filterpermissions}" \
-                          "${callbackqualifier}" \
-                          "${descendqualifier}" \
-                          "${tmpmode}" \
-                          "$@"
+                                            "${datasource}" \
+                                            "${virtual}" \
+                                            "${filternodetypes}" \
+                                            "${filterpermissions}" \
+                                            "${callbackqualifier}" \
+                                            "${descendqualifier}" \
+                                            "${tmpmode}" \
+                                            "$@"
             rval=$?
             [ $rval -ne 0 ] && return $rval
          done
@@ -1275,14 +1297,14 @@ sourcetree::walk::_walk_nodelines()
       [ -z "${nodeline}" ] && continue
 
       sourcetree::walk::walk_nodeline "${nodeline}" \
-                    "${datasource}" \
-                    "${virtual}" \
-                    "${filternodetypes}" \
-                    "${filterpermissions}" \
-                    "${callbackqualifier}" \
-                    "${descendqualifier}" \
-                    "${mode}" \
-                    "$@"
+                                      "${datasource}" \
+                                      "${virtual}" \
+                                      "${filternodetypes}" \
+                                      "${filterpermissions}" \
+                                      "${callbackqualifier}" \
+                                      "${descendqualifier}" \
+                                      "${mode}" \
+                                      "$@"
       rval=$?
       [ $rval -ne 0 ] && return $rval
 
@@ -1293,14 +1315,14 @@ sourcetree::walk::_walk_nodelines()
 
 
             sourcetree::walk::walk_nodeline "${nodeline}" \
-                          "${datasource}" \
-                          "${virtual}" \
-                          "${filternodetypes}" \
-                          "${filterpermissions}" \
-                          "${callbackqualifier}" \
-                          "${descendqualifier}" \
-                          "${tmpmode}" \
-                          "$@"
+                                            "${datasource}" \
+                                            "${virtual}" \
+                                            "${filternodetypes}" \
+                                            "${filterpermissions}" \
+                                            "${callbackqualifier}" \
+                                            "${descendqualifier}" \
+                                            "${tmpmode}" \
+                                            "$@"
             rval=$?
             [ $rval -ne 0 ] && return $rval
          ;;
@@ -1321,14 +1343,14 @@ sourcetree::walk::_walk_nodelines()
             [ -z "${nodeline}" ] && continue
 
             sourcetree::walk::walk_nodeline "${nodeline}" \
-                          "${datasource}" \
-                          "${virtual}" \
-                          "${filternodetypes}" \
-                          "${filterpermissions}" \
-                          "${callbackqualifier}" \
-                          "${descendqualifier}" \
-                          "${tmpmode}" \
-                          "$@"
+                                            "${datasource}" \
+                                            "${virtual}" \
+                                            "${filternodetypes}" \
+                                            "${filterpermissions}" \
+                                            "${callbackqualifier}" \
+                                            "${descendqualifier}" \
+                                            "${tmpmode}" \
+                                            "$@"
             rval=$?
             [ $rval -ne 0 ] && return $rval
          done
@@ -1664,6 +1686,7 @@ sourcetree::walk::main()
    local OPTION_DIRECTION="FORWARD"
    local OPTION_EVAL='YES'
    local OPTION_EXTERNAL_CALL='YES'
+   local OPTION_IGNORE
    local OPTION_LENIENT='NO'
    local OPTION_MARKS=""
    local OPTION_NODETYPES=""
@@ -1826,21 +1849,6 @@ sourcetree::walk::main()
          #
          # filter flags
          #
-         -m|--marks)
-            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
-            shift
-
-            r_comma_concat "${OPTION_MARKS}" "$1"
-            OPTION_MARKS="${RVAL}"
-         ;;
-
-         -q|--qualifier|--marks-qualifier)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
-            shift
-
-            OPTION_QUALIFIER="$1"
-         ;;
-
          --declare-function)
             [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
@@ -1862,6 +1870,22 @@ sourcetree::walk::main()
             OPTION_DESCEND_QUALIFIER="$1"
          ;;
 
+         -m|--marks)
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
+            shift
+
+            r_comma_concat "${OPTION_MARKS}" "$1"
+            OPTION_MARKS="${RVAL}"
+         ;;
+
+         --ignore)
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
+            shift
+
+            r_colon_concat "${OPTION_IGNORE}" "$1"
+            OPTION_IGNORE="${RVAL}"
+         ;;
+
          -n|--nodetypes)
             [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
@@ -1874,6 +1898,13 @@ sourcetree::walk::main()
             shift
 
             OPTION_PERMISSIONS="$1"
+         ;;
+
+         -q|--qualifier|--marks-qualifier)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            OPTION_QUALIFIER="$1"
          ;;
 
          -*)

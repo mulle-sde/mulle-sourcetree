@@ -13,7 +13,7 @@ export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
 run_mulle_sourcetree()
 {
    log_fluff "####################################" >&2
-   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS:-} "$@"
    log_fluff "####################################" >&2
 
    (
@@ -21,7 +21,7 @@ run_mulle_sourcetree()
       
       MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
 
-      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS} "$@"
+      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS:-} "$@"
    )
 }
 
@@ -67,7 +67,7 @@ walk_test()
    local result
 
    result="`run_mulle_sourcetree walk ${mode} 'printf "%s\n" "${NODE_ADDRESS}"' `"
-   [ "${expect}" = "${result}" ] || internal_fail "${mode#2} fail: \"${result}\" != \"${expect}\""
+   [ "${expect}" = "${result}" ] || _internal_fail "${mode#2} fail: \"${result}\" != \"${expect}\""
 
    log_verbose "----- #$testno PASSED -----"
    testno=$(( testno + 1))

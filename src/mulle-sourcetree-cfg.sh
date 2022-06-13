@@ -44,13 +44,24 @@ MULLE_SOURCETREE_CFG_SH="included"
 #
 # Not sure of fallback should be even be set for "write"
 #
+# Globals:
+#    SOURCETREE_CONFIG_NAMES
+#    SOURCETREE_SCOPE
+#    SOURCETREE_CONFIG_DIR
+#    SOURCETREE_FALLBACK_CONFIG_DIR
+#
+# Environment:
+#    MULLE_SOURCETREE_STASH_DIR
+#    MULLE_UNAME
+#    MULLE_VIRTUAL_ROOT
+#
 sourcetree::cfg::__common_configfile()
 {
    [ -z "${SOURCETREE_CONFIG_NAMES}" ] \
-      && internal_fail "SOURCETREE_CONFIG_NAMES is not set"
+      && _internal_fail "SOURCETREE_CONFIG_NAMES is not set"
    [ -z "${SOURCETREE_CONFIG_DIR}" ] \
-      && internal_fail "SOURCETREE_CONFIG_DIR is not set"
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
+      && _internal_fail "SOURCETREE_CONFIG_DIR is not set"
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && _internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
    local names
    local scope
@@ -69,7 +80,7 @@ sourcetree::cfg::__common_configfile()
             ;;
 
             "")
-               internal_fail "scope can't be empty"#
+               _internal_fail "scope can't be empty"#
             ;;
 
             default)
@@ -177,7 +188,7 @@ sourcetree::cfg::__common_configfile()
             ;;
 
             *)
-               internal_fail "database \"$1\" must start with '/'"
+               _internal_fail "database \"$1\" must start with '/'"
             ;;
          esac
       fi
@@ -197,7 +208,7 @@ sourcetree::cfg::__common_configfile()
          'global')
          ;;
 
-         # address custom scope
+         # address custom scope (don't check for existance here)
          *)
             _configfile="${_configfile}.${scope}"
             if [ ! -z "${_fallback_configfile}" ]
@@ -224,13 +235,13 @@ sourcetree::cfg::__common_configfile()
 
    IFS="${DEFAULT_IFS}"
 
-   [ -z "${_configfile}" ] && internal_fail "_configfile must not be empty"
+   [ -z "${_configfile}" ] && _internal_fail "_configfile must not be empty"
 }
 
 
 sourcetree::cfg::__common_rootdir()
 {
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && _internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
    case "${MULLE_SOURCETREE_STASH_DIR}" in
       /*)
@@ -276,7 +287,7 @@ sourcetree::cfg::__common_rootdir()
       ;;
 
       *)
-         internal_fail "Config \"$1\" must start with '/'"
+         _internal_fail "Config \"$1\" must start with '/'"
       ;;
    esac
 }
@@ -360,8 +371,7 @@ sourcetree::cfg::__resolve_configfile()
       return 0
    fi
 
-   log_debug "No config file \"${_configfile#${MULLE_USER_PWD}/}\" or \
-\"${_fallback_configfile#${MULLE_USER_PWD}/}\" found (${PWD#${MULLE_USER_PWD}/})"
+   log_debug "No config file \"${_configfile#${MULLE_USER_PWD}/}\" or \"${_fallback_configfile#${MULLE_USER_PWD}/}\" found (${PWD#${MULLE_USER_PWD}/})"
    _configfile=
    return 1
 }
@@ -392,7 +402,7 @@ sourcetree::cfg::read()
    local _configfile
    local _fallback_configfile
 
-   sourcetree::cfg::__common_configfile "$1"
+   sourcetree::cfg::__common_configfile "$1" "" "$2"
 
    if ! sourcetree::cfg::__resolve_configfile
    then
@@ -407,7 +417,7 @@ sourcetree::cfg::write()
 {
    log_entry "sourcetree::cfg::write" "$@"
 
-   [ -z "${MULLE_SOURCETREE_ETC_DIR}" ] && internal_fail "MULLE_SOURCETREE_ETC_DIR is empty"
+   [ -z "${MULLE_SOURCETREE_ETC_DIR}" ] && _internal_fail "MULLE_SOURCETREE_ETC_DIR is empty"
 
    local _configfile
    local _fallback_configfile
@@ -535,7 +545,7 @@ sourcetree::cfg::remove_nodeline()
    # linux don't like space after -i
    if ! inplace_sed -e "/^${escaped};/d" "${_configfile}"
    then
-      internal_fail "sed address corrupt ?"
+      _internal_fail "sed address corrupt ?"
    fi
 }
 
@@ -563,7 +573,7 @@ sourcetree::cfg::remove_nodeline_by_uuid()
    # linux don't like space after -i
    if ! inplace_sed -e "/^[^;]*;[^;]*;[^;]*;${escaped};/d" "${_configfile}"
    then
-      internal_fail "sed address corrupt ?"
+      _internal_fail "sed address corrupt ?"
    fi
 }
 
@@ -678,7 +688,7 @@ sourcetree::cfg::search_for_configfile()
    local physdirectory="$1"
    local ceiling="$2"
 
-   [ -z "${physdirectory}" ] && internal_fail "empty directory"
+   [ -z "${physdirectory}" ] && _internal_fail "empty directory"
 
    local physceiling
 
@@ -686,11 +696,8 @@ sourcetree::cfg::search_for_configfile()
    [ -z "${physceiling}" ] && fail "SOURCETREE_START/MULLE_VIRTUAL_ROOT does not exist (${ceiling})"
 
    # check that physdirectory is inside physceiling
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
-   then
-      log_trace2 "physceiling  : ${physceiling}"
-      log_trace2 "physdirectory: ${physdirectory}"
-   fi
+   log_setting "physceiling  : ${physceiling}"
+   log_setting "physdirectory: ${physdirectory}"
 
    case "${physdirectory}" in
       ${physceiling})
@@ -710,7 +717,8 @@ sourcetree::cfg::search_for_configfile()
       ;;
    esac
 
-   log_debug "Searching for config \"${SOURCETREE_CONFIG_NAMES}\" (\"$SOURCETREE_CONFIG_DIR:$SOURCETREE_FALLBACK_CONFIG_DIR\") \
+   _log_debug "Searching for config \"${SOURCETREE_CONFIG_NAMES}\" \
+(\"$SOURCETREE_CONFIG_DIR:$SOURCETREE_FALLBACK_CONFIG_DIR\") \
 from \"${physdirectory}\" to \"${physceiling}\""
 
    (
@@ -759,8 +767,8 @@ sourcetree::cfg::determine_working_directory()
    local defer="$1"
    local physpwd="$2"
 
-   [ ! -z "${defer}" ]      || internal_fail "empty defer"
-   [ ! -z "${physpwd}" ]    || internal_fail "empty phypwd"
+   [ ! -z "${defer}" ]      || _internal_fail "empty defer"
+   [ ! -z "${physpwd}" ]    || _internal_fail "empty phypwd"
 
    if [ -z "${MULLE_PATH_SH}" ]
    then
@@ -882,7 +890,7 @@ sourcetree::cfg::determine_working_directory()
       ;;
 
       *)
-         internal_fail "unknown defer type \"${defer}\""
+         _internal_fail "unknown defer type \"${defer}\""
       ;;
    esac
 
@@ -920,7 +928,7 @@ sourcetree::cfg::touch_parents()
    while parent="`sourcetree::cfg::get_parent "${_rootdir}" `"
    do
       [ "${parent}" = "${_rootdir}" ] \
-         && internal_fail "${parent} endless loop"
+         && _internal_fail "${parent} endless loop"
 
       sourcetree::cfg::__common_configfile "${SOURCETREE_START}"
 
@@ -971,13 +979,13 @@ sourcetree::cfg::r_absolute_filename()
       ;;
 
       *)
-         internal_fail "config \"${config}\" is malformed"
+         _internal_fail "config \"${config}\" is malformed"
       ;;
    esac
 
    case "${address}" in
       /*)
-         internal_fail "address \"${address}\" is absolute"
+         _internal_fail "address \"${address}\" is absolute"
       ;;
    esac
 

@@ -153,7 +153,7 @@ sourcetree::sync::_check_descend_nodeline()
    then
       if [ -e "${filename}" ]
       then
-         log_fluff "Will not recursively update \"${filename}\" as it's not \
+         _log_fluff "Will not recursively update \"${filename}\" as it's not \
 a directory"
          return 1
       fi
@@ -204,21 +204,20 @@ sourcetree::sync::_descend_db_nodeline()
    local _filename
    local _config
    local _database
+   local _symbol
 
-   sourcetree::sync::_get_db_descendinfo "${database}" "${_uuid}"
+   sourcetree::sync::_get_db_descendinfo "${database}" "${_address}" "${_uuid}"
 
    # remove duplicate marker from _filename
    _filename="${_filename%#*}"
 
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
-   then
-      log_trace2 "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
-      log_trace2 "config             : ${config}"
-      log_trace2 "database           : ${database}"
-      log_trace2 "filename           : ${_filename}"
-      log_trace2 "newconfig          : ${_config}"
-      log_trace2 "newdatabase        : ${_database}"
-   fi
+   log_setting "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
+   log_setting "config             : ${config}"
+   log_setting "database           : ${database}"
+   log_setting "filename           : ${_filename}"
+   log_setting "newconfig          : ${_config}"
+   log_setting "newdatabase        : ${_database}"
+   log_setting "symbol             : ${_symbol}"
 
    local _style
    local rval
@@ -304,12 +303,12 @@ sourcetree::sync::_descend_db_nodelines()
    nodelines="`sourcetree::db::fetch_all_nodelines "${database}" `" || exit 1
    if [ -z "${nodelines}" ]
    then
-      log_fluff "No \"${style}\" update of database \"${database:-ROOT}\" as \
+      _log_fluff "No \"${style}\" update of database \"${database:-ROOT}\" as \
 it is empty (${PWD#${MULLE_USER_PWD}/})"
       return
    fi
 
-   log_debug "Continuing with a \"${style}\" update of nodelines \
+   _log_debug "Continuing with a \"${style}\" update of nodelines \
 \"${nodelines}\" of db \"${database:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
 
    local nodeline
@@ -994,7 +993,7 @@ sourcetree::sync::warn_dry_run()
 {
    if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" = 'YES' ]
    then
-      log_warning "***IMPORTANT REMINDER***
+      _log_warning "***IMPORTANT REMINDER***
 
 As fetches and zombification are not performed during a dry run (-n), the
 actual commands of an update can not be shown. This is especially true for
@@ -1148,7 +1147,7 @@ sourcetree::sync::main()
    MULLE_FETCH="${MULLE_FETCH:-`command -v mulle-fetch`}"
    [ -z "${MULLE_FETCH}" ] && fail "mulle-fetch not installed"
 
-   [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
+   [ -z "${DEFAULT_IFS}" ] && _internal_fail "IFS fail"
 
    sourcetree::sync::warn_dry_run
 

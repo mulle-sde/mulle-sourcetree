@@ -45,7 +45,7 @@ sourcetree::callback::call()
    local mode="$1"; shift
    local callback="$1"; shift
 
-   [ -z "${callback}" ]  && internal_fail "callback is empty"
+   [ -z "${callback}" ]  && _internal_fail "callback is empty"
 
    local evaluator
 
@@ -76,23 +76,23 @@ sourcetree::callback::call()
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
-      log_trace2 "NODE_ADDRESS:         \"${_address}\""
-      log_trace2 "NODE_BRANCH:          \"${_branch}\""
-      log_trace2 "NODE_FETCHOPTIONS:    \"${_fetchoptions}\""
-      log_trace2 "NODE_FILENAME:        \"${_filename}\""
-      log_trace2 "NODE_MARKS:           \"${_marks}\""
-      log_trace2 "NODE_RAW_USERINFO:    \"${_raw_userinfo}\""
-      log_trace2 "NODE_TAG:             \"${_tag}\""
-      log_trace2 "NODE_TYPE:            \"${_nodetype}\""
-      log_trace2 "NODE_URL:             \"${_url}\""
-      log_trace2 "NODE_UUID:            \"${_uuid}\""
-      log_trace2 "WALK_DATASOURCE:      \"${datasource}\""
-      log_trace2 "WALK_DESTINATION:     \"${_destination}\""
-      log_trace2 "WALK_MODE:            \"${mode}\""
-      log_trace2 "WALK_NODE:            \"${_nodeline}\""
-      log_trace2 "WALK_PARENT:          \"${WALK_PARENT}\""
-      log_trace2 "WALK_VIRTUAL:         \"${virtual}\""
-      log_trace2 "WALK_VIRTUAL_ADDRESS: \"${_virtual_address}\""
+      log_setting "NODE_ADDRESS:         \"${_address}\""
+      log_setting "NODE_BRANCH:          \"${_branch}\""
+      log_setting "NODE_FETCHOPTIONS:    \"${_fetchoptions}\""
+      log_setting "NODE_FILENAME:        \"${_filename}\""
+      log_setting "NODE_MARKS:           \"${_marks}\""
+      log_setting "NODE_RAW_USERINFO:    \"${_raw_userinfo}\""
+      log_setting "NODE_TAG:             \"${_tag}\""
+      log_setting "NODE_TYPE:            \"${_nodetype}\""
+      log_setting "NODE_URL:             \"${_url}\""
+      log_setting "NODE_UUID:            \"${_uuid}\""
+      log_setting "WALK_DATASOURCE:      \"${datasource}\""
+      log_setting "WALK_DESTINATION:     \"${_destination}\""
+      log_setting "WALK_MODE:            \"${mode}\""
+      log_setting "WALK_NODE:            \"${_nodeline}\""
+      log_setting "WALK_PARENT:          \"${WALK_PARENT}\""
+      log_setting "WALK_VIRTUAL:         \"${virtual}\""
+      log_setting "WALK_VIRTUAL_ADDRESS: \"${_virtual_address}\""
    fi
 
    #

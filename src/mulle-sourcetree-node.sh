@@ -138,7 +138,7 @@ sourcetree::node::augment()
 
          if [ "${before}" != "${after}" ]
          then
-            log_warning "Node of nodetype \"${_nodetype}\" augmented with \
+            _log_warning "Node of nodetype \"${_nodetype}\" augmented with \
 necessary marks \"no-delete,no-update,no-share,require\""
             _marks="${after}"
          fi
@@ -167,15 +167,15 @@ necessary marks \"no-delete,no-update,no-share,require\""
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
-      log_trace2 "ADDRESS:      \"${_address}\""
-      log_trace2 "NODETYPE:     \"${_nodetype}\""
-      log_trace2 "MARKS:        \"${_marks}\""
-      log_trace2 "UUID:         \"${_uuid}\""
-      log_trace2 "URL:          \"${_url}\""
-      log_trace2 "BRANCH:       \"${_branch}\""
-      log_trace2 "TAG:          \"${_tag}\""
-      log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
-      log_trace2 "USERINFO:     \"${_raw_userinfo}\""
+      log_setting "ADDRESS:      \"${_address}\""
+      log_setting "NODETYPE:     \"${_nodetype}\""
+      log_setting "MARKS:        \"${_marks}\""
+      log_setting "UUID:         \"${_uuid}\""
+      log_setting "URL:          \"${_url}\""
+      log_setting "BRANCH:       \"${_branch}\""
+      log_setting "TAG:          \"${_tag}\""
+      log_setting "FETCHOPTIONS: \"${_fetchoptions}\""
+      log_setting "USERINFO:     \"${_raw_userinfo}\""
    fi
 
    # this is done  during auto already
@@ -185,9 +185,9 @@ necessary marks \"no-delete,no-update,no-share,require\""
    #    ;;
    # esac
 
-   [ -z "${_uuid## }" ]     && internal_fail "_uuid is empty"
-   [ -z "${_nodetype## }" ] && internal_fail "_nodetype is empty"
-   [ -z "${_address## }" ]  && internal_fail "_address is empty"
+   [ -z "${_uuid## }" ]     && _internal_fail "_uuid is empty"
+   [ -z "${_nodetype## }" ] && _internal_fail "_nodetype is empty"
+   [ -z "${_address## }" ]  && _internal_fail "_address is empty"
 
    # does not work
    case "${_address}" in
@@ -245,15 +245,15 @@ sourcetree::node::_r_to_nodeline()
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
-      log_trace2 "ADDRESS:      \"${_address}\""
-      log_trace2 "NODETYPE:     \"${_nodetype}\""
-      log_trace2 "MARKS:        \"${_marks}\""
-      log_trace2 "UUID:         \"${_uuid}\""
-      log_trace2 "URL:          \"${_url}\""
-      log_trace2 "BRANCH:       \"${_branch}\""
-      log_trace2 "TAG:          \"${_tag}\""
-      log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
-      log_trace2 "USERINFO:     \"${_raw_userinfo}\""
+      log_setting "ADDRESS:      \"${_address}\""
+      log_setting "NODETYPE:     \"${_nodetype}\""
+      log_setting "MARKS:        \"${_marks}\""
+      log_setting "UUID:         \"${_uuid}\""
+      log_setting "URL:          \"${_url}\""
+      log_setting "BRANCH:       \"${_branch}\""
+      log_setting "TAG:          \"${_tag}\""
+      log_setting "FETCHOPTIONS: \"${_fetchoptions}\""
+      log_setting "USERINFO:     \"${_raw_userinfo}\""
    fi
 
    RVAL="${_address};${_nodetype};${_marks};${_uuid};\
@@ -293,7 +293,7 @@ sourcetree::node::r_to_nodeline()
       ;;
 
       "")
-         internal_fail "Address \"${_address}\" is empty"
+         _internal_fail "Address \"${_address}\" is empty"
       ;;
    esac
 
@@ -317,7 +317,7 @@ sourcetree::node::r_to_nodeline()
          fail "Nodetype \"${_nodetype}\" contains comma"
       ;;
       "")
-         internal_fail "_nodetype is empty"
+         _internal_fail "_nodetype is empty"
       ;;
    esac
 
@@ -326,7 +326,7 @@ sourcetree::node::r_to_nodeline()
          fail "UUID \"${_uuid}\" contains semicolon"
       ;;
       "")
-         internal_fail "_uuid is empty"
+         _internal_fail "_uuid is empty"
       ;;
    esac
 
@@ -370,7 +370,7 @@ sourcetree::node::type_filter()
    local nodetype="$1"
    local filter="$2"
 
-   [ -z "${nodetype}" ] && internal_fail "empty nodetype"
+   [ -z "${nodetype}" ] && _internal_fail "empty nodetype"
 
    case ",${filter}," in
       *,no-${nodetype},*)
@@ -395,6 +395,20 @@ sourcetree::node::type_filter()
 }
 
 
+# useful on windows 
+sourcetree::node::same_string()
+{
+   local  a
+   local  b
+
+   r_trim_whitespace "$1"
+   a="${RVAL}"
+   r_trim_whitespace "$2"
+   b="${RVAL}"
+
+   [ "${a}" = "${b}" ]
+}
+
 #
 # returns _formatstring
 # and key in RVAL
@@ -408,19 +422,24 @@ sourcetree::node::_r_get_format_key()
    if [ -z "${MULLE_ARRAY_SH}" ]
    then
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || \
-         internal_fail "Could not load mulle-array.sh via \"${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}\""
+         _internal_fail "Could not load mulle-array.sh via \"${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}\""
    fi
 
-   RVAL="`sed -n 's/%.={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+   local key 
+
+   key="`sed -n 's/%.={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
 
    local remainder
 
    remainder="`sed 's/^%.={[^}]*}//' <<< "${formatstring}" `"
-   if [ -z "${RVAL}" -o "${remainder}" = "${formatstring}" ]
+   if [ -z "${key}" ] || sourcetree::node::same_string "${remainder}" "${formatstring}"
    then
-      fail "malformed formatstring \"${formatstring:1}\". Need ={<title>,<dashes>,<key>}"
+      fail "malformed formatstring \"${formatstring:1}\". Need ={<title>,<dashes>,<key>} (offending: \"${remainder}\")"
    fi
+
    _formatstring="XX${remainder}" ## XX is used for skipping first two chars
+
+   RVAL="${key}"
 }
 
 #
@@ -682,7 +701,7 @@ sourcetree::node::printf()
                formatstring="${_formatstring}"
                switch=""
 
-               if [ ! -z "${ZSH_VERSION}" ]
+               if [ ${ZSH_VERSION+x} ]
                then
                   value="${(P)key}"
                else

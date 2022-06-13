@@ -782,15 +782,15 @@ sourcetree::commands::_append_new_node()
 
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
-      log_trace2 "ADDRESS:      \"${_address}\""
-      log_trace2 "NODETYPE:     \"${_nodetype}\""
-      log_trace2 "MARKS:        \"${_marks}\""
-      log_trace2 "UUID:         \"${_uuid}\""
-      log_trace2 "URL:          \"${_url}\""
-      log_trace2 "BRANCH:       \"${_branch}\""
-      log_trace2 "TAG:          \"${_tag}\""
-      log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
-      log_trace2 "USERINFO:     \"${_raw_userinfo}\""
+      log_setting "ADDRESS:      \"${_address}\""
+      log_setting "NODETYPE:     \"${_nodetype}\""
+      log_setting "MARKS:        \"${_marks}\""
+      log_setting "UUID:         \"${_uuid}\""
+      log_setting "URL:          \"${_url}\""
+      log_setting "BRANCH:       \"${_branch}\""
+      log_setting "TAG:          \"${_tag}\""
+      log_setting "FETCHOPTIONS: \"${_fetchoptions}\""
+      log_setting "USERINFO:     \"${_raw_userinfo}\""
    fi
 
    #
@@ -809,7 +809,7 @@ sourcetree::commands::_append_new_node()
             fail "A node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} already exists \
 in the sourcetree (${RVAL#${MULLE_USER_PWD}/}). Use -f to skip this check."
          else
-            internal_fail "Bizarre error"
+            _internal_fail "Bizarre error"
          fi
       fi
    fi
@@ -900,7 +900,7 @@ sourcetree::commands::add()
             ;;
 
             *)
-               log_warning "There is no directory or file named \
+               _log_warning "There is no directory or file named \
 \"${_address}\" (${PWD#${MULLE_USER_PWD}/})"
             ;;
          esac
@@ -908,8 +908,7 @@ sourcetree::commands::add()
    else
       if [ -e "${_address}" -a "${_nodetype}" != "local" ]
       then
-         log_warning "A directory or file named \"${_address}\" already \
-exists (${PWD#${MULLE_USER_PWD}/})"
+         log_warning "A directory or file named \"${_address}\" already exists (${PWD#${MULLE_USER_PWD}/})"
       fi
    fi
 
@@ -1509,7 +1508,7 @@ sourcetree::commands::mark()
 
             if [ "${blurb}" = 'YES' ]
             then
-               log_info "Node \"${_address}\" is already implicitly marked as \
+               _log_info "Node \"${_address}\" is already implicitly marked as \
 \"${mark}\" (as a negative is absent)"
             fi
          ;;
@@ -1878,10 +1877,6 @@ sourcetree::commands::common()
 {
    log_entry "sourcetree::commands::common" "$@"
 
-   local ROOT_DIR
-
-   ROOT_DIR="`pwd -P`"
-
    # must be empty initially for set
 
    local OPTION_URL
@@ -2017,7 +2012,7 @@ sourcetree::commands::common()
       shift
    done
 
-   [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
+   [ -z "${DEFAULT_IFS}" ] && _internal_fail "IFS fail"
 
    local argument
    local config
@@ -2302,7 +2297,7 @@ sourcetree::commands::initialize()
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
+      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && _internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
 
       # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1

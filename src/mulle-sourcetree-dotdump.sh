@@ -118,7 +118,7 @@ sourcetree::dotdump::html_print_node()
       ;;
 
       *)
-         internal_fail "identifier \"${identifier}\" must be quoted"
+         _internal_fail "identifier \"${identifier}\" must be quoted"
       ;;
    esac
 
@@ -278,7 +278,7 @@ sourcetree::dotdump::print_node()
    case "${identifier}" in
       "")
          [ -z "${destination}" ] && \
-            internal_fail "destination and identifer are empty for \"${WALK_NODE}\""
+            _internal_fail "destination and identifer are empty for \"${WALK_NODE}\""
 
          identifier="\"${destination}\""
       ;;
@@ -287,7 +287,7 @@ sourcetree::dotdump::print_node()
       ;;
 
       *)
-         internal_fail "identifier \"${identifier}\" must be quoted"
+         _internal_fail "identifier \"${identifier}\" must be quoted"
       ;;
    esac
 
@@ -332,7 +332,7 @@ sourcetree::dotdump::print_node()
          ;;
 
          *)
-            internal_fail "state is empty"
+            _internal_fail "state is empty"
          ;;
       esac
    else
@@ -368,7 +368,7 @@ sourcetree::dotdump::print_node()
          ;;
 
          *)
-            internal_fail "state is empty"
+            _internal_fail "state is empty"
          ;;
       esac
    fi
@@ -850,7 +850,7 @@ sourcetree::dotdump::initialize()
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
+      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && _internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
 
       # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1

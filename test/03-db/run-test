@@ -17,7 +17,7 @@ expect()
 
    if [ "${output}" != "${expected}" ]
    then
-      internal_fail "Did expect \"${expected}\" but got \"${output}\""
+      _internal_fail "Did expect \"${expected}\" but got \"${output}\""
    fi
 }
 
@@ -63,7 +63,7 @@ main()
 
    if sourcetree::db::fetch_nodeline_for_uuid "/" 3
    then
-      internal_fail "did find something unexpectedly"
+      _internal_fail "did find something unexpectedly"
    fi
 
    log_verbose "----- #3 PASSED -----"
@@ -73,12 +73,12 @@ main()
    #
    if ! sourcetree::db::forget "/" 2
    then
-      internal_fail "could not forget 2"
+      _internal_fail "could not forget 2"
    fi
 
    if sourcetree::db::fetch_nodeline_for_uuid "/" 2
    then
-      internal_fail "did not forget"
+      _internal_fail "did not forget"
    fi
 
    log_verbose "----- #4 PASSED -----"
@@ -89,7 +89,7 @@ main()
    # with a _nodetype
    if ! sourcetree::db::forget "/" 1
    then
-      internal_fail "did not forget"
+      _internal_fail "did not forget"
    fi
 
    sourcetree::db::memorize "/" 1 "_address;git;;1" "the_owner" "${PWD}/the_owner/_address"
@@ -101,27 +101,27 @@ main()
    #
    if ! sourcetree::db::zombify_nodes "/"
    then
-      internal_fail "internal_failed to zombify"
+      _internal_fail "internal_failed to zombify"
    fi
 
    if ! sourcetree::db::fetch_nodeline_for_uuid "/" 1 > /dev/null
    then
-      internal_fail "zombie doesn't respond anymore"
+      _internal_fail "zombie doesn't respond anymore"
    fi
 
    sourcetree::db::set_uuid_alive "/" 1
 
    if ! sourcetree::db::bury_zombies "/"
    then
-      internal_fail "internal_failed to bury"
+      _internal_fail "internal_failed to bury"
    fi
 
    if ! sourcetree::db::fetch_nodeline_for_uuid "/" 1 > /dev/null
    then
-      internal_fail "alive node unfairly reaped before its time"
+      _internal_fail "alive node unfairly reaped before its time"
    fi
 
-   [ -d "the_owner/_address" ] || internal_fail  "directory vanished"
+   [ -d "the_owner/_address" ] || _internal_fail  "directory vanished"
 
    log_verbose "----- #5 PASSED -----"
 
@@ -130,25 +130,25 @@ main()
    #
    if ! sourcetree::db::zombify_nodes "/"
    then
-      internal_fail "internal_failed to zombify"
+      _internal_fail "internal_failed to zombify"
    fi
 
    if ! sourcetree::db::fetch_nodeline_for_uuid "/" 1 > /dev/null
    then
-      internal_fail "zombie doesn't respond anymore"
+      _internal_fail "zombie doesn't respond anymore"
    fi
 
    if ! sourcetree::db::bury_zombies "/"
    then
-      internal_fail "internal_failed to bury"
+      _internal_fail "internal_failed to bury"
    fi
 
    if sourcetree::db::fetch_nodeline_for_uuid "/" 1
    then
-      internal_fail "survived the zombie apocalypse"
+      _internal_fail "survived the zombie apocalypse"
    fi
 
-   [ ! -d "the_owner/_address" ] || internal_fail  "directory still there"
+   [ ! -d "the_owner/_address" ] || _internal_fail  "directory still there"
 
    log_verbose "----- #6 PASSED -----"
 
