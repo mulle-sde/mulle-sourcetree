@@ -44,14 +44,14 @@ update_actions_for_nodelines()
 {
    log_entry "update_actions_for_nodelines" "$@"
 
-   [ "$#" -ne 3  ] && internal_fail "api error"
+   [ "$#" -ne 3  ] && _internal_fail "api error"
 
    local style="$1"
    local previousnodeline="$2"
    local nodeline="$3"
 
-   [ -z "${style}" ]   && internal_fail "style is empty"
-   [ -z "${nodeline}" ] && internal_fail "nodeline is empty"
+   [ -z "${style}" ]   && _internal_fail "style is empty"
+   [ -z "${nodeline}" ] && _internal_fail "nodeline is empty"
 
    local _branch
    local _address

@@ -475,10 +475,6 @@ sourcetree::list::main()
 {
    log_entry "sourcetree::list::main" "$@"
 
-   local ROOT_DIR
-
-   ROOT_DIR="`pwd -P`"
-
    # must be empty initially for set
    local OPTION_OUTPUT_BANNER='DEFAULT'
    local OPTION_OUTPUT_COLOR='DEFAULT'
@@ -783,7 +779,7 @@ sourcetree::list::main()
       shift
    done
 
-   [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
+   [ -z "${DEFAULT_IFS}" ] && _internal_fail "IFS fail"
 
    [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && sourcetree::list::usage
 
@@ -815,6 +811,16 @@ sourcetree::list::main()
    if [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" ]
    then
       OPTION_OUTPUT_BANNER='NO'
+   fi
+
+   if [ "${OPTION_OUTPUT_INDENT}" = "DEFAULT" ]
+   then
+      if [ "${FLAG_SOURCETREE_MODE}" = 'share' ]
+      then
+         OPTION_OUTPUT_INDENT='YES'
+      else
+         OPTION_OUTPUT_INDENT='NO'
+      fi
    fi
 
    local mode

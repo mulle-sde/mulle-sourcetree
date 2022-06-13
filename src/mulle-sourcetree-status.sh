@@ -80,7 +80,7 @@ sourcetree::status::is_uptodate()
 
    local datasource="$1"
 
-   [ -z "${datasource}" ] && internal_fail "datasource is empty"
+   [ -z "${datasource}" ] && _internal_fail "datasource is empty"
 
    local configtimestamp
    local dbtimestamp
@@ -215,7 +215,7 @@ sourcetree::status::r_emit()
 
    case "${datasource}" in
       "//")
-         internal_fail "malformed datasource"
+         _internal_fail "malformed datasource"
       ;;
 
       "/"|/*/)
@@ -244,16 +244,13 @@ sourcetree::status::r_emit()
    fs="library"      # not a fs (system) library
    treestatus="ok"
 
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
-   then
-      log_trace2 "output_address: ${output_address}"
-      log_trace2 "address:        ${address}"
-      log_trace2 "directory:      ${directory}"
-      log_trace2 "datasource:     ${datasource}"
-      log_trace2 "marks:          ${marks}"
-      log_trace2 "mode:           ${mode}"
-      log_trace2 "filename:       ${filename}"
-   fi
+   log_setting "output_address: ${output_address}"
+   log_setting "address:        ${address}"
+   log_setting "directory:      ${directory}"
+   log_setting "datasource:     ${datasource}"
+   log_setting "marks:          ${marks}"
+   log_setting "mode:           ${mode}"
+   log_setting "filename:       ${filename}"
 
    if sourcetree::nodemarks::enable "${marks}" "fs"
    then
@@ -315,7 +312,7 @@ sourcetree::status::r_emit()
 
          if [ -z "${_url}" ]
          then
-            log_fluff "#3 \"${filename}\" does not exist and is required \
+            _log_fluff "#3 \"${filename}\" does not exist and is required \
 ($PWD), but _url is empty"
             RVAL="${output_address};missing;${fs};${configexists};${dbexists}" #;${filename}"
             return 3
@@ -357,7 +354,7 @@ sourcetree::status::r_emit()
             if [ "${configexists}" = 'NO' ]
             then
                # don't fluff zeroes
-               log_debug "#0: \"${directory}\" does not have a \
+               _log_debug "#0: \"${directory}\" does not have a \
 ${SOURCETREE_CONFIG_DIR} (${PWD#${MULLE_USER_PWD}/})"
 
                RVAL="${output_address};ok;${fs};${configexists};${dbexists}" #;${filename}"
@@ -374,7 +371,7 @@ ${configexists};${dbexists}" #;${filename}"
 
             if ! sourcetree::status::is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
             then
-               log_fluff "#8 Database \"${datasource}\" is not compatible with \
+               _log_fluff "#8 Database \"${datasource}\" is not compatible with \
 \"${SOURCETREE_MODE}\" (${PWD#${MULLE_USER_PWD}/})"
 
                RVAL="${output_address};outdated;${fs};${configexists};${dbexists}" #;${filename}"
@@ -744,7 +741,7 @@ sourcetree::status::initialize()
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
       [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] &&
-         internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
+         _internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
 
       # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1

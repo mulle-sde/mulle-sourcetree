@@ -34,7 +34,7 @@ MULLE_SOURCETREE_NODEMARKS_SH="included"
 
 sourcetree::nodemarks::_key_check()
 {
-   [ -z "${DEFAULT_IFS}" ] && internal_fail "DEFAULT_IFS not set"
+   [ -z "${DEFAULT_IFS}" ] && _internal_fail "DEFAULT_IFS not set"
 
    case "${1}" in
       "")
@@ -279,7 +279,7 @@ sourcetree::nodemarks::version_match()
                ;;
 
                *)
-                  internal_fail "unknown operator \"${operator}\""
+                  _internal_fail "unknown operator \"${operator}\""
                ;;
             esac
       esac
@@ -338,9 +338,9 @@ sourcetree::nodemarks::match()
          rval=1
          pattern="${pattern//\*/*([^,])}"
 
-         shell_is_extglob_enabled || internal_fail "extglob must be enabled"
+         shell_is_extglob_enabled || _internal_fail "extglob must be enabled"
 
-         if [ ! -z "${ZSH_VERSION}" ]
+         if [ ${ZSH_VERSION+x} ]
          then
             case ",${marks}," in
                *\,${~pattern}\,*)
@@ -375,7 +375,7 @@ sourcetree::nodemarks::enable()
 
    case "${key}" in
       'only-'*|'no-'*)
-         internal_fail "key must not start with only or no"
+         _internal_fail "key must not start with only or no"
       ;;
    esac
 
@@ -615,7 +615,7 @@ sourcetree::nodemarks::_filter_sexpr()
          key="${_s%%[[:space:])]*}"
          _s="${_s#"${key}"}"
 
-         if [ ! -z "${ZSH_VERSION}" ]
+         if [ ${ZSH_VERSION+x} ]
          then
             value="${(P)key}"
          else

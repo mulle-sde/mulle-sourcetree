@@ -13,7 +13,7 @@ export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
 run_mulle_sourcetree()
 {
    log_fluff "####################################" >&2
-   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS:-} "$@"
    log_fluff "####################################" >&2
 
    (
@@ -21,7 +21,7 @@ run_mulle_sourcetree()
       
       MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
 
-      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS} "$@"
+      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS:-} "$@"
    )
 }
 
@@ -51,7 +51,7 @@ expect_content()
 
    if [ ! -f "${expect}" ]
    then
-      internal_fail "\"${expect}\" is missing from test"
+      _internal_fail "\"${expect}\" is missing from test"
    fi
 
    local diffs

@@ -111,7 +111,7 @@ sourcetree::db::__common___rootdir()
       ;;
 
       *)
-         internal_fail "_database \"$1\" must start with '/'"
+         _internal_fail "_database \"$1\" must start with '/'"
       ;;
    esac
 }
@@ -119,7 +119,7 @@ sourcetree::db::__common___rootdir()
 
 sourcetree::db::__common__rootdir()
 {
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && _internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
    if sourcetree::db::__common_sharedir "$1"
    then
@@ -136,8 +136,8 @@ sourcetree::db::__common__rootdir()
 #
 sourcetree::db::__common_databasedir()
 {
-   [ -z "${SOURCETREE_DB_FILENAME}" ] && internal_fail "SOURCETREE_DB_FILENAME is not set"
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && internal_fail "MULLE_VIRTUAL_ROOT is not set"
+   [ -z "${SOURCETREE_DB_FILENAME}" ] && _internal_fail "SOURCETREE_DB_FILENAME is not set"
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && _internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
    _database="$1"  # not a local!
 
@@ -177,7 +177,7 @@ sourcetree::db::__common_databasedir()
       ;;
 
       *)
-         internal_fail "_database \"${_database}\" must start with '/'"
+         _internal_fail "_database \"${_database}\" must start with '/'"
       ;;
    esac
 }
@@ -195,7 +195,7 @@ sourcetree::db::__common_uuid()
       return 0
    fi
 
-   internal_fail "Empty uuid"
+   _internal_fail "Empty uuid"
 }
 
 
@@ -242,13 +242,13 @@ sourcetree::db::memorize()
    local filename="$5"
    local evaledurl="$6"
 
-   [ -z "${nodeline}" ] && internal_fail "nodeline is missing"
-   [ -z "${uuid}" ]     && internal_fail "uuid is missing"
-   [ -z "${filename}" ] && internal_fail "filename is missing"
+   [ -z "${nodeline}" ] && _internal_fail "nodeline is missing"
+   [ -z "${uuid}" ]     && _internal_fail "uuid is missing"
+   [ -z "${filename}" ] && _internal_fail "filename is missing"
 
 #   case "${owner}" in
 #      .*/)
-#         internal_fail "owner starts with \".\""
+#         _internal_fail "owner starts with \".\""
 #      ;;
 #   esac
 
@@ -256,7 +256,7 @@ sourcetree::db::memorize()
       /*)
 #         if [ "${MULLE_UNAME}" = "darwin" ]
 #         then
-#            internal_fail "non physical path"
+#            _internal_fail "non physical path"
 #         fi
       ;;
 
@@ -264,7 +264,7 @@ sourcetree::db::memorize()
       ;;
 
       *)
-         internal_fail "filename \"${filename}\" must be absolute"
+         _internal_fail "filename \"${filename}\" must be absolute"
       ;;
    esac
 
@@ -344,8 +344,8 @@ sourcetree::db::bury()
 
    local filename="$3"
 
-   [ $# -eq 3 ] || internal_fail "api error"
-   [ -z "${filename}" ] && internal_fail "filename is empty"
+   [ $# -eq 3 ] || _internal_fail "api error"
+   [ -z "${filename}" ] && _internal_fail "filename is empty"
 
    local gravepath
    local graveyard
@@ -363,7 +363,7 @@ sourcetree::db::bury()
       ;;
 
       *)
-         internal_fail "filename \"${filename}\" must be absolute"
+         _internal_fail "filename \"${filename}\" must be absolute"
       ;;
    esac
 
@@ -399,7 +399,7 @@ sourcetree::db::bury()
    local project_dir
 
    [ -z "${SOURCETREE_DB_FILENAME_RELATIVE}" ] \
-      && internal_fail "SOURCETREE_DB_FILENAME_RELATIVE is empty"
+      && _internal_fail "SOURCETREE_DB_FILENAME_RELATIVE is empty"
 
 
    r_simplified_absolutepath "${_databasedir}/${SOURCETREE_DB_FILENAME_RELATIVE}"
@@ -421,7 +421,7 @@ sourcetree::db::bury()
 
    case "${RVAL}" in
       ../*)
-         internal_fail "Bury path for \"${filename#${MULLE_USER_PWD}/}\" escapes \
+         _internal_fail "Bury path for \"${filename#${MULLE_USER_PWD}/}\" escapes \
 project \"${project_dir#${MULLE_USER_PWD}/}\".
 ${C_INFO}If you recently renamed your project, this is not unusual. 
 You need to clean it up manually (sorry). Suggested fix:
@@ -456,7 +456,7 @@ ${C_RESET_BOLD} rm -rf .mulle/var kitchen stash dependency"
    TAR="`command -v "tar"`"
    if [ ! -z "${TAR}" -a -d "${gravepath}" ]
    then
-      log_info "Burying charred \
+      _log_info "Burying charred \
 ${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \
 \"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
       exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}.tmp" >&2 &&
@@ -466,7 +466,7 @@ ${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \
          rmdir_safer "${gravepath}.tmp"
       ) &
    else
-      log_info "Burying \
+      _log_info "Burying \
 ${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \
 \"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
       exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}" >&2
@@ -497,14 +497,10 @@ sourcetree::db::__parse_dbentry()
       break
    done <<< "${dbentry}"
 
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
-   then
-      log_trace2 "\
-nodeline  : ${nodeline}
-owner     : ${owner}
-filename  : ${filename}
-evaledurl : ${evaledurl}"
-   fi
+   log_setting "nodeline  : ${nodeline}"
+   log_setting "owner     : ${owner}"
+   log_setting "filename  : ${filename}"
+   log_setting "evaledurl : ${evaledurl}"
 }
 
 
@@ -640,13 +636,13 @@ sourcetree::db::fetch_all_nodelines()
 
 #   if shopt -poq noglob
 #   then
-#      internal_fail "noglob should be off"
+#      _internal_fail "noglob should be off"
 #   fi
 
    shell_enable_nullglob
    for i in "${_databasedir}"/*
    do
-      head -1 "${i}" || internal_fail "malformed file $i"
+      head -1 "${i}" || _internal_fail "malformed file $i"
    done
    shell_disable_nullglob
 }
@@ -663,7 +659,7 @@ sourcetree::db::fetch_uuid_for_address()
 
    local address="$2"
 
-   [ -z "${address}" ] && internal_fail "address is empty"
+   [ -z "${address}" ] && _internal_fail "address is empty"
 
    if dir_has_files "${_databasedir}" f
    then
@@ -687,7 +683,7 @@ sourcetree::db::r_fetch_uuid_for_evaledurl()
 
    local searchurl="$2"
 
-   [ -z "${searchurl}" ] && internal_fail "url is empty"
+   [ -z "${searchurl}" ] && _internal_fail "url is empty"
 
    if ! dir_has_files "${_databasedir}" f
    then
@@ -728,7 +724,7 @@ sourcetree::db::r_fetch_uuid_for_evaledurl()
 #
 #    local searchurl="$2"
 #
-#    [ -z "${searchfilename}" ] && internal_fail "filename is empty"
+#    [ -z "${searchfilename}" ] && _internal_fail "filename is empty"
 #
 #    if ! dir_has_files "${_databasedir}" f
 #    then
@@ -881,7 +877,7 @@ sourcetree::db::set_dbtype()
 
    local dbtype="$2"
 
-   [ -z "${dbtype}" ] && internal_fail "type is missing"
+   [ -z "${dbtype}" ] && _internal_fail "type is missing"
 
    mkdir_if_missing "${_databasedir}"
    redirect_exekutor "${_databasedir}/.db_type"  printf "%s\n" "${dbtype}"
@@ -1156,7 +1152,7 @@ sourcetree::db::set_shareddir()
 {
    log_entry "sourcetree::db::set_shareddir" "$@"
 
-   [ $# -eq 2 ] || internal_fail "api error"
+   [ $# -eq 2 ] || _internal_fail "api error"
 
    local _database
    local _databasedir
@@ -1176,7 +1172,7 @@ sourcetree::db::clear_shareddir()
 {
    log_entry "sourcetree::db::clear_shareddir" "$@"
 
-   [ $# -eq 1 ] || internal_fail "api error"
+   [ $# -eq 1 ] || _internal_fail "api error"
 
    local _database
    local _databasedir
@@ -1191,7 +1187,7 @@ sourcetree::db::get_shareddir()
 {
    log_entry "sourcetree::db::get_shareddir" "$@"
 
-   [ $# -eq 1 ] || internal_fail "api error"
+   [ $# -eq 1 ] || _internal_fail "api error"
 
    local _database
    local _databasedir
@@ -1324,7 +1320,7 @@ sourcetree::db::_set_default_mode()
       ;;
 
       *)
-         internal_fail "unknown dbtype \"${dbtype}\""
+         _internal_fail "unknown dbtype \"${dbtype}\""
       ;;
    esac
 
@@ -1333,7 +1329,7 @@ sourcetree::db::_set_default_mode()
       log_debug "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
       if [ "${SOURCETREE_MODE}" = share ]
       then
-         [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
+         [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && _internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
          log_debug "Stash directory: ${C_RESET_BOLD}${MULLE_SOURCETREE_STASH_DIR}${C_INFO}"
       fi
    fi
@@ -1624,7 +1620,7 @@ sourcetree::db::bury_zombie()
 
    local uuid="$2"
 
-   [ -z "${uuid}" ] && internal_fail "uuid is empty"
+   [ -z "${uuid}" ] && _internal_fail "uuid is empty"
 
    local _zombiefile
 
@@ -1856,7 +1852,7 @@ sourcetree::db::r_share_filename()
    local uuid="$5"
    local database="$6"
 
-   [ -z "${evaledurl}" ] && internal_fail "URL \"${evaledurl}\" is empty"
+   [ -z "${evaledurl}" ] && _internal_fail "URL \"${evaledurl}\" is empty"
 
    #
    # Use the "${MULLE_SOURCETREE_STASH_DIR}" for shared nodes, except when
@@ -1912,7 +1908,7 @@ sourcetree::db::r_share_filename()
 
          if [ -e "${filename}" ]
          then
-            log_fluff "The URL \"${evaledurl}\" is already used in root and \
+            _log_fluff "The URL \"${evaledurl}\" is already used in root and \
 exists. So skip \"${address}\" for database \"${database}\"."
             return 3
          fi
@@ -1938,11 +1934,11 @@ exists. So skip \"${address}\" for database \"${database}\"."
 #             then
 #                if [ "${check}" != "${uuid}" ]
 #                then
-#                   internal_fail "Database corrupted. mulle-sde clean tidy everything."
+#                   _internal_fail "Database corrupted. mulle-sde clean tidy everything."
 #                fi
 #
 #                r_basename "${database}"
-#                log_error "\
+#                _log_error "\
 # Shared node \"${address}\" is not in the root database but in database (${database}).
 # ${C_INFO}This can sometimes happen, if you added a dependency, that depends on
 # a dependency that a previous dependency also depends on. This can trip up the
@@ -1973,7 +1969,7 @@ exists. So skip \"${address}\" for database \"${database}\"."
 #          fi
 #     else
 #         [ "${_database}" = "/" ] &&
-#            internal_fail "Unexpected root database for \"${address}\". \
+#            _internal_fail "Unexpected root database for \"${address}\". \
 #But uuids differ \"${uuid}\" vs \"${otheruuid}\""
 #        if [ "${_database}" != "/" ]
 #        then

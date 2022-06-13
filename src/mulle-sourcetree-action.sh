@@ -36,33 +36,42 @@ sourcetree::action::r_fetch_eval_options()
 {
    log_entry "sourcetree::action::r_fetch_eval_options" "$@"
 
+   local marks="$1"
+
    local options
 
-   # this implictily sets --symlink
-   case "${OPTION_FETCH_SYMLINK}" in
-      'NO')
-      ;;
+   if sourcetree::nodemarks::disable "${_marks}" "symlink" || \
+      sourcetree::nodemarks::disable "${_marks}" "symlink-${MULLE_UNAME}"
+   then
+      r_concat "${options}" "--no-symlink"
+      options="${RVAL}"
+   else
+      # this implictily sets --symlink
+      case "${OPTION_FETCH_SYMLINK}" in
+         'NO')
+         ;;
 
-      'YES')
-         r_concat "${options}" "--symlink-returns-4"
-         options="${RVAL}"
-      ;;
-
-      "DEFAULT")
-         if [ "${MULLE_SOURCETREE_SYMLINK}" = 'YES' ]
-         then
+         'YES')
             r_concat "${options}" "--symlink-returns-4"
             options="${RVAL}"
-         fi
-      ;;
-   esac
+         ;;
 
-   if [ "${OPTION_FETCH_ABSOLUTE_SYMLINK}" = 'YES' ]
-   then
-      r_concat "${options}" "--absolute-symlink"
-      options="${RVAL}"
+         "DEFAULT")
+            if [ "${MULLE_SOURCETREE_SYMLINK}" = 'YES' ]
+            then
+               r_concat "${options}" "--symlink-returns-4"
+               options="${RVAL}"
+            fi
+         ;;
+      esac
+
+      if [ "${OPTION_FETCH_ABSOLUTE_SYMLINK}" = 'YES' ]
+      then
+         r_concat "${options}" "--absolute-symlink"
+         options="${RVAL}"
+      fi
    fi
-
+   
    if [ "${OPTION_CHECK_USR_LOCAL_INCLUDE}" = 'YES' ]
    then
       r_concat "${options}" "--check-system-includes"
@@ -212,9 +221,9 @@ sourcetree::action::_do_fetch_operation()
    local _raw_userinfo="$8"   # unused
    local _uuid="$9"           # uuid of the node
 
-   [ -z "${destination}" ] && internal_fail "destination is empty"
+   [ -z "${destination}" ] && _internal_fail "destination is empty"
 
-   [ $# -eq 9 ] || internal_fail "fail"
+   [ $# -eq 9 ] || _internal_fail "fail"
 
    if [ "${OPTION_CHECK_USR_LOCAL_INCLUDE}" = 'YES' ] && sourcetree::action::has_system_include "${_uuid}"
    then
@@ -241,7 +250,7 @@ sourcetree::action::_do_fetch_operation()
 
    local options
 
-   sourcetree::action::r_fetch_eval_options
+   sourcetree::action::r_fetch_eval_options "${_marks}"
    options="${RVAL}"
 
    #
@@ -266,7 +275,7 @@ sourcetree::action::_do_fetch_operation()
 
    local value
 
-   if [ ! -z "${ZSH_VERSION}" ]
+   if [ ${ZSH_VERSION+x} ]
    then
       value="${(P)envvar}"
    else
@@ -290,7 +299,7 @@ sourcetree::action::_do_fetch_operation()
    then
       if sourcetree::nodemarks::disable "${_marks}" "platform-${MULLE_UNAME}"
       then
-         log_info "${C_RESET_BOLD}${_address#${MULLE_USER_PWD}/}${C_INFO} \
+         _log_info "${C_RESET_BOLD}${_address#${MULLE_USER_PWD}/}${C_INFO} \
 not fetched as ${C_MAGENTA}${C_BOLD}platform-${MULLE_UNAME}${C_INFO} is \
 disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
          return
@@ -303,7 +312,7 @@ disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
                                                  "${_branch}" \
                                                  "${_tag}" \
                                                  "${_nodetype}" \
-                                                 "${_fetchoptions}"
+                                                 "${fetchoptions}"
    rval="$?"
    case $rval in
       0)
@@ -313,7 +322,7 @@ disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
       ;;
 
       111)
-         log_fail "Source \"${_nodetype}\" is unknown"
+         fail "Source \"${_nodetype}\" is unknown"
       ;;
 
       *)
@@ -348,7 +357,7 @@ sourcetree::action::do_operation()
       return $?
    fi
 
-   [ -z "${opname}" ] && internal_fail "operation is empty"
+   [ -z "${opname}" ] && _internal_fail "operation is empty"
 
 #   local _address="$1"
    local _url="$2"            # URL of the node
@@ -361,7 +370,7 @@ sourcetree::action::do_operation()
 #   local _raw_userinfo="$9"  # userinfo
 #   shift; local _uuid="$10"          # uuid of the node
 
-   [ -z "${destination}" ] && internal_fail "Destination is empty"
+   [ -z "${destination}" ] && _internal_fail "Destination is empty"
 
    if [ ! -z "${OPTION_OVERRIDE_BRANCH}" ]
    then
@@ -374,12 +383,12 @@ sourcetree::action::do_operation()
    options="${RVAL}"
 
    sourcetree::fetch::sync_operation "${opname}" "${options}" \
-                                         "${_url}" \
-                                         "${destination}" \
-                                         "${_branch}" \
-                                         "${_tag}" \
-                                         "${_nodetype}" \
-                                         "${_fetchoptions}"
+                                                 "${_url}" \
+                                                 "${destination}" \
+                                                 "${_branch}" \
+                                                 "${_tag}" \
+                                                 "${_nodetype}" \
+                                                 "${_fetchoptions}"
 }
 
 
@@ -391,8 +400,8 @@ sourcetree::action::update_safe_move_node()
    local filename="$2"
    local _marks="$3"
 
-   [ -z "${previousfilename}" ] && internal_fail "empty previousfilename"
-   [ -z "${filename}" ]         && internal_fail "empty filename"
+   [ -z "${previousfilename}" ] && _internal_fail "empty previousfilename"
+   [ -z "${filename}" ]         && _internal_fail "empty filename"
 
    if sourcetree::nodemarks::disable "${_marks}" "delete"
    then
@@ -419,8 +428,8 @@ sourcetree::action::update_safe_remove_node()
    local _uuid="$3"
    local database="$4"
 
-   [ -z "${filename}" ] && internal_fail "empty filename"
-   [ -z "${_uuid}" ]    && internal_fail "empty _uuid"
+   [ -z "${filename}" ] && _internal_fail "empty filename"
+   [ -z "${_uuid}" ]    && _internal_fail "empty _uuid"
 
    if sourcetree::nodemarks::disable "${_marks}" "delete"
    then
@@ -439,7 +448,7 @@ sourcetree::action::update_safe_clobber()
    local filename="$1"
    local database="$2"
 
-   [ -z "${filename}" ] && internal_fail "empty filename"
+   [ -z "${filename}" ] && _internal_fail "empty filename"
 
    sourcetree::node::r_uuidgen
    sourcetree::db::bury "${database}" "${RVAL}" "${filename}"
@@ -499,8 +508,8 @@ chickening out"
    else
       if [ -L "${newfilename}" ]
       then
-         log_fluff "Node \"${newfilename#${MULLE_USER_PWD}/}\" references a broken symlink \
-\"${newfilename}\". Clobbering it"
+         _log_fluff "Node \"${newfilename#${MULLE_USER_PWD}/}\" references a \
+broken symlink \"${newfilename}\". Clobbering it"
          remove_file_if_present "${newfilename}"
       else
          log_debug "\"${newfilename#${MULLE_USER_PWD}/}\" is not there"
@@ -537,12 +546,12 @@ chickening out"
          then
             case "${newnodetype}" in
                local)
-                  log_fluff "Local node is present at \"${newfilename#${MULLE_USER_PWD}/}\". \
+                  _log_fluff "Local node is present at \"${newfilename#${MULLE_USER_PWD}/}\". \
 Very well just remember it."
                ;;
 
                *)
-                  log_fluff "Node is new but \"${newfilename#${MULLE_USER_PWD}/}\" exists. \
+                  _log_fluff "Node is new but \"${newfilename#${MULLE_USER_PWD}/}\" exists. \
 As node is marked \"no-delete\" just remember it."
                ;;
             esac
@@ -584,7 +593,7 @@ it doesn't exist (${PWD#${MULLE_USER_PWD}/})"
          then
             pretty_config="."
          fi
-         log_verbose "Node \"${newfilename#${MULLE_USER_PWD}/}\" of \
+         _log_verbose "Node \"${newfilename#${MULLE_USER_PWD}/}\" of \
 sourcetree \"${pretty_config}\" is missing, so fetch"
 
 #         if [ "${newaddress}" = "Foundation" ]
@@ -640,7 +649,7 @@ sourcetree \"${pretty_config}\" is missing, so fetch"
 
    if [ "${_uuid}" != "${newuuid}" ]
    then
-      internal_fail "uuid \"${newuuid}\" wrong (expected \"${_uuid}\")"
+      _internal_fail "uuid \"${newuuid}\" wrong (expected \"${_uuid}\")"
    fi
 
    sourcetree::node::r_sanitized_address "${_address}"
@@ -668,7 +677,7 @@ chickening out"
    then
       if ! [ "${_nodetype}" = "symlink" -a "${newnodetype}" = "git" ]
       then
-         log_verbose "Nodetype has changed from \"${_nodetype}\" to \
+         _log_verbose "Nodetype has changed from \"${_nodetype}\" to \
 \"${newnodetype}\", need to fetch"
 
          # no-delete check here ?
@@ -686,7 +695,7 @@ chickening out"
    #
    if [ "${newexists}" = 'NO' -a "${previousexists}" = 'NO' ]
    then
-      log_fluff "Previous destination \"${previousfilename}\" and \
+      _log_fluff "Previous destination \"${previousfilename}\" and \
 current destination \"${newfilename}\" do not exist."
       r_add_line "${ACTIONS}" "fetch"
       return
@@ -701,10 +710,10 @@ current destination \"${newfilename}\" do not exist."
       then
          if [ "${previousexists}" = 'YES' ]
          then
-            log_warning "Destinations new \"${newfilename}\" and \
+            _log_warning "Destinations new \"${newfilename}\" and \
 old \"${previousfilename}\" exist. Doing nothing."
          else
-            log_fluff "Destinations new \"${newfilename}\" and \
+            _log_fluff "Destinations new \"${newfilename}\" and \
 old \"${previousfilename}\" exist. Looks like a manual move. Doing nothing."
          fi
          ACTIONS="remember"
@@ -713,7 +722,7 @@ old \"${previousfilename}\" exist. Looks like a manual move. Doing nothing."
          # Just old is there, so move it. We already checked
          # for the case where both are absent.
          #
-         log_verbose "Address changed from \"${_address}\" to \
+         _log_verbose "Address changed from \"${_address}\" to \
 \"${newaddress}\", need to move"
          ACTIONS="move"
       fi
@@ -726,7 +735,7 @@ old \"${previousfilename}\" exist. Looks like a manual move. Doing nothing."
       symlink)
          if [ "${newexists}" = 'YES' ]
          then
-            log_fluff "\"${newfilename}\" is symlink. Ignoring possible \
+            _log_fluff "\"${newfilename}\" is symlink. Ignoring possible \
 differences in URL related info."
             RVAL="${ACTIONS}"
             return
@@ -736,7 +745,7 @@ differences in URL related info."
 
    if [ -z "${_url}" ]
    then
-      log_fluff "\"${newfilename}\" has no URL. Ignoring possible differences \
+      _log_fluff "\"${newfilename}\" has no URL. Ignoring possible differences \
 in URL related info."
       RVAL="${ACTIONS}"
       return
@@ -761,12 +770,12 @@ in URL related info."
    then
       if find_line "${available}" "checkout"
       then
-         log_verbose "Branch has changed from \"${_branch}\" to \
+         _log_verbose "Branch has changed from \"${_branch}\" to \
 \"${newbranch}\", need to checkout"
          r_add_line "${ACTIONS}" "checkout"
          ACTIONS="${RVAL}"
       else
-         log_verbose "Branch has changed from \"${_branch}\" to \
+         _log_verbose "Branch has changed from \"${_branch}\" to \
 \"${newbranch}\", need to fetch"
          if [ "${previousexists}" = 'YES' ]
          then
@@ -783,12 +792,12 @@ in URL related info."
    then
       if find_line "${available}" "checkout"
       then
-         log_verbose "Tag has changed from \"${_tag}\" to \"${newtag}\", need \
+         _log_verbose "Tag has changed from \"${_tag}\" to \"${newtag}\", need \
 to checkout"
          r_add_line "${ACTIONS}" "checkout"
          ACTIONS="${RVAL}"
       else
-         log_verbose "Tag has changed from \"${_tag}\" to \"${newtag}\", need \
+         _log_verbose "Tag has changed from \"${_tag}\" to \"${newtag}\", need \
 to fetch"
          if [ "${previousexists}" = 'YES' ]
          then
@@ -805,13 +814,13 @@ to fetch"
    then
       if find_line "${available}" "upgrade" && find_line "${available}" "set-url"
       then
-         log_verbose "URL has changed from \"${_url}\" to \"${newurl}\", need to \
+         _log_verbose "URL has changed from \"${_url}\" to \"${newurl}\", need to \
 set remote _url and fetch"
          r_add_line "${ACTIONS}" "set-url"
          r_add_line "${RVAL}" "upgrade"
          ACTIONS="${RVAL}"
       else
-         log_verbose "URL has changed from \"${_url}\" to \"${newurl}\", need to \
+         _log_verbose "URL has changed from \"${_url}\" to \"${newurl}\", need to \
 fetch"
          if [ "${previousexists}" = 'YES' ]
          then
@@ -836,7 +845,7 @@ sourcetree::action::__update_perform_item()
 {
    log_entry "sourcetree::action::__update_perform_item"
 
-   [ -z "${filename}" ] && internal_fail "filename is empty"
+   [ -z "${filename}" ] && _internal_fail "filename is empty"
 
    case "${item}" in
       "checkout"|"upgrade"|"set-url")
@@ -919,7 +928,7 @@ sourcetree::action::__update_perform_item()
          if [ -f "${filename}/.mulle-sourcetree/config" -a \
               ! -f "${filename}/.mulle/etc/sourcetree/config" ]
          then
-            log_warning "\"`basename -- "${filename}"`\" contains an old-fashioned sourcetree \
+            _log_warning "\"`basename -- "${filename}"`\" contains an old-fashioned sourcetree \
 which must be upgraded to be usable."
          fi
 
@@ -944,7 +953,7 @@ which must be upgraded to be usable."
       ;;
 
       *)
-         internal_fail "Unknown action item \"${item}\""
+         _internal_fail "Unknown action item \"${item}\""
       ;;
    esac
 }
@@ -1064,7 +1073,7 @@ sourcetree::action::_memorize_node_in_db()
 
    sourcetree::node::__evaluate_values
 
-   log_debug "${C_INFO}Remembering ${_address} located at \"${filename}\" \
+   _log_debug "${C_INFO}Remembering ${_address} located at \"${filename}\" \
 in \"${database}\"..."
 
    sourcetree::db::memorize "${database}" \
@@ -1095,7 +1104,7 @@ sourcetree::action::write_fix_info()
    # filename="`physicalpath "${filename}" `"
 
    [ -z "${SOURCETREE_FIX_FILENAME}" ] \
-   && internal_fail "SOURCETREE_FIX_FILENAME is empty"
+   && _internal_fail "SOURCETREE_FIX_FILENAME is empty"
 
    r_filepath_concat "${filename}" "${SOURCETREE_FIX_FILENAME}"
    output="${RVAL}"
@@ -1109,7 +1118,7 @@ ${nodeline}"
 
    r_mkdir_parent_if_missing "${output}"
    redirect_exekutor "${output}" printf "%s\n" "${text}" \
-   || internal_fail "failed to write fixinfo \"${output}\""
+   || _internal_fail "failed to write fixinfo \"${output}\""
 }
 
 
@@ -1122,10 +1131,10 @@ sourcetree::action::_r_do_actions_with_nodeline()
    local config="$3"
    local database="$4"
 
-   [ "$#" -ne 4 ]     && internal_fail "api error"
+   [ "$#" -ne 4 ]     && _internal_fail "api error"
 
-   [ -z "$style" ]    && internal_fail "style is empty"
-   [ -z "$nodeline" ] && internal_fail "nodeline is empty"
+   [ -z "$style" ]    && _internal_fail "style is empty"
+   [ -z "$nodeline" ] && _internal_fail "nodeline is empty"
 
    local _branch
    local _address
@@ -1196,7 +1205,7 @@ sourcetree::action::_r_do_actions_with_nodeline()
          ;;
 
          *)
-            internal_fail "unknown code"
+            _internal_fail "unknown code"
          ;;
       esac
       database='/'
@@ -1208,11 +1217,11 @@ sourcetree::action::_r_do_actions_with_nodeline()
    r_simplified_absolutepath "${filename}"
    filename="${RVAL}"
 
-   [ -z "${filename}" ] && internal_fail "Filename is empty for \"${_address}\""
+   [ -z "${filename}" ] && _internal_fail "Filename is empty for \"${_address}\""
 
    log_fluff "Filename for node \"${_address}\" is \"${filename}\""
 
-   [ -z "${database}" ] && internal_fail "A share-only update gone wrong"
+   [ -z "${database}" ] && _internal_fail "A share-only update gone wrong"
 
    if sourcetree::nodemarks::disable "${_marks}" "update"
    then
@@ -1221,7 +1230,7 @@ sourcetree::action::_r_do_actions_with_nodeline()
          if sourcetree::nodemarks::disable "${_marks}" "require" ||
             sourcetree::nodemarks::disable "${_marks}" "require-os-${MULLE_UNAME}"
          then
-            log_fluff "\"${_address}\" is marked as no-update and doesn't exist, \
+            _log_fluff "\"${_address}\" is marked as no-update and doesn't exist, \
 but it is not required"
             return 2
          fi
@@ -1265,7 +1274,7 @@ but it is not required"
          if [ "${otheruuid}" != "${_uuid}" ]
          then
             # this is _address is already taken
-            log_fluff "Filename \"${filename}\" is already used by \
+            _log_fluff "Filename \"${filename}\" is already used by \
 node \"${otheruuid}\" in database \"${database}\". Skip it."
             # don't set alive though
             # RVAL="${otheruuid}" (or set other alive ?)
@@ -1295,7 +1304,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    then
       previousfilename="`sourcetree::db::fetch_filename_for_uuid "${database}" "${_uuid}"`"
 
-      [ -z "${previousfilename}" ] && internal_fail "corrupted db"
+      [ -z "${previousfilename}" ] && _internal_fail "corrupted db"
    else
       if [ -L "${filename}" ]
       then
@@ -1335,17 +1344,17 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
 
    # this actually exits on fail
    if ! sourcetree::action::__update_perform_actions "${style}" \
-                                 "${nodeline}" \
-                                 "${filename}" \
-                                 "${previousnodeline}" \
-                                 "${previousfilename}" \
-                                 "${database}" \
-                                 "${config}"
+                                                     "${nodeline}" \
+                                                     "${filename}" \
+                                                     "${previousnodeline}" \
+                                                     "${previousfilename}" \
+                                                     "${database}" \
+                                                     "${config}"
    then
       return 1
    fi
 
-   log_debug "\
+   _log_debug "\
 contentschanged : ${_contentschanged}
 remember        : ${_remember}
 skip            : ${_skip}
@@ -1426,7 +1435,7 @@ sourcetree::action::do_actions_with_nodelines()
    local config="$3"
    local database="$4"
 
-   [ -z "${style}" ] && internal_fail "style is empty"
+   [ -z "${style}" ] && _internal_fail "style is empty"
 
    if [ -z "${nodelines}" ]
    then
@@ -1469,7 +1478,7 @@ sourcetree::action::do_actions_with_nodelines_parallel()
    local config="$3"
    local database="$4"
 
-   [ -z "${style}" ] && internal_fail "style is empty"
+   [ -z "${style}" ] && _internal_fail "style is empty"
 
    if [ -z "${nodelines}" ]
    then
@@ -1497,9 +1506,9 @@ sourcetree::action::do_actions_with_nodelines_parallel()
       if [ ! -z "${nodeline}" ]
       then
          _parallel_execute sourcetree::action::do_actions_with_nodeline "${nodeline}" \
-                                                    "${style}" \
-                                                    "${config}" \
-                                                    "${database}"
+                                                                        "${style}" \
+                                                                        "${config}" \
+                                                                        "${database}"
       fi
    done
 

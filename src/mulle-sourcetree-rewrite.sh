@@ -145,7 +145,7 @@ sourcetree::rewrite::initialize()
 
    if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
    then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
+      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && _internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
 
       # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
       . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1

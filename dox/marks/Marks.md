@@ -33,35 +33,48 @@ A dependency marked `no-share` is placed into the project at the *address* of th
 
 ### fs
 
-[Stage 2] A config entry marked `no-fs` does not take part in the actual sync. This is useful for system library entries or entries that are used for commenting or other non-sync purposes.
+[Stage 2] A config entry marked `no-fs` does not take part in the actual sync.
+This is useful for system library entries or entries that are used for other
+non-sync purposes.
 
 The `fs` is the very first mark being checked during stage 2.
 
 ![](sync.svg)
 
-> In the diagram "database entries" are read. Deleted dependencies will still have a database entry. This way a sync can detect and remove these zombies.
+> In the diagram "database entries" are read. Deleted dependencies will still
+> have a database entry. This way a sync can detect and remove these zombies.
 >
 ### readwrite
 
-[Stage 2] A dependency marked `no-readwrite` will be write protected. Write protecting embedded files can be useful to prevent accidental edits, that would be lost after the next cleaning operation.
+[Stage 2] A dependency marked `no-readwrite` will be write protected. Write
+protecting embedded files can be useful to prevent accidental edits, that would
+be lost after the next cleaning operation.
 
 ### delete
 
-[Stage 2] A dependency marked `no-delete` can not be deleted or moved by the sync. So an entry marked `no-delete` can acts as a one-time fetch. It's also used for system libraries and subprojects.
+[Stage 2] A dependency marked `no-delete` can not be deleted or moved by the
+sync. So an entry marked `no-delete` acts as a one-time fetch. It's also used
+for system libraries and subprojects.
 
 ### update
 
-[Stage 2] A dependency marked `no-update` does not take part in the sync process. It is mostly used for subprojects, which are expected to be there already.
+[Stage 2] A dependency marked `no-update` does not take part in the sync
+process. It is mostly used for subprojects, which are expected to be there
+already.
 
 ### require
 
-[Stage 2] If a dependency marked `require`  can not be fetched, the sync will fail. The mark `no-require` can be Operating System specific. For example `no-require-os-linux` would make a dependency required on all systems except linux.
+[Stage 2] If a dependency marked `require` can not be fetched, the sync will
+fail. The mark `no-require` can be Operating System specific. For example
+`no-require-os-linux` would make a dependency required on all systems except
+linux.
 
 
 ## mulle-sourcetree walk
 
 The **walk** is used to traverse the fetched dependencies to generate
-the necessary information to build the dependencies in the proper order and to link what needs to be linked.
+the necessary information to build the dependencies in the proper order and to
+link what needs to be linked.
 
 ### descend (walk)
 
@@ -71,7 +84,11 @@ With `descend` you can stop the recursion for any entry during a walk.
 
 ### bequeath
 
-With `no-bequeath` you can stop the recursion for any entry that is not appearing in the top most config. Most often used for dependencies that are executables or startup libraries. An executable that provides tooling for the build, may use a certain library, that isn't needed for the actual build output. Marking those dependencies as `no-bequeath` in the config of the executable project will do the trick.
+With `no-bequeath` you can stop the recursion for any entry that is not
+appearing in the top most config. Most often used for dependencies that are
+executables or startup libraries. An executable that provides tooling for the
+build, may use a certain library, that isn't needed for the actual build
+output. Marking those dependencies as `no-bequeath` in the config of the executable project will do the trick.
 
 ## mulle-sourcetree craftorder
 
@@ -89,7 +106,9 @@ The linkorder emits the link statements necessary to link the project.
 
 ### static-link
 
-Set dependencies to `no-static-link` if they are created as dynamic (shared) libraries. Used by `mulle-test`.
+Set dependencies to `no-static-link` if they are created as dynamic (shared)
+libraries. Used by `mulle-test`.
+
 
 ### only-standalone (linkorder)
 
@@ -98,13 +117,17 @@ See the **mulle-craft** explanation for [`only-standalone`](only-standalone).
 
 ### dependency
 
-Entries marked `no-dependency` do not partake in the linkorder output, if they are part of a `no-static-link` or `only-standalone` agglomeration.
+Entries marked `no-dependency` do not partake in the linkorder output, if they
+are part of a `no-static-link` or `only-standalone` agglomeration.
 
 ### only-standalone
 
 ### no-intermediate-link
 
 ### no-dynamic-link
+
+A dependency or library marked no-dynamic-link can only be statically linked.
+(What's the difference to only-static-link ?)
 
 ### no-static-link
 

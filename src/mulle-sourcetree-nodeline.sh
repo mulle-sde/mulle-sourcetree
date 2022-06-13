@@ -196,7 +196,7 @@ sourcetree::nodeline::parse()
 
    local nodeline="$1"
 
-   [ -z "${nodeline}" ] && internal_fail "sourcetree::nodeline::parse: nodeline is empty"
+   [ -z "${nodeline}" ] && _internal_fail "sourcetree::nodeline::parse: nodeline is empty"
 
    # MEMO: if there are stray ';' in the back they will be part of
    # _raw_userinfo (its a bashism)
@@ -210,9 +210,9 @@ sourcetree::nodeline::parse()
 
    _userinfo=""
 
-   [ -z "${_address}" ]   && internal_fail "_address is empty"
-   [ -z "${_nodetype}" ]  && internal_fail "_nodetype is empty"
-   [ -z "${_uuid}" ]      && internal_fail "_uuid is empty"
+   [ -z "${_address}" ]   && _internal_fail "_address is empty"
+   [ -z "${_nodetype}" ]  && _internal_fail "_nodetype is empty"
+   [ -z "${_uuid}" ]      && _internal_fail "_uuid is empty"
 
    # correct some legacy stuff, because i was too lazy to write a script
    # probably only used by MulleObjCOSFoundation
@@ -222,15 +222,15 @@ sourcetree::nodeline::parse()
    # early escape here
    if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
    then
-      log_trace2 "ADDRESS:      \"${_address}\""
-      log_trace2 "NODETYPE:     \"${_nodetype}\""
-      log_trace2 "MARKS:        \"${_marks}\""
-      log_trace2 "UUID:         \"${_uuid}\""
-      log_trace2 "URL:          \"${_url}\""
-      log_trace2 "BRANCH:       \"${_branch}\""
-      log_trace2 "TAG:          \"${_tag}\""
-      log_trace2 "FETCHOPTIONS: \"${_fetchoptions}\""
-      log_trace2 "RAW_USERINFO: \"${_raw_userinfo}\""
+      log_setting "ADDRESS:      \"${_address}\""
+      log_setting "NODETYPE:     \"${_nodetype}\""
+      log_setting "MARKS:        \"${_marks}\""
+      log_setting "UUID:         \"${_uuid}\""
+      log_setting "URL:          \"${_url}\""
+      log_setting "BRANCH:       \"${_branch}\""
+      log_setting "TAG:          \"${_tag}\""
+      log_setting "FETCHOPTIONS: \"${_fetchoptions}\""
+      log_setting "RAW_USERINFO: \"${_raw_userinfo}\""
    fi
 
    return 0
@@ -250,7 +250,7 @@ sourcetree::nodeline::r_raw_userinfo_parse()
          RVAL="`base64 --decode <<< "${raw_userinfo:7}"`"
          if [ "$?" -ne 0 ]
          then
-            internal_fail "userinfo could not be base64 decoded."
+            _internal_fail "userinfo could not be base64 decoded."
          fi
          return 0
       ;;
@@ -302,7 +302,7 @@ sourcetree::nodeline::_r_find()
    local lookup="$3"
    local fuzzy="$4"
 
-   [ $# -ne 4 ] && internal_fail "API error"
+   [ $# -ne 4 ] && _internal_fail "API error"
 
    local nodeline
    local other
@@ -353,7 +353,7 @@ sourcetree::nodeline::r_find()
    local address="$2"
    local fuzzy="${3:-NO}"
 
-   [ -z "${address}" ] && internal_fail "address is empty"
+   [ -z "${address}" ] && _internal_fail "address is empty"
 
    sourcetree::nodeline::_r_find "${nodelines}" "${address}" sourcetree::nodeline::r_get_address "${fuzzy}"
 }
@@ -367,7 +367,7 @@ sourcetree::nodeline::find()
    local address="$2"
    local fuzzy="${3:-NO}"
 
-   [ -z "${address}" ] && internal_fail "address is empty"
+   [ -z "${address}" ] && _internal_fail "address is empty"
 
    if ! sourcetree::nodeline::_r_find "${nodelines}" "${address}" sourcetree::nodeline::r_get_address "${fuzzy}"
    then
@@ -384,7 +384,7 @@ sourcetree::nodeline::find_by_url()
    local nodelines="$1"
    local url="$2"
 
-   [ -z "${url}" ] && internal_fail "url is empty"
+   [ -z "${url}" ] && _internal_fail "url is empty"
 
    if ! sourcetree::nodeline::_r_find "${nodelines}" "${url}" sourcetree::nodeline::r_get_url NO
    then
@@ -401,7 +401,7 @@ sourcetree::nodeline::find_by_evaled_url()
    local nodelines="$1"
    local url="$2"
 
-   [ -z "${url}" ] && internal_fail "url is empty"
+   [ -z "${url}" ] && _internal_fail "url is empty"
 
    if ! sourcetree::nodeline::_r_find "${nodelines}" "${url}" sourcetree::nodeline::r_get_evaled_url NO
    then
@@ -418,7 +418,7 @@ sourcetree::nodeline::r_find_by_uuid()
    local nodelines="$1"
    local uuid="$2"
 
-   [ -z "${uuid}" ] && internal_fail "uuid is empty"
+   [ -z "${uuid}" ] && _internal_fail "uuid is empty"
 
    sourcetree::nodeline::_r_find "${nodelines}" "${uuid}" sourcetree::nodeline::r_get_uuid NO
 }
@@ -431,7 +431,7 @@ sourcetree::nodeline::find_by_uuid()
    local nodelines="$1"
    local uuid="$2"
 
-   [ -z "${uuid}" ] && internal_fail "uuid is empty"
+   [ -z "${uuid}" ] && _internal_fail "uuid is empty"
 
    if ! sourcetree::nodeline::_r_find "${nodelines}" "${uuid}" sourcetree::nodeline::r_get_uuid NO
    then
@@ -481,7 +481,7 @@ sourcetree::nodeline::read_file()
 
    local filename="$1"
 
-   [ -z "${filename}" ] && internal_fail "file is empty"
+   [ -z "${filename}" ] && _internal_fail "file is empty"
 
    egrep -s -v '^#' "${filename}"
 }
@@ -782,7 +782,7 @@ sourcetree::nodeline::r_diff()
    do
       u_field="_${field}"
 
-      if [ ! -z "${ZSH_VERSION}" ]
+      if [ ${ZSH_VERSION+x} ]
       then
          field_value="${(P)field}"
          u_field_value="${(P)u_field}"

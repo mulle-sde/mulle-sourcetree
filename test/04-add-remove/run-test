@@ -16,7 +16,7 @@ expect()
 
    if [ "${output}" != "${expected}" ]
    then
-      internal_fail "Did expect \"${expected}\" but got \"${output}\""
+      _internal_fail "Did expect \"${expected}\" but got \"${output}\""
    fi
 }
 
@@ -24,10 +24,10 @@ expect()
 run_mulle_sourcetree()
 {
    log_fluff "${C_MAGENTA}${C_BOLD}####################################"
-   log_fluff "${C_MAGENTA}${C_BOLD}${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} $*"
+   log_fluff "${C_MAGENTA}${C_BOLD}${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS:-} $*"
    log_fluff "${C_MAGENTA}${C_BOLD}####################################"
 
-   exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS} "$@"
+   exekutor ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS:-} "$@"
 }
 
 
@@ -35,52 +35,52 @@ test_run()
 {
    if ! run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "a"
    then
-      internal_fail "add failed unexpectedly"
+      _internal_fail "add failed unexpectedly"
    fi
 
    if run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "a"
    then
-      internal_fail "duplicate add succeeded unexpectedly"
+      _internal_fail "duplicate add succeeded unexpectedly"
    fi
 
    if run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "."
    then
-      internal_fail "add \".\" succeeded unexpectedly"
+      _internal_fail "add \".\" succeeded unexpectedly"
    fi
 
    if run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" -s local "/"
    then
-      internal_fail "/ add succeeded unexpectedly"
+      _internal_fail "/ add succeeded unexpectedly"
    fi
 
    if ! [ -f ".mulle/etc/sourcetree/config" ]
    then
-      internal_fail "config should exist now"
+      _internal_fail "config should exist now"
    fi
 
    if ! run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "b"
    then
-      internal_fail "add of b failed unexpectedly"
+      _internal_fail "add of b failed unexpectedly"
    fi
 
    if ! run_mulle_sourcetree -N remove "a"
    then
-      internal_fail "remove \"a\" failed unexpectedly"
+      _internal_fail "remove \"a\" failed unexpectedly"
    fi
 
    if run_mulle_sourcetree -N remove "a"
    then
-      internal_fail "superflous remove \"a\" succeeded unexpectedly"
+      _internal_fail "superflous remove \"a\" succeeded unexpectedly"
    fi
 
    if run_mulle_sourcetree -N remove "."
    then
-      internal_fail "remove \".\" succeeded unexpectedly"
+      _internal_fail "remove \".\" succeeded unexpectedly"
    fi
 
    if [ ! -f ".mulle/etc/sourcetree/config" ]
    then
-      internal_fail "config still exist now"
+      _internal_fail "config still exist now"
    fi
 }
 
@@ -109,20 +109,20 @@ main()
 
    if [ -f ".mulle/etc/sourcetree/config" ]
    then
-      internal_fail "#1.1 config should not exist"
+      _internal_fail "#1.1 config should not exist"
    fi
 
    test_run
 
    if ! run_mulle_sourcetree -N remove "b"
    then
-      internal_fail "remove \"b\" failed unexpectedly"
+      _internal_fail "remove \"b\" failed unexpectedly"
    fi
 
    # there is no fallback, the sourcetree should be gone
    if [ -d ".mulle/etc/sourcetree" ]
    then
-      internal_fail "#1.2 config should not exist now"
+      _internal_fail "#1.2 config should not exist now"
    fi
 
    log_verbose "----- #1 PASSED -----"
@@ -138,13 +138,13 @@ main()
 
    if ! run_mulle_sourcetree -N remove "b"
    then
-      internal_fail "remove \"b\" failed unexpectedly"
+      _internal_fail "remove \"b\" failed unexpectedly"
    fi
 
    # this has changes, the sourcetree stays to clobber share
    if [ ! -f ".mulle/etc/sourcetree/config" ]
    then
-      internal_fail "#2.1 config should exist now"
+      _internal_fail "#2.1 config should exist now"
    fi
 
    rmdir_safer ".mulle/share/sourcetree"
@@ -158,12 +158,12 @@ main()
 
    if ! run_mulle_sourcetree -N remove "b"
    then
-      internal_fail "remove \"b\" failed unexpectedly"
+      _internal_fail "remove \"b\" failed unexpectedly"
    fi
 
    if [ -f ".mulle/etc/sourcetree/config" ]
    then
-      internal_fail "#3.1 config should not exist now"
+      _internal_fail "#3.1 config should not exist now"
    fi
 
    rmdir_safer ".mulle/share/sourcetree"
@@ -176,7 +176,7 @@ main()
    #
    if ! run_mulle_sourcetree -N add "https://a.com/a.git"
    then
-      internal_fail "add URL, failed unexpectedly"
+      _internal_fail "add URL, failed unexpectedly"
    fi
 
    log_verbose "Informational output"
@@ -188,12 +188,12 @@ main()
 
    if [ "${nodetype}" != "git" ] || [ "${address}" != "a" ] || [ "${url}" != "https://a.com/a.git" ]
    then
-      internal_fail "#4.1 did not work (${address};${nodetype};${url})"
+      _internal_fail "#4.1 did not work (${address};${nodetype};${url})"
    fi
 
    if ! run_mulle_sourcetree -N add -u "https://a.com/a.git" b
    then
-      internal_fail "add URL, failed unexpectedly"
+      _internal_fail "add URL, failed unexpectedly"
    fi
 
    log_verbose "Informational output"
@@ -205,14 +205,14 @@ main()
 
    if [ "${nodetype}" != "git" ] || [ "${address}" != "b" ] || [ "${url}" != "https://a.com/a.git" ]
    then
-      internal_fail "#4.2 did not work (${address};${nodetype};${url})"
+      _internal_fail "#4.2 did not work (${address};${nodetype};${url})"
    fi
 
    log_verbose "----- #4 PASSED -----"
 
    if ! run_mulle_sourcetree -N add --nodetype symlink --url "/a.com/a" c
    then
-      internal_fail "add URL, failed unexpectedly"
+      _internal_fail "add URL, failed unexpectedly"
    fi
 
    log_verbose "Informational output"
@@ -224,7 +224,7 @@ main()
 
    if [ "${nodetype}" != "symlink" ] || [ "${address}" != "c" ] || [ "${url}" != "/a.com/a" ]
    then
-      internal_fail "#5 did not work (${address};${nodetype};${url})"
+      _internal_fail "#5 did not work (${address};${nodetype};${url})"
    fi
 
    log_verbose "----- #5 PASSED -----"

@@ -255,7 +255,7 @@ sourcetree::clean::main()
    local OPTION_CLEAN_FS='DEFAULT'
    local OPTION_CLEAN_CONFIG_FILE='NO'
 
-   [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
+   [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && _internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
 
    while [ $# -ne 0 ]
    do

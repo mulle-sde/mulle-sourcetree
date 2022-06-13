@@ -87,7 +87,7 @@ sourcetree::sync::_get_db_descendinfo()
 
    _filename="`sourcetree::db::fetch_filename_for_uuid "${database}" "${uuid}" `"
 
-   [ -z "${_filename}" ] && internal_fail "corrupted db, better clean it"
+   [ -z "${_filename}" ] && _internal_fail "corrupted db, better clean it"
 
    _config="${_filename#${MULLE_VIRTUAL_ROOT}}"
    _config="${_config}/"
@@ -153,7 +153,7 @@ sourcetree::sync::_check_descend_nodeline()
    then
       if [ -e "${filename}" ]
       then
-         log_fluff "Will not recursively update \"${filename}\" as it's not \
+         _log_fluff "Will not recursively update \"${filename}\" as it's not \
 a directory"
          return 1
       fi
@@ -177,7 +177,7 @@ sourcetree::sync::_descend_db_nodeline()
 {
    log_entry "sourcetree::sync::_descend_db_nodeline" "$@"
 
-   [ "$#" -ne 4 ] && internal_fail "api error"
+   [ "$#" -ne 4 ] && _internal_fail "api error"
 
    local nodeline="$1"; shift
    local style="$1"; shift
@@ -185,8 +185,8 @@ sourcetree::sync::_descend_db_nodeline()
    local config="$1"
    local database="$2"
 
-   [ -z "${nodeline}" ]   && internal_fail "nodeline is empty"
-   [ -z "${style}" ]      && internal_fail "style is empty"
+   [ -z "${nodeline}" ]   && _internal_fail "nodeline is empty"
+   [ -z "${style}" ]      && _internal_fail "style is empty"
 
    local _branch
    local _address
@@ -210,15 +210,12 @@ sourcetree::sync::_descend_db_nodeline()
    # remove duplicate marker from _filename
    _filename="${_filename%#*}"
 
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
-   then
-      log_trace2 "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
-      log_trace2 "config             : ${config}"
-      log_trace2 "database           : ${database}"
-      log_trace2 "filename           : ${_filename}"
-      log_trace2 "newconfig          : ${_config}"
-      log_trace2 "newdatabase        : ${_database}"
-   fi
+   log_setting "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
+   log_setting "config             : ${config}"
+   log_setting "database           : ${database}"
+   log_setting "filename           : ${_filename}"
+   log_setting "newconfig          : ${_config}"
+   log_setting "newdatabase        : ${_database}"
 
    local _style
    local rval
@@ -238,7 +235,7 @@ sourcetree::sync::_descend_config_nodeline()
 {
    log_entry "sourcetree::sync::_descend_config_nodeline" "$@"
 
-   [ "$#" -ne 4 ] && internal_fail "api error"
+   [ "$#" -ne 4 ] && _internal_fail "api error"
 
    local nodeline="$1"; shift
    local style="$1"; shift
@@ -246,8 +243,8 @@ sourcetree::sync::_descend_config_nodeline()
    local config="$1"
    local database="$2"
 
-   [ -z "${nodeline}" ] && internal_fail "nodeline is empty"
-   [ -z "${style}" ]    && internal_fail "style is empty"
+   [ -z "${nodeline}" ] && _internal_fail "nodeline is empty"
+   [ -z "${style}" ]    && _internal_fail "style is empty"
 
    local _branch
    local _address
@@ -268,15 +265,12 @@ sourcetree::sync::_descend_config_nodeline()
 
    sourcetree::sync::_get_config_descendinfo "${config}" "${_address}"
 
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
-   then
-      log_trace2 "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
-      log_trace2 "config             : ${config}"
-      log_trace2 "database           : ${database}"
-      log_trace2 "filename           : ${_filename}"
-      log_trace2 "newconfig          : ${_config}"
-      log_trace2 "newdatabase        : ${_database}"
-   fi
+   log_setting "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
+   log_setting "config             : ${config}"
+   log_setting "database           : ${database}"
+   log_setting "filename           : ${_filename}"
+   log_setting "newconfig          : ${_config}"
+   log_setting "newdatabase        : ${_database}"
 
    sourcetree::sync::_check_descend_nodeline "${_filename}"
 
@@ -304,12 +298,12 @@ sourcetree::sync::_descend_db_nodelines()
    nodelines="`sourcetree::db::fetch_all_nodelines "${database}" `" || exit 1
    if [ -z "${nodelines}" ]
    then
-      log_fluff "No \"${style}\" update of database \"${database:-ROOT}\" as \
+      _log_fluff "No \"${style}\" update of database \"${database:-ROOT}\" as \
 it is empty (${PWD#${MULLE_USER_PWD}/})"
       return
    fi
 
-   log_debug "Continuing with a \"${style}\" update of nodelines \
+   _log_debug "Continuing with a \"${style}\" update of nodelines \
 \"${nodelines}\" of db \"${database:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
 
    local nodeline
@@ -367,12 +361,12 @@ sourcetree::sync::_descend_config_nodelines()
    nodelines="`sourcetree::cfg::read "${config}" `"
    if [ -z "${nodelines}" ]
    then
-      log_fluff "No\"${style}\" update of config \"${config:-ROOT}\" as it \
+      _log_fluff "No\"${style}\" update of config \"${config:-ROOT}\" as it \
 is empty (${PWD#${MULLE_USER_PWD}/})"
       return
    fi
 
-   log_debug "Continuing with a \"${style}\" update of \
+   _log_debug "Continuing with a \"${style}\" update of \
 nodelines \"${nodelines}\" from config \"${config:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
 
    local nodeline
@@ -432,9 +426,9 @@ sourcetree::sync::_sync_nodeline_only_share()
    local config="$2"
    local database="$3"
 
-   [ "$#" -ne 3 ]     && internal_fail "api error"
-   [ -z "$style" ]    && internal_fail "style is empty"
-   [ -z "$nodeline" ] && internal_fail "nodeline is empty"
+   [ "$#" -ne 3 ]     && _internal_fail "api error"
+   [ -z "$style" ]    && _internal_fail "style is empty"
+   [ -z "$nodeline" ] && _internal_fail "nodeline is empty"
 
    local _branch
    local _address
@@ -994,7 +988,7 @@ sourcetree::sync::warn_dry_run()
 {
    if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" = 'YES' ]
    then
-      log_warning "***IMPORTANT REMINDER***
+      _log_warning "***IMPORTANT REMINDER***
 
 As fetches and zombification are not performed during a dry run (-n), the
 actual commands of an update can not be shown. This is especially true for
@@ -1148,7 +1142,7 @@ sourcetree::sync::main()
    MULLE_FETCH="${MULLE_FETCH:-`command -v mulle-fetch`}"
    [ -z "${MULLE_FETCH}" ] && fail "mulle-fetch not installed"
 
-   [ -z "${DEFAULT_IFS}" ] && internal_fail "IFS fail"
+   [ -z "${DEFAULT_IFS}" ] && _internal_fail "IFS fail"
 
    sourcetree::sync::warn_dry_run
 
