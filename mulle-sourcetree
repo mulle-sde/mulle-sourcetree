@@ -211,7 +211,7 @@ EOF
    cat <<EOF
 
 Environment:
-   MULLE_SOURCETREE_CONFIG_NAMES  : names separated by : to search (config)
+   MULLE_SOURCETREE_CONFIG_NAMES_${PROJECT_UPCASE_IDENTIFIER:-LOCAL}  : names separated by : to search (config)
    MULLE_SOURCETREE_STASH_DIR     : place to store shared dependencies (stash)
    MULLE_SOURCETREE_SYMLINK       : allow symlinks to be used
    MULLE_SOURCETREE_FETCH_<name>  : set to NO to inhibit fetch of a dependency
@@ -304,14 +304,26 @@ sourcetree::main()
    local MULLE_FLAG_LOG_MERGE='NO'
    local MULLE_TRACE_POSTPONE='NO'
 
-   local MULLE_FLAG_DEFER  # test also uses this ?
+   local MULLE_FLAG_DEFER=""  # test also uses this ?
 
    local FLAG_USE_FALLBACK='NO'
-   local FLAG_SOURCETREE_MODE
-   local FLAG_CONFIG_DIR
-   local FLAG_SHARE_DIR
-   local FLAG_SCOPE
-   local FLAG_CONFIG_NAMES
+   local FLAG_SOURCETREE_MODE=""
+   local FLAG_CONFIG_DIR=""
+   local FLAG_SHARE_DIR=""
+   local FLAG_SCOPE=""
+   local FLAG_CONFIG_NAMES=""
+
+   #
+   # get default scope from environment
+   # if empty, will default to "default"
+   #
+   if [ -z "${PROJECT_UPCASE_IDENTIFIER}" ]
+   then
+      include "case"
+
+      r_de_camel_case_upcase_identifier "${PROJECT_NAME:-local}"
+      PROJECT_UPCASE_IDENTIFIER="${RVAL}"
+   fi
 
    #
    # simple option handling
@@ -476,17 +488,56 @@ sourcetree::main()
    local SOURCETREE_SCOPE
    local SOURCETREE_CONFIG_NAMES
 
-   #
-   # get default scope from environment
-   # if empty, will default to "default"
-   #
+   local var
+   local names
+   local scope
+   local dir
 
-   sourcetree::environment::default "${FLAG_SCOPE:-${MULLE_SOURCETREE_SCOPE}}" \
-                          "${FLAG_SHARE_DIR}" \
-                          "${FLAG_CONFIG_DIR}" \
-                          "${FLAG_CONFIG_NAMES:-${MULLE_SOURCETREE_CONFIG_NAMES}}" \
-                          "${FLAG_USE_FALLBACK}" \
-                          "${MULLE_FLAG_DEFER}"
+   dir="${FLAG_CONFIG_DIR}"
+   if [ -z "${names}" ]
+   then
+      var="MULLE_SOURCETREE_CONFIG_DIR_${PROJECT_UPCASE_IDENTIFIER}"
+      if [ ! -z "${ZSH_VERSION}" ]
+      then
+         dir="${(P)var}"
+      else
+         dir="${!var}"
+      fi
+      log_verbose "${var}   : ${dir}"
+   fi
+
+   names="${FLAG_CONFIG_NAMES}"
+   if [ -z "${names}" ]
+   then
+      var="MULLE_SOURCETREE_CONFIG_NAMES_${PROJECT_UPCASE_IDENTIFIER}"
+      if [ ! -z "${ZSH_VERSION}" ]
+      then
+         names="${(P)var}"
+      else
+         names="${!var}"
+      fi
+      log_verbose "${var} : ${names}"
+   fi
+
+   scope="${FLAG_SCOPE}"
+   if [ -z "${scope}" ]
+   then
+      var="MULLE_SOURCETREE_SCOPE_${PROJECT_UPCASE_IDENTIFIER}"
+      if [ ! -z "${ZSH_VERSION}" ]
+      then
+         scope="${(P)var}"
+      else
+         scope="${!var}"
+      fi
+      log_verbose "${var}        : ${scope}"
+   fi
+
+   sourcetree::environment::default "${scope}" \
+                                    "${FLAG_SHARE_DIR}" \
+                                    "${dir}" \
+                                    "${names}" \
+                                    "${FLAG_USE_FALLBACK}" \
+                                    "${MULLE_FLAG_DEFER}"
 
    cmd="${1}"
    [ $# -eq 0 ] || shift

@@ -149,21 +149,21 @@ sourcetree::environment::basic()
                mulle-tool-env sourcetree` || exit 1
 
    sourcetree::environment::config "${config_dir}" \
-                                 "${config_names}" \
-                                 "${use_fallback}" \
-                                 "${scope}" \
-                                 "${mode}"
+                                   "${config_names}" \
+                                   "${use_fallback}" \
+                                   "${scope}" \
+                                   "${mode}"
 
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
    then
-      log_trace2 "MULLE_SOURCETREE_PROJECT_DIR:   ${MULLE_SOURCETREE_PROJECT_DIR}"
-      log_trace2 "SOURCETREE_CONFIG_NAMES:        ${SOURCETREE_CONFIG_NAMES}"
-      log_trace2 "SOURCETREE_CONFIG_DIR:          ${SOURCETREE_CONFIG_DIR}"
-      log_trace2 "SOURCETREE_FALLBACK_CONFIG_DIR: ${SOURCETREE_FALLBACK_CONFIG_DIR}"
-      log_trace2 "MULLE_SOURCETREE_ETC_DIR:       ${MULLE_SOURCETREE_ETC_DIR}"
-      log_trace2 "MULLE_SOURCETREE_VAR_DIR:       ${MULLE_SOURCETREE_VAR_DIR}"
-      log_trace2 "MULLE_SOURCETREE_SHARE_DIR:     ${MULLE_SOURCETREE_SHARE_DIR}"
+      log_setting "MULLE_SOURCETREE_PROJECT_DIR:   ${MULLE_SOURCETREE_PROJECT_DIR}"
+      log_setting "SOURCETREE_CONFIG_NAMES:        ${SOURCETREE_CONFIG_NAMES}"
+      log_setting "SOURCETREE_CONFIG_DIR:          ${SOURCETREE_CONFIG_DIR}"
+      log_setting "SOURCETREE_FALLBACK_CONFIG_DIR: ${SOURCETREE_FALLBACK_CONFIG_DIR}"
+      log_setting "MULLE_SOURCETREE_ETC_DIR:       ${MULLE_SOURCETREE_ETC_DIR}"
+      log_setting "MULLE_SOURCETREE_VAR_DIR:       ${MULLE_SOURCETREE_VAR_DIR}"
+      log_setting "MULLE_SOURCETREE_SHARE_DIR:     ${MULLE_SOURCETREE_SHARE_DIR}"
    fi
 }
 

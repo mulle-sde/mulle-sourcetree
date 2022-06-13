@@ -74,6 +74,8 @@ sourcetree::wrap::config()
    local url_identifier
    local tag_identifier
 
+   include "case"
+
    shell_disable_glob; IFS=$'\n'
    for nodeline in ${nodelines}
    do

@@ -83,15 +83,19 @@ sourcetree::sync::_get_db_descendinfo()
    log_entry "sourcetree::sync::_get_db_descendinfo" "$@"
 
    local database="$1"
-   local uuid="$2"
+   local address="$2"
+   local uuid="$3"
 
    _filename="`sourcetree::db::fetch_filename_for_uuid "${database}" "${uuid}" `"
 
-   [ -z "${_filename}" ] && internal_fail "corrupted db, better clean it"
+   [ -z "${_filename}" ] && _internal_fail "corrupted db, better clean it"
 
    _config="${_filename#${MULLE_VIRTUAL_ROOT}}"
    _config="${_config}/"
    _database="${_config}"
+
+   sourcetree::walk::r_symbol_for_address "${address}"
+   _symbol="${RVAL}"
 }
 
 #
@@ -113,6 +117,9 @@ sourcetree::sync::_get_config_descendinfo()
 
    _config="${_config}/"
    _database="${_config}"
+
+   sourcetree::walk::r_symbol_for_address "SOURCETREE_CONFIG_NAMES" "${address}"
+   _symbol="{RVAL}"
 }
 
 
@@ -177,7 +184,7 @@ sourcetree::sync::_descend_db_nodeline()
 {
    log_entry "sourcetree::sync::_descend_db_nodeline" "$@"
 
-   [ "$#" -ne 4 ] && internal_fail "api error"
+   [ "$#" -ne 4 ] && _internal_fail "api error"
 
    local nodeline="$1"; shift
    local style="$1"; shift
@@ -185,8 +192,8 @@ sourcetree::sync::_descend_db_nodeline()
    local config="$1"
    local database="$2"
 
-   [ -z "${nodeline}" ]   && internal_fail "nodeline is empty"
-   [ -z "${style}" ]      && internal_fail "style is empty"
+   [ -z "${nodeline}" ]   && _internal_fail "nodeline is empty"
+   [ -z "${style}" ]      && _internal_fail "style is empty"
 
    local _branch
    local _address
@@ -227,7 +234,7 @@ sourcetree::sync::_descend_db_nodeline()
 
    if sourcetree::sync::_style_for_${style} ${rval}
    then
-      sourcetree::sync::_sync_${_style} "${_config}" "${_database}"
+      sourcetree::sync::_sync_${_style} "${_config}" "${_database}" "${_symbol}"
       return $?
    fi
 }
@@ -237,7 +244,7 @@ sourcetree::sync::_descend_config_nodeline()
 {
    log_entry "sourcetree::sync::_descend_config_nodeline" "$@"
 
-   [ "$#" -ne 4 ] && internal_fail "api error"
+   [ "$#" -ne 4 ] && _internal_fail "api error"
 
    local nodeline="$1"; shift
    local style="$1"; shift
@@ -245,8 +252,8 @@ sourcetree::sync::_descend_config_nodeline()
    local config="$1"
    local database="$2"
 
-   [ -z "${nodeline}" ] && internal_fail "nodeline is empty"
-   [ -z "${style}" ]    && internal_fail "style is empty"
+   [ -z "${nodeline}" ] && _internal_fail "nodeline is empty"
+   [ -z "${style}" ]    && _internal_fail "style is empty"
 
    local _branch
    local _address
@@ -264,24 +271,23 @@ sourcetree::sync::_descend_config_nodeline()
    local _filename
    local _config
    local _database
+   local _symbol
 
    sourcetree::sync::_get_config_descendinfo "${config}" "${_address}"
 
-   if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
-   then
-      log_trace2 "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
-      log_trace2 "config             : ${config}"
-      log_trace2 "database           : ${database}"
-      log_trace2 "filename           : ${_filename}"
-      log_trace2 "newconfig          : ${_config}"
-      log_trace2 "newdatabase        : ${_database}"
-   fi
+   log_setting "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
+   log_setting "config             : ${config}"
+   log_setting "database           : ${database}"
+   log_setting "filename           : ${_filename}"
+   log_setting "newconfig          : ${_config}"
+   log_setting "newdatabase        : ${_database}"
+   log_setting "symbol             : ${_symbol}"
 
    sourcetree::sync::_check_descend_nodeline "${_filename}"
 
    [ $? -ne 0 ] && return 1
 
-   sourcetree::sync::_sync_${style} "${_config}" "${_database}"
+   sourcetree::sync::_sync_${style} "${_config}" "${_database}" "${_symbol}"
 }
 
 
@@ -348,6 +354,7 @@ it is empty (${PWD#${MULLE_USER_PWD}/})"
 }
 
 
+
 #
 # A flat update has run. Now walk over the DB entries (actually existing
 # stuff at proper position) and recursively do the inferior sourcetrees
@@ -360,18 +367,19 @@ sourcetree::sync::_descend_config_nodelines()
 
    local config="$1"
    local database="$2"
+   local symbol="$3"
 
    local nodelines
 
-   nodelines="`sourcetree::cfg::read "${config}" `"
+   nodelines="`sourcetree::walk::cfg_read "${symbol}" "${config}" `"
    if [ -z "${nodelines}" ]
    then
-      log_fluff "No\"${style}\" update of config \"${config:-ROOT}\" as it \
+      _log_fluff "No\"${style}\" update of config \"${config:-ROOT}\" as it \
 is empty (${PWD#${MULLE_USER_PWD}/})"
       return
    fi
 
-   log_debug "Continuing with a \"${style}\" update of \
+   _log_debug "Continuing with a \"${style}\" update of \
 nodelines \"${nodelines}\" from config \"${config:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
 
    local nodeline
@@ -423,17 +431,17 @@ sourcetree::sync::_style_for_only_share()
 }
 
 
-sourcetree::sync::_sync_nodeline_only_share()
+sourcetree::sync::_nodeline_sync_only_share()
 {
-   log_entry "sourcetree::sync::_sync_nodeline_only_share" "$@"
+   log_entry "sourcetree::sync::_nodeline_sync_only_share" "$@"
 
    local nodeline="$1"
    local config="$2"
    local database="$3"
 
-   [ "$#" -ne 3 ]     && internal_fail "api error"
-   [ -z "$style" ]    && internal_fail "style is empty"
-   [ -z "$nodeline" ] && internal_fail "nodeline is empty"
+   [ "$#" -ne 3 ]     && _internal_fail "api error"
+   [ -z "$style" ]    && _internal_fail "style is empty"
+   [ -z "$nodeline" ] && _internal_fail "nodeline is empty"
 
    local _branch
    local _address
@@ -462,8 +470,10 @@ sourcetree::sync::_sync_only_share()
 
    local config="$1"
    local database="$2"
+   local symbol="$3"
 
    local style
+
    style="only_share"
 
    if ! find_line "${UPDATED}" "${config}"
@@ -480,7 +490,7 @@ sourcetree::sync::_sync_only_share()
    #
    local nodelines
 
-   if ! nodelines="`sourcetree::cfg::read "${config}" `"
+   if ! nodelines="`sourcetree::walk::cfg_read "${symbol}" "${config}" `"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       return 127
@@ -510,13 +520,44 @@ sourcetree::sync::_sync_only_share()
          VISITED="${RVAL}"
       fi
 
-      sourcetree::sync::_sync_nodeline_only_share "${nodeline}" "${config}" "${database}"
+      sourcetree::sync::_nodeline_sync_only_share "${nodeline}" "${config}" "${database}"
    done
    IFS="${DEFAULT_IFS}" ; shell_enable_glob
 
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
-   sourcetree::sync::_descend_config_nodelines "only_share" "${config}" "${database}" || return 1
+   sourcetree::sync::_descend_config_nodelines "only_share" "${config}" "${database}" "${symbol}" || return 1
+}
+
+
+sourcetree::sync::sync_only_share()
+{
+   log_entry "sourcetree::sync::sync_only_share" "$@"
+
+   local config="$1"
+   local database="$2"
+   local symbol="$3"
+   local startpoint="$4"
+
+   local UPDATED
+   local rval
+
+   sourcetree::sync::_sync_only_share "${config}" "${database}" "${symbol}"
+   rval=$?
+
+   if [ $rval -eq 0 ]
+   then
+      log_debug "UPDATED: ${UPDATED}"
+
+      if ! find_line "${UPDATED}" "${startpoint}"
+      then
+         fail "\"${MULLE_VIRTUAL_ROOT}${startpoint}\" is not reachable from \
+the sourcetree root (${MULLE_VIRTUAL_ROOT})"
+      fi
+   else
+      log_debug "sourcetree sync of ${config} failed ($rval)"
+   fi
+   return $rval
 }
 
 
@@ -558,6 +599,7 @@ sourcetree::sync::_sync_share()
 
    local config="$1"
    local database="$2"
+   local symbol="$3"
 
    local style
 
@@ -577,7 +619,7 @@ sourcetree::sync::_sync_share()
    local _configfile
    local _fallback_configfile
 
-   sourcetree::cfg::__common_configfile "${config}"
+   sourcetree::walk::__common_configfile "${symbol}" "${config}"
 
    if ! sourcetree::cfg::__resolve_configfile
    then
@@ -711,11 +753,13 @@ sourcetree::sync::sync_share()
 
    local config="$1"
    local database="$2"
+   local symbol="$3"
+   local startpoint="$4"
 
    local UPDATED
    local rval
 
-   sourcetree::sync::_sync_share "${config}" "${database}"
+   sourcetree::sync::_sync_share "${config}" "${database}" "${symbol}"
    rval=$?
 
    if [ $rval -eq 0 ]
@@ -756,6 +800,7 @@ sourcetree::sync::_style_for_recurse()
 #
 # config     : config relative to MULLE_VIRTUAL_ROOT
 # database   : prefix relative to MULLE_VIRTUAL_ROOT
+# symbol     : suffix to resolve SOURCETREE_CONFIG_NAMES
 #
 sourcetree::sync::_sync_recurse()
 {
@@ -763,6 +808,7 @@ sourcetree::sync::_sync_recurse()
 
    local config="$1"
    local database="$2"
+   local symbol="$3"
 
    local style
 
@@ -775,7 +821,7 @@ sourcetree::sync::_sync_recurse()
    local _configfile
    local _fallback_configfile
 
-   sourcetree::cfg::__common_configfile "${config}"
+   sourcetree::walk::__common_configfile "${symbol}" "${config}"
 
    if ! sourcetree::cfg::__resolve_configfile
    then
@@ -838,10 +884,12 @@ sourcetree::sync::sync_recurse()
 {
    log_entry "sourcetree::sync::sync_recurse" "$@"
 
-   local config="$1"
-   local database="$2"
+  local config="$1"
+  local database="$2"
+  local symbol="$3"
+#  local startpoint="$4"
 
-   sourcetree::sync::_sync_recurse "${config}" "${database}"
+   sourcetree::sync::_sync_recurse "${config}" "${database}" "${symbol}"
 }
 
 
@@ -858,6 +906,7 @@ sourcetree::sync::_sync_flat()
 
    local config="$1"
    local database="$2"
+   local symbol="$3"
 
    local style
 
@@ -871,7 +920,7 @@ sourcetree::sync::_sync_flat()
    local _configfile
    local _fallback_configfile
 
-   sourcetree::cfg::__common_configfile "${config}"
+   sourcetree::cfg::__common_configfile "${symbol}" "${config}"
 
    if ! sourcetree::cfg::__resolve_configfile
    then
@@ -925,8 +974,10 @@ sourcetree::sync::sync_flat()
 
    local config="$1"
    local database="$2"
+   local symbol="$3"
+#   local startpoint="$4"
 
-   sourcetree::sync::_sync_flat "${config}" "${database}"
+   sourcetree::sync::_sync_flat "${config}" "${database}" "${symbol}"
 }
 
 
@@ -973,9 +1024,14 @@ sourcetree::sync::start()
    sourcetree::db::ensure_consistency "${SOURCETREE_START}"
    sourcetree::db::ensure_compatible_dbtype "${SOURCETREE_START}" "${style}"
 
-   local  rval
+   local rval
 
-   sourcetree::sync::sync_${style} "${SOURCETREE_START}" "${SOURCETREE_START}"
+
+   sourcetree::sync::sync_${style} \
+                          "${SOURCETREE_START}" \
+                          "${SOURCETREE_START}" \
+                          "" \
+                          "${startpoint}"
    rval=$?
 
    # this is checked by 17-minions

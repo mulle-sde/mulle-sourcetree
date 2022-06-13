@@ -44,13 +44,13 @@ Usage:
    configuration is stored in the
    "${MULLE_SOURCETREE_ETC_DIR#${MULLE_USER_PWD}/}/config" file. OS specific
    derivations called "scopes" are stored separately. (For the current
-   OS scope that would be "${MULLE_SOURCETREE_ETC_DIR#${MULLE_USER_PWD}/}/config.${MULLE_UNAME}".)
+   OS scope that would be "${MULLE_SOURCETREE_ETC_DIR#${MULLE_USER_PWD}/}/config.${MULLE_UNAME}").
 
    Sometimes you may need two completely different sourcetree configurations.
-   For this you can have alternate sourcetree configuratio names. When you
+   For this you can have alternate sourcetree configuration names. When you
    specify these alternate names with the --config-names flag or the
-   MULLE_SOURCETREE_CONFIG_NAMES environment variable, these names will be
-   searched in the given order of preference.
+   MULLE_SOURCETREE_CONFIG_NAMES_${PROJECT_UPCASE_IDENTIFIER:-LOCAL} environment
+   variable, these names will be searched in the given order of preference.
 
 Examples:
    Two scopes
@@ -65,8 +65,8 @@ Examples:
       sourcetree with the default name "config" and introduce a second
       sourcetree with the name "apple" for Apple Foundation.
       To switch to the Apple Foundation you would set
-      MULLE_SOURCETREE_CONFIG_NAMES to 'apple:config', having the default as
-      a fallback.
+      MULLE_SOURCETREE_CONFIG_NAMES_${PROJECT_UPCASE_IDENTIFIER:-LOCAL} to
+      'apple:config', having the default as a fallback.
    
 Commands:
    list
