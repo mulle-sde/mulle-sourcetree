@@ -582,17 +582,21 @@ to WILL_DESCEND_CALLBACK"
    WALK_PARENT="${_address}"
 
    local rval
+   local symbol
 
    log_fluff "Descend into \"${next_datasource}\""
 
+   sourcetree::walk::r_symbol_for_address "${_address}"
+   symbol="${RVAL}"
+
    case ",${mode}," in
       *,walkdb,*)
-         sourcetree::walk::_walk_db_uuids "$@"
+         sourcetree::walk::_walk_db_uuids "${symbol}" "$@"
          rval=$?
       ;;
 
       *)
-         sourcetree::walk::_walk_config_uuids "$@"
+         sourcetree::walk::_walk_config_uuids "${symbol}" "$@"
          rval=$?
       ;;
    esac
@@ -1163,15 +1167,15 @@ sourcetree::walk::walk_nodeline()
    next_datasource="${datasource}${_destination}/"
 
    sourcetree::walk::_visit_node "${datasource}" \
-               "${virtual}" \
-               "${next_datasource}" \
-               "${next_virtual}" \
-               "${filternodetypes}" \
-               "${filterpermissions}" \
-               "${callbackqualifier}" \
-               "${descendqualifier}" \
-               "${mode}" \
-               "$@"
+                                 "${virtual}" \
+                                 "${next_datasource}" \
+                                 "${next_virtual}" \
+                                 "${filternodetypes}" \
+                                 "${filterpermissions}" \
+                                 "${callbackqualifier}" \
+                                 "${descendqualifier}" \
+                                 "${mode}" \
+                                 "$@"
 }
 
 
@@ -1274,14 +1278,14 @@ sourcetree::walk::_walk_nodelines()
             [ -z "${nodeline}" ] && continue
 
             sourcetree::walk::walk_nodeline "${nodeline}" \
-                          "${datasource}" \
-                          "${virtual}" \
-                          "${filternodetypes}" \
-                          "${filterpermissions}" \
-                          "${callbackqualifier}" \
-                          "${descendqualifier}" \
-                          "${tmpmode}" \
-                          "$@"
+                                            "${datasource}" \
+                                            "${virtual}" \
+                                            "${filternodetypes}" \
+                                            "${filterpermissions}" \
+                                            "${callbackqualifier}" \
+                                            "${descendqualifier}" \
+                                            "${tmpmode}" \
+                                            "$@"
             rval=$?
             [ $rval -ne 0 ] && return $rval
          done
@@ -1297,14 +1301,14 @@ sourcetree::walk::_walk_nodelines()
       [ -z "${nodeline}" ] && continue
 
       sourcetree::walk::walk_nodeline "${nodeline}" \
-                    "${datasource}" \
-                    "${virtual}" \
-                    "${filternodetypes}" \
-                    "${filterpermissions}" \
-                    "${callbackqualifier}" \
-                    "${descendqualifier}" \
-                    "${mode}" \
-                    "$@"
+                                      "${datasource}" \
+                                      "${virtual}" \
+                                      "${filternodetypes}" \
+                                      "${filterpermissions}" \
+                                      "${callbackqualifier}" \
+                                      "${descendqualifier}" \
+                                      "${mode}" \
+                                      "$@"
       rval=$?
       [ $rval -ne 0 ] && return $rval
 
@@ -1315,14 +1319,14 @@ sourcetree::walk::_walk_nodelines()
 
 
             sourcetree::walk::walk_nodeline "${nodeline}" \
-                          "${datasource}" \
-                          "${virtual}" \
-                          "${filternodetypes}" \
-                          "${filterpermissions}" \
-                          "${callbackqualifier}" \
-                          "${descendqualifier}" \
-                          "${tmpmode}" \
-                          "$@"
+                                            "${datasource}" \
+                                            "${virtual}" \
+                                            "${filternodetypes}" \
+                                            "${filterpermissions}" \
+                                            "${callbackqualifier}" \
+                                            "${descendqualifier}" \
+                                            "${tmpmode}" \
+                                            "$@"
             rval=$?
             [ $rval -ne 0 ] && return $rval
          ;;
@@ -1343,14 +1347,14 @@ sourcetree::walk::_walk_nodelines()
             [ -z "${nodeline}" ] && continue
 
             sourcetree::walk::walk_nodeline "${nodeline}" \
-                          "${datasource}" \
-                          "${virtual}" \
-                          "${filternodetypes}" \
-                          "${filterpermissions}" \
-                          "${callbackqualifier}" \
-                          "${descendqualifier}" \
-                          "${tmpmode}" \
-                          "$@"
+                                            "${datasource}" \
+                                            "${virtual}" \
+                                            "${filternodetypes}" \
+                                            "${filterpermissions}" \
+                                            "${callbackqualifier}" \
+                                            "${descendqualifier}" \
+                                            "${tmpmode}" \
+                                            "$@"
             rval=$?
             [ $rval -ne 0 ] && return $rval
          done
@@ -1394,6 +1398,130 @@ sourcetree::walk::remove_from_deduped()
 }
 
 
+sourcetree::walk::r_symbol_for_address()
+{
+   log_entry "sourcetree::walk::r_symbol_for_address" "$@"
+
+   local address="$1"
+
+   include "case"
+
+   r_basename "${address}"
+   r_smart_upcase_identifier "${RVAL}"
+
+   [ ! -z "${RVAL}" ]
+}
+
+
+sourcetree::walk::__common_configfile()
+{
+   log_entry "sourcetree::walk::__common_configfile" "$@"
+
+   local symbol="$1" ; shift
+
+   r_identifier "${symbol}"
+   r_uppercase "${RVAL}"
+   [ "${symbol}" = "${RVAL}" ] || _internal_fail "\"${symbol}\" is not an uppercase identifier"
+
+   if [ -z "${symbol}" ]
+   then
+      sourcetree::cfg::__common_configfile "$@"
+      return
+   fi
+
+   # for descends we need to reset some internal variables temporarily
+   # make local copies of previous values, only valid for the lifetime
+   # of this function call
+
+   local SOURCETREE_CONFIG_NAMES="config"
+   local SOURCETREE_CONFIG_SCOPES="${SOURCETREE_CONFIG_SCOPES:-default}"
+   local SOURCETREE_CONFIG_DIR="${SOURCETREE_CONFIG_DIR}"
+   local SOURCETREE_FALLBACK_CONFIG_DIR="${SOURCETREE_FALLBACK_CONFIG_DIR}"
+
+   #
+   # override with environment variables
+   #
+   local var
+   local value
+
+   var="SOURCETREE_CONFIG_NAMES_${symbol}"
+   if [ ! -z "${ZSH_VERSION}" ]
+   then
+      value="${(P)var}"
+   else
+      value="${!var}"
+   fi
+   SOURCETREE_CONFIG_NAMES="${value:-${SOURCETREE_CONFIG_NAMES}}"
+   log_setting "${var} : ${value}"
+
+   var="SOURCETREE_CONFIG_SCOPE_${symbol}"
+   if [ ! -z "${ZSH_VERSION}" ]
+   then
+      value="${(P)var}"
+   else
+      value="${!var}"
+   fi
+   SOURCETREE_CONFIG_SCOPE="${value:-${SOURCETREE_CONFIG_SCOPE}}"
+   log_setting "${var} : ${value}"
+
+   sourcetree::cfg::__common_configfile "$@"
+}
+
+
+sourcetree::walk::cfg_read()
+{
+   log_entry "sourcetree::walk::cfg_read" "$@"
+
+   local symbol="$1" ; shift
+
+   local _configfile
+   local _fallback_configfile
+
+   sourcetree::walk::__common_configfile "${symbol}" "$1"
+
+   if ! sourcetree::cfg::__resolve_configfile
+   then
+      return 1
+   fi
+
+   sourcetree::cfg::__read
+}
+
+
+#
+# these can be prefixed for external queries
+#
+sourcetree::walk::r_config_exists()
+{
+   log_entry "sourcetree::walk::r_config_exists" "$@"
+
+   local _configfile
+   local _fallback_configfile
+
+   local symbol="$1" ; shift
+
+   sourcetree::walk::__common_configfile "${symbol}" "$1"
+
+   if [ -f "${_configfile}" ]
+   then
+      log_debug "\"${_configfile}\" exists"
+      RVAL="${_configfile}"
+      return 0
+   fi
+
+   if [ ! -z "${_fallback_configfile}" ] && [ -f "${_fallback_configfile}" ]
+   then
+      log_debug "\"${_fallback_configfile}\" exists"
+      RVAL="${_fallback_configfile}"
+      return 0
+   fi
+
+   log_debug "\"${_configfile}\" not found"
+   RVAL=
+   return 1
+}
+
+
 #
 # walk_auto_uuid settingname,callback,permissions,SOURCETREE_DB_FILENAME ...
 #
@@ -1416,6 +1544,8 @@ sourcetree::walk::_walk_config_uuids()
 {
    log_entry "sourcetree::walk::_walk_config_uuids" "$@"
 
+   local symbol="$1" ; shift
+
    local datasource="$1"
    local virtual="$2"
    local mode="$7"
@@ -1425,9 +1555,11 @@ sourcetree::walk::_walk_config_uuids()
       return 0
    fi
 
+   # _address is in WALK_PARENT
+
    local nodelines
 
-   if ! nodelines="`sourcetree::cfg::read "${datasource}" `"
+   if ! nodelines="`sourcetree::walk::cfg_read "${symbol}" "${datasource}" `"
    then
       log_debug "Config \"${datasource#${MULLE_USER_PWD}/}\" does not exist"
       return 0
@@ -1458,7 +1590,7 @@ sourcetree::walk::walk_config_uuids()
 
    WALKED=
    VISITED=
-   sourcetree::walk::_walk_config_uuids "${SOURCETREE_START}" "" "$@"
+   sourcetree::walk::_walk_config_uuids "" "${SOURCETREE_START}" "" "$@"
    rval=$?
 
    # on 2, which is preempt we dont call the callback
@@ -1492,6 +1624,8 @@ sourcetree::walk::_walk_db_uuids()
 {
    log_entry "sourcetree::walk::_walk_db_uuids" "$@"
 
+   local symbol="$1" ; shift
+
    local datasource="$1"
    local virtual="$2"
    local mode="$7"
@@ -1506,7 +1640,8 @@ sourcetree::walk::_walk_db_uuids()
       ;;
 
       *)
-         if sourcetree::cfg::r_config_exists "${datasource}" && ! sourcetree::db::is_ready "${datasource}"
+         if sourcetree::walk::r_config_exists "${symbol}" "${datasource}" \
+            && ! sourcetree::db::is_ready "${datasource}"
          then
             fail "The sourcetree at \"${datasource}\" is not updated fully \
 yet, can not proceed"
@@ -1542,7 +1677,7 @@ sourcetree::walk::walk_db_uuids()
 
    WALKED=
    VISITED=
-   sourcetree::walk::_walk_db_uuids "${SOURCETREE_START}" "" "$@"
+   sourcetree::walk::_walk_db_uuids "" "${SOURCETREE_START}" "" "$@"
    rval=$?
 
    if [ ! -z "${DID_WALK_CALLBACK}" ]

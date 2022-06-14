@@ -44,19 +44,45 @@ MULLE_SOURCETREE_CFG_SH="included"
 #
 # Not sure of fallback should be even be set for "write"
 #
+# Globals:
+#    SOURCETREE_CONFIG_NAMES
+#    SOURCETREE_CONFIG_SCOPE
+#    SOURCETREE_CONFIG_DIR
+#    SOURCETREE_FALLBACK_CONFIG_DIR
+#
+# Environment:
+#    MULLE_SOURCETREE_STASH_DIR
+#    MULLE_UNAME
+#    MULLE_VIRTUAL_ROOT
+#
 sourcetree::cfg::__common_configfile()
 {
+   log_entry "sourcetree::cfg::__common_configfile" "$@"
+
    [ -z "${SOURCETREE_CONFIG_NAMES}" ] \
       && _internal_fail "SOURCETREE_CONFIG_NAMES is not set"
    [ -z "${SOURCETREE_CONFIG_DIR}" ] \
       && _internal_fail "SOURCETREE_CONFIG_DIR is not set"
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && _internal_fail "MULLE_VIRTUAL_ROOT is not set"
+   [ -z "${MULLE_UNAME}" ] && _internal_fail "MULLE_VIRTUAL_ROOT is not set"
 
+   is_absolutepath "${SOURCETREE_CONFIG_DIR}" && _internal_fail "SOURCETREE_CONFIG_DIR must be relative"
+
+   # TODO: change scope to SOURCETREE_CONFIG_SCOPES, so that the default scopes
+   #       are:
+   #        ${MULLE_UNAME}:global
+   #
+   # then users can expand the scopes search to:
+   #        ubuntu-linux:linux:global
+   #
    local names
    local scope
 
-   scope="${SOURCETREE_SCOPE}"
+   scope="${SOURCETREE_CONFIG_SCOPE}"
    names="${SOURCETREE_CONFIG_NAMES}"
+
+   log_setting "SOURCETREE_CONFIG_SCOPE : ${scope}"
+   log_setting "SOURCETREE_CONFIG_NAMES : ${names}"
 
    #
    # for writing can only have one filename, as the file may not exist
@@ -69,7 +95,7 @@ sourcetree::cfg::__common_configfile()
             ;;
 
             "")
-               _internal_fail "scope can't be empty"#
+               _internal_fail "scope can't be empty"
             ;;
 
             default)
@@ -85,10 +111,14 @@ sourcetree::cfg::__common_configfile()
       ;;
    esac
 
+   log_setting "scope                   : ${scope}"
+   log_setting "names                   : ${names}"
+
    local name
    local lastname
    local filename
    local fallback_filename
+   local s
 
    lastname="${names##*:}"
 
@@ -97,9 +127,13 @@ sourcetree::cfg::__common_configfile()
    do
       IFS="${DEFAULT_IFS}"
 
+      # this is usually the etc dir (relative)
+      # we get something like .mulle/etc/sourcetree/config here
       r_filepath_concat "${SOURCETREE_CONFIG_DIR}" "${name}"
       filename="${RVAL}"
 
+      # this is usually the share dir
+      # we get something like .mulle/share/sourcetree/config here
       if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_DIR}" ]
       then
          r_filepath_concat "${SOURCETREE_FALLBACK_CONFIG_DIR}" "${name}"
@@ -197,7 +231,11 @@ sourcetree::cfg::__common_configfile()
          'global')
          ;;
 
-         # address custom scope
+         "")
+            _internal_fail "scope can't be empty"
+         ;;
+
+         # address custom scope (don't check for existance here)
          *)
             _configfile="${_configfile}.${scope}"
             if [ ! -z "${_fallback_configfile}" ]

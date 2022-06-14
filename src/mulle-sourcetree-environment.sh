@@ -64,7 +64,7 @@ sourcetree::environment::config()
       SOURCETREE_FALLBACK_CONFIG_DIR=""
    fi
 
-   SOURCETREE_SCOPE="${scope:-default}"
+   SOURCETREE_CONFIG_SCOPE="${scope:-default}"
    SOURCETREE_MODE="${mode}" # maybe empty for now
 
    is_absolutepath "${SOURCETREE_CONFIG_DIR}" \
@@ -149,10 +149,10 @@ sourcetree::environment::basic()
                mulle-tool-env sourcetree` || exit 1
 
    sourcetree::environment::config "${config_dir}" \
-                                 "${config_names}" \
-                                 "${use_fallback}" \
-                                 "${scope}" \
-                                 "${mode}"
+                                   "${config_names}" \
+                                   "${use_fallback}" \
+                                   "${scope}" \
+                                   "${mode}"
 
 
    if [ "${MULLE_FLAG_LOG_SETTINGS}" = 'YES' ]
@@ -181,11 +181,11 @@ sourcetree::environment::default()
    local mode="$7"
 
    sourcetree::environment::basic "" \
-                                "${option_configdir}" \
-                                "${option_confignames}" \
-                                "${option_use_fallback}" \
-                                "${option_scope}" \
-                                "${mode}"
+                                  "${option_configdir}" \
+                                  "${option_confignames}" \
+                                  "${option_use_fallback}" \
+                                  "${option_scope}" \
+                                  "${mode}"
 
    if [ "${defer}" = "VIRTUAL" ]
    then

@@ -165,18 +165,16 @@ necessary marks \"no-delete,no-update,no-share,require\""
    sourcetree::node::r_sanitized_marks "${_marks}"
    _marks="${RVAL}"
 
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
-   then
-      log_setting "ADDRESS:      \"${_address}\""
-      log_setting "NODETYPE:     \"${_nodetype}\""
-      log_setting "MARKS:        \"${_marks}\""
-      log_setting "UUID:         \"${_uuid}\""
-      log_setting "URL:          \"${_url}\""
-      log_setting "BRANCH:       \"${_branch}\""
-      log_setting "TAG:          \"${_tag}\""
-      log_setting "FETCHOPTIONS: \"${_fetchoptions}\""
-      log_setting "USERINFO:     \"${_raw_userinfo}\""
-   fi
+
+   log_setting "ADDRESS      : \"${_address}\""
+   log_setting "NODETYPE     : \"${_nodetype}\""
+   log_setting "MARKS        : \"${_marks}\""
+   log_setting "UUID         : \"${_uuid}\""
+   log_setting "URL          : \"${_url}\""
+   log_setting "BRANCH       : \"${_branch}\""
+   log_setting "TAG          : \"${_tag}\""
+   log_setting "FETCHOPTIONS : \"${_fetchoptions}\""
+   log_setting "USERINFO     : \"${_raw_userinfo}\""
 
    # this is done  during auto already
    # case "${_address}" in
@@ -243,18 +241,15 @@ sourcetree::node::_r_to_nodeline()
       fi
    fi
 
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
-   then
-      log_setting "ADDRESS:      \"${_address}\""
-      log_setting "NODETYPE:     \"${_nodetype}\""
-      log_setting "MARKS:        \"${_marks}\""
-      log_setting "UUID:         \"${_uuid}\""
-      log_setting "URL:          \"${_url}\""
-      log_setting "BRANCH:       \"${_branch}\""
-      log_setting "TAG:          \"${_tag}\""
-      log_setting "FETCHOPTIONS: \"${_fetchoptions}\""
-      log_setting "USERINFO:     \"${_raw_userinfo}\""
-   fi
+   log_setting "ADDRESS      : \"${_address}\""
+   log_setting "NODETYPE     : \"${_nodetype}\""
+   log_setting "MARKS        : \"${_marks}\""
+   log_setting "UUID         : \"${_uuid}\""
+   log_setting "URL          : \"${_url}\""
+   log_setting "BRANCH       : \"${_branch}\""
+   log_setting "TAG          : \"${_tag}\""
+   log_setting "FETCHOPTIONS : \"${_fetchoptions}\""
+   log_setting "USERINFO     : \"${_raw_userinfo}\""
 
    RVAL="${_address};${_nodetype};${_marks};${_uuid};\
 ${_url};${_branch};${_tag};${_fetchoptions};\

@@ -780,18 +780,15 @@ sourcetree::commands::_append_new_node()
 
    [ ! -z "${_uuid}" ] && fail "UUID already set"
 
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
-   then
-      log_setting "ADDRESS:      \"${_address}\""
-      log_setting "NODETYPE:     \"${_nodetype}\""
-      log_setting "MARKS:        \"${_marks}\""
-      log_setting "UUID:         \"${_uuid}\""
-      log_setting "URL:          \"${_url}\""
-      log_setting "BRANCH:       \"${_branch}\""
-      log_setting "TAG:          \"${_tag}\""
-      log_setting "FETCHOPTIONS: \"${_fetchoptions}\""
-      log_setting "USERINFO:     \"${_raw_userinfo}\""
-   fi
+   log_setting "ADDRESS      : \"${_address}\""
+   log_setting "NODETYPE     : \"${_nodetype}\""
+   log_setting "MARKS        : \"${_marks}\""
+   log_setting "UUID         : \"${_uuid}\""
+   log_setting "URL          : \"${_url}\""
+   log_setting "BRANCH       : \"${_branch}\""
+   log_setting "TAG          : \"${_tag}\""
+   log_setting "FETCHOPTIONS : \"${_fetchoptions}\""
+   log_setting "USERINFO     : \"${_raw_userinfo}\""
 
    #
    # now just some sanity checks and save it

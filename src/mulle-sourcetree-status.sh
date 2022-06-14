@@ -244,13 +244,13 @@ sourcetree::status::r_emit()
    fs="library"      # not a fs (system) library
    treestatus="ok"
 
-   log_setting "output_address: ${output_address}"
-   log_setting "address:        ${address}"
-   log_setting "directory:      ${directory}"
-   log_setting "datasource:     ${datasource}"
-   log_setting "marks:          ${marks}"
-   log_setting "mode:           ${mode}"
-   log_setting "filename:       ${filename}"
+   log_setting "output_address : ${output_address}"
+   log_setting "address        : ${address}"
+   log_setting "directory      : ${directory}"
+   log_setting "datasource     : ${datasource}"
+   log_setting "marks          : ${marks}"
+   log_setting "mode           : ${mode}"
+   log_setting "filename       : ${filename}"
 
    if sourcetree::nodemarks::enable "${marks}" "fs"
    then

@@ -44,13 +44,13 @@ Usage:
    configuration is stored in the
    "${MULLE_SOURCETREE_ETC_DIR#${MULLE_USER_PWD}/}/config" file. OS specific
    derivations called "scopes" are stored separately. (For the current
-   OS scope that would be "${MULLE_SOURCETREE_ETC_DIR#${MULLE_USER_PWD}/}/config.${MULLE_UNAME}".)
+   OS scope that would be "${MULLE_SOURCETREE_ETC_DIR#${MULLE_USER_PWD}/}/config.${MULLE_UNAME}").
 
    Sometimes you may need two completely different sourcetree configurations.
-   For this you can have alternate sourcetree configuratio names. When you
+   For this you can have alternate sourcetree configuration names. When you
    specify these alternate names with the --config-names flag or the
-   MULLE_SOURCETREE_CONFIG_NAMES environment variable, these names will be
-   searched in the given order of preference.
+   MULLE_SOURCETREE_CONFIG_NAMES_${PROJECT_UPCASE_IDENTIFIER:-LOCAL} environment
+   variable, these names will be searched in the given order of preference.
 
 Examples:
    Two scopes
@@ -65,8 +65,8 @@ Examples:
       sourcetree with the default name "config" and introduce a second
       sourcetree with the name "apple" for Apple Foundation.
       To switch to the Apple Foundation you would set
-      MULLE_SOURCETREE_CONFIG_NAMES to 'apple:config', having the default as
-      a fallback.
+      MULLE_SOURCETREE_CONFIG_NAMES_${PROJECT_UPCASE_IDENTIFIER:-LOCAL} to
+      'apple:config', having the default as a fallback.
    
 Commands:
    list
@@ -86,34 +86,19 @@ sourcetree::config::list_usage()
 Usage:
    ${MULLE_USAGE_NAME} config list [options]
 
-   List the currently active sourcetree configuration. You can also see the
-   available sourcetree configurations.
+   List the available sourcetree configuration files. The "config"
+   configuration is the default configuration used my ${MULLE_USAGE_NAME},
+   unless overridden by a
+   MULLE_SOURCETREE_CONFIG_NAMES_\${PROJECT_UPCASE_IDENTIFIER} environment
+   variable.
 
 Options:
-   -a  : list all available sourcetree configurations
+   -n        : list only available names
+   -s        : separator to separate names, if -n option is used
+   --no-warn : don't print a warning if there is no sourcetree
 EOF
+   exit 1
 }
-
-
-sourcetree::config::name_usage()
-{
-   [ $# -ne 0 ] && log_error "$*"
-
-   cat <<EOF >&2
-Usage:
-   ${MULLE_USAGE_NAME} [flags] config name [options]
-
-   List the currently active sourcetree configuration name.
-
-Tip:
-   Use the --config-names and --config-scope flags to address a specific
-   config file.
-
-Options:
-   -h  : help
-EOF
-}
-
 
 
 sourcetree::config::copy_usage()
@@ -133,6 +118,7 @@ Tip:
 Options:
    -h  : help
 EOF
+   exit 1
 }
 
 
@@ -156,6 +142,7 @@ Tip:
 Options:
    -h  : help
 EOF
+   exit 1
 }
 
 
@@ -173,11 +160,8 @@ sourcetree::config::r_find()
 
    rval=1
 
-   IFS=':'; shell_disable_glob
-   for name in ${config_names}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
-
+   .foreachpath name in ${config_names}
+   .do
       case "${config_scope}" in
          'default')
             scope="${MULLE_UNAME}"
@@ -198,14 +182,14 @@ sourcetree::config::r_find()
          if [ -f "${MULLE_SOURCETREE_ETC_DIR}/${name}.${scope}" ]
          then
             rval=0
-            break
+            .break
          fi
 
          filename="${MULLE_SOURCETREE_SHARE_DIR}/${name}.${scope}"
          if [ -f "${MULLE_SOURCETREE_SHARE_DIR}/${name}.${scope}" ]
          then
             rval=0
-            break
+            .break
          fi
       fi
 
@@ -215,21 +199,20 @@ sourcetree::config::r_find()
             if [ -f "${MULLE_SOURCETREE_ETC_DIR}/${name}" ]
             then
                rval=0
-               break
+               .break
             fi
 
             filename="${MULLE_SOURCETREE_SHARE_DIR}/${name}"
             if [ -f "${MULLE_SOURCETREE_SHARE_DIR}/${name}" ]
             then
                rval=0
-               break
+               .break
             fi
          ;;
       esac
 
       filename=""
-   done
-   shell_disable_glob
+   .done
 
    RVAL="${filename}"
    return $rval
@@ -240,7 +223,8 @@ sourcetree::config::list_main()
 {
    log_entry "sourcetree::config::list_main" "$@"
 
-   local OPTION_ALL
+   local OPTION_SEPARATOR=" "
+   local OPTION_WARN="YES"
 
    while [ $# -ne 0 ]
    do
@@ -249,8 +233,19 @@ sourcetree::config::list_main()
             sourcetree::config::list_usage
          ;;
 
-         -a|--all)
-            OPTION_ALL='YES'
+         -n|--name-only)
+            OPTION_NAME_ONLY='YES'
+         ;;
+
+         -s|--separator)
+            [ $# -eq 1 ] && sourcetree::config::list_usage "Missing argument to \"$1\""
+            shift
+
+            OPTION_SEPARATOR="$1"
+         ;;
+
+         --no-warn)
+            OPTION_WARN='NO'
          ;;
 
          -*)
@@ -269,164 +264,73 @@ sourcetree::config::list_main()
 
    local filename
    local found
+   local names
 
-   if [ "${OPTION_ALL}" = 'YES' ]
+   shell_enable_nullglob
+
+   if [ -d "${MULLE_SOURCETREE_ETC_DIR}" ]
    then
-      shell_enable_nullglob
-      if [ -d "${MULLE_SOURCETREE_ETC_DIR}" ]
-      then
-         log_info "etc"
+      [ "${OPTION_NAME_ONLY}" != 'YES' ] && log_info "etc"
 
-         for filename in "${MULLE_SOURCETREE_ETC_DIR}"/*
-         do
-            if [ -f "${filename}" ] # ignore directories
-            then
-               printf "%s\n" "${filename#${MULLE_USER_PWD}/}"
-               found='YES'
-            fi
-         done
-      fi
-
-      if [ -d "${MULLE_SOURCETREE_SHARE_DIR}" ]
-      then
-         log_info "share"
-
-         for filename in "${MULLE_SOURCETREE_SHARE_DIR}"/*
-         do
-            if [ -f "${filename}" ]  # ignore directories
-            then
-               printf "%s\n" "${filename#${MULLE_USER_PWD}/}"
-               found='YES'
-            fi
-         done
-      fi
-
-      shell_disable_nullglob
-      return
-
-      if [ "${found}" != 'YES' ]
-      then
-         log_warning "There is no sourcetree here"
-      fi
-   fi
-
-   #
-   #
-   #
-   if sourcetree::config::r_find "${SOURCETREE_CONFIG_NAMES}" \
-                               "${SOURCETREE_SCOPE}"
-   then
-      printf "%s\n" "${RVAL#${MULLE_USER_PWD}/}"
-   else
-      log_warning "There is no sourcetree here"
-   fi
-}
-
-
-# scopeless name or names without etc or share
-sourcetree::config::name_main()
-{
-   log_entry "sourcetree::config::name_main" "$@"
-
-   local OPTION_ALL
-   local OPTION_SEPARATOR=$'\n'
-
-   while [ $# -ne 0 ]
-   do
-      case "$1" in
-         -h*|--help|help)
-            sourcetree::config::name_usage
-         ;;
-
-         -a|--all)
-            OPTION_ALL='YES'
-         ;;
-
-         --separator)
-            [ $# -eq 1 ] && sourcetree::config::name_usage "Missing argument to \"$1\""
-            shift
-
-            OPTION_SEPARATOR="$1"
-         ;;
-
-         -*)
-            sourcetree::config::name_usage "Unknown config list option $1"
-         ;;
-
-         *)
-            break
-         ;;
-      esac
-
-      shift
-   done
-
-   [ $# -ne 0 ] && sourcetree::config::name_usage "Superflous arguments $*"
-
-   local filename
-   local found
-
-   if [ "${OPTION_ALL}" = 'YES' ]
-   then
-      local names 
-
-      shell_enable_nullglob
-      if [ -d "${MULLE_SOURCETREE_ETC_DIR}" ]
-      then
-         for filename in "${MULLE_SOURCETREE_ETC_DIR}"/*
-         do
-            if [ -f "${filename}" ] # ignore directories
+      for filename in "${MULLE_SOURCETREE_ETC_DIR}"/*
+      do
+         if [ -f "${filename}" ] # ignore directories
+         then
+            if [ "${OPTION_NAME_ONLY}" = 'YES' ]
             then
                r_extensionless_basename "${filename}"
                r_add_unique_line "${names}" "${RVAL}"
                names="${RVAL}"
+            else
+               printf "%s\n" "${filename#${MULLE_USER_PWD}/}"
             fi
-         done
-      fi
+            found='YES'
+         fi
+      done
+   fi
 
-      if [ -d "${MULLE_SOURCETREE_SHARE_DIR}" ]
-      then
-         for filename in "${MULLE_SOURCETREE_SHARE_DIR}"/*
-         do
-            if [ -f "${filename}" ] # ignore directories
+   if [ -d "${MULLE_SOURCETREE_SHARE_DIR}" ]
+   then
+      [ "${OPTION_NAME_ONLY}" != 'YES' ] && log_info "share"
+
+      for filename in "${MULLE_SOURCETREE_SHARE_DIR}"/*
+      do
+         if [ -f "${filename}" ]  # ignore directories
+         then
+            if [ "${OPTION_NAME_ONLY}" = 'YES' ]
             then
                r_extensionless_basename "${filename}"
                r_add_unique_line "${names}" "${RVAL}"
                names="${RVAL}"
+            else
+               printf "%s\n" "${filename#${MULLE_USER_PWD}/}"
             fi
-         done
-      fi
-
-      shell_disable_nullglob
-
-      if [ ! -z "${names}" ]
-      then
-         local sep
-         local line
-
-         IFS=$'\n'
-         for line in ${names}
-         do
-            printf "%s%s" "${sep}" "${line}"
-            sep="${OPTION_SEPARATOR}"
-         done
-         IFS="${DEFAULT_IFS}"
-
-         printf "\n"
-         return 0
-      fi
-      return 1
+            found='YES'
+         fi
+      done
    fi
 
-   if sourcetree::config::r_find "${SOURCETREE_CONFIG_NAMES}" \
-                                 "${SOURCETREE_SCOPE}"
+   shell_disable_nullglob
+
+   if [ "${found}" != 'YES' -a "${OPTION_WARN}" = 'YES' ]
    then
-      r_extensionless_basename "${RVAL}"
-      printf "%s\n" "${RVAL}"
+      log_warning "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
       return 0
    fi
 
-   return 1
+   if [ "${OPTION_NAME_ONLY}" = 'YES' ]
+   then
+      local sep
+      local line
+
+      .foreachline line in ${names}
+      .do
+         printf "%s%s" "${sep}" "${line}"
+         sep="${OPTION_SEPARATOR}"
+      .done
+
+      printf "\n"
+   fi
 }
 
 
@@ -503,17 +407,17 @@ sourcetree::config::copy_main()
       fail "\"${destination_file#${MULLE_USER_PWD}/}\" already exists"
    fi
 
-   if ! sourcetree::config::r_find "${SOURCETREE_CONFIG_NAMES}" "${SOURCETREE_SCOPE}"
+   if ! sourcetree::config::r_find "${SOURCETREE_CONFIG_NAMES}" "${SOURCETREE_CONFIG_SCOPE}"
    then
       local text
 
-      case "${SOURCETREE_SCOPE}" in
+      case "${SOURCETREE_CONFIG_SCOPE}" in
          default|global)
             text= ""
          ;;
 
          *)
-            text="${SOURCETREE_SCOPE} "
+            text="${SOURCETREE_CONFIG_SCOPE} "
          ;;
       esac
       fail "No ${text}sourcetree with names ${SOURCETREE_CONFIG_NAMES//:/,} found"
@@ -551,17 +455,17 @@ sourcetree::config::remove_main()
 
    [ $# -ne 0 ] && sourcetree::config::remove_usage "Superflous argument $*"
 
-   if ! sourcetree::config::r_find "${SOURCETREE_CONFIG_NAMES}" "${SOURCETREE_SCOPE}"
+   if ! sourcetree::config::r_find "${SOURCETREE_CONFIG_NAMES}" "${SOURCETREE_CONFIG_SCOPE}"
    then
       local text
 
-      case "${SOURCETREE_SCOPE}" in
+      case "${SOURCETREE_CONFIG_SCOPE}" in
          default|global)
             text= ""
          ;;
 
          *)
-            text="${SOURCETREE_SCOPE} "
+            text="${SOURCETREE_CONFIG_SCOPE} "
          ;;
       esac
       fail "No ${text}sourcetree with names ${SOURCETREE_CONFIG_NAMES//:/,} found"
@@ -624,7 +528,7 @@ sourcetree::config::main()
 
    cmd="${cmd:-list}"
    case "${cmd}" in
-      name|copy|list|remove)
+      copy|list|remove)
          sourcetree::config::${cmd}_main "$@"
       ;;
 

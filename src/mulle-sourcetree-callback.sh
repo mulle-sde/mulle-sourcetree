@@ -74,26 +74,23 @@ sourcetree::callback::call()
 #   r_basename "${datasource#/}"
 #   owner="${RVAL:-.}"
 
-   if [ "$MULLE_FLAG_LOG_SETTINGS" = 'YES' ]
-   then
-      log_setting "NODE_ADDRESS:         \"${_address}\""
-      log_setting "NODE_BRANCH:          \"${_branch}\""
-      log_setting "NODE_FETCHOPTIONS:    \"${_fetchoptions}\""
-      log_setting "NODE_FILENAME:        \"${_filename}\""
-      log_setting "NODE_MARKS:           \"${_marks}\""
-      log_setting "NODE_RAW_USERINFO:    \"${_raw_userinfo}\""
-      log_setting "NODE_TAG:             \"${_tag}\""
-      log_setting "NODE_TYPE:            \"${_nodetype}\""
-      log_setting "NODE_URL:             \"${_url}\""
-      log_setting "NODE_UUID:            \"${_uuid}\""
-      log_setting "WALK_DATASOURCE:      \"${datasource}\""
-      log_setting "WALK_DESTINATION:     \"${_destination}\""
-      log_setting "WALK_MODE:            \"${mode}\""
-      log_setting "WALK_NODE:            \"${_nodeline}\""
-      log_setting "WALK_PARENT:          \"${WALK_PARENT}\""
-      log_setting "WALK_VIRTUAL:         \"${virtual}\""
-      log_setting "WALK_VIRTUAL_ADDRESS: \"${_virtual_address}\""
-   fi
+   log_setting "NODE_ADDRESS         : \"${_address}\""
+   log_setting "NODE_BRANCH          : \"${_branch}\""
+   log_setting "NODE_FETCHOPTIONS    : \"${_fetchoptions}\""
+   log_setting "NODE_FILENAME        : \"${_filename}\""
+   log_setting "NODE_MARKS           : \"${_marks}\""
+   log_setting "NODE_RAW_USERINFO    : \"${_raw_userinfo}\""
+   log_setting "NODE_TAG             : \"${_tag}\""
+   log_setting "NODE_TYPE            : \"${_nodetype}\""
+   log_setting "NODE_URL             : \"${_url}\""
+   log_setting "NODE_UUID            : \"${_uuid}\""
+   log_setting "WALK_DATASOURCE      : \"${datasource}\""
+   log_setting "WALK_DESTINATION     : \"${_destination}\""
+   log_setting "WALK_MODE            : \"${mode}\""
+   log_setting "WALK_NODE            : \"${_nodeline}\""
+   log_setting "WALK_PARENT          : \"${WALK_PARENT}\""
+   log_setting "WALK_VIRTUAL         : \"${virtual}\""
+   log_setting "WALK_VIRTUAL_ADDRESS : \"${_virtual_address}\""
 
    #
    # "pass" these as globals
