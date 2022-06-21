@@ -91,8 +91,8 @@ This is the canonical way to specify a sourcetree dependency in mulle-sde.
 It allows you to override the version (ZLIB_TAG) and the host of the archive
 (ZLIB_URL) to download the desired archive.
 
-```
-mulle-sourcetree add \
+``` bash
+$ mulle-sourcetree add \
    --nodetype tar \
    --tag '${ZLIB_TAG:-2.0.0}' \
    --url '${ZLIB_URL:-https://github.com/madler/zlib/archive/${MULLE_TAG}.tar.gz}' \
@@ -175,13 +175,13 @@ Generally you will use the `--share` - the default - for minimal hassle.
 
 #### `mulle-sourcetree add` : add nodes with
 
-```
+``` bash
 $ mulle-sourcetree add --url https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz external/expat
 ```
 
 You can specify your URL with environment variables, to make them more portable:
 
-```
+``` bash
 $ mulle-sourcetree add --url '${ZLIB_URL:-https://github.com/madler/zlib.git}' external/zlib
 ```
 
@@ -191,7 +191,7 @@ $ mulle-sourcetree add --url '${ZLIB_URL:-https://github.com/madler/zlib.git}' e
 After changing the sourcetree, run *sync* to reflect the changes back
 into your project by fetching added and deleting removed dependencies:
 
-```
+``` bash
 $ mulle-sourcetree sync
 ```
 
@@ -200,7 +200,7 @@ $ mulle-sourcetree sync
 
 See your sourcetree with **list**:
 
-```
+``` bash
 $ mulle-sourcetree list --output-header --output-eval
 address         nodetype  marks  userinfo  url
 -------         --------  -----  --------  ---
@@ -211,15 +211,15 @@ external/zlib   git                        https://github.com/madler/zlib.git
 Use custom format options to retrieve the information you want. This example
 lists all the URLs definitions used in your project:
 
-```
-mulle-sourcetree list -r --format "%u\n" --output-no-header --output-no-indent | sed -n 's/^\${\([A-Z_]*\):-\(.*\)}$/\1=\"\2\"/p' | sort -u
+``` bash
+$ mulle-sourcetree list -r --format "%u\n" --output-no-header --output-no-indent | sed -n 's/^\${\([A-Z_]*\):-\(.*\)}$/\1=\"\2\"/p' | sort -u
 ```
 
 #### `mulle-sourcetree dotdump` : picture your sourcetree
 
 Get a graphical overview with **dotdump**:
 
-```
+``` bash
 $ mulle-sourcetree dotdump > pic.dot
 open pic.dot # view it with Graphviz (http://graphviz.org/)
 ```
@@ -229,10 +229,21 @@ open pic.dot # view it with Graphviz (http://graphviz.org/)
 
 #### `mulle-sourcetree craftorder` : retrieve projects to build
 
-```
+``` bash
 $ mulle-sourcetree craftorder
 /private/tmp/a/external/expat
 /private/tmp/a/external/zlib
+```
+
+#### `mulle-sourcetree-edit-csv` : edit the sourcetree with a spreadsheet
+
+These commands need sqlite3 and a spreadsheet editor installed:
+
+``` bash
+$ mulle-sourcetree-edit-csv
+$ mulle-sourcetree-import-csv
+$ mulle-sourcetree-export-csv
+$ mulle-sourcetree-import-sqlite
 ```
 
 ## GitHub and Mulle kybernetiK

@@ -1,0 +1,109 @@
+#! /bin/sh
+#
+#   Copyright (c) 2022 Nat! - Mulle kybernetiK
+#   All rights reserved.
+#
+#   Redistribution and use in source and binary forms, with or without
+#   modification, are permitted provided that the following conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
+#   may be used to endorse or promote products derived from this software
+#   without specific prior written permission.
+#
+#   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+#   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+#   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+#   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#   POSSIBILITY OF SUCH DAMAGE.
+#
+[ "${TRACE:-}" = 'YES' -o "${MULLE_SOURCETREE_EXPORT_CSV_TRACE:-}" = 'YES' ] && set -x && : "$0" "$@"
+
+
+SQLITE="${SQLITE:-sqlite3}"
+TABLENAME="${TABLENAME:-sourcetree}"
+
+CONFIG="${1:-.mulle/etc/sourcetree/config}"
+DATABASE="${2:-:memory:}"
+SEPARATOR="${3:-,}"
+HEADERS="${4:-on}"
+
+[ -z "${SQLITE}" ]    && CONFIG=help
+[ -z "${TABLENAME}" ] && CONFIG=help
+
+[ -z "${CONFIG}" ]    && CONFIG=help
+[ -z "${DATABASE}" ]  && CONFIG=help
+[ -z "${HEADERS}" ]   && CONFIG=help
+
+
+case "${CONFIG}" in
+   help|-h|--help)
+      cat <<EOF
+Usage:
+   mulle-sourcetree-export-csv [config [database [separator [headers]]]]
+
+   Read a mulle-sourcetree config file and convert it into a CSV file.
+
+   * config    : the sourcetree file (.mulle/etc/sourcetree/config)
+   * database  : SQLITE3 database to fill (:memory:)
+   * separator : output separator (',')
+   * headers   : set to "on" or "off" for column name line output (on)
+
+   This command needs sqlite to be installed to work.
+
+Note:
+   But 'config' is already a CSV file ? Yes, but it's german style with
+   semicolons and it has no column headers. You can more easily import
+   a more standard format into sqlite3:
+
+      mulle-sourcetree-export-csv \\
+      | ${SQLITE} ${DATABASE} \\
+         -cmd '.mode csv' \\
+         -cmd '.import "|cat -" ${TABLENAME}' \\
+         'select * from ${TABLENAME}'
+
+Environment:
+   SQLITE     : sqlite executable to use (${SQLITE})
+   TABLENAME  : sqlite tablename (${TABLENAME})
+
+EOF
+      exit 1
+   ;;
+esac
+
+SQLITE_EXE="`command -v "${SQLITE}" `"
+[ -z "${SQLITE_EXE}" ] && echo "fatal: SQLite executable ${SQLITE} is not in PATH ($PATH)" >&2 && exit 1
+
+
+"${SQLITE_EXE}" "${DATABASE}" \
+   -cmd ".mode csv" \
+   -cmd ".separator \";\"" \
+   -cmd "CREATE TABLE ${TABLENAME}
+(
+   address        TEXT,
+   nodetype       TEXT,
+   marks          TEXT,
+   uuid           TEXT,
+   url            TEXT,
+   branch         TEXT,
+   tag            TEXT,
+   fetchoptions   TEXT,
+   raw_userinfo   TEXT
+)" \
+   -cmd ".import \"${CONFIG}\" ${TABLENAME}" \
+   -cmd ".separator \"${SEPARATOR}\"" \
+   -cmd ".headers ${HEADERS}" \
+   "select * from ${TABLENAME}"
+

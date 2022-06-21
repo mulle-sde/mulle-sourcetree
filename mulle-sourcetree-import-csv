@@ -1,0 +1,124 @@
+#! /bin/sh
+#
+#   Copyright (c) 2022 Nat! - Mulle kybernetiK
+#   All rights reserved.
+#
+#   Redistribution and use in source and binary forms, with or without
+#   modification, are permitted provided that the following conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
+#   may be used to endorse or promote products derived from this software
+#   without specific prior written permission.
+#
+#   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+#   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+#   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+#   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#   POSSIBILITY OF SUCH DAMAGE.
+#
+[ "${TRACE:-}" = 'YES' -o "${MULLE_SOURCETREE_IMPORT_CSV_TRACE:-}" = 'YES' ] && set -x && : "$0" "$@"
+
+
+SQLITE="${SQLITE:-sqlite3}"
+TABLENAME="${TABLENAME:-sourcetree}"
+
+CSV="$1"
+CONFIG="${2:-.mulle/etc/sourcetree/config}"
+SEPARATOR="${3:-,}"
+HEADERS="${4:-auto}"
+
+
+[ -z "${CSV}" ]       && CSV=help
+[ -z "${CONFIG}" ]    && CSV=help
+[ -z "${TABLENAME}" ] && CSV=help
+[ -z "${SQLITE}" ]    && CSV=help
+
+case "${CSV}" in
+   help|-h|--help)
+      cat <<EOF
+Usage:
+   mulle-sourcetree-import-csv <csv> [config [separator [headers]]]]
+
+   Read a CSV file and create a mulle-sourcetree config file from it. This
+   is intended as the next step after mulle-sourcetree-edit.
+
+   * csv       : CSV file to import
+   * config    : the sourcetree file to create (.mulle/etc/sourcetree/config)
+   * tablename : sqlite tablename  ('sourcetree')
+   * separator : input separator (',')
+   * headers   : set to "on" to skip first line with column names (auto)
+
+   This command needs sqlite to be installed to work.
+
+Environment:
+   SQLITE      : sqlite executable to use (${SQLITE})
+
+EOF
+      exit 1
+   ;;
+esac
+
+SQLITE_EXE="`command -v "${SQLITE}" `"
+[ -z "${SQLITE_EXE}" ] && echo "fatal: SQLite executable \"${SQLITE}\" is not in PATH ($PATH)" >&2 && exit 1
+
+
+SKIP_LINES=0
+case  "${HEADERS}" in
+   on)
+      SKIP_LINES=1
+   ;;
+
+   auto)
+      line="`head -1 "${CSV}" `"
+      case "${line}" in
+         "address,nodetype,marks,uuid,url,branch,tag,fetchoptions,raw_userinfo"*)
+            SKIP_LINES=1
+         ;;
+      esac
+   ;;
+esac
+
+text="`"${SQLITE_EXE}" :memory: \
+   -cmd ".mode csv" \
+   -cmd ".separator \\"${SEPARATOR}\\"" \
+   -cmd "CREATE TABLE sourcetree
+(
+   address        TEXT,
+   nodetype       TEXT,
+   marks          TEXT,
+   uuid           TEXT,
+   url            TEXT,
+   branch         TEXT,
+   tag            TEXT,
+   fetchoptions   TEXT,
+   raw_userinfo   TEXT
+)" \
+   -cmd ".import --skip ${SKIP_LINES} \\"${CSV}\\" sourcetree" \
+   -cmd ".separator \\";\\"" \
+   -cmd ".headers off" \
+   "select address, nodetype, marks, uuid, url, branch, tag, fetchoptions, raw_userinfo
+   from sourcetree"  \
+| tr -d '"' \
+| sed -e 's/\r$//'
+
+`" || exit 1
+
+
+dir="`dirname -- "${CONFIG}" `"
+
+mkdir -p "${dir}" &&
+printf "%s\n" "${text}" > "${CONFIG}"
+

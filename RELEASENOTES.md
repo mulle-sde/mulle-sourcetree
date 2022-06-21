@@ -1,3 +1,8 @@
+## 1.1.0
+
+* added mulle-sourcetree-edit-csv and friends
+
+
 # 1.0.0
 
 * big function rename to `<tool>`::`<file>`::`<function>` to make it easier to read hopefully

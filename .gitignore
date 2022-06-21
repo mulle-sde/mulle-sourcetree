@@ -17,3 +17,5 @@ mulle-column
 TODO.md
 benchmark
 research/
+.gitignore
+.mulle-make-build-dir
