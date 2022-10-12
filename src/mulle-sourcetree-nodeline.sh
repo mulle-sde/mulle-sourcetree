@@ -106,6 +106,7 @@ sourcetree::nodeline::r_get_url()
    RVAL="${RVAL%%;*}"
 }
 
+
 # this needs to do proper expansion to evaluate the URL
 sourcetree::nodeline::r_get_evaled_url()
 {
@@ -134,7 +135,6 @@ sourcetree::nodeline::r_get_evaled_url()
 
    r_expanded_string "${_url}"
 }
-
 
 
 #
@@ -210,9 +210,9 @@ sourcetree::nodeline::parse()
 
    _userinfo=""
 
-   [ -z "${_address}" ]   && _internal_fail "_address is empty"
-   [ -z "${_nodetype}" ]  && _internal_fail "_nodetype is empty"
-   [ -z "${_uuid}" ]      && _internal_fail "_uuid is empty"
+   [ -z "${_address}" ]   && _internal_fail "_address is empty in \"${nodeline}\""
+   [ -z "${_nodetype}" ]  && _internal_fail "_nodetype is empty in \"${nodeline}\""
+   [ -z "${_uuid}" ]      && _internal_fail "_uuid is empty in \"${nodeline}\""
 
    # correct some legacy stuff, because i was too lazy to write a script
    # probably only used by MulleObjCOSFoundation
@@ -232,29 +232,6 @@ sourcetree::nodeline::parse()
    log_setting "USERINFO     : \"${_raw_userinfo}\""
 
    return 0
-}
-
-
-#   local _raw_userinfo
-#   local _userinfo
-sourcetree::nodeline::r_raw_userinfo_parse()
-{
-   log_entry "sourcetree::nodeline::r_raw_userinfo_parse" "$@"
-
-   local raw_userinfo="$1"
-
-   case "${raw_userinfo}" in
-      base64:*)
-         RVAL="`base64 --decode <<< "${raw_userinfo:7}"`"
-         if [ "$?" -ne 0 ]
-         then
-            _internal_fail "userinfo could not be base64 decoded."
-         fi
-         return 0
-      ;;
-   esac
-
-   RVAL="${raw_userinfo}"
 }
 
 
@@ -603,21 +580,36 @@ sourcetree::nodeline::printf_header()
             dash="------------"
          ;;
 
-         %i*|%v*)
+         %v*)
             if [ "${formatstring:2:2}" = "={" ]
             then
-               name="`sed -n 's/%.={[^,]*,\([^,]*\)[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+               local _formatstring
+
+               sourcetree::node::_r_get_format_key "${formatstring}"
+               name="${RVAL}"
+               dash="--------"
+               formatstring="${_formatstring}"
+            else
+               name="userinfo"
+               dash="--------"
+            fi
+         ;;
+
+         %i*)
+            if [ "${formatstring:2:2}" = "={" ]
+            then
+               name="`sed -n 's/%.={[^,]*,\([^,]*\)[,]*[^{}]*}.*/\1/p' <<< "${formatstring}" `"
                if [ -z "${name}" ]
                then
-                  name="`sed -n 's/%.={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+                  name="`sed -n 's/%.={\([^,]*\)[,]*[^,]*[,]*[^{}]*}.*/\1/p' <<< "${formatstring}" `"
                fi
-               dash="`sed -n 's/%.={[^,]*,[^,]*,\([^}]*\)}.*/\1/p' <<< "${formatstring}" `"
+               dash="`sed -n 's/%.={[^,]*,[^,]*,\([^{}]*\)}.*/\1/p' <<< "${formatstring}" `"
                if [ -z "${dash}" ]
                then
                   dash="------"
                fi
                # skip over format string
-               tmp="`sed 's/%.={[^}]*}//' <<< "${formatstring}" `"
+               tmp="`sed 's/%.={[^{}]*}//' <<< "${formatstring}" `"
                if [ "${tmp}" != "${formatstring}" ]
                then
                   formatstring="XX${tmp}"

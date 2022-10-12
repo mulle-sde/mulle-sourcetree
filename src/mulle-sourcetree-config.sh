@@ -110,6 +110,8 @@ Usage:
    ${MULLE_USAGE_NAME} [flags] config copy [options] <destination>
 
    Copy the currently active sourcetree configuration to a different name.
+   Use ${MULLE_USAGE_NAME} config switch <destination>, to use the copied
+   configuration.
 
 Tip:
    Use the --config-names and --config-scope flags to address a specific
@@ -434,11 +436,22 @@ sourcetree::config::remove_main()
 {
    log_entry "sourcetree::config::remove_main" "$@"
 
+   local scope
+
+   scope="${SOURCETREE_CONFIG_SCOPE}"
+
    while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)
             sourcetree::config::remove_usage
+         ;;
+
+         --scope)
+            [ $# -eq 1 ] && sourcetree::config::remove_usage "Missing argument to \"$1\""
+            shift
+
+            scope="$1"
          ;;
 
          -*)
@@ -453,22 +466,30 @@ sourcetree::config::remove_main()
       shift
    done
 
-   [ $# -ne 0 ] && sourcetree::config::remove_usage "Superflous argument $*"
+   [ $# -gt 1 ] && shift && sourcetree::config::remove_usage "Superflous argument $*"
 
-   if ! sourcetree::config::r_find "${SOURCETREE_CONFIG_NAMES}" "${SOURCETREE_CONFIG_SCOPE}"
+   local names
+
+   names="${SOURCETREE_CONFIG_NAMES}"
+   if [ $# -eq 1 ]
+   then
+      names="$1"
+   fi
+
+   if ! sourcetree::config::r_find "${names}" "${scope}"
    then
       local text
 
-      case "${SOURCETREE_CONFIG_SCOPE}" in
+      case "${scope}" in
          default|global)
-            text= ""
+            text=""
          ;;
 
          *)
-            text="${SOURCETREE_CONFIG_SCOPE} "
+            text="${scope} "
          ;;
       esac
-      fail "No ${text}sourcetree with names ${SOURCETREE_CONFIG_NAMES//:/,} found"
+      fail "No ${text}sourcetree with name \"${names//:/\" or \"}\" found"
    fi
 
    log_verbose "${RVAL#${MULLE_USER_PWD}/} found"

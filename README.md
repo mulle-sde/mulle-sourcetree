@@ -26,9 +26,15 @@ Organize your projects freely with multiple archives and repositories.
 * maintain complex dependency trees
 
 
-Executable          | Description
---------------------|--------------------------------
-`mulle-sourcetree`  | Maintain sources and dependencies
+Executable                       | Description
+---------------------------------|--------------------------------
+`mulle-sourcetree`               | Maintain sources and dependencies
+`mulle-sourcetree-export-json`   | Export mulle-sourcetree config to JSON
+`mulle-sourcetree-import-json`   | Import mulle-sourcetree config from JSON
+`mulle-sourcetree-export-csv`    | Export mulle-sourcetree config to CSV
+`mulle-sourcetree-import-csv`    | Import mulle-sourcetree config from CSV
+`mulle-sourcetree-import-sqlite` | Import mulle-sourcetree config from SQLite
+`mulle-sourcetree-graph`         | Produce a SVG of the dependency tree
 
 
 ## Install
@@ -226,6 +232,7 @@ open pic.dot # view it with Graphviz (http://graphviz.org/)
 
 ![Picture](pic.png)
 
+Or try `mulle-sourcetree-graph` for a more restricted view.
 
 #### `mulle-sourcetree craftorder` : retrieve projects to build
 
@@ -235,14 +242,25 @@ $ mulle-sourcetree craftorder
 /private/tmp/a/external/zlib
 ```
 
-#### `mulle-sourcetree-edit-csv` : edit the sourcetree with a spreadsheet
+#### `mulle-sourcetree-import-json` : edit the sourcetree config as JSON
+
+For more drastic changes, JSON can be a convenient intermediate format. With
+these two commands, you can export to and import from JSON:
+
+``` bash
+$ mulle-sourcetree-export-json
+$ mulle-sourcetree-import-json
+```
+
+
+#### `mulle-sourcetree-edit-csv` : edit the sourcetree config with a spreadsheet
 
 These commands need sqlite3 and a spreadsheet editor installed:
 
 ``` bash
 $ mulle-sourcetree-edit-csv
-$ mulle-sourcetree-import-csv
 $ mulle-sourcetree-export-csv
+$ mulle-sourcetree-import-csv
 $ mulle-sourcetree-import-sqlite
 ```
 

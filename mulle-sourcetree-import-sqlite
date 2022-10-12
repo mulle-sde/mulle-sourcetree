@@ -46,7 +46,7 @@ TABLENAME="${3:-sourcetree}"
 
 case "${DATABASE}" in
    help|-h|--help)
-      cat <<EOF
+      cat <<EOF >&2
 Usage:
    mulle-sourcetree-import-sqlite <database> [config [tablename]]]
 

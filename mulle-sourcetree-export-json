@@ -1,0 +1,266 @@
+#! /bin/sh
+#
+#   Copyright (c) 2022 Nat! - Mulle kybernetiK
+#   All rights reserved.
+#
+#   Redistribution and use in source and binary forms, with or without
+#   modification, are permitted provided that the following conditions are met:
+#
+#   Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+#   Redistributions in binary form must reproduce the above copyright notice,
+#   this list of conditions and the following disclaimer in the documentation
+#   and/or other materials provided with the distribution.
+#
+#   Neither the name of Mulle kybernetiK nor the names of its contributors
+#   may be used to endorse or promote products derived from this software
+#   without specific prior written permission.
+#
+#   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+#   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+#   IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+#   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+#   LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+#   CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+#   SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+#   INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+#   CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+#   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+#   POSSIBILITY OF SUCH DAMAGE.
+#
+[ "${TRACE:-}" = 'YES' -o "${MULLE_SOURCETREE_EXPORT_JSON_TRACE:-}" = 'YES' ] && set -x && : "$0" "$@"
+
+
+MULLE_EXECUTABLE_VERSION="1.1.0"
+##########################################################################
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+###########################################################################
+# #
+# # PRELUDE - Standard startup code for loading mulle-bashfunctions
+# #
+###
+
+#
+# Figure out MULLE_BASHFUNCTIONS_LIBEXEC_DIR on this machine if needed.
+#
+if ! [ ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR+x} ]
+then
+   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+   export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+fi
+
+#
+# The booter reruns the executable either with bash or zsh, whatever the
+# system provides. On the second run --no-auto-shell will be set first.
+#
+if [ "${1:-}" != --no-auto-shell ]
+then
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+else
+   shift    # get rid of --no-auto-shell
+fi
+
+
+#
+# Include mulle-bashfunctions.sh         : default functions
+#         mulle-bashfunctions-none.sh    : almost no functions
+#         mulle-bashfunctions-minimal.sh : few functions for basic scripts
+#         mulle-bashfunctions-all.sh     : everything, even obscure functions
+#
+# Do this first to get aliases
+#
+MULLE_EXECUTABLE="${BASH_SOURCE[0]:-${(%):-%x}}"
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+###
+# # Now we are in bash or zsh with mulle-bashfunctions loaded
+# #
+###########################################################################
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+###########################################################################
+
+
+
+CONFIG="${1:-.mulle/etc/sourcetree/config}"
+
+
+usage()
+{
+      cat <<EOF >&2
+Usage:
+   mulle-sourcetree-export-json [config]
+
+   Read a mulle-sourcetree config file and convert it into a JSON file.
+
+   * config    : the sourcetree file (.mulle/etc/sourcetree/config)
+
+   This command needs sqlite to be installed to work.
+
+EOF
+      exit 1
+}
+
+
+json_export_userinfo()
+{
+   local raw="$1"
+   include "sourcetree::node"
+
+   printf "      \"userinfo\":     {"
+
+   local userinfo
+
+   sourcetree::node::r_decode_raw_userinfo "${raw}"
+   userinfo="${RVAL}"
+
+   local delimiter=$'\n'
+
+   .foreachline key in `assoc_array_all_keys "${userinfo}"`
+   .do
+      r_assoc_array_get "${userinfo}" "${key}"
+      value="${RVAL}"
+
+      if [ ! -z "${value}" ]
+      then
+         r_escaped_doublequotes "${value}"
+         value="${RVAL}"
+         printf "${delimiter}                          \"%s\": \"%s\"%s"  "${key}" "${value}"
+         delimiter=","$'\n'
+      fi
+   .done
+
+   printf "\n                      },\n"
+}
+
+
+json_export_callback()
+{
+   log_entry "callback" "$@"
+
+   printf "%s" "${DELIMITER}"
+   DELIMITER=","$'\n'
+
+   printf "   {\n"
+   printf "      \"address\":      \"${_address}\",\n"
+
+   if [ ! -z "${_branch}" ]
+   then
+      printf "      \"branch\":       \"${_branch}\",\n"
+   fi
+   if [ ! -z "${_fetchoptions}" ]
+   then
+      printf "      \"fetchoptions\": \"${_fetchoptions}\",\n"
+   fi
+   if [ ! -z "${_marks}" ]
+   then
+      printf "      \"marks\":        \"${_marks}\",\n"
+   fi
+   if [ ! -z "${_raw_userinfo}" ]
+   then
+      json_export_userinfo "${_raw_userinfo}"
+   fi
+   if [ ! -z "${_tag}" ]
+   then
+      printf "      \"tag\":          \"${_tag}\",\n"
+   fi
+   if [ ! -z "${_nodetype}" ]
+   then
+      printf "      \"nodetype\":     \"${_nodetype}\",\n"
+   fi
+   if [ ! -z "${_url}" ]
+   then
+      printf "      \"url\":          \"${_url}\",\n"
+   fi
+
+   printf "      \"uuid\":         \"${_uuid}\"\n"
+   printf "   }"
+}
+
+
+main()
+{
+   local MULLE_FLAG_MAGNUM_FORCE='NO'
+   local MULLE_FLAG_IGNORE_GRAVEYARD='NO'
+
+   # technical flags
+   local MULLE_TRACE
+   local MULLE_FLAG_EXEKUTOR_DRY_RUN='NO'
+   local MULLE_FLAG_LOG_LOCAL='NO'
+   local MULLE_FLAG_LOG_DEBUG='NO'
+   local MULLE_FLAG_LOG_EXEKUTOR='NO'
+   local MULLE_FLAG_LOG_FLUFF='NO'
+   local MULLE_FLAG_LOG_SCRIPTS='NO'
+   local MULLE_FLAG_LOG_SETTINGS='NO'
+   local MULLE_FLAG_LOG_VERBOSE='NO'
+   local MULLE_FLAG_LOG_MERGE='NO'
+   local MULLE_TRACE_POSTPONE='NO'
+
+   #
+   # simple option handling
+   #
+   while [ $# -ne 0 ]
+   do
+      if options_technical_flags "$1"
+      then
+         shift
+         continue
+      fi
+
+      case "$1" in
+         -h*|--help|help)
+            usage "${MULLE_TRACE}"
+         ;;
+
+         --version)
+            printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
+            exit 0
+         ;;
+
+         -*)
+            log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown flag \"$1\""
+            usage "${MULLE_TRACE}"
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
+   options_setup_trace "${MULLE_TRACE}" && set -x
+
+   include "array"
+
+   include "sourcetree::environment"
+
+   sourcetree::environment::default
+
+   include "sourcetree::node"
+
+   include "sourcetree::walk"
+
+   local text
+
+   text="`rexekutor sourcetree::walk::main \
+                               --lenient \
+                               --no-eval \
+                               --flat \
+                               json_export_callback `"
+   if [ ! -z "${text}" ]
+   then
+      cat <<EOF
+[
+${text}
+]
+EOF
+      return 0
+   fi
+
+   return 1
+}
+
+
+call_with_flags "main" "${MULLE_SOURCETREE_EXPORT_JSON_FLAGS}" "$@"

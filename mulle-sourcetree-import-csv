@@ -48,7 +48,7 @@ HEADERS="${4:-auto}"
 
 case "${CSV}" in
    help|-h|--help)
-      cat <<EOF
+      cat <<EOF >&2
 Usage:
    mulle-sourcetree-import-csv <csv> [config [separator [headers]]]]
 

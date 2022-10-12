@@ -50,7 +50,7 @@ HEADERS="${4:-on}"
 
 case "${CONFIG}" in
    help|-h|--help)
-      cat <<EOF
+      cat <<EOF >&2
 Usage:
    mulle-sourcetree-export-csv [config [database [separator [headers]]]]
 

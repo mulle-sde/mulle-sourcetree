@@ -261,13 +261,13 @@ _emit_c_include()
    cat <<EOF
 // You can tweak the following #$include with these commands.
 // (Use ${uuid} instead of ${address} if there are duplicate entries)
-//    remove:             \`mulle-sde dependency mark ${address} no-header\`
-//    rename:             \`mulle-sde dependency|library set ${address} include whatever.h\`
-//    reorder:            \`mulle-sde dependency move ${address} <up|down>\`
+//    remove #${tinclude}: \`mulle-sde dependency mark ${address} no-header\`
+//    rename:              \`mulle-sde dependency|library set ${address} include whatever.h\`
+//    reorder:             \`mulle-sde dependency move ${address} <up|down>\`
 //    toggle #${tinclude}    \`mulle-sde dependency mark ${address} [no-]import\`
-//    toggle public:      \`mulle-sde dependency mark ${address} [no-]public\`
-//    toggle optional:    \`mulle-sde dependency mark ${address} [no-]require\`
-//    remove for platform:\`mulle-sde dependency mark ${address} no-platform-<uname>\`
+//    toggle public:       \`mulle-sde dependency mark ${address} [no-]public\`
+//    toggle optional:     \`mulle-sde dependency mark ${address} [no-]require\`
+//    remove for platform: \`mulle-sde dependency mark ${address} no-platform-<uname>\`
 //        (use \`mulle-sourcetree-to-c --unames\` to list known values)
 EOF
    if [ ! -z "${marks}" ]

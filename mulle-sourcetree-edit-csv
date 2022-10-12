@@ -43,7 +43,7 @@ CONFIG="${1:-.mulle/etc/sourcetree/config}"
 
 case "${CONFIG}" in
    help|-h|--help)
-      cat <<EOF
+      cat <<EOF >&2
 Usage:
    mulle-sourcetree-edit-csv [config]
 

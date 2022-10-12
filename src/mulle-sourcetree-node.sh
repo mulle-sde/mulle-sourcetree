@@ -202,43 +202,76 @@ necessary marks \"no-delete,no-update,no-share,require\""
 }
 
 
+sourcetree::node::r_encode_userinfo()
+{
+   log_entry "sourcetree::node::r_encode_userinfo" "$@"
+
+   local userinfo="$1"
+
+   local convert
+
+   convert="NO"
+   case "${userinfo}" in
+      *$'\n'*)
+         convert="YES"
+      ;;
+
+      *)
+         # basically escape non-printables :isprint: and ';'
+         if egrep -q '[^[:print:]]|;' <<< "${userinfo}"
+         then
+            convert="YES"
+         fi
+      ;;
+   esac
+
+   if [ "${convert}" = "YES" ]
+   then
+      case "${MULLE_UNAME}" in
+         linux|windows|mingw)
+            RVAL="base64:`base64 -w 0 <<< "${userinfo}"`"
+         ;;
+
+         *)
+            RVAL="base64:`base64 -b 0 <<< "${userinfo}"`"
+         ;;
+      esac
+   else
+      RVAL="${userinfo}"
+   fi
+}
+
+
+sourcetree::node::r_decode_raw_userinfo()
+{
+   log_entry "sourcetree::node::r_decode_raw_userinfo" "$@"
+
+   local raw_userinfo="$1"
+
+   case "${raw_userinfo}" in
+      base64:*)
+         RVAL="`base64 --decode <<< "${raw_userinfo:7}" `"
+         if [ "$?" -ne 0 ]
+         then
+            _internal_fail "userinfo could not be base64 decoded."
+         fi
+      ;;
+
+      *)
+         RVAL="${raw_userinfo}"
+      ;;
+   esac
+}
+
+
 sourcetree::node::_r_to_nodeline()
 {
    log_entry "sourcetree::node::_r_to_nodeline" "$@"
 
    if [ ! -z "${_userinfo}" ]
    then
-      local convert
-
-      convert="NO"
-      case "${_userinfo}" in
-         *$'\n'*)
-            convert="YES"
-         ;;
-
-         *)
-            # basically escape non-printables :isprint: and ';'
-            if egrep -q '[^[:print:]]|;' <<< "${_userinfo}"
-            then
-               convert="YES"
-            fi
-         ;;
-      esac
-
-      if [ "${convert}" = "YES" ]
-      then
-         case "${MULLE_UNAME}" in
-            linux|windows|mingw)
-               _raw_userinfo="base64:`base64 -w 0 <<< "${_userinfo}"`"
-            ;;
-
-            *)
-               _raw_userinfo="base64:`base64 -b 0 <<< "${_userinfo}"`"
-            ;;
-         esac
-      else
-         _raw_userinfo="${_userinfo}"
-      fi
+      sourcetree::node::r_encode_userinfo "${_userinfo}"
+      _raw_userinfo="${RVAL}"
    fi
 
    log_setting "ADDRESS      : \"${_address}\""
@@ -422,7 +455,7 @@ sourcetree::node::_r_get_format_key()
 
    local key 
 
-   key="`sed -n 's/%.={\([^,]*\)[,]*[^,]*[,]*[^}]*}.*/\1/p' <<< "${formatstring}" `"
+   key="`sed -n 's/%.={\([^{,]*\)[,]*[^{,]*[,]*[^{}}]*}.*/\1/p' <<< "${formatstring}" `"
 
    local remainder
 
@@ -553,8 +586,6 @@ sourcetree::node::printf()
       cmdline="${MULLE_USAGE_NAME} -N add"
    fi
 
-   local _formatstring
-   local extended
    local value
    local switch
 
@@ -598,19 +629,19 @@ sourcetree::node::printf()
                ;;
 
                *)
-            if [ ! -z "${_raw_userinfo}" -a -z "${_userinfo}" ]
-            then
-                     sourcetree::nodeline::r_raw_userinfo_parse "${_raw_userinfo}"
+                  if [ ! -z "${_raw_userinfo}" -a -z "${_userinfo}" ]
+                  then
+                     sourcetree::node::r_decode_raw_userinfo "${_raw_userinfo}"
                      _userinfo="${RVAL}"
-            fi
+                  fi
 
-            extended='NO'
-            if [ "${formatstring:2:2}" = "={" ]
-            then
-               sourcetree::node::_r_get_format_key "${formatstring}"
-               key="${RVAL}"
-               formatstring="${_formatstring}"
-               extended='YES'
+                  if [ "${formatstring:2:2}" = "={" ]
+                  then
+                     local _formatstring
+
+                     sourcetree::node::_r_get_format_key "${formatstring}"
+                     key="${RVAL}"
+                     formatstring="${_formatstring}"
 
                      switch="--${key}"
 
@@ -691,6 +722,8 @@ sourcetree::node::printf()
             switch=""
             if [ "${formatstring:2:1}" = "=" ]
             then
+               local _formatstring
+
                sourcetree::node::_r_get_format_key "${formatstring}"
                key="${RVAL}"
                formatstring="${_formatstring}"

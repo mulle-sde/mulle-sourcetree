@@ -479,7 +479,7 @@ sourcetree::main()
       shift
    done
 
-   options_setup_trace "${MULLE_TRACE}"
+   options_setup_trace "${MULLE_TRACE}" && set -x
 
    # shellcheck source=mulle-sourcetree-environment.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-environment.sh" || exit 1
@@ -502,7 +502,8 @@ sourcetree::main()
       else
          names="${!var}"
       fi
-      log_verbose "${var} : ${names}"
+
+      [ ! -z "${names}" ] && log_verbose "${var} : ${names}"
    fi
 
    scope="${FLAG_SCOPE}"
@@ -515,7 +516,8 @@ sourcetree::main()
       else
          scope="${!var}"
       fi
-      log_verbose "${var}        : ${scope}"
+
+      [ ! -z "${scope}" ] && log_verbose "${var} : ${scope}"
    fi
 
    sourcetree::environment::default "${scope}" \

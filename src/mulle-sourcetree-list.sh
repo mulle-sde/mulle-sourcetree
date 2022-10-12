@@ -67,7 +67,10 @@ Usage:
 
    A '-' indicates a no-bequeath entry.
    A '*' indicates a duplicate (most often conflicting marks). Use the 
-         \`${MULLE_USAGE_NAME} star-search\` command to list duplicates by name.
+        \`${MULLE_USAGE_NAME} star-search\` command to list duplicates by name.
+
+   Use the \`mulle-sourcetree-export-json\` command to list the current config in
+   JSON format.
 
 EOF
 
@@ -262,11 +265,11 @@ sourcetree::list::walk()
 
    DUPLICATES=""
    sourcetree::walk::do "${filternodetypes}" \
-                   "" \
-                   "${marksqualifier}" \
-                   "" \
-                   "${mode}" \
-                   sourcetree::list::walk_callback "${formatstring}" "${cmdline}"
+                        "" \
+                        "${marksqualifier}" \
+                        "" \
+                        "${mode}" \
+                        sourcetree::list::walk_callback "${formatstring}" "${cmdline}"
 }
 
 
@@ -654,6 +657,8 @@ sourcetree::list::main()
 
          -r)
             FLAG_SOURCETREE_MODE="share"
+            sourcetree::list::r_add_format "%v={WALK_DEPENDENCY}" "${OPTION_FORMAT}"
+            OPTION_FORMAT="${RVAL}"
          ;;
 
          -m)

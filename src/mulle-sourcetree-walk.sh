@@ -1444,7 +1444,7 @@ sourcetree::walk::__common_configfile()
    local var
    local value
 
-   var="SOURCETREE_CONFIG_NAMES_${symbol}"
+   var="MULLE_SOURCETREE_CONFIG_NAMES_${symbol}"
    if [ ! -z "${ZSH_VERSION}" ]
    then
       value="${(P)var}"
@@ -1454,7 +1454,7 @@ sourcetree::walk::__common_configfile()
    SOURCETREE_CONFIG_NAMES="${value:-${SOURCETREE_CONFIG_NAMES}}"
    log_setting "${var} : ${value}"
 
-   var="SOURCETREE_CONFIG_SCOPE_${symbol}"
+   var="MULLE_SOURCETREE_CONFIG_SCOPE_${symbol}"
    if [ ! -z "${ZSH_VERSION}" ]
    then
       value="${(P)var}"
@@ -1588,6 +1588,8 @@ sourcetree::walk::walk_config_uuids()
    local WALK_INDEX=0
    local WALK_PARENT="${WALK_PARENT:-.}"
 
+   [ -z "${SOURCETREE_START}" ] && _internal_fail "SOURCETREE_START is undefined"
+
    WALKED=
    VISITED=
    sourcetree::walk::_walk_config_uuids "" "${SOURCETREE_START}" "" "$@"
@@ -1675,6 +1677,8 @@ sourcetree::walk::walk_db_uuids()
    local WALK_LEVEL=0
    local WALK_INDEX=0
 
+   [ -z "${SOURCETREE_START}" ] && _internal_fail "SOURCETREE_START is undefined"
+
    WALKED=
    VISITED=
    sourcetree::walk::_walk_db_uuids "" "${SOURCETREE_START}" "" "$@"
@@ -1706,13 +1710,13 @@ sourcetree::walk::_visit_root_callback()
    local _uuid
 
    sourcetree::walk::_visit_callback "" \
-                   "${SOURCETREE_START}" \
-                   "" \
-                   "" \
-                   "" \
-                   "" \
-                   "" \
-                   "$@"
+                                     "${SOURCETREE_START}" \
+                                     "" \
+                                     "" \
+                                     "" \
+                                     "" \
+                                     "" \
+                                     "$@"
 }
 
 
@@ -1722,6 +1726,8 @@ sourcetree::walk::do()
 
    local mode="$5"
    local callback="$6"
+
+   include "sourcetree::cfg"
 
    [ -z "${mode}" ] && _internal_fail "mode can't be empty"
 
@@ -2199,12 +2205,12 @@ ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
    OPTION_CALLBACK_QUALIFIER="${OPTION_CALLBACK_QUALIFIER:-${OPTION_QUALIFIER}}"
 
    sourcetree::walk::do "${OPTION_NODETYPES}" \
-                   "${OPTION_PERMISSIONS}" \
-                   "${OPTION_CALLBACK_QUALIFIER}" \
-                   "${OPTION_DESCEND_QUALIFIER}" \
-                   "${mode}" \
-                   "${callback}" \
-                   "$@"
+                        "${OPTION_PERMISSIONS}" \
+                        "${OPTION_CALLBACK_QUALIFIER}" \
+                        "${OPTION_DESCEND_QUALIFIER}" \
+                        "${mode}" \
+                        "${callback}" \
+                        "$@"
 }
 
 

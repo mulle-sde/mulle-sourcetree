@@ -111,6 +111,11 @@ sourcetree::callback::call()
    #
    log_debug "Calling callback: NODE_ADDRESS=${_address} NODE_FILENAME=${_filename} ${callback} "
 
+   local dependency
+
+   r_basename "${datasource}"
+   dependency="${RVAL}"
+
    #
    # DO NOT WRAP THIS IN A SUBSHELL, BECAUSE THE CALLBACK LOSES STATE!
    # TODO: since callback is evaluated we actually do not not need to pass the
@@ -127,6 +132,7 @@ sourcetree::callback::call()
    NODE_URL="${_url}" \
    NODE_UUID="${_uuid}" \
    WALK_DATASOURCE="${datasource}" \
+   WALK_DEPENDENCY="${dependency}" \
    WALK_DESTINATION="${_destination}" \
    WALK_MODE="${mode}" \
    WALK_INDENT="${WALK_INDENT}" \

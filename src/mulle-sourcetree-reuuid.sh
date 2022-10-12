@@ -161,7 +161,7 @@ sourcetree::reuuid::main()
 
    [ "$#" -eq 0 ] || sourcetree::reuuid::usage
 
-   log_info "Create new UUIDs for sourcetree"
+   log_info "Create new UUIDs for sourcetree ${C_RESET_BOLD}${SOURCETREE_CONFIG_NAMES%%:*}"
    sourcetree::reuuid::do "/" || exit 1
 
    log_info "${C_VERBOSE}Don't forget to \`reset\` affected databases"

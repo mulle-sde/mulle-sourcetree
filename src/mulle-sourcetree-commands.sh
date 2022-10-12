@@ -177,11 +177,15 @@ sourcetree::commands::remove_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} remove [options] <address>
+   ${MULLE_EXECUTABLE_NAME} remove [options] <address|url> 
 
-   Remove a nodes with the given url.
+   Remove a nodes with the given url or address. You can specify
+   multiple nodes to remove.
 
    (This command only affects the local sourcetree.)
+
+Example:
+   ${MULLE_EXECUTABLE_NAME} remove --if-present foo other-foo
 
 Options:
    --if-present : don't complain if address is missing
@@ -771,6 +775,23 @@ ${newnodeline}
 }
 
 
+sourcetree::commands::log_add_remove()
+{
+   log_entry "sourcetree::commands::log_add_remove" "$@"
+
+   if [ "${MULLE_FLAG_LOG_TERSE}" != 'YES' ]
+   then
+      local _configfile
+      local _fallback_configfile
+
+      sourcetree::cfg::__common_configfile "${SOURCETREE_START}" "w"
+      r_basename "${_configfile}"
+
+      log_info "$1 ${C_MAGENTA}${C_BOLD}$2${C_INFO} $3 ${C_RESET_BOLD}${RVAL}"
+   fi
+}
+
+
 sourcetree::commands::_append_new_node()
 {
    log_entry "sourcetree::commands::_append_new_node" "$@"
@@ -827,8 +848,9 @@ in the sourcetree (${RVAL#${MULLE_USER_PWD}/}). Use -f to skip this check."
    sourcetree::cfg::write "${SOURCETREE_START}" "${appended}"
    sourcetree::cfg::touch_parents "${SOURCETREE_START}"
 
-   log_info "Added ${C_MAGENTA}${C_BOLD}${_address}"
+   sourcetree::commands::log_add_remove "Added" "${_address}" "to"
 }
+
 
 #
 #
@@ -1171,6 +1193,8 @@ in the sourcetree (${PWD#${MULLE_USER_PWD}/})"
 
    sourcetree::node::r_to_nodeline
    sourcetree::commands::change_nodeline_uuid "${oldnodeline}" "${RVAL}" "${_uuid}"
+
+   sourcetree::commands::log_add_remove "Changed node" "${_address}" "in"
 }
 
 
@@ -1229,7 +1253,7 @@ sourcetree::commands::get()
          ;;
 
          userinfo)
-            sourcetree::nodeline::r_raw_userinfo_parse "${_raw_userinfo}"
+            sourcetree::node::r_decode_raw_userinfo "${_raw_userinfo}"
             _userinfo="${RVAL}"
             rexekutor printf "%s\n" "${_userinfo}"
          ;;
@@ -1267,7 +1291,8 @@ sourcetree::commands::move()
    sourcetree::cfg::touch_parents "${SOURCETREE_START}"
 
    sourcetree::nodeline::r_get_address "${nodeline}"
-   log_info "Moved ${C_MAGENTA}${C_BOLD}${RVAL}${C_INFO} ${direction}"
+
+   sourcetree::commands::log_add_remove "Moved" "${RVAL}" "${direction} in"
 }
 
 
@@ -1275,33 +1300,40 @@ sourcetree::commands::remove()
 {
    log_entry "sourcetree::commands::remove" "$@"
 
-   local input="$1"
+   local input
 
-   local oldnodeline
+   while [ $# -ne 0 ]
+   do
+      input="$1"
+      shift 
+      
+      local nodeline
 
-   if ! nodeline="`sourcetree::commands::get_nodeline "${input}" `"
-   then
-      if [ "${OPTION_IF_PRESENT}" = 'YES' ]
+      if ! nodeline="`sourcetree::commands::get_nodeline "${input}" `"
       then
-         return 0
+         if [ "${OPTION_IF_PRESENT}" = 'YES' ]
+         then
+            continue
+         fi
+         log_error "No node found for \"{input}\"" 
+         return 3  # also return non 0 , but lets's not be dramatic about it
+                   # 1 is an error, 2 stacktraces
       fi
-      return 3  # also return non 0 , but lets's not be dramatic about it
-                # 1 is an error, 2 stacktraces
-   fi
 
-   local uuid
+      local uuid
 
-   sourcetree::nodeline::r_get_uuid "${nodeline}"
-   uuid="${RVAL}"
+      sourcetree::nodeline::r_get_uuid "${nodeline}"
+      uuid="${RVAL}"
 
-   sourcetree::cfg::remove_nodeline_by_uuid "${SOURCETREE_START}" "${uuid}"
-   sourcetree::cfg::remove_if_empty_and_no_fallback_exists "${SOURCETREE_START}"
-   sourcetree::cfg::touch_parents "${SOURCETREE_START}"
+      sourcetree::cfg::remove_nodeline_by_uuid "${SOURCETREE_START}" "${uuid}"
+      sourcetree::cfg::remove_if_empty_and_no_fallback_exists "${SOURCETREE_START}"
+      sourcetree::cfg::touch_parents "${SOURCETREE_START}"
 
-   sourcetree::nodeline::r_get_address "${nodeline}"
-   log_info "Removed ${C_MAGENTA}${C_BOLD}${RVAL}"
+      sourcetree::nodeline::r_get_address "${nodeline}"
+
+      sourcetree::commands::log_add_remove "Removed" "${RVAL}" "from"
+   done
 }
-
 
 
 ###
@@ -1518,7 +1550,6 @@ sourcetree::commands::mark()
 
    sourcetree::commands::write_nodeline_changed_marks "${oldnodeline}"
 }
-
 
 
 sourcetree::commands::unmark()
@@ -1887,7 +1918,7 @@ sourcetree::commands::common()
 
    local OPTION_EXTENDED_MARK="DEFAULT"
    local OPTION_IF_MISSING='NO'
-   local OPTION_IF_PRESENT='NO'
+   local OPTION_IF_PRESENT='YES'
    local OPTION_MATCH='NO'
 
    while [ $# -ne 0 ]
@@ -1919,6 +1950,10 @@ sourcetree::commands::common()
          # just for remove
          --if-present)
             OPTION_IF_PRESENT='YES'
+         ;;
+
+         --error-if-missing)
+            OPTION_IF_PRESENT='NO'
          ;;
 
          #
