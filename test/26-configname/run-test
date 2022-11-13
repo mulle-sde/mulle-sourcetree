@@ -21,7 +21,7 @@ run_mulle_sourcetree()
       
       MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
 
-      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS:-} "$@"
+      . "${MULLE_SOURCETREE}" ${MULLE_SOURCETREE_FLAGS:-} "$@"
    )
 }
 
@@ -42,18 +42,25 @@ main()
    r_make_tmp_directory || exit 1
    directory="${RVAL}"
 
-
    mkdir_if_missing "${directory}"
    cd "${directory}" || exit 1
 
    # place a into different
    run_mulle_sourcetree --config-name "different" add a || exit 1
+   if [ ! -e .mulle/etc/sourcetree/different ]
+   then
+      tree -a .mulle >&2
+      fail "different is missing"
+   fi
+
    if ! run_mulle_sourcetree --config-name "different" get a > /dev/null
    then
+      tree -a .mulle >&2
       fail "a is gone ($PWD)"
    fi
    if run_mulle_sourcetree get a > /dev/null
    then
+      tree -a .mulle >&2
       fail "a should not have been found ($PWD)"
    fi
    log_verbose "----- #1 PASSED -----"
@@ -62,13 +69,15 @@ main()
    run_mulle_sourcetree add b || exit 1
 
    # should not be found, as different supersedes config
-   if run_mulle_sourcetree --config-name "different:config" get b > /dev/null
+   if run_mulle_sourcetree --config-name "different" get b > /dev/null
    then
+      tree -a .mulle >&2
       fail "b was found, though it shouldn't have been ($PWD)"
    fi
 
    if ! run_mulle_sourcetree --config-name "config" get b > /dev/null
    then
+      tree -a .mulle >&2
       fail "b should have been found ($PWD)"
    fi
 

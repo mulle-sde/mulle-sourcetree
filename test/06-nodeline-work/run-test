@@ -117,7 +117,8 @@ main()
 
    mkdir_if_missing "${project}"
 
-   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}/project"`"
+   r_physicalpath "${directory}/project"
+   MULLE_VIRTUAL_ROOT="${RVAL}"
    export MULLE_VIRTUAL_ROOT
 
    (

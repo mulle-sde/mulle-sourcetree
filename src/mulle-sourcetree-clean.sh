@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -171,11 +171,11 @@ sourcetree::clean::do()
    # descendqualifier
    # mode
    commands="`sourcetree::walk::walk_db_uuids "ALL" \
-                            "descend-skip-symlink" \
-                            "" \
-                            "" \
-                            "${mode},no-dbcheck,no-trace,dedupe-filename" \
-                            "sourcetree::clean::walk" `"
+                                              "descend-skip-symlink" \
+                                              "" \
+                                              "" \
+                                              "${mode},no-dbcheck,no-trace,dedupe-filename" \
+                                              "sourcetree::clean::walk" `"
 
 
    log_debug "COMMANDS: ${commands}"
@@ -185,11 +185,8 @@ sourcetree::clean::do()
 
    local protected
 
-   shell_disable_glob; IFS=$'\n'
-   for line in ${commands}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
-
+   .foreachline line in ${commands}
+   .do
       filename="${line:2}"
       case "${line}" in
          P*)
@@ -197,15 +194,9 @@ sourcetree::clean::do()
             protected=${RVAL}
          ;;
       esac
-   done
+   .done
 
-   if [ -z "${MULLE_PARALLEL_SH}" ]
-   then
-      # shellcheck source=mulle-file.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-parallel.sh"      || return 1
-   fi
-
-   local uuid
+   include "parallel"
 
    local _parallel_statusfile
    local _parallel_maxjobs
@@ -214,15 +205,12 @@ sourcetree::clean::do()
 
    _parallel_begin
 
-   shell_disable_glob; IFS=$'\n'
-   for line in ${commands}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
-
+   .foreachline line in ${commands}
+   .do
       filename="${line:2}"
       if find_line "${protected}" "${filename}"
       then
-         continue
+         .continue
       fi
 
       case "${line}" in
@@ -235,8 +223,7 @@ sourcetree::clean::do()
             _parallel_execute remove_file_if_present "${filename}"
          ;;
       esac
-   done
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .done
 
    _parallel_end
 
@@ -356,7 +343,7 @@ sourcetree::clean::main()
 
    if [ "${OPTION_CLEAN_FS}" != 'NO' ]
    then
-      if ! sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
+      if ! sourcetree::cfg::is_config_present "${SOURCETREE_START}"
       then
          log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
       fi
@@ -400,7 +387,7 @@ sourcetree::clean::main()
 
    if [ "${OPTION_CLEAN_CONFIG_FILE}" = 'YES' ]
    then
-      sourcetree::cfg::file_remove "${SOURCETREE_START}"
+      rmdir_safer "${SOURCETREE_CONFIG_DIR}" # hmm!
    fi
 }
 

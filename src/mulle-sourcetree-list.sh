@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -279,7 +279,7 @@ sourcetree::list::do()
 
    local mode="$1"
 
-   if ! sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
+   if ! sourcetree::cfg::is_config_present "${SOURCETREE_START}"
    then
       if [ -z "${IS_PRINTING}" ]
       then
@@ -287,6 +287,9 @@ sourcetree::list::do()
       fi
       return 0
    fi
+
+# this gets tedious in reflects real quick
+#   log_info "${RVAL#"${MULLE_USER_PWD}/"}"
 
    if [ "${OPTION_OUTPUT_BANNER}" = 'YES' ]
    then
@@ -470,9 +473,10 @@ sourcetree::list::warn_if_sync_outstanding()
 
    if [ $rval -eq 2 ]
    then
-      log_warning "Listing will be complete after a sync (${PWD#${MULLE_USER_PWD}/})."
+      log_warning "Listing will be complete after a sync (${PWD#"${MULLE_USER_PWD}/"})."
    fi   
 }
+
 
 sourcetree::list::main()
 {
@@ -792,7 +796,7 @@ sourcetree::list::main()
    then
       # hack hack hacky hack
       r_basename "${OPTION_CONFIG_FILE}"
-      SOURCETREE_CONFIG_NAMES="${RVAL}"
+      SOURCETREE_CONFIG_NAME="${RVAL}"
       SOURCETREE_FALLBACK_CONFIG_DIR=
 
       r_dirname "${OPTION_CONFIG_FILE}"
@@ -805,7 +809,7 @@ sourcetree::list::main()
    fi
 
    [ -z "${SOURCETREE_CONFIG_DIR}" ]   && fail "SOURCETREE_CONFIG_DIR is empty"
-   [ -z "${SOURCETREE_CONFIG_NAMES}" ] && fail "SOURCETREE_CONFIG_NAMES is empty"
+   [ -z "${SOURCETREE_CONFIG_NAME}" ] && fail "SOURCETREE_CONFIG_NAME is empty"
 
    if [ "${FLAG_SOURCETREE_MODE}" = "share" ]
    then

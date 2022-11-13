@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -79,10 +79,11 @@ sourcetree::node::r_sanitized_address()
 sourcetree::node::r_sanitized_marks()
 {
    local marks="$1"
+   local address="$2"
 
-   sourcetree::nodemarks::check_consistency "${marks}" "${_address}"
+   sourcetree::nodemarks::check_consistency "${marks}" "${address}"
 
-   sourcetree::nodemarks::r_simplify "${_marks}"
+   sourcetree::nodemarks::r_simplify "${marks}"
    sourcetree::nodemarks::sort "${RVAL}"
 }
 
@@ -91,7 +92,7 @@ sourcetree::node::r_sanitized_marks()
 # This function sets values of variables that should be declared
 # in the caller!
 #
-#   # sourcetree::node::augment
+#   # sourcetree::node::__augment
 #
 #   local _branch
 #   local _address
@@ -103,7 +104,7 @@ sourcetree::node::r_sanitized_marks()
 #   local _raw_userinfo
 #   local _uuid
 #
-sourcetree::node::augment()
+sourcetree::node::__augment()
 {
    local mode="$1"
 
@@ -162,9 +163,8 @@ necessary marks \"no-delete,no-update,no-share,require\""
       ;;
    esac
 
-   sourcetree::node::r_sanitized_marks "${_marks}"
+   sourcetree::node::r_sanitized_marks "${_marks}" "${_address}"
    _marks="${RVAL}"
-
 
    log_setting "ADDRESS      : \"${_address}\""
    log_setting "NODETYPE     : \"${_nodetype}\""
@@ -250,8 +250,7 @@ sourcetree::node::r_decode_raw_userinfo()
 
    case "${raw_userinfo}" in
       base64:*)
-         RVAL="`base64 --decode <<< "${raw_userinfo:7}" `"
-         if [ "$?" -ne 0 ]
+         if ! RVAL="`base64 --decode <<< "${raw_userinfo:7}" `"
          then
             _internal_fail "userinfo could not be base64 decoded."
          fi
@@ -264,6 +263,29 @@ sourcetree::node::r_decode_raw_userinfo()
 }
 
 
+sourcetree::node::show_error()
+{
+   if [ ! -z "${_url}" ]
+   then
+      log_error "${_url}"
+   fi
+
+   sourcetree::node::r_decode_raw_userinfo "${_raw_userinfo}"
+   log_error "${RVAL%%$'\n'*}"$'\n'"${C_INFO}${RVAL#*$'\n'}"
+   return 1
+}
+
+#
+#   local _branch
+#   local _address
+#   local _fetchoptions
+#   local _marks
+#   local _nodetype
+#   local _tag
+#   local _url
+#   local _raw_userinfo
+#   local _uuid
+#
 sourcetree::node::_r_to_nodeline()
 {
    log_entry "sourcetree::node::_r_to_nodeline" "$@"
@@ -289,8 +311,20 @@ ${_url};${_branch};${_tag};${_fetchoptions};\
 ${_raw_userinfo}"
 }
 
+
 #
 # this is unformatted
+#
+#
+#   local _branch
+#   local _address
+#   local _fetchoptions
+#   local _marks
+#   local _nodetype
+#   local _tag
+#   local _url
+#   local _raw_userinfo
+#   local _uuid
 #
 sourcetree::node::r_to_nodeline()
 {
@@ -528,6 +562,12 @@ sourcetree::node::__evaluate_values()
    MULLE_URL="${_evaledurl}" \
       r_expanded_string "${_fetchoptions}"
       _evaledfetchoptions="${RVAL}"
+
+   log_setting "EVAL NODETYPE     : \"${_evalednodetype}\""
+   log_setting "EVAL URL          : \"${_evaledurl}\""
+   log_setting "EVAL BRANCH       : \"${_evaledbranch}\""
+   log_setting "EVAL TAG          : \"${_evaledtag}\""
+   log_setting "EVAL FETCHOPTIONS : \"${_evaledfetchoptions}\""
 }
 
 
@@ -729,12 +769,8 @@ sourcetree::node::printf()
                formatstring="${_formatstring}"
                switch=""
 
-               if [ ${ZSH_VERSION+x} ]
-               then
-                  value="${(P)key}"
-               else
-                  value="${!key}"
-               fi
+               r_shell_indirect_expand "${key}"
+               value="${RVAL}"
             else
                value="failed format"
             fi

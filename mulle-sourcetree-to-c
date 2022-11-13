@@ -1,4 +1,5 @@
-#! /bin/sh
+#! /usr/bin/env mulle-bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2018 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -33,55 +34,6 @@
 
 
 MULLE_EXECUTABLE_VERSION="1.1.0"
-##########################################################################
-###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
-###########################################################################
-# #
-# # PRELUDE - Standard startup code for loading mulle-bashfunctions
-# #
-###
-
-#
-# Figure out MULLE_BASHFUNCTIONS_LIBEXEC_DIR on this machine if needed.
-#
-if ! [ ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR+x} ]
-then
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
-   export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
-fi
-
-#
-# The booter reruns the executable either with bash or zsh, whatever the
-# system provides. On the second run --no-auto-shell will be set first.
-#
-if [ "${1:-}" != --no-auto-shell ]
-then
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
-else
-   shift    # get rid of --no-auto-shell
-fi
-
-
-#
-# Include mulle-bashfunctions.sh         : default functions
-#         mulle-bashfunctions-none.sh    : almost no functions
-#         mulle-bashfunctions-minimal.sh : few functions for basic scripts
-#         mulle-bashfunctions-all.sh     : everything, even obscure functions
-#
-# Do this first to get aliases
-#
-MULLE_EXECUTABLE="${BASH_SOURCE[0]:-${(%):-%x}}"
-. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-
-###
-# # Now we are in bash or zsh with mulle-bashfunctions loaded
-# #
-###########################################################################
-###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
-###########################################################################
-
-
-
 
 
 usage()
@@ -173,6 +125,47 @@ list_unames()
 
 
 
+r_sdk_to_cpp()
+{
+   log_entry "r_sdk_to_cpp" "$@"
+
+   local sdk="$1"  # the part after only-os or no
+
+   case "${sdk}" in
+      'glibc')
+         RVAL=
+      ;;
+
+      'musl')
+         RVAL="__MULLE_MUSL__"  # guess
+      ;;
+
+      'cosmopolitan')
+         RVAL="__MULLE_COSMOPOLITAN__"
+      ;;
+
+      *)
+         r_uppercase "${sdk}"
+      ;;
+   esac
+}
+
+
+list_sdks()
+{
+   log_entry "list_sdks" "$@"
+
+   local i
+
+   .for i in glibc musl cosmopolitan
+   .do
+      r_sdk_to_cpp "$i"
+      printf "%s : %s\n" "${i}" "${RVAL}"
+   .done
+}
+
+
+
 r_platformexclude_to_cpp_if()
 {
    log_entry "r_platformexclude_to_cpp_if" "$@"
@@ -197,6 +190,18 @@ r_platformexclude_to_cpp_if()
 				r_uname_to_cpp "${mark:14}"
             r_concat "${onlys}" "defined( ${RVAL})" " || "
             onlys="${RVAL}"
+         ;;
+
+         only-craft-platform-*)
+            r_uname_to_cpp "${mark:20}"
+            r_concat "${onlys}" "defined( ${RVAL})" " || "
+            onlys="${RVAL}"
+         ;;
+
+         no-craft-platform-*)
+            r_uname_to_cpp "${mark:18}"
+            r_concat "${excludes}" "! defined( ${RVAL})" " && "
+            excludes="${RVAL}"
          ;;
 
          no-platform-*)
@@ -224,6 +229,64 @@ r_platformexclude_to_cpp_if()
 }
 
 
+r_sdk_exclude_to_cpp_if()
+{
+   log_entry "r_sdk_exclude_to_cpp_if" "$@"
+
+   local marks="$1"
+
+   local cppvar
+
+   local excludes
+   local onlys
+
+   local mark
+
+   .foreachitem mark in ${marks}
+   .do
+      case "${mark}" in
+         only-sdk-*)
+            r_sdk_to_cpp "${mark:9}"
+            r_concat "${onlys}" "defined( ${RVAL})" " || "
+            onlys="${RVAL}"
+         ;;
+
+         only-craft-sdk-*)
+            r_sdk_to_cpp "${mark:15}"
+            r_concat "${onlys}" "defined( ${RVAL})" " || "
+            onlys="${RVAL}"
+         ;;
+
+         no-craft-sdk-*)
+            r_sdk_to_cpp "${mark:13}"
+            r_concat "${excludes}" "! defined( ${RVAL})" " && "
+            excludes="${RVAL}"
+         ;;
+
+         no-sdk-*)
+            r_sdk_to_cpp "${mark:7}"
+            r_concat "${excludes}" "! defined( ${RVAL})" " && "
+            excludes="${RVAL}"
+         ;;
+      esac
+   .done
+
+   if [ ! -z "${onlys}" ]
+   then
+      RVAL="# if ${onlys}"
+      return
+   fi
+
+   if [ ! -z "${excludes}" ]
+   then
+      RVAL="# if ${excludes}"
+      return
+   fi
+
+   RVAL=""
+}
+
+
 _emit_c_include()
 {
    log_entry "_emit_c_include" "$@"
@@ -234,7 +297,8 @@ _emit_c_include()
    local header="$4"
 
    local indent
-   local ifstatement
+   local ifstatement1
+   local ifstatement2
    local include
    local mark
    local tinclude
@@ -273,13 +337,22 @@ EOF
    if [ ! -z "${marks}" ]
    then
    	r_platformexclude_to_cpp_if "${marks}"
-      ifstatement="${RVAL}"
+      ifstatement1="${RVAL}"
+
+      r_sdk_exclude_to_cpp_if "${marks}"
+      ifstatement2="${RVAL}"
    fi
 
-   if [ ! -z "${ifstatement}" ]
+   if [ ! -z "${ifstatement1}" ]
    then
-      printf "%s\n" "${ifstatement}"
+      printf "%s\n" "${ifstatement1}"
       indent=" "
+   fi
+
+   if [ ! -z "${ifstatement2}" ]
+   then
+      printf "%s%s\n" "{indent}" "${ifstatement2}"
+      indent="${indent} "
    fi
 
    # TODO: remove support __has_include for C ? Not all C compilers have
@@ -311,10 +384,17 @@ EOF
       ;;
    esac
 
-
-   if [ ! -z "${ifstatement}" ]
+   if [ ! -z "${ifstatement2}" ]
    then
-      echo "#endif"
+      indent="${indent%\ }"
+      printf "%s%s\n" "${indent}" "#endif"
+   fi
+
+
+   if [ ! -z "${ifstatement1}" ]
+   then
+      indent="${indent%\ }"
+      printf "%s%s\n" "${indent}" "#endif"
    fi
 
    echo

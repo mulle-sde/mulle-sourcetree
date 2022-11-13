@@ -21,7 +21,7 @@ run_mulle_sourcetree()
       
       MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
 
-      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS:-} "$@"
+      . "${MULLE_SOURCETREE}" ${MULLE_SOURCETREE_FLAGS:-} "$@"
    )
 }
 
@@ -65,7 +65,8 @@ setup_demo_repos()
 
 run_test()
 {
-   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}/project"`"
+   r_physicalpath "${directory}/project"
+   MULLE_VIRTUAL_ROOT="${RVAL}"
    export MULLE_VIRTUAL_ROOT
 
    exekutor mkdir b
@@ -118,7 +119,8 @@ run_test()
    #
    # now with the proper root though
    #
-   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}/project"`"
+   r_physicalpath "${directory}/project"
+   MULLE_VIRTUAL_ROOT="${RVAL}"
 
    if ! run_mulle_sourcetree ${UPDATE_FLAGS} --share update --no-lenient
    then
@@ -149,7 +151,8 @@ run_test()
 
    log_verbose "----- #4 PASSED -----"
 
-   MULLE_VIRTUAL_ROOT="`physicalpath "${directory}/project"`"
+   r_physicalpath "${directory}/project"
+   MULLE_VIRTUAL_ROOT="${RVAL}"
 
    #
    # should also work, will defer to root

@@ -1,0 +1,175 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_sourcetree()
+{
+   log_fluff "####################################" >&2
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS:-} "$@"
+   log_fluff "####################################" >&2
+
+   (
+      set +e
+      
+      MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
+
+      . "${MULLE_SOURCETREE}" ${MULLE_SOURCETREE_FLAGS:-} "$@"
+   )
+}
+
+
+expect_string()
+{
+   local output="$1"
+   local expect="$2"
+
+   if [ "${output}" = "${expect}" ]
+   then
+      return
+   fi
+
+   if [ -z "${output}" ]
+   then
+      fail "Did not produce \"${expect}\" as expected"
+   fi
+
+   if [ -z "${expect}" ]
+   then
+      fail "Did produce \"${output}\" unexpectedly. Nothing was expected"
+   fi
+
+   local diffs
+
+   diffs="`diff -b <( echo "${output}" ) <( echo "${expect}" )`"
+   log_error "Unexpected output generated"
+   cat <<EOF >&2
+----------------
+Output:
+----------------
+${output}
+----------------
+Expected:
+----------------
+${expect}
+----------------
+Diff:
+----------------
+${diffs}
+----------------
+EOF
+   exit 1
+}
+
+
+
+function setup_project()
+(
+   include "sourcetree::cfg"
+
+   cd "$1" || exit 1
+
+   local _branch
+   local _address
+   local _fetchoptions
+   local _nodetype
+   local _marks
+   local _raw_userinfo
+   local _tag
+   local _url
+   local _uuid
+   local _userinfo
+
+   SOURCETREE_FALLBACK_CONFIG_DIR=".mulle/share/sourcetree"
+
+   mkdir_if_missing "${SOURCETREE_FALLBACK_CONFIG_DIR}"
+
+   _address="a"
+   _url="a"
+   _uuid="`uuidgen`"
+   _nodetype="git"
+
+   sourcetree::node::r_to_nodeline
+   redirect_exekutor "${SOURCETREE_FALLBACK_CONFIG_DIR}/config" printf "%s\n" "${RVAL}"
+
+   _address="b"
+   _url="b"
+   _uuid="`uuidgen`"
+   _nodetype="git"
+
+   sourcetree::node::r_to_nodeline
+   redirect_exekutor "${SOURCETREE_FALLBACK_CONFIG_DIR}/other" printf "%s\n" "${RVAL}"
+)
+
+
+main()
+{
+   MULLE_SOURCETREE_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
+
+   setup_project "${directory}"
+
+   (
+      cd "${directory}" &&
+      result="`run_mulle_sourcetree --config-name other list --output-no-header --output-no-indent --output-no-column`"
+
+      expect_string "${result}" "b"
+
+      result="`run_mulle_sourcetree list --output-no-header --output-no-indent --output-no-column`"
+      expect_string "${result}" "a"
+
+   ) || exit 1
+
+
+   (
+      cd "${directory}" &&
+
+      run_mulle_sourcetree --config-name other add --url c --nodetype git c
+      result="`run_mulle_sourcetree --config-name other list --output-no-header --output-no-indent --output-no-column`"
+      expect_string "${result}" "b
+c"
+
+      run_mulle_sourcetree --config-name other remove c
+      result="`run_mulle_sourcetree --config-name other  list --output-no-header --output-no-indent --output-no-column`"
+      expect_string "${result}" "b"
+
+      # further more we expect etc to be gone
+      [ -d ".mulle/etc/sourcetree" ] && fail "useless etc dir still present"
+
+      :
+
+   ) || exit 1
+
+   rmdir_safer "${directory}"
+}
+
+
+init()
+{
+   MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
+   MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
+
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-callback.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-sync.sh"     || exit 1
+}
+
+
+init "$@"
+main "$@"
+

@@ -21,7 +21,7 @@ run_mulle_sourcetree()
       
       MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
 
-      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS:-} "$@"
+      . "${MULLE_SOURCETREE}" ${MULLE_SOURCETREE_FLAGS:-} "$@"
    )
 }
 

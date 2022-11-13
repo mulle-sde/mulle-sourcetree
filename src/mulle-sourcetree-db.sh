@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -344,7 +344,7 @@ sourcetree::db::bury()
 
    local filename="$3"
 
-   [ $# -eq 3 ] || _internal_fail "api error"
+   [ $# -eq 3 ]         || _internal_fail "api error"
    [ -z "${filename}" ] && _internal_fail "filename is empty"
 
    local gravepath
@@ -386,11 +386,11 @@ sourcetree::db::bury()
    then
       if [ -d "${filename}" ]
       then
-         rmdir_safer  "${filename}"
+         rmdir_safer "${filename}"
       else
          remove_file_if_present "${filename}"
       fi
-      return $?
+      return 0
    fi
 
    #
@@ -411,24 +411,27 @@ sourcetree::db::bury()
    local phys_filename
    local phys_project_dir
 
-   r_physicalpath "${filename}"
-   phys_filename="${RVAL}"
+   if [ "${filename#"${MULLE_SOURCETREE_STASH_DIR}/"}" = "${filename}" ]
+   then
+      r_physicalpath "${filename}"
+      phys_filename="${RVAL}"
 
-   r_physicalpath "${project_dir}"
-   phys_project_dir="${RVAL}"
+      r_physicalpath "${project_dir}"
+      phys_project_dir="${RVAL}"
 
-   r_relative_path_between "${phys_filename}" "${phys_project_dir}"
+      r_relative_path_between "${phys_filename}" "${phys_project_dir}"
 
-   case "${RVAL}" in
-      ../*)
-         _internal_fail "Bury path for \"${filename#${MULLE_USER_PWD}/}\" escapes \
-project \"${project_dir#${MULLE_USER_PWD}/}\".
+      case "${RVAL}" in
+         ../*)
+            _internal_fail "Bury path for \"${filename#"${MULLE_USER_PWD}/"}\" escapes \
+project \"${project_dir#"${MULLE_USER_PWD}/"}\".
 ${C_INFO}If you recently renamed your project, this is not unusual. 
 You need to clean it up manually (sorry). Suggested fix:
-${C_RESET_BOLD} rm -rf .mulle/var kitchen stash dependency"
-      ;;
-   esac
-
+${C_RESET_BOLD} rm -rf .mulle/var ${KITCHEN_DIR:-kitchen} ${MULLE_SOURCETREE_STASH_DIR:-} ${DEPENDENCY_DIR:-dependency}"
+         ;;
+      esac
+   fi
+   
    log_debug "project_dir: ${project_dir}"
    log_debug "filename:    ${filename}"
    log_debug "relative:    ${RVAL}"
@@ -457,8 +460,8 @@ ${C_RESET_BOLD} rm -rf .mulle/var kitchen stash dependency"
    if [ ! -z "${TAR}" -a -d "${gravepath}" ]
    then
       _log_info "Burying charred \
-${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \
-\"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
+${C_MAGENTA}${C_BOLD}${filename#"${MULLE_USER_PWD}/"}${C_INFO} in grave \
+\"${gravepath#"${MULLE_VIRTUAL_ROOT}/"}\""
       exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}.tmp" >&2 &&
       (
          rexekutor cd "${gravepath}.tmp" &&
@@ -467,8 +470,8 @@ ${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \
       ) &
    else
       _log_info "Burying \
-${C_MAGENTA}${C_BOLD}${filename#${MULLE_USER_PWD}/}${C_INFO} in grave \
-\"${gravepath#${MULLE_VIRTUAL_ROOT}/}\""
+${C_MAGENTA}${C_BOLD}${filename#"${MULLE_USER_PWD}/"}${C_INFO} in grave \
+\"${gravepath#"${MULLE_VIRTUAL_ROOT}/"}\""
       exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}" >&2
       exekutor find "${gravepath}" -type f -exec chmod a-w {} \;
    fi
@@ -1145,6 +1148,8 @@ sourcetree::db::clear_update()
    sourcetree::db::__common_databasedir "$1"
 
    remove_file_if_present "${_databasedir}/.db_update"
+
+   :
 }
 
 
@@ -1595,13 +1600,17 @@ sourcetree::db::_bury_zombiefile()
    local entry
    local filename
 
-   entry="`cat "${zombiefile}"`" || exit 1
+   if ! entry="`cat "${zombiefile}"`"
+   then
+      log_warning "Zombie ${zombiefile#"${MULLE_USER_PWD}/"} vanished"
+      return
+   fi
 
    sourcetree::db::__parse_dbentry "${entry}"
-
-   sourcetree::db::safe_bury_dbentry "${database}" "${nodeline}" "${owner}" "${filename}"
-
+   sourcetree::db::safe_bury_dbentry "${database}" "${nodeline}" "${owner}" "${filename}" || return 1
    remove_file_if_present "${zombiefile}"
+
+   :
 }
 
 
@@ -1702,6 +1711,8 @@ sourcetree::db::bury_zombies()
    fi
 
    rmdir_safer "${zombiedir}"
+
+   :
 }
 
 
@@ -1773,7 +1784,7 @@ sourcetree::db::bury_zombie_nodelines()
          zombiefile="${zombiedir}/${_uuid}"
          if [ -e "${zombiefile}" ]
          then
-            sourcetree::db::_bury_zombiefile "${_database}" "${zombiefile}"
+            sourcetree::db::_bury_zombiefile "${_database}" "${zombiefile}" || return 1
          fi
       fi
    done

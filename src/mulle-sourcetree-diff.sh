@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2021 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -108,7 +108,7 @@ sourcetree::diff::r_diff_configs()
    fi
    if [ -z "${a_nodelines}" ]
    then
-      log_warning "${config_a#${MULLE_USER_PWD}/} is empty"
+      log_warning "${config_a#"${MULLE_USER_PWD}/"} is empty"
    fi
 
    r_absolutepath "${config_b}"
@@ -121,7 +121,7 @@ sourcetree::diff::r_diff_configs()
    fi
    if [ -z "${b_nodelines}" ]
    then
-      log_warning "${config_b#${MULLE_USER_PWD}/} is empty"
+      log_warning "${config_b#"${MULLE_USER_PWD}/"} is empty"
    fi
 
    local _branch

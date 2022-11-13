@@ -25,7 +25,7 @@ expect_actions()
       log_error "Unexpected output generated"
       cat <<EOF >&2
 ----------------
-Output:
+Result:
 ----------------
 ${actions}
 ----------------

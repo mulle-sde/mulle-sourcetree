@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -781,11 +781,8 @@ sourcetree::commands::log_add_remove()
 
    if [ "${MULLE_FLAG_LOG_TERSE}" != 'YES' ]
    then
-      local _configfile
-      local _fallback_configfile
-
-      sourcetree::cfg::__common_configfile "${SOURCETREE_START}" "w"
-      r_basename "${_configfile}"
+      sourcetree::cfg::r_configfile_for_write "${SOURCETREE_START}"
+      r_basename "${RVAL}"
 
       log_info "$1 ${C_MAGENTA}${C_BOLD}$2${C_INFO} $3 ${C_RESET_BOLD}${RVAL}"
    fi
@@ -822,10 +819,10 @@ sourcetree::commands::_append_new_node()
       fi
       if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
       then
-         if sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
+         if sourcetree::cfg::is_config_present "${SOURCETREE_START}"
          then
             fail "A node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} already exists \
-in the sourcetree (${RVAL#${MULLE_USER_PWD}/}). Use -f to skip this check."
+in the sourcetree (${RVAL#"${MULLE_USER_PWD}/"}). Use -f to skip this check."
          else
             _internal_fail "Bizarre error"
          fi
@@ -838,7 +835,7 @@ in the sourcetree (${RVAL#${MULLE_USER_PWD}/}). Use -f to skip this check."
 #      mode="${RVAL}"
 #   fi
 
-   sourcetree::node::augment  # safe by default
+   sourcetree::node::__augment  # safe by default
 
    contents="`sourcetree::cfg::read "${SOURCETREE_START}" `"
    sourcetree::node::r_to_nodeline
@@ -920,14 +917,14 @@ sourcetree::commands::add()
 
             *)
                _log_warning "There is no directory or file named \
-\"${_address}\" (${PWD#${MULLE_USER_PWD}/})"
+\"${_address}\" (${PWD#"${MULLE_USER_PWD}/"})"
             ;;
          esac
       fi
    else
       if [ -e "${_address}" -a "${_nodetype}" != "local" ]
       then
-         log_warning "A directory or file named \"${_address}\" already exists (${PWD#${MULLE_USER_PWD}/})"
+         log_warning "A directory or file named \"${_address}\" already exists (${PWD#"${MULLE_USER_PWD}/"})"
       fi
    fi
 
@@ -1179,7 +1176,7 @@ sourcetree::commands::set()
       sourcetree::commands::set_usage
    fi
 
-   sourcetree::node::augment "${OPTION_AUGMENTMODE}"
+   sourcetree::node::__augment "${OPTION_AUGMENTMODE}"
 
    if [ "${oldaddress}" != "${_address}" ] &&
       sourcetree::cfg::has_duplicate "${SOURCETREE_START}" "${_uuid}" "${_address}"
@@ -1187,7 +1184,7 @@ sourcetree::commands::set()
       if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
       then
          fail "There is already a node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} \
-in the sourcetree (${PWD#${MULLE_USER_PWD}/})"
+in the sourcetree (${PWD#"${MULLE_USER_PWD}/"})"
       fi
    fi
 
@@ -1315,7 +1312,7 @@ sourcetree::commands::remove()
          then
             continue
          fi
-         log_error "No node found for \"{input}\"" 
+         log_error "No node found for \"${input}\""
          return 3  # also return non 0 , but lets's not be dramatic about it
                    # 1 is an error, 2 stacktraces
       fi
@@ -1326,7 +1323,6 @@ sourcetree::commands::remove()
       uuid="${RVAL}"
 
       sourcetree::cfg::remove_nodeline_by_uuid "${SOURCETREE_START}" "${uuid}"
-      sourcetree::cfg::remove_if_empty_and_no_fallback_exists "${SOURCETREE_START}"
       sourcetree::cfg::touch_parents "${SOURCETREE_START}"
 
       sourcetree::nodeline::r_get_address "${nodeline}"
@@ -1918,7 +1914,7 @@ sourcetree::commands::common()
 
    local OPTION_EXTENDED_MARK="DEFAULT"
    local OPTION_IF_MISSING='NO'
-   local OPTION_IF_PRESENT='YES'
+   local OPTION_IF_PRESENT='NO'
    local OPTION_MATCH='NO'
 
    while [ $# -ne 0 ]
@@ -2070,7 +2066,7 @@ sourcetree::commands::common()
    fi
 
    [ -z "${SOURCETREE_CONFIG_DIR}" ]   && fail "SOURCETREE_CONFIG_DIR is empty"
-   [ -z "${SOURCETREE_CONFIG_NAMES}" ] && fail "SOURCETREE_CONFIG_NAMES is empty"
+   [ -z "${SOURCETREE_CONFIG_NAME}" ] && fail "SOURCETREE_CONFIG_NAME is empty"
 
    case "${COMMAND}" in
       add|duplicate)

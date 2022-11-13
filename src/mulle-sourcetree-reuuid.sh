@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2018 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -66,8 +66,6 @@ sourcetree::reuuid::do()
 
    [ -z "${nodelines}" ] && return 0
 
-   shell_disable_glob; IFS=$'\n'
-
    local _branch
    local _address
    local _fetchoptions
@@ -79,10 +77,8 @@ sourcetree::reuuid::do()
    local _uuid
    local _userinfo
 
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
-
+   .foreachline nodeline in ${nodelines}
+   .do
       sourcetree::nodeline::parse "${nodeline}"  # memo: :_marks used raw
 
       sourcetree::node::r_uuidgen
@@ -91,8 +87,7 @@ sourcetree::reuuid::do()
       sourcetree::node::_r_to_nodeline
       r_add_line "${output}" "${RVAL}"
       output="${RVAL}"
-   done
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .done
 
    sourcetree::cfg::write "${config}" "${output}"
 }
@@ -161,7 +156,7 @@ sourcetree::reuuid::main()
 
    [ "$#" -eq 0 ] || sourcetree::reuuid::usage
 
-   log_info "Create new UUIDs for sourcetree ${C_RESET_BOLD}${SOURCETREE_CONFIG_NAMES%%:*}"
+   log_info "Create new UUIDs for sourcetree ${C_RESET_BOLD}${SOURCETREE_CONFIG_NAME%%:*}"
    sourcetree::reuuid::do "/" || exit 1
 
    log_info "${C_VERBOSE}Don't forget to \`reset\` affected databases"

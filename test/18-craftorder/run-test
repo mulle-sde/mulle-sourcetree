@@ -21,7 +21,7 @@ run_mulle_sourcetree()
       
       MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
 
-      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS:-} "$@"
+      . "${MULLE_SOURCETREE}" ${MULLE_SOURCETREE_FLAGS:-} "$@"
    )
 }
 
@@ -106,12 +106,18 @@ main()
       fail "update failed unexpectedly"
    fi
 
-   local result
 #   local expected="`physicalpath "${project}"`/a/b;
 #`physicalpath "${project}"`/a;no-delete"
 
-   local expected="`physicalpath "${project}"`/a/b;
-`physicalpath "${project}"`/a;no-delete"
+   local physpath
+
+   r_physicalpath "${project}"
+   physpath="${RVAL}"
+
+   local expected="${physpath}/a/b;
+${physpath}/a;no-delete"
+
+   local result
 
    result="`run_mulle_sourcetree craftorder --output-absolute --no-print-env`"
    if [ "${expected}" != "${result}" ]

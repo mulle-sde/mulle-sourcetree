@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -275,12 +275,8 @@ sourcetree::action::_do_fetch_operation()
 
    local value
 
-   if [ ${ZSH_VERSION+x} ]
-   then
-      value="${(P)envvar}"
-   else
-      value="${!envvar}"
-   fi
+   r_shell_indirect_expand "${envvar}"
+   value="${RVAL}"
 
    log_fluff "Check \"${envvar}\" for \"${_address}\""
    if [ "${value}" = 'NO' ]
@@ -299,7 +295,7 @@ sourcetree::action::_do_fetch_operation()
    then
       if sourcetree::nodemarks::disable "${_marks}" "platform-${MULLE_UNAME}"
       then
-         _log_info "${C_RESET_BOLD}${_address#${MULLE_USER_PWD}/}${C_INFO} \
+         _log_info "${C_RESET_BOLD}${_address#"${MULLE_USER_PWD}/"}${C_INFO} \
 not fetched as ${C_MAGENTA}${C_BOLD}platform-${MULLE_UNAME}${C_INFO} is \
 disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
          return
@@ -436,7 +432,7 @@ sourcetree::action::update_safe_remove_node()
       fail "Can't remove \"${filename}\" as it is marked no-delete"
    fi
 
-   sourcetree::db::bury "${database}" "${_uuid}" "${filename}"
+   sourcetree::db::bury "${database}" "${_uuid}" "${filename}" &&
    sourcetree::db::forget "${database}" "${_uuid}"
 }
 
@@ -503,16 +499,16 @@ chickening out"
    newexists='NO'
    if [ -e "${newfilename}" ]
    then
-      log_fluff "\"${newfilename#${MULLE_USER_PWD}/}\" already exists"
+      log_fluff "\"${newfilename#"${MULLE_USER_PWD}/"}\" already exists"
       newexists='YES'
    else
       if [ -L "${newfilename}" ]
       then
-         _log_fluff "Node \"${newfilename#${MULLE_USER_PWD}/}\" references a \
+         _log_fluff "Node \"${newfilename#"${MULLE_USER_PWD}/"}\" references a \
 broken symlink \"${newfilename}\". Clobbering it"
          remove_file_if_present "${newfilename}"
       else
-         log_debug "\"${newfilename#${MULLE_USER_PWD}/}\" is not there"
+         log_debug "\"${newfilename#"${MULLE_USER_PWD}/"}\" is not there"
       fi
    fi
 
@@ -546,12 +542,12 @@ broken symlink \"${newfilename}\". Clobbering it"
          then
             case "${newnodetype}" in
                local)
-                  _log_fluff "Local node is present at \"${newfilename#${MULLE_USER_PWD}/}\". \
+                  _log_fluff "Local node is present at \"${newfilename#"${MULLE_USER_PWD}/"}\". \
 Very well just remember it."
                ;;
 
                *)
-                  _log_fluff "Node is new but \"${newfilename#${MULLE_USER_PWD}/}\" exists. \
+                  _log_fluff "Node is new but \"${newfilename#"${MULLE_USER_PWD}/"}\" exists. \
 As node is marked \"no-delete\" just remember it."
                ;;
             esac
@@ -565,7 +561,7 @@ As node is marked \"no-delete\" just remember it."
          then
             local oldnodeline
 
-            oldnodeline="`rexekutor egrep -s -v '^#' "${newfilename#${MULLE_USER_PWD}/}/${SOURCETREE_FIX_FILENAME}"`"
+            oldnodeline="`rexekutor egrep -s -v '^#' "${newfilename#"${MULLE_USER_PWD}/"}/${SOURCETREE_FIX_FILENAME}"`"
             if [ "${oldnodeline}" = "${nodeline}" ]
             then
                log_fluff "Fix info was written by identical config, so it looks ok"
@@ -575,14 +571,14 @@ As node is marked \"no-delete\" just remember it."
             fi
          fi
 
-         log_fluff "Node is new, but \"${newfilename#${MULLE_USER_PWD}/}\" exists. Clobber it."
+         log_fluff "Node is new, but \"${newfilename#"${MULLE_USER_PWD}/"}\" exists. Clobber it."
          sourcetree::action::update_safe_clobber "${newfilename}" "${database}"
          ACTIONS="remember"
       else
          if [ -z "${_url}" ]
          then
-            fail "Node \"${newfilename#${MULLE_USER_PWD}/}\" has no URL and \
-it doesn't exist (${PWD#${MULLE_USER_PWD}/})"
+            fail "Node \"${newfilename#"${MULLE_USER_PWD}/"}\" has no URL and \
+it doesn't exist (${PWD#"${MULLE_USER_PWD}/"})"
          fi
 
          local pretty_config
@@ -593,7 +589,7 @@ it doesn't exist (${PWD#${MULLE_USER_PWD}/})"
          then
             pretty_config="."
          fi
-         _log_verbose "Node \"${newfilename#${MULLE_USER_PWD}/}\" of \
+         _log_verbose "Node \"${newfilename#"${MULLE_USER_PWD}/"}\" of \
 sourcetree \"${pretty_config}\" is missing, so fetch"
 
 #         if [ "${newaddress}" = "Foundation" ]
@@ -621,7 +617,7 @@ sourcetree \"${pretty_config}\" is missing, so fetch"
    #
    if [ "${previousnodeline}" = "${newnodeline}" ]
    then
-      log_fluff "Node \"${newfilename#${MULLE_USER_PWD}/}\" is unchanged"
+      log_fluff "Node \"${newfilename#"${MULLE_USER_PWD}/"}\" is unchanged"
 
       if [ "${newexists}" = 'YES' ]
       then
@@ -671,23 +667,21 @@ chickening out"
    fi
 
    #
-   # Source change is big (except if old is symlink and new is git)
+   # Source change is big (except if old is symlink). If the nodetype changed
+   # there should also be a change in URL..
    #
-   if [ "${_nodetype}" != "${newnodetype}" ]
+   if [ "${_nodetype}" != "${newnodetype}" -a "${_nodetype}" != "symlink" ]
    then
-      if ! [ "${_nodetype}" = "symlink" -a "${newnodetype}" = "git" ]
-      then
-         _log_verbose "Nodetype has changed from \"${_nodetype}\" to \
+      _log_verbose "Nodetype has changed from \"${_nodetype}\" to \
 \"${newnodetype}\", need to fetch"
 
-         # no-delete check here ?
-         if [ "${previousexists}" = 'YES' ]
-         then
-            ACTIONS="remove"
-         fi
-         r_add_line "${ACTIONS}" "fetch"
-         return
+      # no-delete check here ?
+      if [ "${previousexists}" = 'YES' ]
+      then
+         ACTIONS="remove"
       fi
+      r_add_line "${ACTIONS}" "fetch"
+      return
    fi
 
    #
@@ -865,7 +859,7 @@ sourcetree::action::__update_perform_item()
             # the previousaddress
             sourcetree::action::update_safe_remove_node "${previousfilename}" "${_marks}" "${_uuid}" "${database}"
             log_fluff "Failed to ${item} ${_url}" # operation should have errored already
-            exit 1
+            return 1
          fi
          _contentschanged='YES'
          _remember='YES'
@@ -873,15 +867,15 @@ sourcetree::action::__update_perform_item()
 
       "fetch")
          sourcetree::action::do_operation "fetch" "${_address}" \
-                              "${_url}" \
-                              "${filename}" \
-                              "${_branch}" \
-                              "${_tag}" \
-                              "${_nodetype}" \
-                              "${_marks}" \
-                              "${_fetchoptions}" \
-                              "${_raw_userinfo}" \
-                              "${_uuid}"
+                                                  "${_url}" \
+                                                  "${filename}" \
+                                                  "${_branch}" \
+                                                  "${_tag}" \
+                                                  "${_nodetype}" \
+                                                  "${_marks}" \
+                                                  "${_fetchoptions}" \
+                                                  "${_raw_userinfo}" \
+                                                  "${_uuid}"
 
          case "$?" in
             0)
@@ -889,7 +883,7 @@ sourcetree::action::__update_perform_item()
             ;;
 
             4)
-               # if we used a symlink, we want to memorize that
+               # if we used a symlink, we want to memorize that (why ?)
                _nodetype="symlink"
 
                # we don't really want to update that
@@ -921,7 +915,8 @@ sourcetree::action::__update_perform_item()
                   return 4
                fi
 
-               fail "The fetch of \"${_address}\" failed and it is required."
+               log_error "The fetch of \"${_address}\" failed and it is required."
+               return 1
             ;;
          esac
 
@@ -1152,9 +1147,9 @@ sourcetree::action::_r_do_actions_with_nodeline()
    if sourcetree::nodemarks::disable "${_marks}" "fs"
    then
       log_fluff "\"${_address}\" is marked as no-fs, so nothing to update"
+      RVAL="${_uuid}"
       return 2
    fi
-
 
    local _evaledurl
    local _evalednodetype
@@ -1164,11 +1159,18 @@ sourcetree::action::_r_do_actions_with_nodeline()
 
    sourcetree::node::__evaluate_values
 
-   if [ "${_evalednodetype}" = 'comment' ]
-   then
-      log_debug "\"${_address}\" is a comment, so nothing to update"
-      return 2
-   fi
+   case "${_evalednodetype}" in
+      'comment')
+         log_debug "\"${_address}\" is a comment \"${_userinfo}\", so nothing to update"
+         RVAL="${_uuid}"
+         return 2
+      ;;
+
+      'error')
+         sourcetree::node::show_error
+         return 1
+      ;;
+   esac
 
    #
    # the address is what is relative to the current config (configfile)
@@ -1210,7 +1212,8 @@ sourcetree::action::_r_do_actions_with_nodeline()
       esac
       database='/'
    else
-      sourcetree::cfg::r_absolute_filename "${config}" "${_address%#*}" "${style}"
+      # TODO: fix
+      sourcetree::cfg::r_old_absolute_filename "${config}" "${_address%#*}" "${style}"
       filename="${RVAL}"
    fi
 
@@ -1404,6 +1407,7 @@ sourcetree::action::do_actions_with_nodeline()
 
    sourcetree::action::_r_do_actions_with_nodeline "$@"
    rval=$?
+   uuid="${RVAL}"
 
    case $rval in
       0|2)
@@ -1414,7 +1418,6 @@ sourcetree::action::do_actions_with_nodeline()
       ;;
    esac
 
-   uuid="${RVAL}"
    # this could be executed in parallel ?
    if ! sourcetree::db::set_uuid_alive "${database}" "${uuid}"
    then
@@ -1443,27 +1446,22 @@ sourcetree::action::do_actions_with_nodelines()
       return 0
    fi
 
-   log_debug "\"${style}\" update \"${nodelines}\" for db \"${config:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
+   log_debug "\"${style}\" update \"${nodelines}\" for db \"${config:-ROOT}\" (${PWD#"${MULLE_USER_PWD}/"})"
 
    local nodeline
    local rval
 
    rval=0
-   shell_disable_glob; IFS=$'\n'
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
-
-      [ -z "${nodeline}" ] && continue 
+   .foreachline nodeline in ${nodelines}
+   .do
+      [ -z "${nodeline}" ] && .continue
 
       if ! sourcetree::action::do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
       then
          rval=1
-         break
+         .break
       fi
-   done
-
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 
    return $rval
 }
@@ -1486,7 +1484,7 @@ sourcetree::action::do_actions_with_nodelines_parallel()
       return 0
    fi
 
-   log_debug "\"${style}\" update \"${nodelines}\" for db \"${config:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
+   log_debug "\"${style}\" update \"${nodelines}\" for db \"${config:-ROOT}\" (${PWD#"${MULLE_USER_PWD}/"})"
 
    local nodeline
    local rval 
@@ -1498,11 +1496,8 @@ sourcetree::action::do_actions_with_nodelines_parallel()
 
    _parallel_begin
 
-   shell_disable_glob; IFS=$'\n'
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
-
+   .foreachline nodeline in ${nodelines}
+   .do
       if [ ! -z "${nodeline}" ]
       then
          _parallel_execute sourcetree::action::do_actions_with_nodeline "${nodeline}" \
@@ -1510,9 +1505,7 @@ sourcetree::action::do_actions_with_nodelines_parallel()
                                                                         "${config}" \
                                                                         "${database}"
       fi
-   done
-
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 
    _parallel_end
    rval=$? 

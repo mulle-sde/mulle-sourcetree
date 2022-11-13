@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -263,7 +263,7 @@ sourcetree::status::r_emit()
       for dir in "${SOURCETREE_CONFIG_DIR:-.mulle/etc/sourcetree}" \
                  "${SOURCETREE_FALLBACK_CONFIG_DIR:-.mulle/share/sourcetree}"
       do
-         for name in ${SOURCETREE_CONFIG_NAMES:-config}
+         for name in ${SOURCETREE_CONFIG_NAME:-config}
          do
             if [ -e "${filename}/${dir}/${name}" -o \
                  -e "${filename}/${dir}/${name}.${MULLE_UNAME}" ]
@@ -305,7 +305,7 @@ sourcetree::status::r_emit()
             # build and updates for non-required stuff thats
             # never there. Fix: (always need a require node)
             #
-            log_fluff "#5: \"${filename}\" does not exist but it isn't required (${PWD#${MULLE_USER_PWD}/})"
+            log_fluff "#5: \"${filename}\" does not exist but it isn't required (${PWD#"${MULLE_USER_PWD}/"})"
             RVAL="${output_address};optional;${fs};${configexists};${dbexists}" #;${filename}"
             return 5
          fi
@@ -318,7 +318,7 @@ sourcetree::status::r_emit()
             return 3
          fi
 
-         log_fluff "#4 \"${filename}\" does not exist and is required (${PWD#${MULLE_USER_PWD}/})"
+         log_fluff "#4 \"${filename}\" does not exist and is required (${PWD#"${MULLE_USER_PWD}/"})"
          RVAL="${output_address};absent;${fs};${configexists};${dbexists}" #;${filename}"
          return 4
       fi
@@ -355,7 +355,7 @@ sourcetree::status::r_emit()
             then
                # don't fluff zeroes
                _log_debug "#0: \"${directory}\" does not have a \
-${SOURCETREE_CONFIG_DIR} (${PWD#${MULLE_USER_PWD}/})"
+${SOURCETREE_CONFIG_DIR} (${PWD#"${MULLE_USER_PWD}/"})"
 
                RVAL="${output_address};ok;${fs};${configexists};${dbexists}" #;${filename}"
                return 0
@@ -363,7 +363,7 @@ ${SOURCETREE_CONFIG_DIR} (${PWD#${MULLE_USER_PWD}/})"
 
             if [ "${dbexists}" = 'NO' ]
             then
-               log_fluff "#6 \"${filename}\" is dirty (${PWD#${MULLE_USER_PWD}/})"
+               log_fluff "#6 \"${filename}\" is dirty (${PWD#"${MULLE_USER_PWD}/"})"
                RVAL="${output_address};dirty;${fs};\
 ${configexists};${dbexists}" #;${filename}"
                return 6
@@ -372,7 +372,7 @@ ${configexists};${dbexists}" #;${filename}"
             if ! sourcetree::status::is_db_compatible "${datasource}" "${SOURCETREE_MODE}"
             then
                _log_fluff "#8 Database \"${datasource}\" is not compatible with \
-\"${SOURCETREE_MODE}\" (${PWD#${MULLE_USER_PWD}/})"
+\"${SOURCETREE_MODE}\" (${PWD#"${MULLE_USER_PWD}/"})"
 
                RVAL="${output_address};outdated;${fs};${configexists};${dbexists}" #;${filename}"
                return 8
@@ -388,7 +388,7 @@ ${configexists};${dbexists}" #;${filename}"
 
             if sourcetree::db::is_updating "${datasource}"
             then
-               log_fluff "#7: \"${filename}\" is marked as updating (${PWD#${MULLE_USER_PWD}/})"
+               log_fluff "#7: \"${filename}\" is marked as updating (${PWD#"${MULLE_USER_PWD}/"})"
                RVAL="${output_address};updating;${fs};\
 ${configexists};${dbexists}" #;${filename}"
                return 7
@@ -396,7 +396,7 @@ ${configexists};${dbexists}" #;${filename}"
 
             if ! sourcetree::status::is_uptodate "${datasource}"
             then
-               log_fluff "#6: Database \"${datasource}\" is dirty (${PWD#${MULLE_USER_PWD}/})"
+               log_fluff "#6: Database \"${datasource}\" is dirty (${PWD#"${MULLE_USER_PWD}/"})"
                RVAL="${output_address};dirty;${fs};\
 ${configexists};${dbexists}" #;${filename}"
               return 6
@@ -460,9 +460,9 @@ sourcetree::status::walk()
    then
       if [ -e "${NODE_FILENAME}" ]
       then
-         RVAL="${RVAL};${NODE_FILENAME#${MULLE_USER_PWD}/};YES"
+         RVAL="${RVAL};${NODE_FILENAME#"${MULLE_USER_PWD}/"};YES"
       else
-         RVAL="${RVAL};${NODE_FILENAME#${MULLE_USER_PWD}/};NO"
+         RVAL="${RVAL};${NODE_FILENAME#"${MULLE_USER_PWD}/"};NO"
       fi
    fi
 
@@ -658,7 +658,7 @@ sourcetree::status::main()
 
    [ "$#" -eq 0 ] || sourcetree::status::usage "superflous arguments \"$*\""
 
-   if ! sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
+   if ! sourcetree::cfg::is_config_present "${SOURCETREE_START}"
    then
       log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
       return 0

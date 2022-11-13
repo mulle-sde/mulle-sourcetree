@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -84,7 +84,7 @@ sourcetree::craftorder::r_create_filename()
 
    if [ "${OPTION_ABSOLUTE}" = 'NO' ]
    then
-      filename="${filename#${MULLE_VIRTUAL_ROOT}/}"
+      filename="${filename#"${MULLE_VIRTUAL_ROOT}/"}"
    fi
 
    RVAL="${filename%#*}"
@@ -138,7 +138,7 @@ sourcetree::craftorder::augment_line()
       fi
    fi
 
-   log_fluff "Augmented ${filename} with marks from ${_datasource#${MULLE_USER_PWD}/}${_address}"
+   log_fluff "Augmented ${filename} with marks from ${_datasource#"${MULLE_USER_PWD}/"}${_address}"
 
    if [ "${OUTPUT_RAW_USERINFO}" = 'YES' ]
    then

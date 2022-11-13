@@ -1,4 +1,5 @@
-#! /bin/sh
+#! /usr/bin/env mulle-bash
+# shellcheck shell=bash
 #
 # shellcheck shell=bash
 # shellcheck disable=SC2236
@@ -41,53 +42,6 @@
 
 
 MULLE_EXECUTABLE_VERSION="1.1.0"
-##########################################################################
-###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
-###########################################################################
-# #
-# # PRELUDE - Standard startup code for loading mulle-bashfunctions
-# #
-###
-
-#
-# Figure out MULLE_BASHFUNCTIONS_LIBEXEC_DIR on this machine if needed.
-#
-if ! [ ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR+x} ]
-then
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
-   export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
-fi
-
-#
-# The booter reruns the executable either with bash or zsh, whatever the
-# system provides. On the second run --no-auto-shell will be set first.
-#
-if [ "${1:-}" != --no-auto-shell ]
-then
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
-else
-   shift    # get rid of --no-auto-shell
-fi
-
-
-#
-# Include mulle-bashfunctions.sh         : default functions
-#         mulle-bashfunctions-none.sh    : almost no functions
-#         mulle-bashfunctions-minimal.sh : few functions for basic scripts
-#         mulle-bashfunctions-all.sh     : everything, even obscure functions
-#
-# Do this first to get aliases
-#
-MULLE_EXECUTABLE="${BASH_SOURCE[0]:-${(%):-%x}}"
-. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-
-###
-# # Now we are in bash or zsh with mulle-bashfunctions loaded
-# #
-###########################################################################
-###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
-###########################################################################
-
 
 
 usage()
@@ -99,7 +53,7 @@ Usage:
    ${MULLE_USAGE_NAME} [flags]
 
    Create the _Dependencies.cmake and _Libraries.cmake files from the
-   information contained in the subtree.
+   information contained in the sourcetree config.
 
    ${MULLE_USAGE_NAME} has to run in a mulle-sde environment. You can run it
    with \`mulle-sde run ${MULLE_USAGE_NAME}\`.
@@ -120,6 +74,7 @@ Flags:
       --stdout                : emit to stdout (implies --serial)
 
 Environment:
+   MULLE_SOURCETREE_CONFIG_NAME                : the config to use (config)
    MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE : the dependencies output file
    MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE    : the libraries output file
    MULLE_SOURCETREE_CMAKE_SEARCHPATH_ENABLED   : if cmake-searchpath is used
@@ -159,6 +114,30 @@ r_uname_to_cmake()
 
    RVAL="\${CMAKE_SYSTEM_NAME} MATCHES \"${systemname}\""
 }
+
+
+r_sdk_to_cmake()
+{
+   log_entry "r_uname_to_cmake" "$@"
+
+   local sdk="$1"
+
+   local sdkname
+
+   case "${sdk}" in
+      'musl')
+         sdkname="MUSL_STATIC_ONLY"
+      ;;
+
+      *)
+         r_uppercase "${sdk}"
+         sdkname="${RVAL}"
+      ;;
+   esac
+
+   RVAL="${sdkname}"    # sic
+}
+
 
 
 r_create_exclude_only_if()
@@ -221,11 +200,8 @@ r_osexclude_configuration_to_cmake_if()
       len1=$((length + 6))
       len2=$((length + 4))
 
-      shell_disable_glob ; IFS=","
-      for mark in ${marks}
-      do
-         IFS="${DEFAULT_IFS}"; shell_enable_glob
-
+      .foreachitem mark in ${marks}
+      .do
          case "${mark}" in
             only-${key}-*)
                r_uname_to_cmake "${mark:${len1}}"
@@ -253,11 +229,75 @@ r_osexclude_configuration_to_cmake_if()
                esac
             ;;
          esac
-      done
+      .done
    done
 
    r_create_exclude_only_if "${excludes}" "${onlys}"
 }
+
+
+
+#
+# key is "sdk" usually
+#
+r_sdk_exclude_configuration_to_cmake_if()
+{
+   log_entry "r_sdk_exclude_configuration_to_cmake_if" "$@"
+
+   local marks="$1"; shift
+
+   local excludes
+   local onlys
+   local mark
+
+   local length
+   local len1
+   local len2
+
+   while [ $# -ne 0 ]
+   do
+      key="$1"
+      shift
+
+      length="${#key}"
+      len1=$((length + 6)) # only-- 6
+      len2=$((length + 4)) # no--   4
+
+      .foreachitem mark in ${marks}
+      .do
+         case "${mark}" in
+            only-${key}-*)
+               r_sdk_to_cmake "${mark:${len1}}"
+               case " OR ${onlys} OR " in
+                  *" OR ${RVAL} OR "*)
+                  ;;
+
+                  *)
+                     r_concat "${onlys}" "${RVAL}" " OR "
+                     onlys="${RVAL}"
+                  ;;
+               esac
+            ;;
+
+            no-${key}-*)
+               r_sdk_to_cmake "${mark:${len2}}"
+               case " OR ${excludes} OR " in
+                  *" OR ${RVAL} OR "*)
+                  ;;
+
+                  *)
+                     r_concat "${excludes}" "${RVAL}" " OR "
+                     excludes="${RVAL}"
+                  ;;
+               esac
+            ;;
+         esac
+      .done
+   done
+
+   r_create_exclude_only_if "${excludes}" "${onlys}"
+}
+
 
 
 # CMAKE must have global variable set for
@@ -1041,7 +1081,8 @@ emit_cmake_dependency()
    [ -z "${containername}" ] && _internal_fail "containername is empty"
 
    local indent
-   local ifstatement
+   local ifstatement1
+   local ifstatement2
    local endifstatement
    local actualcontainername
 
@@ -1055,10 +1096,19 @@ emit_cmake_dependency()
    if [ ! -z "${marks}" ]
    then
       r_osexclude_configuration_to_cmake_if "${marks}" "platform" "cmake-platform"
-      ifstatement="${RVAL}"
-      if [ ! -z "${ifstatement}" ]
+      ifstatement1="${RVAL}"
+
+      if [ ! -z "${ifstatement1}" ]
       then
          indent="   "
+      fi
+
+      r_sdk_exclude_configuration_to_cmake_if "${marks}" "sdk" "cmake-sdk"
+      ifstatement2="${RVAL}"
+
+      if [ ! -z "${ifstatement2}" ]
+      then
+         indent="${indent}   "
       fi
 
       case ",${marks}," in
@@ -1119,12 +1169,22 @@ emit_cmake_dependency()
 # Generated from sourcetree: ${uuid};${address};${marks};${aliases}
 # Disable with : \`mulle-sourcetree mark ${address} ${disabler}\`
 # Disable for this platform: \`mulle-sourcetree mark ${address} no-cmake-platform-\${MULLE_UNAME}\`
+# Disable for a sdk: \`mulle-sourcetree mark ${address} no-cmake-sdk-<name>\`
 #
 EOF
 
-   if [ ! -z "${ifstatement}" ]
+   if [ ! -z "${ifstatement1}" ]
    then
-      printf "%s\n" "${ifstatement}"
+      printf "%s\n" "${ifstatement1}"
+      if [ ! -z "${ifstatement2}" ]
+      then
+         printf "   %s\n" "${ifstatement2}"
+      fi
+   else
+      if [ ! -z "${ifstatement2}" ]
+      then
+         printf "%s\n" "${ifstatement2}"
+      fi
    fi
 
    "${emitter}" "${names}" \
@@ -1135,9 +1195,18 @@ EOF
                 "${header}" \
                 "${indent}"
 
-   if [ ! -z "${ifstatement}" ]
+   if [ ! -z "${ifstatement1}" ]
    then
-      echo "endif()"
+      echo "   endif()"
+      if [ ! -z "${ifstatement2}" ]
+      then
+         echo "endif()"
+      fi
+   else
+      if [ ! -z "${ifstatement2}" ]
+      then
+         echo "endif()"
+      fi
    fi
 
    echo
@@ -1156,11 +1225,8 @@ emit_cmake_dependencies()
 
    local dependency
 
-   shell_disable_glob; IFS=$'\n'
-   for dependency in ${dependencies}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
-
+   .foreachline dependency in ${dependencies}
+   .do
       local address
       local marks
       local aliases
@@ -1187,8 +1253,7 @@ emit_cmake_dependencies()
                                "${include}" \
                                "${disabler}"
       fi
-   done
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .done
 }
 
 

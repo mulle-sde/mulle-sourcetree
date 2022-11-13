@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -335,7 +335,7 @@ sourcetree::walk::_callback_nodetypes()
 
 sourcetree::walk::_callback_filter()
 {
-   log_entry "sourcetree::walk::_callback_filter" "$@"
+   # log_entry "sourcetree::walk::_callback_filter" "$@"
 
    sourcetree::nodemarks::filter_with_qualifier "$@"
 }
@@ -343,7 +343,7 @@ sourcetree::walk::_callback_filter()
 
 sourcetree::walk::_descend_filter()
 {
-   log_entry "sourcetree::walk::_descend_filter" "$@"
+   # log_entry "sourcetree::walk::_descend_filter" "$@"
 
    sourcetree::nodemarks::filter_with_qualifier "$@"
 }
@@ -388,7 +388,7 @@ sourcetree::walk::__docd_postamble()
 #
 sourcetree::walk::_visit_callback()
 {
-   log_entry "sourcetree::walk::_visit_callback" "$@"
+   # log_entry "sourcetree::walk::_visit_callback" "$@"
 
    local datasource="$1"
    local virtual="$2"
@@ -504,7 +504,7 @@ doesn't jive with permissions \"${filterpermissions}\""
 #
 sourcetree::walk::_visit_descend()
 {
-   log_entry "sourcetree::walk::_visit_descend" "$@"
+   # log_entry "sourcetree::walk::_visit_descend" "$@"
 
    local datasource="$1"
    local virtual="$2"
@@ -623,7 +623,7 @@ to WILL_DESCEND_CALLBACK"
 #
 sourcetree::walk::r_get_dedupe_lineid_from_node()
 {
-   log_entry "sourcetree::walk::r_get_dedupe_lineid_from_node" "$@"
+   # log_entry "sourcetree::walk::r_get_dedupe_lineid_from_node" "$@"
 
    local mode="$1"
 
@@ -793,7 +793,7 @@ sourcetree::walk::remove_from_visited()
 #
 sourcetree::walk::_visit_node()
 {
-   log_entry "sourcetree::walk::_visit_node" "$2/${_address}"
+   # log_entry "sourcetree::walk::_visit_node" "$2/${_address}"
 
    local datasource="$1"
    local virtual="$2"
@@ -912,7 +912,7 @@ sourcetree::walk::_visit_node()
 
 sourcetree::walk::_share_node()
 {
-   log_entry "sourcetree::walk::_share_node" "$2/${_address}"
+   # log_entry "sourcetree::walk::_share_node" "$2/${_address}"
 
    local datasource="$1"
    local virtual="$2"
@@ -1061,10 +1061,12 @@ sourcetree::walk::walk_nodeline()
    local evalednodetype
 
    r_expanded_string "${_nodetype}"
+
    evalednodetype="${RVAL}"
 
    case "${evalednodetype}" in
-      comment)
+      'comment')
+         log_debug "Hä"
          case ",${mode}," in
             *,comments,*)
                r_comma_concat "${mode}" "flat"
@@ -1073,6 +1075,20 @@ sourcetree::walk::walk_nodeline()
 
             *)
                return 0
+            ;;
+         esac
+      ;;
+
+      'error')
+         case ",${mode}," in
+            *,comments,*)
+               r_comma_concat "${mode}" "flat"
+               mode="${RVAL}"
+            ;;
+
+            *)
+               sourcetree::node::show_error
+               return 1
             ;;
          esac
       ;;
@@ -1270,12 +1286,9 @@ sourcetree::walk::_walk_nodelines()
          r_comma_concat "${mode}" 'breadth-flat'
          tmpmode="${RVAL}"
 
-         shell_disable_glob; IFS=$'\n'
-         for nodeline in ${nodelines}
-         do
-            IFS="${DEFAULT_IFS}" ; shell_enable_glob
-
-            [ -z "${nodeline}" ] && continue
+         .foreachline nodeline in ${nodelines}
+         .do
+            [ -z "${nodeline}" ] && .continue
 
             sourcetree::walk::walk_nodeline "${nodeline}" \
                                             "${datasource}" \
@@ -1288,17 +1301,13 @@ sourcetree::walk::_walk_nodelines()
                                             "$@"
             rval=$?
             [ $rval -ne 0 ] && return $rval
-         done
-         IFS="${DEFAULT_IFS}" ; shell_enable_glob
+         .done
       ;;
    esac
 
-   shell_disable_glob; IFS=$'\n'
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
-
-      [ -z "${nodeline}" ] && continue
+   .foreachline nodeline in ${nodelines}
+   .do
+      [ -z "${nodeline}" ] && .continue
 
       sourcetree::walk::walk_nodeline "${nodeline}" \
                                       "${datasource}" \
@@ -1331,20 +1340,16 @@ sourcetree::walk::_walk_nodelines()
             [ $rval -ne 0 ] && return $rval
          ;;
       esac
-   done
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 
    case ",${mode}," in
       *,post-order,*)
          r_comma_concat "${mode}" 'post-flat'
          tmpmode="${RVAL}"
 
-         shell_disable_glob; IFS=$'\n'
-         for nodeline in ${nodelines}
-         do
-            IFS="${DEFAULT_IFS}" ; shell_enable_glob
-
-            [ -z "${nodeline}" ] && continue
+         .foreachline nodeline in ${nodelines}
+         .do
+            [ -z "${nodeline}" ] && .continue
 
             sourcetree::walk::walk_nodeline "${nodeline}" \
                                             "${datasource}" \
@@ -1357,8 +1362,7 @@ sourcetree::walk::_walk_nodelines()
                                             "$@"
             rval=$?
             [ $rval -ne 0 ] && return $rval
-         done
-         IFS="${DEFAULT_IFS}" ; shell_enable_glob
+         .done
       ;;
    esac
 }
@@ -1378,7 +1382,7 @@ sourcetree::walk::dedupe()
    # on zsh find_line is faster than a case with all walked in one line 
    if find_line "${WALKED}" "${datasource}"
    then
-      log_debug "Datasource \"${datasource#${MULLE_USER_PWD}/}\" has already been walked"
+      log_debug "Datasource \"${datasource#"${MULLE_USER_PWD}/"}\" has already been walked"
       return 0
    fi
 
@@ -1400,7 +1404,7 @@ sourcetree::walk::remove_from_deduped()
 
 sourcetree::walk::r_symbol_for_address()
 {
-   log_entry "sourcetree::walk::r_symbol_for_address" "$@"
+   # log_entry "sourcetree::walk::r_symbol_for_address" "$@"
 
    local address="$1"
 
@@ -1413,28 +1417,37 @@ sourcetree::walk::r_symbol_for_address()
 }
 
 
-sourcetree::walk::__common_configfile()
+sourcetree::walk::r_configfile()
 {
-   log_entry "sourcetree::walk::__common_configfile" "$@"
+   log_entry "sourcetree::walk::r_configfile" "$@"
 
-   local symbol="$1" ; shift
+   local symbol="$1"
+   local config="$2"
 
    r_identifier "${symbol}"
    r_uppercase "${RVAL}"
-   [ "${symbol}" = "${RVAL}" ] || _internal_fail "\"${symbol}\" is not an uppercase identifier"
+   upper_symbol="${RVAL}"
 
-   if [ -z "${symbol}" ]
+   [ "${symbol}" = "${upper_symbol}" ] || _internal_fail "\"${symbol}\" is not an uppercase identifier"
+
+   if [ -z "${upper_symbol}" ]
    then
-      sourcetree::cfg::__common_configfile "$@"
-      return
+      #
+      # override with environment variables
+      #
+      # local SOURCETREE_CONFIG_NAME="${MULLE_SOURCETREE_CONFIG_NAME:-${SOURCETREE_CONFIG_NAME}}"
+      # local SOURCETREE_CONFIG_SCOPES="${MULLE_SOURCETREE_CONFIG_SCOPES:-${SOURCETREE_CONFIG_SCOPES}}"
+
+      sourcetree::cfg::r_configfile_for_read "${config}"
+      return $?
    fi
 
    # for descends we need to reset some internal variables temporarily
    # make local copies of previous values, only valid for the lifetime
    # of this function call
 
-   local SOURCETREE_CONFIG_NAMES="config"
-   local SOURCETREE_CONFIG_SCOPES="${SOURCETREE_CONFIG_SCOPES:-default}"
+   local SOURCETREE_CONFIG_NAME="${MULLE_SOURCETREE_DEFAULT_CONFIG_NAME:-config}"
+   # local SOURCETREE_CONFIG_SCOPES="${MULLE_SOURCETREE_DEFAULT_CONFIG_SCOPES:-${SOURCETREE_CONFIG_SCOPES:-default}}"
    local SOURCETREE_CONFIG_DIR="${SOURCETREE_CONFIG_DIR}"
    local SOURCETREE_FALLBACK_CONFIG_DIR="${SOURCETREE_FALLBACK_CONFIG_DIR}"
 
@@ -1444,27 +1457,19 @@ sourcetree::walk::__common_configfile()
    local var
    local value
 
-   var="MULLE_SOURCETREE_CONFIG_NAMES_${symbol}"
-   if [ ! -z "${ZSH_VERSION}" ]
-   then
-      value="${(P)var}"
-   else
-      value="${!var}"
-   fi
-   SOURCETREE_CONFIG_NAMES="${value:-${SOURCETREE_CONFIG_NAMES}}"
+   var="MULLE_SOURCETREE_CONFIG_NAME_${upper_symbol}"
+   r_shell_indirect_expand "${var}"
+   value="${RVAL}"
+   SOURCETREE_CONFIG_NAME="${value:-${SOURCETREE_CONFIG_NAME}}"
    log_setting "${var} : ${value}"
 
-   var="MULLE_SOURCETREE_CONFIG_SCOPE_${symbol}"
-   if [ ! -z "${ZSH_VERSION}" ]
-   then
-      value="${(P)var}"
-   else
-      value="${!var}"
-   fi
-   SOURCETREE_CONFIG_SCOPE="${value:-${SOURCETREE_CONFIG_SCOPE}}"
-   log_setting "${var} : ${value}"
+#   var="MULLE_SOURCETREE_CONFIG_SCOPES_${upper_symbol}"
+#   r_shell_indirect_expand "${var}"
+#   value="${RVAL}"
+#   SOURCETREE_CONFIG_SCOPES="${value:-${SOURCETREE_CONFIG_SCOPES}}"
+#   log_setting "${var} : ${value}"
 
-   sourcetree::cfg::__common_configfile "$@"
+   sourcetree::cfg::r_configfile_for_read "${config}"
 }
 
 
@@ -1472,54 +1477,24 @@ sourcetree::walk::cfg_read()
 {
    log_entry "sourcetree::walk::cfg_read" "$@"
 
-   local symbol="$1" ; shift
+   local symbol="$1"
+   local config="$2"
 
-   local _configfile
-   local _fallback_configfile
-
-   sourcetree::walk::__common_configfile "${symbol}" "$1"
-
-   if ! sourcetree::cfg::__resolve_configfile
+   if ! sourcetree::walk::r_configfile "${symbol}" "${config}"
    then
       return 1
    fi
 
-   sourcetree::cfg::__read
+   local rval
+
+   sourcetree::cfg::_read "${RVAL}"
+   rval=$?
+
+   log_debug "Configfile \"${symbol}\" \"${config}\" is \"${RVAL}\" read returns $rval"
+
+   return $rval
 }
 
-
-#
-# these can be prefixed for external queries
-#
-sourcetree::walk::r_config_exists()
-{
-   log_entry "sourcetree::walk::r_config_exists" "$@"
-
-   local _configfile
-   local _fallback_configfile
-
-   local symbol="$1" ; shift
-
-   sourcetree::walk::__common_configfile "${symbol}" "$1"
-
-   if [ -f "${_configfile}" ]
-   then
-      log_debug "\"${_configfile}\" exists"
-      RVAL="${_configfile}"
-      return 0
-   fi
-
-   if [ ! -z "${_fallback_configfile}" ] && [ -f "${_fallback_configfile}" ]
-   then
-      log_debug "\"${_fallback_configfile}\" exists"
-      RVAL="${_fallback_configfile}"
-      return 0
-   fi
-
-   log_debug "\"${_configfile}\" not found"
-   RVAL=
-   return 1
-}
 
 
 #
@@ -1561,17 +1536,17 @@ sourcetree::walk::_walk_config_uuids()
 
    if ! nodelines="`sourcetree::walk::cfg_read "${symbol}" "${datasource}" `"
    then
-      log_debug "Config \"${datasource#${MULLE_USER_PWD}/}\" does not exist"
+      log_debug "Config \"${datasource#"${MULLE_USER_PWD}/"}\" does not exist"
       return 0
    fi
 
    if [ -z "${nodelines}" ]
    then
-      log_debug "Config \"${datasource#${MULLE_USER_PWD}/}\" has no nodes"
+      log_debug "Config \"${datasource#"${MULLE_USER_PWD}/"}\" has no nodes"
       return 0
    fi
 
-   log_debug "Walking config \"${datasource#${MULLE_USER_PWD}/}\" nodes"
+   log_debug "Walking config \"${datasource#"${MULLE_USER_PWD}/"}\" nodes"
    sourcetree::walk::_walk_nodelines "${nodelines}" "$@"
 }
 
@@ -1642,7 +1617,7 @@ sourcetree::walk::_walk_db_uuids()
       ;;
 
       *)
-         if sourcetree::walk::r_config_exists "${symbol}" "${datasource}" \
+         if sourcetree::walk::r_configfile "${symbol}" "${datasource}" \
             && ! sourcetree::db::is_ready "${datasource}"
          then
             fail "The sourcetree at \"${datasource}\" is not updated fully \

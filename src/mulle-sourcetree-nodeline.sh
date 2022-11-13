@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -192,7 +192,7 @@ sourcetree::nodeline::r_get_evaled_url()
 #
 sourcetree::nodeline::parse()
 {
-   log_entry "sourcetree::nodeline::parse" "$@"
+   # log_entry "sourcetree::nodeline::parse" "$@"
 
    local nodeline="$1"
 
@@ -772,14 +772,11 @@ sourcetree::nodeline::r_diff()
    do
       u_field="_${field}"
 
-      if [ ${ZSH_VERSION+x} ]
-      then
-         field_value="${(P)field}"
-         u_field_value="${(P)u_field}"
-      else
-         field_value="${!field}"
-         u_field_value="${!u_field}"
-      fi
+      r_shell_indirect_expand "${field}"
+      field_value="${RVAL}"
+
+      r_shell_indirect_expand "${u_field}"
+      u_field_value="${RVAL}"
 
       if [ "${field_value}" = "${u_field_value}" ]
       then

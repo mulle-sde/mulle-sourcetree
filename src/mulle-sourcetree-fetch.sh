@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2018 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -406,14 +406,12 @@ sourcetree::fetch::r_list_operations()
 
    local cachekey
    local cachekey_value
+
    r_uppercase "${nodetype}"
    cachekey="_SOURCETREE_OPERATIONS_${RVAL}"
-   if [ ${ZSH_VERSION+x} ]
-   then
-      cachekey_value="${(P)cachekey}"
-   else
-      cachekey_value="${!cachekey}"
-   fi
+
+   r_shell_indirect_expand "${cachekey}"
+   cachekey_value="${RVAL}"
 
    if [ -z "${cachekey_value}" ]
    then

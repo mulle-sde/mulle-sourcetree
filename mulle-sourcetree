@@ -1,4 +1,5 @@
-#! /bin/sh
+#! /usr/bin/env mulle-bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2015-2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -33,52 +34,6 @@
 
 
 MULLE_EXECUTABLE_VERSION="1.1.0"
-##########################################################################
-###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
-###########################################################################
-# #
-# # PRELUDE - Standard startup code for loading mulle-bashfunctions
-# #
-###
-
-#
-# Figure out MULLE_BASHFUNCTIONS_LIBEXEC_DIR on this machine if needed.
-#
-if ! [ ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR+x} ]
-then
-   MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
-   export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
-fi
-
-#
-# The booter reruns the executable either with bash or zsh, whatever the
-# system provides. On the second run --no-auto-shell will be set first.
-#
-if [ "${1:-}" != --no-auto-shell ]
-then
-   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
-else
-   shift    # get rid of --no-auto-shell
-fi
-
-
-#
-# Include mulle-bashfunctions.sh         : default functions
-#         mulle-bashfunctions-none.sh    : almost no functions
-#         mulle-bashfunctions-minimal.sh : few functions for basic scripts
-#         mulle-bashfunctions-all.sh     : everything, even obscure functions
-#
-# Do this first to get aliases
-#
-MULLE_EXECUTABLE="${BASH_SOURCE[0]:-${(%):-%x}}"
-. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-
-###
-# # Now we are in bash or zsh with mulle-bashfunctions loaded
-# #
-###########################################################################
-###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
-###########################################################################
 
 #
 # Determine location of own libexec directory. Which is `src` in development
@@ -211,10 +166,11 @@ EOF
    cat <<EOF
 
 Environment:
-   MULLE_SOURCETREE_CONFIG_NAMES_${PROJECT_UPCASE_IDENTIFIER:-LOCAL}  : names separated by : to search (config)
-   MULLE_SOURCETREE_STASH_DIR     : place to store shared dependencies (stash)
-   MULLE_SOURCETREE_SYMLINK       : allow symlinks to be used
-   MULLE_SOURCETREE_FETCH_<name>  : set to NO to inhibit fetch of a dependency
+   MULLE_SOURCETREE_CONFIG_NAME          : config name to search (config)
+   MULLE_SOURCETREE_CONFIG_NAME_<name>   : config to use for dependency (config)
+   MULLE_SOURCETREE_STASH_DIR            : place to store dependencies (stash)
+   MULLE_SOURCETREE_SYMLINK              : allow symlinks to be used
+   MULLE_SOURCETREE_FETCH_<name>         : if NO, inhibits dependency fetch
 EOF
    exit 1
 }
@@ -243,7 +199,10 @@ sourcetree::__check_sane_stash_dir()
    # check that an absolute MULLE_SOURCETREE_STASH_DIR does not go outside
    # MULLE_VIRTUAL_ROOT.
    # MEMO: I think this is actually a cool feature.
-
+   #
+   # Ensure that stash dir is at least three levels deep, /tmp/xxx/stash is
+   # OK
+   #
    case "${MULLE_SOURCETREE_STASH_DIR}" in
       *".."*)
         fail "MULLE_SOURCETREE_STASH_DIR contains .."
@@ -283,6 +242,12 @@ sourcetree::__check_sane_stash_dir()
       ;;
    esac
 
+   r_path_depth "${MULLE_SOURCETREE_STASH_DIR}"
+   case ${rval} in 
+      0|1|2)
+         _internal_fail "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) is too close to root"
+      ;;
+   esac
 }
 
 
@@ -306,24 +271,11 @@ sourcetree::main()
 
    local MULLE_FLAG_DEFER=""  # test also uses this ?
 
-   local FLAG_USE_FALLBACK='NO'
+   local FLAG_USE_FALLBACK='NO'     # should probably remove
    local FLAG_SOURCETREE_MODE=""
    local FLAG_CONFIG_DIR=""
    local FLAG_SHARE_DIR=""
-   local FLAG_SCOPE=""
-   local FLAG_CONFIG_NAMES=""
-
-   #
-   # get default scope from environment
-   # if empty, will default to "default"
-   #
-   if [ -z "${PROJECT_UPCASE_IDENTIFIER}" ]
-   then
-      include "case"
-
-      r_smart_upcase_identifier "${PROJECT_NAME:-local}"
-      PROJECT_UPCASE_IDENTIFIER="${RVAL}"
-   fi
+   local FLAG_CONFIG_NAME=""
 
    #
    # simple option handling
@@ -358,12 +310,11 @@ sourcetree::main()
             FLAG_CONFIG_DIR="$1"
          ;;
 
-         --config-names|--config-name)
+         --config-name|--config-names)
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
-            r_colon_concat "${FLAG_CONFIG_NAMES}" "$1"
-            FLAG_CONFIG_NAMES="${RVAL}"
+            FLAG_CONFIG_NAME="$1"
          ;;
 
          -d|--directory)
@@ -383,24 +334,6 @@ sourcetree::main()
 
             GIT_TERMINAL_PROMPT="$1"
             export GIT_TERMINAL_PROMPT
-         ;;
-
-         #
-         # SCOPES
-         #
-         --scope)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
-            shift
-
-            FLAG_SCOPE="$1"
-         ;;
-
-         --global)
-            FLAG_SCOPE="global"
-         ;;
-
-         --os)
-            FLAG_SCOPE="${MULLE_UNAME}"
          ;;
 
          #
@@ -485,45 +418,13 @@ sourcetree::main()
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-environment.sh" || exit 1
 
    local SOURCETREE_START
-   local SOURCETREE_CONFIG_SCOPE
-   local SOURCETREE_CONFIG_NAMES
+   local SOURCETREE_CONFIG_NAME
 
-   local var
-   local names
-   local scope
+   FLAG_CONFIG_NAME="${FLAG_CONFIG_NAME:-${MULLE_SOURCETREE_CONFIG_NAME}}"
 
-   names="${FLAG_CONFIG_NAMES}"
-   if [ -z "${names}" ]
-   then
-      var="MULLE_SOURCETREE_CONFIG_NAMES_${PROJECT_UPCASE_IDENTIFIER}"
-      if [ ! -z "${ZSH_VERSION}" ]
-      then
-         names="${(P)var}"
-      else
-         names="${!var}"
-      fi
-
-      [ ! -z "${names}" ] && log_verbose "${var} : ${names}"
-   fi
-
-   scope="${FLAG_SCOPE}"
-   if [ -z "${scope}" ]
-   then
-      var="MULLE_SOURCETREE_CONFIG_SCOPE_${PROJECT_UPCASE_IDENTIFIER}"
-      if [ ! -z "${ZSH_VERSION}" ]
-      then
-         scope="${(P)var}"
-      else
-         scope="${!var}"
-      fi
-
-      [ ! -z "${scope}" ] && log_verbose "${var} : ${scope}"
-   fi
-
-   sourcetree::environment::default "${scope}" \
-                                    "${FLAG_SHARE_DIR}" \
+   sourcetree::environment::default "${FLAG_SHARE_DIR}" \
                                     "${FLAG_CONFIG_DIR}" \
-                                    "${names}" \
+                                    "${FLAG_CONFIG_NAME}" \
                                     "${FLAG_USE_FALLBACK}" \
                                     "${MULLE_FLAG_DEFER}"
 
@@ -563,19 +464,19 @@ sourcetree::main()
    sourcetree::db::_set_default_mode "${SOURCETREE_START}" "${FLAG_SOURCETREE_MODE}" \
    || fail "Could not set database to \"${FLAG_SOURCETREE_MODE}\""
 
-   log_setting "MULLE_SOURCETREE_PROJECT_DIR=${MULLE_SOURCETREE_PROJECT_DIR}"
-   log_setting "MULLE_SOURCETREE_ETC_DIR=${MULLE_SOURCETREE_ETC_DIR}"
-   log_setting "MULLE_SOURCETREE_STASH_DIRNAME=${MULLE_SOURCETREE_STASH_DIRNAME}"
-   log_setting "MULLE_SOURCETREE_STASH_DIR=${MULLE_SOURCETREE_STASH_DIR}"
-   log_setting "MULLE_SOURCETREE_VAR_DIR=${MULLE_SOURCETREE_VAR_DIR}"
-   log_setting "MULLE_VIRTUAL_ROOT=${MULLE_VIRTUAL_ROOT}"
-   log_setting "PWD=${PWD}"
-   log_setting "SOURCETREE_CONFIG_NAMES=${SOURCETREE_CONFIG_NAMES}"
-   log_setting "SOURCETREE_CONFIG_DIR=${SOURCETREE_CONFIG_DIR}"
-   log_setting "SOURCETREE_DB_FILENAME=${SOURCETREE_DB_FILENAME}"
-   log_setting "SOURCETREE_FIX_FILENAME=${SOURCETREE_FIX_FILENAME}"
-   log_setting "SOURCETREE_MODE=${SOURCETREE_MODE}"
-   log_setting "SOURCETREE_START=${SOURCETREE_START}"
+   log_setting "MULLE_SOURCETREE_PROJECT_DIR   : ${MULLE_SOURCETREE_PROJECT_DIR}"
+   log_setting "MULLE_SOURCETREE_ETC_DIR       : ${MULLE_SOURCETREE_ETC_DIR}"
+   log_setting "MULLE_SOURCETREE_STASH_DIRNAME : ${MULLE_SOURCETREE_STASH_DIRNAME}"
+   log_setting "MULLE_SOURCETREE_STASH_DIR     : ${MULLE_SOURCETREE_STASH_DIR}"
+   log_setting "MULLE_SOURCETREE_VAR_DIR       : ${MULLE_SOURCETREE_VAR_DIR}"
+   log_setting "MULLE_VIRTUAL_ROOT             : ${MULLE_VIRTUAL_ROOT}"
+   log_setting "PWD                            : ${PWD}"
+   log_setting "SOURCETREE_CONFIG_NAME         : ${SOURCETREE_CONFIG_NAME}"
+   log_setting "SOURCETREE_CONFIG_DIR          : ${SOURCETREE_CONFIG_DIR}"
+   log_setting "SOURCETREE_DB_FILENAME         : ${SOURCETREE_DB_FILENAME}"
+   log_setting "SOURCETREE_FIX_FILENAME        : ${SOURCETREE_FIX_FILENAME}"
+   log_setting "SOURCETREE_MODE                : ${SOURCETREE_MODE}"
+   log_setting "SOURCETREE_START               : ${SOURCETREE_START}"
 
    case "${cmd}" in
       add|copy|get|duplicate|info|knownmarks|mark|move|rename|rename-marks|remove|set|unmark)
@@ -619,14 +520,9 @@ sourcetree::main()
 
       filter)
          # shellcheck source=src/mulle-sourcetree-fix.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-filter.sh"
 
-         if sourcetree::nodemarks::filter_with_qualifier "$@"
-         then
-            echo 'YES'
-         else
-            echo 'NO'
-         fi
+         sourcetree::filter::main "$@"
       ;;
 
       libexec-dir|library-path)

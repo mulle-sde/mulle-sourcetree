@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2018 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -80,11 +80,8 @@ sourcetree::rewrite::do()
    local _uuid
    local _userinfo
 
-   shell_disable_glob; IFS=$'\n'
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
-
+   .foreachline nodeline in ${nodelines}
+   .do
       sourcetree::nodeline::parse "${nodeline}"  # memo: :_marks used raw
 
       sourcetree::node::r_sanitized_marks "${_marks}"
@@ -99,8 +96,7 @@ sourcetree::rewrite::do()
       sourcetree::node::_r_to_nodeline
       r_add_line "${output}" "${RVAL}"
       output="${RVAL}"
-   done
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .done
 
    sourcetree::cfg::write "${config}" "${output}"
 }

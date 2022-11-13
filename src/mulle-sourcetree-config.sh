@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -40,33 +40,23 @@ sourcetree::config::usage()
 Usage:
    ${MULLE_USAGE_NAME} config <command>
 
-   Manipulate sourcetree configuration files. Usually a sourcetree
-   configuration is stored in the
-   "${MULLE_SOURCETREE_ETC_DIR#${MULLE_USER_PWD}/}/config" file. OS specific
-   derivations called "scopes" are stored separately. (For the current
-   OS scope that would be "${MULLE_SOURCETREE_ETC_DIR#${MULLE_USER_PWD}/}/config.${MULLE_UNAME}").
+   Manipulate sourcetree configuration files. A sourcetree configuration is
+   usually stored in the
+   "${MULLE_SOURCETREE_ETC_DIR#"${MULLE_USER_PWD}/"}/config" file.
 
-   Sometimes you may need two completely different sourcetree configurations.
+   Sometimes you may need a completely different sourcetree configuration.
    For this you can have alternate sourcetree configuration names. When you
-   specify these alternate names with the --config-names flag or the
-   MULLE_SOURCETREE_CONFIG_NAMES_${PROJECT_UPCASE_IDENTIFIER:-LOCAL} environment
-   variable, these names will be searched in the given order of preference.
+   specify these alternate names with the --config-name flag or the
+   MULLE_SOURCETREE_CONFIG_NAME environment variable, this name will be
+   used instead of "config".
 
 Examples:
-   Two scopes
-      You want your library to build with mulle-objc by default, but on Apple
-      you always want to use the Apple Foundation. You use the OS "scoping" of
-      mulle-sourcetree with a standard "config" for mulle-objc and a
-      "config.darwin" for Apple.
-
-   Two names
-      If you desire to sometimes build with the Apple Foundation and sometimes
-      with mulle-objc, you could keep the mulle-objc dependencies in the
-      sourcetree with the default name "config" and introduce a second
-      sourcetree with the name "apple" for Apple Foundation.
-      To switch to the Apple Foundation you would set
-      MULLE_SOURCETREE_CONFIG_NAMES_${PROJECT_UPCASE_IDENTIFIER:-LOCAL} to
-      'apple:config', having the default as a fallback.
+   If you desire to sometimes build with the Apple Foundation and sometimes
+   with mulle-objc, you could keep the mulle-objc dependencies in the
+   sourcetree with the default name "config" and introduce a second
+   sourcetree with the name "apple" for Apple Foundation.
+   To switch to the Apple Foundation you would set
+   MULLE_SOURCETREE_CONFIG_NAME to 'apple'.
    
 Commands:
    list
@@ -89,7 +79,7 @@ Usage:
    List the available sourcetree configuration files. The "config"
    configuration is the default configuration used my ${MULLE_USAGE_NAME},
    unless overridden by a
-   MULLE_SOURCETREE_CONFIG_NAMES_\${PROJECT_UPCASE_IDENTIFIER} environment
+   MULLE_SOURCETREE_CONFIG_NAME_\${PROJECT_UPCASE_IDENTIFIER} environment
    variable.
 
 Options:
@@ -114,8 +104,7 @@ Usage:
    configuration.
 
 Tip:
-   Use the --config-names and --config-scope flags to address a specific
-   config file.
+   Use the --config-name flag to address a specific config file.
 
 Options:
    -h  : help
@@ -138,8 +127,7 @@ Usage:
    reappear on the next project upgrade.)
 
 Tip:
-   Use the --config-names and --config-scope flags to address a specific
-   config file.
+   Use the --config-name flag to address a specific config file.
 
 Options:
    -h  : help
@@ -152,51 +140,51 @@ sourcetree::config::r_find()
 {
    log_entry "sourcetree::config::r_find" "$@"
 
-   local config_names="$1"
-   local config_scope="$2"
+   local config_name="$1"
+#   local config_scope="$2"
 
-   local scope
+#   local scope
    local filename
    local rval
    local name
 
    rval=1
 
-   .foreachpath name in ${config_names}
+   .foreachpath name in ${config_name}
    .do
-      case "${config_scope}" in
-         'default')
-            scope="${MULLE_UNAME}"
-         ;;
-
-         'global')
-            scope=""
-         ;;
-
-         *)
-            scope="${config_scope}"
-         ;;
-      esac
-
-      if [ ! -z "${scope}" ]
-      then
-         filename="${MULLE_SOURCETREE_ETC_DIR}/${name}.${scope}"
-         if [ -f "${MULLE_SOURCETREE_ETC_DIR}/${name}.${scope}" ]
-         then
-            rval=0
-            .break
-         fi
-
-         filename="${MULLE_SOURCETREE_SHARE_DIR}/${name}.${scope}"
-         if [ -f "${MULLE_SOURCETREE_SHARE_DIR}/${name}.${scope}" ]
-         then
-            rval=0
-            .break
-         fi
-      fi
-
-      case "${config_scope}" in
-         default|global)
+#      case "${config_scope}" in
+#         'default')
+#            scope="${MULLE_UNAME}"
+#         ;;
+#
+#         'global')
+#            scope=""
+#         ;;
+#
+#         *)
+#            scope="${config_scope}"
+#         ;;
+#      esac
+#
+#      if [ ! -z "${scope}" ]
+#      then
+#         filename="${MULLE_SOURCETREE_ETC_DIR}/${name}.${scope}"
+#         if [ -f "${MULLE_SOURCETREE_ETC_DIR}/${name}.${scope}" ]
+#         then
+#            rval=0
+#            .break
+#         fi
+#
+#         filename="${MULLE_SOURCETREE_SHARE_DIR}/${name}.${scope}"
+#         if [ -f "${MULLE_SOURCETREE_SHARE_DIR}/${name}.${scope}" ]
+#         then
+#            rval=0
+#            .break
+#         fi
+#      fi
+#
+#      case "${config_scope}" in
+#         default|global)
             filename="${MULLE_SOURCETREE_ETC_DIR}/${name}"
             if [ -f "${MULLE_SOURCETREE_ETC_DIR}/${name}" ]
             then
@@ -210,8 +198,8 @@ sourcetree::config::r_find()
                rval=0
                .break
             fi
-         ;;
-      esac
+#         ;;
+#      esac
 
       filename=""
    .done
@@ -284,7 +272,7 @@ sourcetree::config::list_main()
                r_add_unique_line "${names}" "${RVAL}"
                names="${RVAL}"
             else
-               printf "%s\n" "${filename#${MULLE_USER_PWD}/}"
+               printf "%s\n" "${filename#"${MULLE_USER_PWD}/"}"
             fi
             found='YES'
          fi
@@ -305,7 +293,7 @@ sourcetree::config::list_main()
                r_add_unique_line "${names}" "${RVAL}"
                names="${RVAL}"
             else
-               printf "%s\n" "${filename#${MULLE_USER_PWD}/}"
+               printf "%s\n" "${filename#"${MULLE_USER_PWD}/"}"
             fi
             found='YES'
          fi
@@ -369,63 +357,52 @@ sourcetree::config::copy_main()
    local destination="$1"
 
    local destination_file
-   local name
-   local scope
+#   local name
+#   local scope
 
    if [ -z "${destination}" ]
    then
       fail "destination must not be empty"
    fi
 
-   case "${destination}" in
-      *\.*)
-         name="${destination%%.*}"
-         scope="${destination#*.}"
-      ;;
-
-      *)
-         name="${destination}"
-      ;;
-   esac
-
-   if [ "${name//[^a-zA-Z0-9_-]/}" != "${name}" ]
+   if [ "${destination//[^a-zA-Z0-9_-]/}" != "${destination}" ]
    then
       fail "\"${destination}\" is not a valid configuration name (identifier[.identifier])"
    fi
 
-   if [ "${scope//[^a-zA-Z0-9_-]/}" != "${scope}" ]
-   then
-      fail "\"${destination}\" is not a valid configuration name (${name}[.identifier])"
-   fi
-
-   if [ ! -z "${scope}" -a "${name}.${scope}" != "${destination}" ]
-   then
-      fail "\"${destination}\" is not a valid configuration name (identifier.identifier)"
-   fi
+#   if [ "${scope//[^a-zA-Z0-9_-]/}" != "${scope}" ]
+#   then
+#      fail "\"${destination}\" is not a valid configuration name (${name}[.identifier])"
+#   fi
+#
+#   if [ ! -z "${scope}" -a "${name}.${scope}" != "${destination}" ]
+#   then
+#      fail "\"${destination}\" is not a valid configuration name (identifier.identifier)"
+#   fi
 
    destination_file="${MULLE_SOURCETREE_ETC_DIR}/${destination}"
    if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' -a -f "${destination_file}" ]
    then
-      fail "\"${destination_file#${MULLE_USER_PWD}/}\" already exists"
+      fail "\"${destination_file#"${MULLE_USER_PWD}/"}\" already exists"
    fi
 
-   if ! sourcetree::config::r_find "${SOURCETREE_CONFIG_NAMES}" "${SOURCETREE_CONFIG_SCOPE}"
+   if ! sourcetree::config::r_find "${SOURCETREE_CONFIG_NAME}" # "${SOURCETREE_CONFIG_SCOPES}"
    then
       local text
 
-      case "${SOURCETREE_CONFIG_SCOPE}" in
-         default|global)
-            text= ""
-         ;;
-
-         *)
-            text="${SOURCETREE_CONFIG_SCOPE} "
-         ;;
-      esac
-      fail "No ${text}sourcetree with names ${SOURCETREE_CONFIG_NAMES//:/,} found"
+#      case "${SOURCETREE_CONFIG_SCOPES}" in
+#         default|global)
+#            text=""
+#         ;;
+#
+#         *)
+#            text="${SOURCETREE_CONFIG_SCOPES} "
+#         ;;
+#      esac
+      fail "No ${text}sourcetree with name ${SOURCETREE_CONFIG_NAME} found"
    fi
 
-   log_verbose "${RVAL#${MULLE_USER_PWD}/} found"
+   log_verbose "${RVAL#"${MULLE_USER_PWD}/"} found"
 
    remove_file_if_present "${destination_file}"
    exekutor cp -a "${RVAL}" "${destination_file}"
@@ -436,9 +413,9 @@ sourcetree::config::remove_main()
 {
    log_entry "sourcetree::config::remove_main" "$@"
 
-   local scope
-
-   scope="${SOURCETREE_CONFIG_SCOPE}"
+#   local scope
+#
+#   scope="${SOURCETREE_CONFIG_SCOPES}"
 
    while [ $# -ne 0 ]
    do
@@ -447,12 +424,12 @@ sourcetree::config::remove_main()
             sourcetree::config::remove_usage
          ;;
 
-         --scope)
-            [ $# -eq 1 ] && sourcetree::config::remove_usage "Missing argument to \"$1\""
-            shift
-
-            scope="$1"
-         ;;
+#         --scope)
+#            [ $# -eq 1 ] && sourcetree::config::remove_usage "Missing argument to \"$1\""
+#            shift
+#
+#            scope="$1"
+#         ;;
 
          -*)
             sourcetree::config::remove_usage "Unknown config copy option $1"
@@ -470,29 +447,29 @@ sourcetree::config::remove_main()
 
    local names
 
-   names="${SOURCETREE_CONFIG_NAMES}"
+   names="${SOURCETREE_CONFIG_NAME}"
    if [ $# -eq 1 ]
    then
       names="$1"
    fi
 
-   if ! sourcetree::config::r_find "${names}" "${scope}"
+   if ! sourcetree::config::r_find "${names}" # "${scope}"
    then
       local text
-
-      case "${scope}" in
-         default|global)
-            text=""
-         ;;
-
-         *)
-            text="${scope} "
-         ;;
-      esac
+#
+#      case "${scope}" in
+#         default|global)
+#            text=""
+#         ;;
+#
+#         *)
+#            text="${scope} "
+#         ;;
+#      esac
       fail "No ${text}sourcetree with name \"${names//:/\" or \"}\" found"
    fi
 
-   log_verbose "${RVAL#${MULLE_USER_PWD}/} found"
+   log_verbose "${RVAL#"${MULLE_USER_PWD}/"} found"
 
    #
    # if in share, we gotta create an empty file, to effectively hide it

@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -173,7 +173,7 @@ sourcetree::fix::_fixup_address_change()
 
    r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${datasource}"
 
-   exekutor echo "cd \"${RVAL#${MULLE_USER_PWD}/}\""
+   exekutor echo "cd \"${RVAL#"${MULLE_USER_PWD}/"}\""
    exekutor echo "mulle-sourcetree set --address '${fixaddress}' '${address}'"
 }
 
@@ -187,7 +187,7 @@ sourcetree::fix::_fixup_manual_removal()
 
    r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${datasource}"
 
-   exekutor echo "cd \"${RVAL#${MULLE_USER_PWD}/}\""
+   exekutor echo "cd \"${RVAL#"${MULLE_USER_PWD}/"}\""
    exekutor echo "mulle-sourcetree remove '${address}'"
 }
 
@@ -343,7 +343,7 @@ sourcetree::fix::main()
       . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
    fi
 
-   if ! sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
+   if ! sourcetree::cfg::is_config_present "${SOURCETREE_START}"
    then
       log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
    fi

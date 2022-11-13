@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -57,20 +57,13 @@ sourcetree::dbstatus::main()
 
    [ "$#" -eq 0 ] || sourcetree::status::usage
 
-   if [ -z "${MULLE_SOURCETREE_CFG_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-cfg.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh" || exit 1
-   fi
-   if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-cfg.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
-   fi
-   local _configfile
-   local _fallback_configfile
+   include "sourcetree::cfg"
+   include "sourcetree::db"
 
-   sourcetree::cfg::__common_configfile "${SOURCETREE_START}"
+   local configfile
+
+   sourcetree::cfg::r_configfile_for_read "${SOURCETREE_START}"
+   configfile="${RVAL}"
 
    local _database
    local _databasedir
@@ -79,17 +72,13 @@ sourcetree::dbstatus::main()
 
    dbdonefile="${_databasedir}/.db_done"
 
-   if [ ! -e "${_configfile}" ]
+   if [ ! -e "${configfile}" ]
    then
-      if [ ! -e "${_fallback_configfile}" ]
-      then
-         log_info "No sourcetree here"
-         return 1
-      fi
-      _configfile="${_fallback_configfile}"
+      log_info "No sourcetree here"
+      return 1
    fi
 
-   if rexekutor [ "${_configfile}" -nt "${dbdonefile}" ]
+   if rexekutor [ "${configfile}" -nt "${dbdonefile}" ]
    then
       if [ -e "${dbdonefile}" ]
       then
@@ -104,6 +93,20 @@ sourcetree::dbstatus::main()
    then
       log_info "Needs sync as database is not ready"
       return 2
+   fi
+
+   if rexekutor [ ! -e "${MULLE_SOURCETREE_STASH_DIR}" ]
+   then
+      local dependencies
+
+      # only complain if there are dependencies in configfile
+      # how does mulle-sourcetree know about this though ?
+      dependencies="`sourcetree::cfg::_read "${configfile}" | egrep -v 'no-dependency' `"
+      if [ ! -z "${dependencies}" ]
+      then
+         log_info "No stash here"
+         return 2
+      fi
    fi
 
    log_info "Is up-to-date"

@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -80,18 +80,15 @@ sourcetree::nodemarks::_r_find_prefix()
 
    local i
 
-   shell_disable_glob ; IFS=","
-   for i in ${marks}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .foreachitem i in ${marks}
+   .do
       case "${i}" in
          "${prefix}"*)
             RVAL="$i"
-            return
+            return 0
          ;;
       esac
-   done
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 
    RVAL=""
    return 1
@@ -166,7 +163,7 @@ sourcetree::nodemarks::r_remove()
 
       *)
          sourcetree::nodemarks::_r_remove "${marks}" "only-${key}"
-         sourcetree::nodemarks::_r_add "${RVAL}" "no-${key}"
+         sourcetree::nodemarks::_r_add    "${RVAL}"  "no-${key}"
       ;;
    esac
 }
@@ -233,11 +230,8 @@ sourcetree::nodemarks::version_match()
    local i
    local markvalue
 
-   shell_disable_glob ; IFS=","
-   for i in ${marks}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
-
+   .foreachitem i in ${marks}
+   .do
       case "$i" in
          "${key}"-*)
             if [ -z "${MULLE_VERSION_SH}" ]
@@ -245,7 +239,7 @@ sourcetree::nodemarks::version_match()
                . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-version.sh" || exit 1
             fi
 
-            markvalue="${i#${key}-}"
+            markvalue="${i#"${key}-"}"
             r_version_distance "${value}" "${markvalue}"
             case "${operator}" in
                ""|"="|"==")
@@ -283,8 +277,7 @@ sourcetree::nodemarks::version_match()
                ;;
             esac
       esac
-   done
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 
    return 2  # no match found
 }
@@ -410,10 +403,8 @@ sourcetree::nodemarks::compatible_with_nodemarks()
 
    local key
 
-   shell_disable_glob ; IFS=","
-   for key in ${anymarks}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .foreachitem key in ${anymarks}
+   .do
       case "${key}" in
          no-*)
             key="${key:3}"
@@ -424,7 +415,7 @@ sourcetree::nodemarks::compatible_with_nodemarks()
          ;;
 
         version-*)
-            continue
+            .continue
          ;;
       esac
 
@@ -440,8 +431,7 @@ sourcetree::nodemarks::compatible_with_nodemarks()
             return 1
          fi
       fi
-   done
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 
    return 0
 }
@@ -455,16 +445,13 @@ sourcetree::nodemarks::intersect()
 
    local key
 
-   shell_disable_glob ; IFS=","
-   for key in ${anymarks}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .foreachitem key in ${anymarks}
+   .do
       if sourcetree::nodemarks::_contain "${marks}" "${key}"
       then
          return 0
       fi
-   done
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 
    return 1
 }
@@ -480,13 +467,11 @@ sourcetree::nodemarks::r_simplify()
    local result
    local key
 
-   shell_disable_glob ; IFS=","
-   for key in ${marks}
-   do
+   .foreachitem key in ${marks}
+   .do
       sourcetree::nodemarks::r_add "${result}" "${key}"
       result="${RVAL}"
-   done
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 
    RVAL="${result}"
 }
@@ -496,16 +481,16 @@ sourcetree::nodemarks::sort()
 {
    local marks="$1"
 
-   local result
    local i
+   local result
 
-   RVAL=
-   IFS=$'\n'
-   for i in `tr ',' '\n' <<< "${marks}" | LC_ALL=C sort -u`
-   do
-      r_comma_concat "${RVAL}" "${i}"
-   done
-   IFS="${DEFAULT_IFS}"
+   .foreachline i in `tr ',' '\n' <<< "${marks}" | LC_ALL=C sort -u`
+   .do
+      r_comma_concat "${result}" "${i}"
+      result="${RVAL}"
+   .done
+
+   RVAL="${result}"
 }
 
 
@@ -615,12 +600,9 @@ sourcetree::nodemarks::_filter_sexpr()
          key="${_s%%[[:space:])]*}"
          _s="${_s#"${key}"}"
 
-         if [ ${ZSH_VERSION+x} ]
-         then
-            value="${(P)key}"
-         else
-            value="${!key}"
-         fi
+         r_shell_indirect_expand "${key}"
+         value="${RVAL}"
+
          [ ! -z "${value}" ]
          return $?
       ;;

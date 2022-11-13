@@ -1,4 +1,7 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
+# shellcheck disable=SC2236
+# shellcheck disable=SC2166
+# shellcheck disable=SC2006
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -32,21 +35,152 @@
 MULLE_SOURCETREE_CFG_SH="included"
 
 
-#
-# config file stuff. The fallback file is usally in "share" and the default
-# in "etc"
+# some old hack that I should get rid off (only used on one occasion)
+sourcetree::cfg::r_old_absolute_filename()
+{
+   log_entry "sourcetree::cfg::r_old_absolute_filename" "$@"
+
+   local config="$1"
+   local address="$2"
+#   local style="$3"
+
+   case "${config}" in
+      /|/*/)
+      ;;
+
+      *)
+         _internal_fail "config \"${config}\" is malformed"
+      ;;
+   esac
+
+   case "${address}" in
+      /*)
+         _internal_fail "address \"${address}\" is absolute"
+      ;;
+   esac
+
+   # support test for global shared dir, which no-one uses
+   #  "${style}" != "share" -a
+   if [ "${config#"${MULLE_SOURCETREE_STASH_DIR}"}" != "${config}" ]
+   then
+      RVAL="${config}${address}"
+   else
+      RVAL="${MULLE_VIRTUAL_ROOT}${config}${address}"
+   fi
+}
+
+
+
+sourcetree::cfg::r_absolute_filename()
+{
+   local config="$1"
+   local filename="$2"
+
+   local configfile
+
+   # special handling for absolute stash
+   if [ "${MULLE_SOURCETREE_STASH_DIR:0:1}" = '/' ] && \
+      string_has_prefix "${config}" "${MULLE_SOURCETREE_STASH_DIR}"
+   then
+      case "${filename}" in
+         "/")
+            # filename="${filename}"
+            # fallback_filename="${fallback_filename}"
+         ;;
+
+         /*/)
+            RVAL="${config}${filename}"
+            return
+         ;;
+
+         *)
+            RVAL="${config}/${filename}"
+            return
+         ;;
+      esac
+   fi
+
+   #
+   # figure out actual _configfile
+   # need not exist
+   #
+   case "${config}" in
+      "#/"*)  # hack for copy command for absolute names
+         RVAL="${config#\#}/${filename}"
+         return
+      ;;
+
+      "/")
+         RVAL="${MULLE_VIRTUAL_ROOT}/${filename}"
+         return
+      ;;
+
+      /*/)
+         RVAL="${MULLE_VIRTUAL_ROOT}${config}${filename}"
+         return
+      ;;
+
+      /*)
+         RVAL="${MULLE_VIRTUAL_ROOT}${config}/${filename}"
+         return
+      ;;
+   esac
+   _internal_fail "Config \"${config}\" must start with '/'"
+}
+
+
 #
 # local _configfile
 # local _fallback_configfile
 #
+sourcetree::cfg::__common_configfile()
+{
+   log_entry "sourcetree::cfg::__common_configfile" "$@"
+
+   local config="$1"
+
+   [ -z "${SOURCETREE_CONFIG_NAME}" ] \
+      && _internal_fail "SOURCETREE_CONFIG_NAME is not set"
+   [ -z "${SOURCETREE_CONFIG_DIR}" ] \
+      && _internal_fail "SOURCETREE_CONFIG_DIR is not set"
+   [ -z "${MULLE_VIRTUAL_ROOT}" ] && _internal_fail "MULLE_VIRTUAL_ROOT is not set"
+   [ -z "${MULLE_UNAME}" ] && _internal_fail "MULLE_VIRTUAL_ROOT is not set"
+
+   is_absolutepath "${SOURCETREE_CONFIG_DIR}" && _internal_fail "SOURCETREE_CONFIG_DIR must be relative"
+
+   # this is usually the etc dir (relative)
+   # we get something like .mulle/etc/sourcetree/config here
+   r_filepath_concat "${SOURCETREE_CONFIG_DIR}" "${SOURCETREE_CONFIG_NAME}"
+   sourcetree::cfg::r_absolute_filename "${config}" "${RVAL}"
+   _configfile="${RVAL}"
+   _fallback_configfile=
+
+   # this is usually the share dir
+   # we get something like .mulle/share/sourcetree/config here
+   if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_DIR}" ]
+   then
+      r_filepath_concat "${SOURCETREE_FALLBACK_CONFIG_DIR}" "${SOURCETREE_CONFIG_NAME}"
+      sourcetree::cfg::r_absolute_filename "${config}" "${RVAL}"
+      _fallback_configfile="${RVAL}"
+   fi
+
+   log_setting "_configfile          : ${_configfile}"
+   log_setting "_fallback_configfile : ${_fallback_configfile}"
+}
+
+
+#
+# config file stuff. The fallback file is usally in "share" and the default
+# in "etc"
+#
+#
 # $1 is SOURCE_TREE_START usually '/'
-# $2 is either "r" (default) or "w"
+# $2 is either "" (default) or "fallback-only"
 #
 # Not sure of fallback should be even be set for "write"
 #
 # Globals:
-#    SOURCETREE_CONFIG_NAMES
-#    SOURCETREE_CONFIG_SCOPE
+#    SOURCETREE_CONFIG_NAME
 #    SOURCETREE_CONFIG_DIR
 #    SOURCETREE_FALLBACK_CONFIG_DIR
 #
@@ -55,214 +189,215 @@ MULLE_SOURCETREE_CFG_SH="included"
 #    MULLE_UNAME
 #    MULLE_VIRTUAL_ROOT
 #
-sourcetree::cfg::__common_configfile()
+sourcetree::cfg::r_configfile_for_read()
 {
-   log_entry "sourcetree::cfg::__common_configfile" "$@"
+   log_entry "sourcetree::cfg::r_configfile_for_read" "$@"
 
-   [ -z "${SOURCETREE_CONFIG_NAMES}" ] \
-      && _internal_fail "SOURCETREE_CONFIG_NAMES is not set"
-   [ -z "${SOURCETREE_CONFIG_DIR}" ] \
-      && _internal_fail "SOURCETREE_CONFIG_DIR is not set"
-   [ -z "${MULLE_VIRTUAL_ROOT}" ] && _internal_fail "MULLE_VIRTUAL_ROOT is not set"
-   [ -z "${MULLE_UNAME}" ] && _internal_fail "MULLE_VIRTUAL_ROOT is not set"
+   local config="$1"
+   local mode="$2"
 
-   is_absolutepath "${SOURCETREE_CONFIG_DIR}" && _internal_fail "SOURCETREE_CONFIG_DIR must be relative"
+   local _configfile
+   local _fallback_configfile
 
-   # TODO: change scope to SOURCETREE_CONFIG_SCOPES, so that the default scopes
-   #       are:
-   #        ${MULLE_UNAME}:global
-   #
-   # then users can expand the scopes search to:
-   #        ubuntu-linux:linux:global
-   #
-   local names
-   local scope
+   sourcetree::cfg::__common_configfile "${config}"
 
-   scope="${SOURCETREE_CONFIG_SCOPE}"
-   names="${SOURCETREE_CONFIG_NAMES}"
+#  local scopes
 
-   log_setting "SOURCETREE_CONFIG_SCOPE : ${scope}"
-   log_setting "SOURCETREE_CONFIG_NAMES : ${names}"
+#  scopes="${SOURCETREE_CONFIG_SCOPES:-default}"
+#  if [ "${scopes}" = "default" ]
+#  then
+#     scopes="${MULLE_UNAME}:global"
+#  fi
 
-   #
-   # for writing can only have one filename, as the file may not exist
-   #
-   case "$2" in
-      *w)
-         case "${scope}" in
-            global)
-               names="config"
-            ;;
+#   local scope
+   local configfile
+   local fallback_configfile
 
-            "")
-               _internal_fail "scope can't be empty"
-            ;;
+#   .foreachpath scope in ${scopes}
+#   .do
+#      case "${scope}" in
+#         "")
+#            .continue
+#         ;;
+#
+#         'global')
+            configfile="${_configfile}"
+            fallback_configfile="${_fallback_configfile}"
+#         ;;
+#
+#         # address custom scope (don't check for existance here)
+#         *)
+#            configfile="${_configfile}.${scope}"
+#            fallback_configfile="${_fallback_configfile}.${scope}"
+#         ;;
+#      esac
 
-            default)
-               names="${SOURCETREE_CONFIG_NAMES%%:*}" # pick first to write
-               scope="global"
-            ;;
-
-            *)
-               names="${SOURCETREE_CONFIG_NAMES%%:*}" # pick first to write
-                                                      # keep scope
-            ;;
-         esac
-      ;;
-   esac
-
-   log_setting "scope                   : ${scope}"
-   log_setting "names                   : ${names}"
-
-   local name
-   local lastname
-   local filename
-   local fallback_filename
-   local s
-
-   lastname="${names##*:}"
-
-   IFS=":"
-   for name in ${names}
-   do
-      IFS="${DEFAULT_IFS}"
-
-      # this is usually the etc dir (relative)
-      # we get something like .mulle/etc/sourcetree/config here
-      r_filepath_concat "${SOURCETREE_CONFIG_DIR}" "${name}"
-      filename="${RVAL}"
-
-      # this is usually the share dir
-      # we get something like .mulle/share/sourcetree/config here
-      if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_DIR}" ]
-      then
-         r_filepath_concat "${SOURCETREE_FALLBACK_CONFIG_DIR}" "${name}"
-         fallback_filename="${RVAL}"
-      fi
-
-      _configfile=""
-      _fallback_configfile=""
-
-      # special handling for absolute stash
-      if [ "${MULLE_SOURCETREE_STASH_DIR:0:1}" = '/' ] && \
-         string_has_prefix "$1" "${MULLE_SOURCETREE_STASH_DIR}"
-      then
-         case "$1" in
-            "/")
-               # filename="${filename}"
-               # fallback_filename="${fallback_filename}"
-            ;;
-
-            /*/)
-               _configfile="$1${filename}"
-               if [ ! -z "${fallback_filename}" ]
-               then
-                  _fallback_configfile="$1${fallback_filename}"
-               fi
-            ;;
-
-            *)
-               _configfile="$1/${filename}"
-               if [ ! -z "${fallback_filename}" ]
-               then
-                  _fallback_configfile="$1/${fallback_filename}"
-               fi
-            ;;
-         esac
-      fi
-
-      if [ -z "${_configfile}" ]
-      then
-         #
-         # figure out actual _configfile _configfile
-         # need not exist
-         #
-         case "$1" in
-            "#/"*)  # hack for copy command for absolute names
-               _configfile="${1#\#}/${filename}"
-               if [ ! -z "${fallback_filename}" ]
-               then
-                  _fallback_configfile="${1#\#}/${fallback_filename}"
-               fi
-            ;;
-
-            "/")
-               _configfile="${MULLE_VIRTUAL_ROOT}/${filename}"
-               if [ ! -z "${fallback_filename}" ]
-               then
-                  _fallback_configfile="${MULLE_VIRTUAL_ROOT}/${fallback_filename}"
-               fi
-            ;;
-
-            /*/)
-               _configfile="${MULLE_VIRTUAL_ROOT}$1${filename}"
-               if [ ! -z "${fallback_filename}" ]
-               then
-                  _fallback_configfile="${MULLE_VIRTUAL_ROOT}$1${fallback_filename}"
-               fi
-            ;;
-
-            /*)
-               _configfile="${MULLE_VIRTUAL_ROOT}$1/${filename}"
-               if [ ! -z "${fallback_filename}" ]
-               then
-                  _fallback_configfile="${MULLE_VIRTUAL_ROOT}$1/${fallback_filename}"
-               fi
-            ;;
-
-            *)
-               _internal_fail "database \"$1\" must start with '/'"
-            ;;
-         esac
-      fi
-
-      case "${scope}" in
-         'default')
-            if [ -f "${_configfile}.${MULLE_UNAME}" ]
-            then
-               _configfile="${_configfile}.${MULLE_UNAME}"
-            fi
-            if [ ! -z "${_fallback_configfile}" -a -f "${_fallback_configfile}.${MULLE_UNAME}"  ]
-            then
-               _fallback_configfile="${_fallback_configfile}.${MULLE_UNAME}"
-            fi
-         ;;
-
-         'global')
-         ;;
-
-         "")
-            _internal_fail "scope can't be empty"
-         ;;
-
-         # address custom scope (don't check for existance here)
-         *)
-            _configfile="${_configfile}.${scope}"
-            if [ ! -z "${_fallback_configfile}" ]
-            then
-               _fallback_configfile="${_fallback_configfile}.${scope}"
-            fi
-         ;;
-      esac
+      log_setting "configfile           : ${configfile}"
+      log_setting "fallback_configfile  : ${fallback_configfile}"
 
       #
       # if there are more names to search and there are no files here
       # keep going
       #
-      if [ "$name" != "${lastname}" ]
+      if [ -f "${configfile}" ]
       then
-         if [ ! -f "${_configfile}" -a ! -f "${_fallback_configfile}" ]
+         if [ "${mode}" == "fallback-only" ]
          then
-            continue
+            if [ -f "${fallback_configfile}" ]
+            then
+               log_debug "return       : ${fallback_configfile}"
+               RVAL="${fallback_configfile}"
+               return 0
+            fi
+            log_debug "return       : NONE"
+            RVAL=
+            return 1
          fi
+
+         log_debug "return       : ${configfile}"
+         RVAL="${configfile}"
+         return 0
       fi
+#   .done
 
-      break # found something
-   done
+   #
+   # in fallback-only we look for the fallback file matching the configfile
+   # we return 1, if there is only the fallback file or of there was no
+   # configfile match (!) ot there is no such fallback file
+   #
+   if [ "${mode}" == "fallback-only" ]
+   then
+      log_debug "return       : NONE"
+      RVAL=""
+      return 1
+   fi
 
-   IFS="${DEFAULT_IFS}"
+#   .foreachpath scope in ${scopes}
+#   .do
+#      case "${scope}" in
+#         "")
+#            .continue
+#         ;;
+#
+#         'global')
+            configfile="${_fallback_configfile}"
+#         ;;
+#
+#         # address custom scope (don't check for existance here)
+#         *)
+#            configfile="${_fallback_configfile}.${scope}"
+#         ;;
+#      esac
 
-   [ -z "${_configfile}" ] && _internal_fail "_configfile must not be empty"
+      log_setting "configfile           : ${configfile}"
+
+      #
+      # if there are more names to search and there are no files here
+      # keep going
+      #
+      if [ -f "${configfile}" ]
+      then
+         log_debug "return       : ${configfile}"
+         RVAL="${configfile}"
+         return 0
+      fi
+#   .done
+
+   log_debug "return       : NONE"
+   RVAL=
+   return 1
+}
+
+
+#
+# config file stuff. The fallback file is usally in "share" and the default
+# in "etc"
+#
+# $1 is SOURCE_TREE_START usually '/'
+# $2 is either "r" (default) or "w"
+#
+# Not sure of fallback should be even be set for "write"
+#
+# Globals:
+#    SOURCETREE_CONFIG_NAME
+#    SOURCETREE_CONFIG_SCOPES
+#    SOURCETREE_CONFIG_DIR
+#    SOURCETREE_FALLBACK_CONFIG_DIR
+#
+# Environment:
+#    MULLE_SOURCETREE_STASH_DIR
+#    MULLE_UNAME
+#    MULLE_VIRTUAL_ROOT
+#
+sourcetree::cfg::r_configfile_for_write()
+{
+   log_entry "sourcetree::cfg::r_configfile_for_write" "$@"
+
+   local _configfile
+   local _fallback_configfile
+
+   sourcetree::cfg::__common_configfile "$@"
+
+   [ -z "${_configfile}" ] && _internal_fail "configfile must not be empty"
+
+#   local scopes
+#
+#   scopes="${SOURCETREE_CONFIG_SCOPES:-default}"
+#   if [ "${scopes}" = "default" ]
+#   then
+#      scopes="${MULLE_UNAME}:global"
+#   fi
+
+   #
+   # pick the first one that exists, otherwise use last scope
+   #
+#   .foreachpath scope in ${scopes}
+#   .do
+#      case "${scope}" in
+#         "")
+#            .continue
+#         ;;
+#
+#         'global')
+            configfile="${_configfile}"
+#         ;;
+#
+#         # address custom scope (don't check for existance here)
+#         *)
+#            configfile="${_configfile}.${scope}"
+#         ;;
+#      esac
+
+      log_setting "configfile   : ${configfile}"
+
+      #
+      # if there are more names to search and there are no files here
+      # keep going
+      #
+#      if [ -f "${configfile}" ]
+#      then
+#         log_debug "return       : ${configfile}"
+         RVAL="${configfile}"
+#         return 0
+#      fi
+#   .done
+#   local lastscope
+#
+#   lastscope="${scopes##*:}"
+#
+#   case "${lastscope}" in
+#      ''|'global')
+#         RVAL="${_configfile}"
+#      ;;
+#
+#      # address custom scope (don't check for existance here)
+#      *)
+#         RVAL="${_configfile}.${lastscope}"
+#      ;;
+#   esac
+#
+   log_debug "return       : ${RVAL}"
+   return 0
 }
 
 
@@ -280,7 +415,8 @@ sourcetree::cfg::__common_rootdir()
                ;;
 
                /*/)
-                  _rootdir="$(sed 's|/$||g' <<< "$1")"
+                  _rootdir="${1%%\/}"
+                  _rootdir="${_rootdir:-.}"  # if all were '///'
                ;;
 
                *)
@@ -306,11 +442,11 @@ sourcetree::cfg::__common_rootdir()
       ;;
 
       /*/)
-         _rootdir="${MULLE_VIRTUAL_ROOT}/$(sed 's|/$||g' <<< "$1")"
+         _rootdir="${MULLE_VIRTUAL_ROOT}${1%%\/}"
       ;;
 
       /*)
-         _rootdir="${MULLE_VIRTUAL_ROOT}/$1"
+         _rootdir="${MULLE_VIRTUAL_ROOT}$1"
       ;;
 
       *)
@@ -332,31 +468,20 @@ sourcetree::cfg::rootdir()
 #
 # these can be prefixed for external queries
 #
-sourcetree::cfg::r_config_exists()
+sourcetree::cfg::is_config_present()
 {
-   log_entry "sourcetree::cfg::r_config_exists" "$@"
+   log_entry "sourcetree::cfg::is_config_present" "$@"
 
-   local _configfile
-   local _fallback_configfile
+   local config="$1"
 
-   sourcetree::cfg::__common_configfile "$1"
-
-   if [ -f "${_configfile}" ]
+   sourcetree::cfg::r_configfile_for_read "${config}"
+   if [ ! -z "${RVAL}" ]
    then
-      log_debug "\"${_configfile}\" exists"
-      RVAL="${_configfile}"
+      log_debug "\"${config}\" exists as \"${RVAL}\""
       return 0
    fi
 
-   if [ ! -z "${_fallback_configfile}" ] && [ -f "${_fallback_configfile}" ]
-   then
-      log_debug "\"${_fallback_configfile}\" exists"
-      RVAL="${_fallback_configfile}"
-      return 0
-   fi
-
-   log_debug "\"${_configfile}\" not found"
-   RVAL=
+   log_debug "\"${config}\" not found"
    return 1
 }
 
@@ -365,42 +490,14 @@ sourcetree::cfg::timestamp()
 {
    log_entry "sourcetree::cfg::timestamp" "$@"
 
-   local _configfile
-   local _fallback_configfile
+   local config="$1"
 
-   sourcetree::cfg::__common_configfile "$1"
-
-   if [ -f "${_configfile}" ]
+   if ! sourcetree::cfg::r_configfile_for_read "${config}"
    then
-      modification_timestamp "${_configfile}"
-      return $?
+      return 1
    fi
 
-   if [ ! -z "${_fallback_configfile}" ] && [ -f "${_fallback_configfile}" ]
-   then
-      modification_timestamp "${_fallback_configfile}"
-      return $?
-   fi
-}
-
-
-sourcetree::cfg::__resolve_configfile()
-{
-   if [ -f "${_configfile}" ]
-   then
-      _configfile="${_configfile}"
-      return 0
-   fi
-
-   if [ ! -z "${_fallback_configfile}" ] && [ -f "${_fallback_configfile}" ]
-   then
-      _configfile="${_fallback_configfile}"
-      return 0
-   fi
-
-   log_debug "No config file \"${_configfile#${MULLE_USER_PWD}/}\" or \"${_fallback_configfile#${MULLE_USER_PWD}/}\" found (${PWD#${MULLE_USER_PWD}/})"
-   _configfile=
-   return 1
+   modification_timestamp "${RVAL}"
 }
 
 
@@ -409,16 +506,24 @@ sourcetree::cfg::__resolve_configfile()
 #                     1: no lines
 #                     2: error
 #
-sourcetree::cfg::__read()
+sourcetree::cfg::_read()
 {
-   log_debug "Read config file \"${_configfile#${MULLE_USER_PWD}/}\" (${PWD#${MULLE_USER_PWD}/})"
-   egrep -s -v '^#' "${_configfile}"
-}
+   local configfile="$1"
 
-sourcetree::cfg::__fallback_read()
-{
-   log_debug "Read fallback config file \"${_fallback_configfile#${MULLE_USER_PWD}/}\" (${PWD#${MULLE_USER_PWD}/})"
-   egrep -s -v '^#' "${_fallback_configfile}"
+   local  rval
+
+   egrep -s -v '^#' "${configfile}"
+   rval=$?
+
+   log_debug "Read config file \"${configfile#"${MULLE_USER_PWD}/"}\" (${PWD#"${MULLE_USER_PWD}/"}) rval:${rval}"
+
+   # egrep error is 2
+   case $rval in 
+      0|1)
+         return 0
+      ;;
+   esac
+   return $rval
 }
 
 
@@ -426,38 +531,14 @@ sourcetree::cfg::read()
 {
    log_entry "sourcetree::cfg::read" "$@"
 
-   local _configfile
-   local _fallback_configfile
+   local config="$1"
 
-   sourcetree::cfg::__common_configfile "$1"
-
-   if ! sourcetree::cfg::__resolve_configfile
+   if ! sourcetree::cfg::r_configfile_for_read "${config}"
    then
       return 1
    fi
 
-   sourcetree::cfg::__read
-}
-
-
-sourcetree::cfg::write()
-{
-   log_entry "sourcetree::cfg::write" "$@"
-
-   [ -z "${MULLE_SOURCETREE_ETC_DIR}" ] && _internal_fail "MULLE_SOURCETREE_ETC_DIR is empty"
-
-   local _configfile
-   local _fallback_configfile
-
-   sourcetree::cfg::__common_configfile "$1" "w"
-   shift
-
-   r_mkdir_parent_if_missing "${_configfile}"
-
-   if ! redirect_exekutor "${_configfile}" printf "%s\n" "$*"
-   then
-      exit 1
-   fi
+   sourcetree::cfg::_read "${RVAL}"
 }
 
 
@@ -533,47 +614,152 @@ sourcetree::cfg::has_duplicate()
 }
 
 
-#
-# local _configfile
-# local _fallback_configfile
-#
-sourcetree::cfg::_copy_to_etc_if_needed()
+sourcetree::cfg::r_prepare_for_write()
 {
-   log_entry "sourcetree::cfg::_copy_to_etc_if_needed" "$@"
+   log_entry "sourcetree::cfg::r_prepare_for_write" "$@"
 
-   if [ ! -f "${_configfile}" -a -f "${_fallback_configfile}" ]
+   local config="$1"
+
+   include "etc"
+
+   #
+   # need this beforehand to get proper write_configfile
+   #
+   local etcdir
+
+   sourcetree::cfg::r_absolute_filename "${config}" "${SOURCETREE_CONFIG_DIR}"
+   etcdir="${RVAL}"
+
+   if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_DIR}" ]
    then
-      r_mkdir_parent_if_missing "${_configfile}"
-      exekutor cp "${_fallback_configfile}" "${_configfile}" || exit 1
-      exekutor chmod +w "${_configfile}" || exit 1
+      local sharedir
+
+      sourcetree::cfg::r_absolute_filename "${config}" "${SOURCETREE_FALLBACK_CONFIG_DIR}"
+      sharedir="${RVAL}"
+
+      etc_setup_from_share_if_needed "${etcdir}" \
+                                     "${sharedir}"
+   fi
+
+   sourcetree::cfg::r_configfile_for_write "${config}"
+   write_configfile="${RVAL}"
+
+   r_mkdir_parent_if_missing "${write_configfile}"
+
+   if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_DIR}" ]
+   then
+      etc_make_file_from_symlinked_file "${write_configfile}"
+   fi
+
+   RVAL="${write_configfile}"
+}
+
+
+sourcetree::cfg::finish_for_write()
+{
+   log_entry "sourcetree::cfg::finish_for_write" "$@"
+
+   local config="$1"
+   local write_configfile="$2"
+
+   local sharedir
+
+   if [ ! -z "${SOURCETREE_FALLBACK_CONFIG_DIR}" ]
+   then
+      sourcetree::cfg::r_absolute_filename "${config}" "${SOURCETREE_FALLBACK_CONFIG_DIR}"
+      sharedir="${RVAL}"
+      if [ ! -d "${sharedir}" ]
+      then
+         sharedir=""
+      fi
+   fi
+
+   local rval
+
+   if [ ! -z "${sharedir}" ]
+   then
+      etc_make_symlink_if_possible "${write_configfile}" "${sharedir}"
+      rval=$?
+      log_debug "rval=$rval"
+
+      case $rval in
+         0) # : did make symlink
+            sourcetree::cfg::r_absolute_filename "${config}" "${SOURCETREE_CONFIG_DIR}"
+            etcdir="${RVAL}"
+            etc_remove_if_possible "${etcdir}" "${sharedir}"
+            return
+         ;;
+
+         1) # : symlinking error
+            fail "Could not create symlink for config file"
+         ;;
+
+         2) # : share file does not exist
+            # so we can remove it
+         ;;
+
+         *) # : contents differ or nothing to do
+            return 0
+         ;;
+      esac
+   fi
+
+   local current_contents
+
+   current_contents="`sourcetree::cfg::_read "${write_configfile}"`"
+   if [ -z "${current_contents}" ]
+   then
+      remove_file_if_present  "${write_configfile}"
+      r_dirname "${write_configfile}"
+      rmdir_if_empty "${RVAL}"
    fi
 }
 
+
+sourcetree::cfg::write()
+{
+   log_entry "sourcetree::cfg::write" "$@"
+
+   local config="$1"; shift
+
+   local write_configfile
+
+   sourcetree::cfg::r_prepare_for_write "${config}"
+   write_configfile="$RVAL"
+
+   if ! redirect_exekutor "${write_configfile}" printf "%s\n" "$*"
+   then
+      exit 1
+   fi
+
+   sourcetree::cfg::finish_for_write "${config}" "${write_configfile}"
+}
 
 sourcetree::cfg::remove_nodeline()
 {
    log_entry "sourcetree::cfg::remove_nodeline" "$@"
 
-   local _configfile
-   local _fallback_configfile
-
-   sourcetree::cfg::__common_configfile "$1" "w"
-
-   sourcetree::cfg::_copy_to_etc_if_needed
-
+   local config="$1"
    local address="$2"
+
+   local write_configfile
+
+   sourcetree::cfg::r_prepare_for_write "${config}"
+   write_configfile="$RVAL"
 
    local escaped
 
-   log_debug "Removing \"${address}\" from  \"${_configfile}\""
+   log_debug "Removing \"${address}\" from  \"${write_configfile}\""
    r_escaped_sed_pattern "${address}"
    escaped="${RVAL}"
 
    # linux don't like space after -i
-   if ! inplace_sed -e "/^${escaped};/d" "${_configfile}"
+   if ! inplace_sed -e "/^${escaped};/d" "${write_configfile}"
    then
       _internal_fail "sed address corrupt ?"
    fi
+
+   sourcetree::cfg::finish_for_write "${config}" "${write_configfile}"
 }
 
 
@@ -581,87 +767,28 @@ sourcetree::cfg::remove_nodeline_by_uuid()
 {
    log_entry "sourcetree::cfg::remove_nodeline_by_uuid" "$@"
 
-   local _configfile
-   local _fallback_configfile
-
-   sourcetree::cfg::__common_configfile "$1" "w"
-
-   sourcetree::cfg::_copy_to_etc_if_needed
-
+   local config="$1"
    local uuid="$2"
 
-   local escaped
+   local write_configfile
 
-   log_debug "Removing \"${uuid}\" from \"${_configfile}\""
+   sourcetree::cfg::r_prepare_for_write "${config}"
+   write_configfile="$RVAL"
+
+   log_debug "Removing \"${uuid}\" from \"${write_configfile}\""
+
+   local escaped
 
    r_escaped_sed_pattern "${uuid}"
    escaped="${RVAL}"
 
    # linux don't like space after -i
-   if ! inplace_sed -e "/^[^;]*;[^;]*;[^;]*;${escaped};/d" "${_configfile}"
+   if ! inplace_sed -e "/^[^;]*;[^;]*;[^;]*;${escaped};/d" "${write_configfile}"
    then
       _internal_fail "sed address corrupt ?"
    fi
-}
 
-
-sourcetree::cfg::file_remove()
-{
-   log_entry "sourcetree::cfg::file_remove" "$@"
-
-   local _configfile
-   local _fallback_configfile
-
-   sourcetree::cfg::__common_configfile "$1" "w"
-
-   remove_file_if_present "${_configfile}"
-}
-
-
-#
-# This is in a fallback situation probably not the best idea, because then
-# you couldn't remove everything. Depends though. So lets say if there is
-# a fallback, then we don't otherwise we do. We can also remove if the
-# fallback is identical to what we have now (win!)
-#
-sourcetree::cfg::remove_if_empty_and_no_fallback_exists()
-{
-   log_entry "sourcetree::cfg::remove_if_empty_and_no_fallback_exists" "$@"
-
-   local _configfile
-   local _fallback_configfile
-
-   sourcetree::cfg::__common_configfile "$1" "w"
-
-   local current_contents
-
-   current_contents="`sourcetree::cfg::__read`"
-
-   # if we have a fallback, then _configfile is not needed if the contents
-   # are identical
-   if [ ! -z "${_fallback_configfile}" ]
-   then
-      local fallback_contents
-
-      fallback_contents="`sourcetree::cfg::__fallback_read`"
-      if [ "${current_contents}" != "${fallback_contents}" ]
-      then
-         return
-      fi
-      log_debug "Safe to remove as contents of fallback and config are identical"
-   else
-      log_debug "No fallback configured"
-
-      # With no fallback an empty _configfile is not needed
-      if [ ! -z "${current_contents}" ]
-      then
-         return
-      fi
-   fi
-
-   remove_file_if_present "${_configfile}"
-   r_dirname "${_configfile}"
-   rmdir_if_empty "${RVAL}"
+   sourcetree::cfg::finish_for_write "${config}" "${write_configfile}"
 }
 
 
@@ -669,15 +796,14 @@ sourcetree::cfg::change_nodeline()
 {
    log_entry "sourcetree::cfg::change_nodeline" "$@"
 
-   local _configfile
-   local _fallback_configfile
-
-   sourcetree::cfg::__common_configfile "$1" "w"
-
-   sourcetree::cfg::_copy_to_etc_if_needed
-
+   local config="$1"
    local oldnodeline="$2"
    local newnodeline="$3"
+
+   local write_configfile
+
+   sourcetree::cfg::r_prepare_for_write "${config}"
+   write_configfile="$RVAL"
 
    if [ "${MULLE_FLAG_LOG_DEBUG}" = 'YES' ]
    then
@@ -693,13 +819,15 @@ sourcetree::cfg::change_nodeline()
    r_escaped_sed_replacement "${newnodeline}"
    newescaped="${RVAL}"
 
-   log_debug "Editing \"${_configfile}\""
+   log_debug "Editing \"${write_configfile}\""
 
    # linux don't like space after -i
-   if ! inplace_sed -e "s/^${oldescaped}$/${newescaped}/" "${_configfile}"
+   if ! inplace_sed -e "s/^${oldescaped}$/${newescaped}/" "${write_configfile}"
    then
       fail "Edit of config file failed unexpectedly"
    fi
+
+   sourcetree::cfg::finish_for_write "${config}" "${write_configfile}"
 }
 
 
@@ -744,24 +872,20 @@ sourcetree::cfg::search_for_configfile()
       ;;
    esac
 
-   _log_debug "Searching for config \"${SOURCETREE_CONFIG_NAMES}\" \
+   _log_debug "Searching for config \"${SOURCETREE_CONFIG_NAME}\" \
 (\"$SOURCETREE_CONFIG_DIR:$SOURCETREE_FALLBACK_CONFIG_DIR\") \
 from \"${physdirectory}\" to \"${physceiling}\""
 
    (
       cd "${physdirectory}" || exit 1
 
-      local _configfile
-      local _fallback_configfile
-
       while :
       do
-         sourcetree::cfg::__common_configfile "${SOURCETREE_START}"
-
-         if [ ! -z "${_configfile}" -o ! -z "${_fallback_configfile}" ]
+         if sourcetree::cfg::r_configfile_for_read "${SOURCETREE_START}"
          then
             break
          fi
+
          # since we do physical paths, PWD is ok here
          if [ "${PWD}" = "${physceiling}" ]
          then
@@ -827,7 +951,7 @@ sourcetree::cfg::determine_working_directory()
 
    case "${defer}" in
       'NONE')
-         if sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
+         if sourcetree::cfg::is_config_present "${SOURCETREE_START}"
          then
             pwd -P
             return 0
@@ -949,20 +1073,18 @@ sourcetree::cfg::touch_parents()
    sourcetree::cfg::__common_rootdir "$@"
 
    local parent
-   local _configfile
-   local _fallback_configfile
 
    while parent="`sourcetree::cfg::get_parent "${_rootdir}" `"
    do
       [ "${parent}" = "${_rootdir}" ] \
          && _internal_fail "${parent} endless loop"
 
-      sourcetree::cfg::__common_configfile "${SOURCETREE_START}"
+      sourcetree::cfg::r_configfile_for_write "${SOURCETREE_START}"
 
       # don't touch the fallback
-      if [ -f "${_configfile}" ]
+      if [ -f "${RVAL}" ]
       then
-         exekutor touch -f "${_configfile}"
+         exekutor touch -f "${RVAL}"
       fi
 
       _rootdir="${parent}"
@@ -991,38 +1113,3 @@ sourcetree::cfg::defer_if_needed()
       return 1
    fi
 }
-
-
-sourcetree::cfg::r_absolute_filename()
-{
-   log_entry "sourcetree::cfg::r_absolute_filename" "$@"
-
-   local config="$1"
-   local address="$2"
-   local style="$3"
-
-   case "${config}" in
-      /|/*/)
-      ;;
-
-      *)
-         _internal_fail "config \"${config}\" is malformed"
-      ;;
-   esac
-
-   case "${address}" in
-      /*)
-         _internal_fail "address \"${address}\" is absolute"
-      ;;
-   esac
-
-   # support test for global shared dir, which no-one uses
-   #  "${style}" != "share" -a
-   if [ "${config#${MULLE_SOURCETREE_STASH_DIR}}" != "${config}" ]
-   then
-      RVAL="${config}${address}"
-   else
-      RVAL="${MULLE_VIRTUAL_ROOT}${config}${address}"
-   fi
-}
-

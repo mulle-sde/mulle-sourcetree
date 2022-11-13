@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2021 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -49,7 +49,7 @@ Usage:
 
 Example:
    ${MULLE_USAGE_NAME} filter no-foo 'ENABLES foo'
-   ${MULLE_USAGE_NAME} filter version-max-darwin-10.99.0 \
+   ${MULLE_USAGE_NAME} filter version-max-darwin-10.99.0 \\
                               'VERSION version-max-darwin >= 11.0.0'
 
 Options:

@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -112,13 +112,18 @@ sourcetree::sync::_get_config_descendinfo()
 
    r_filepath_concat "${config}" "${address}"
    _config="${RVAL}"
-   r_filepath_concat  "${MULLE_VIRTUAL_ROOT}" "${_config}"
-   _filename="${RVAL}"
+
+   _filename="${_config}"
+   if ! is_absolutepath "${_config}"
+   then
+      r_filepath_concat  "${MULLE_VIRTUAL_ROOT}" "${_config}"
+      _filename="${RVAL}"
+   fi
 
    _config="${_config}/"
    _database="${_config}"
 
-   sourcetree::walk::r_symbol_for_address "SOURCETREE_CONFIG_NAMES" "${address}"
+   sourcetree::walk::r_symbol_for_address "SOURCETREE_CONFIG_NAME" "${address}"
    _symbol="${RVAL}"
 }
 
@@ -310,12 +315,12 @@ sourcetree::sync::_descend_db_nodelines()
    if [ -z "${nodelines}" ]
    then
       _log_fluff "No \"${style}\" update of database \"${database:-ROOT}\" as \
-it is empty (${PWD#${MULLE_USER_PWD}/})"
+it is empty (${PWD#"${MULLE_USER_PWD}/"})"
       return
    fi
 
    _log_debug "Continuing with a \"${style}\" update of nodelines \
-\"${nodelines}\" of db \"${database:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
+\"${nodelines}\" of db \"${database:-ROOT}\" (${PWD#"${MULLE_USER_PWD}/"})"
 
    local nodeline
 
@@ -375,12 +380,12 @@ sourcetree::sync::_descend_config_nodelines()
    if [ -z "${nodelines}" ]
    then
       _log_fluff "No\"${style}\" update of config \"${config:-ROOT}\" as it \
-is empty (${PWD#${MULLE_USER_PWD}/})"
+is empty (${PWD#"${MULLE_USER_PWD}/"})"
       return
    fi
 
    _log_debug "Continuing with a \"${style}\" update of \
-nodelines \"${nodelines}\" from config \"${config:-ROOT}\" (${PWD#${MULLE_USER_PWD}/})"
+nodelines \"${nodelines}\" from config \"${config:-ROOT}\" (${PWD#"${MULLE_USER_PWD}/"})"
 
    local nodeline
 
@@ -616,12 +621,7 @@ sourcetree::sync::_sync_share()
    # if there are no nodelines that's OK, we still want to do zombification
    # but if there's also no database then just bail
    #
-   local _configfile
-   local _fallback_configfile
-
-   sourcetree::walk::__common_configfile "${symbol}" "${config}"
-
-   if ! sourcetree::cfg::__resolve_configfile
+   if ! sourcetree::walk::r_configfile "${symbol}" "${config}"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
 
@@ -640,9 +640,13 @@ sourcetree::sync::_sync_share()
       fi
    fi
 
+   local configfile
+
+   configfile="${RVAL}"
+
    local nodelines
 
-   nodelines="`sourcetree::cfg::__read`"
+   nodelines="`sourcetree::cfg::_read "${configfile}" `"
 
    local need_db='NO'
 
@@ -666,7 +670,7 @@ sourcetree::sync::_sync_share()
    if [ "${need_db}" = 'YES' ]
    then
       sourcetree::db::set_dbtype "${database}" "${style}"
-      sourcetree::db::set_update "${database}" "${_configfile}"
+      sourcetree::db::set_update "${database}" "${configfile}"
       sourcetree::db::set_shareddir "${database}" "${MULLE_SOURCETREE_STASH_DIR}"
       #
       # do a flat update first and remove what we don't have
@@ -740,9 +744,9 @@ sourcetree::sync::_sync_share()
 
    if [ "${need_db}" = 'YES' ]
    then
-      sourcetree::db::bury_zombies "${database}"
-      sourcetree::db::clear_update "${database}"
-      sourcetree::db::set_ready "${database}" "${_configfile}"
+      sourcetree::db::bury_zombies "${database}" &&
+      sourcetree::db::clear_update "${database}" &&
+      sourcetree::db::set_ready "${database}" "${configfile}"
    fi
 }
 
@@ -800,7 +804,7 @@ sourcetree::sync::_style_for_recurse()
 #
 # config     : config relative to MULLE_VIRTUAL_ROOT
 # database   : prefix relative to MULLE_VIRTUAL_ROOT
-# symbol     : suffix to resolve SOURCETREE_CONFIG_NAMES
+# symbol     : suffix to resolve SOURCETREE_CONFIG_NAME
 #
 sourcetree::sync::_sync_recurse()
 {
@@ -818,12 +822,7 @@ sourcetree::sync::_sync_recurse()
    # if there are no nodelines that's OK, we still want to do zombification
    # but if there's also no database then just bail
    #
-   local _configfile
-   local _fallback_configfile
-
-   sourcetree::walk::__common_configfile "${symbol}" "${config}"
-
-   if ! sourcetree::cfg::__resolve_configfile
+   if ! sourcetree::walk::r_configfile "${symbol}" "${config}"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! sourcetree::db::dir_exists "${database}"
@@ -833,14 +832,18 @@ sourcetree::sync::_sync_recurse()
       fi
    fi
 
+   local configfile
+
+   configfile="${RVAL}"
+
    local nodelines
 
-   nodelines="`sourcetree::cfg::__read`"
+   nodelines="`sourcetree::cfg::_read "${configfile}" `"
 
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
    sourcetree::db::set_dbtype "${database}" "${style}"
-   sourcetree::db::set_update "${database}" "${_configfile}"
+   sourcetree::db::set_update "${database}" "${configfile}"
 
    sourcetree::db::clear_shareddir "${database}"
 
@@ -855,28 +858,33 @@ sourcetree::sync::_sync_recurse()
 
    if [ "${OPTION_PARALLEL}" = 'YES' -a ${count} -gt 1 ]
    then
-      sourcetree::action::do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
+      sourcetree::action::do_actions_with_nodelines_parallel "${nodelines}" \
+                                                             "${style}" \
+                                                             "${config}" \
+                                                             "${database}"
       rval=$?
       log_debug "Parallel recurse update of ${config}: ${rval}"
    else
-      sourcetree::action::do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
+      sourcetree::action::do_actions_with_nodelines "${nodelines}" \
+                                                    "${style}" \
+                                                    "${config}" \
+                                                    "${database}"
       rval=$?
       log_debug "Recurse update of ${config}: ${rval}"
    fi
 
    [ $rval -eq 0 ] || return 1
 
-   sourcetree::db::bury_zombie_nodelines "${database}" "${nodelines}"
+   sourcetree::db::bury_zombie_nodelines "${database}" "${nodelines}" || return 1
 
    # until now, it was just like flat. Now recurse through nodelines.
 
    sourcetree::sync::_descend_db_nodelines "recurse" "${config}" "${database}"  || return 1
 
    # bury rest of zombies
-   sourcetree::db::bury_zombies "${database}"
-
-   sourcetree::db::clear_update "${database}"
-   sourcetree::db::set_ready "${database}" "${_configfile}"
+   sourcetree::db::bury_zombies "${database}" &&
+   sourcetree::db::clear_update "${database}" &&
+   sourcetree::db::set_ready "${database}" "${configfile}"
 }
 
 
@@ -917,12 +925,7 @@ sourcetree::sync::_sync_flat()
    # but if there's also no database then just bail. We remember the actual
    # config that was used, to make it easier to debug symlink problems later
    #
-   local _configfile
-   local _fallback_configfile
-
-   sourcetree::cfg::__common_configfile "${symbol}" "${config}"
-
-   if ! sourcetree::cfg::__resolve_configfile
+   if ! sourcetree::walk::r_configfile "${symbol}" "${config}"
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! sourcetree::db::dir_exists "${database}"
@@ -932,6 +935,10 @@ sourcetree::sync::_sync_flat()
       fi
    fi
 
+   local configfile
+
+   configfile="${RVAL}"
+
    local nodelines
 
    nodelines="`sourcetree::cfg::__read`"
@@ -939,7 +946,7 @@ sourcetree::sync::_sync_flat()
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
    sourcetree::db::set_dbtype "${database}" "${style}"
-   sourcetree::db::set_update "${database}" "${_configfile}"
+   sourcetree::db::set_update "${database}" "${configfile}"
 
    sourcetree::db::clear_shareddir "${database}"
    sourcetree::db::zombify_nodes "${database}"
@@ -961,10 +968,9 @@ sourcetree::sync::_sync_flat()
    fi
    [ $rval -eq 0 ] || return 1
 
-   sourcetree::db::bury_zombies "${database}"
-
-   sourcetree::db::clear_update "${database}"
-   sourcetree::db::set_ready "${database}" "${_configfile}"
+   sourcetree::db::bury_zombies "${database}" &&
+   sourcetree::db::clear_update "${database}" &&
+   sourcetree::db::set_ready "${database}" "${configfile}"
 }
 
 
@@ -978,6 +984,30 @@ sourcetree::sync::sync_flat()
 #   local startpoint="$4"
 
    sourcetree::sync::_sync_flat "${config}" "${database}" "${symbol}"
+}
+
+
+sourcetree::sync::write_cachedir_tag()
+{
+   log_entry "sourcetree::sync::write_cachedir_tag" "$@"
+
+   local stashdir="$1"
+
+   [ "${MULLE_CACHEDIR_TAG}" != "YES" ] && return
+
+   # assume one stat is faster than open/write/close
+   [ ! -d "${stashdir}" ] || [ -f "${stashdir}/CACHEDIR.TAG" ] && return
+
+   redirect_exekutor "${stashdir}/CACHEDIR.TAG" printf "%s\n" "\
+Signature: 8a477f597d28d172789f06886806bc55
+
+This file is a cache directory tag created by mulle-sourcetree.
+If you use \`tar --exclude-caches-all\`, this directory will be excluded from
+your archive.
+
+You can suppress the generation of this file with:
+   mulle-sde env --global set MULLE_CACHEDIR_TAG NO
+"
 }
 
 
@@ -1002,7 +1032,7 @@ sourcetree::sync::sync_flat()
 #
 sourcetree::sync::start()
 {
-   log_entry "sourcetree::sync::start" "$@" "(${PWD#${MULLE_USER_PWD}/})"
+   log_entry "sourcetree::sync::start" "$@" "(${PWD#"${MULLE_USER_PWD}/"})"
 
    local style
    local startpoint
@@ -1043,6 +1073,9 @@ sourcetree::sync::start()
       log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\"), but that's OK"
       return 0
    fi
+
+   sourcetree::sync::write_cachedir_tag "${MULLE_SOURCETREE_STASH_DIR:-stash}"
+
    return $rval
 }
 

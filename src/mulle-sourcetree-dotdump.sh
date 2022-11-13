@@ -1,4 +1,4 @@
-#! /usr/bin/env bash
+# shellcheck shell=bash
 #
 #   Copyright (c) 2017 Nat! - Mulle kybernetiK
 #   All rights reserved.
@@ -231,7 +231,7 @@ sourcetree::dotdump::r_get_fs_status()
       ;;
    esac
 
-   if ! sourcetree::cfg::r_config_exists "${datasource}"
+   if ! sourcetree::cfg::is_config_present "${datasource}"
    then
       log_debug "${destination} has no cfg (is a folder)"
       RVAL="folder"
@@ -829,7 +829,7 @@ sourcetree::dotdump::main()
       r_comma_concat "${mode}" "walkdb"
       mode="${RVAL}"
    else
-      if ! sourcetree::cfg::r_config_exists "${SOURCETREE_START}"
+      if ! sourcetree::cfg::is_config_present "${SOURCETREE_START}"
       then
          log_info "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
       fi

@@ -21,7 +21,7 @@ run_mulle_sourcetree()
       
       MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
 
-      . "${MULLE_SOURCETREE}" --no-auto-shell ${MULLE_SOURCETREE_FLAGS:-} "$@"
+      . "${MULLE_SOURCETREE}" ${MULLE_SOURCETREE_FLAGS:-} "$@"
    )
 }
 
@@ -221,7 +221,8 @@ main()
       rmdir_safer "${project}" &&
       mkdir_if_missing "${project}" &&
 
-      MULLE_VIRTUAL_ROOT="`physicalpath "${project}" `"
+      r_physicalpath "${project}"
+      MULLE_VIRTUAL_ROOT="${RVAL}"
       export MULLE_VIRTUAL_ROOT
 
       cd "${project}" &&
