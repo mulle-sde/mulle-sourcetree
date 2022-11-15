@@ -153,7 +153,7 @@ main()
    log_verbose "----- #2 PASSED -----"
 
    mkdir_if_missing ".mulle/share/sourcetree"
-   exekutor echo "ignore;comment" ".mulle/share/sourcetree/config"
+#  redirect_exekutor ".mulle/share/sourcetree/config" echo "ignore;comment" 
 
    test_run
 

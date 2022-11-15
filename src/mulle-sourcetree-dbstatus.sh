@@ -62,6 +62,8 @@ sourcetree::dbstatus::main()
 
    local configfile
 
+   include "sourcetree::cfg"
+   
    sourcetree::cfg::r_configfile_for_read "${SOURCETREE_START}"
    configfile="${RVAL}"
 

@@ -243,7 +243,7 @@ sourcetree::__check_sane_stash_dir()
    esac
 
    r_path_depth "${MULLE_SOURCETREE_STASH_DIR}"
-   case ${rval} in 
+   case ${RVAL} in 
       0|1|2)
          _internal_fail "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) is too close to root"
       ;;

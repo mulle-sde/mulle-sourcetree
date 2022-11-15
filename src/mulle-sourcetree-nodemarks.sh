@@ -497,9 +497,9 @@ sourcetree::nodemarks::sort()
 #
 # A small parser
 #
-sourcetree::nodemarks::_filter_iexpr()
+sourcetree::nodemarks::do_filter_iexpr()
 {
-#   log_entry "sourcetree::nodemarks::_filter_iexpr" "$1" "$2" "(_s=${_s})"
+#   log_entry "sourcetree::nodemarks::do_filter_iexpr" "$1" "$2" "(_s=${_s})"
 
    local marks="$1"
    local expr=$2
@@ -509,7 +509,7 @@ sourcetree::nodemarks::_filter_iexpr()
    case "${_s}" in
       AND*)
          _s="${_s:3}"
-         sourcetree::nodemarks::_filter_expr "${marks}" "${error_hint}"
+         sourcetree::nodemarks::do_filter_expr "${marks}" "${error_hint}"
          if [ $? -eq 1  ]
          then
             return 1
@@ -519,7 +519,7 @@ sourcetree::nodemarks::_filter_iexpr()
 
       OR*)
          _s="${_s:2}"
-         sourcetree::nodemarks::_filter_expr "${marks}" "${error_hint}"
+         sourcetree::nodemarks::do_filter_expr "${marks}" "${error_hint}"
          if [ $? -eq 0  ]
          then
             return 0
@@ -548,9 +548,9 @@ sourcetree::nodemarks::_filter_iexpr()
 }
 
 
-sourcetree::nodemarks::_filter_sexpr()
+sourcetree::nodemarks::do_filter_sexpr()
 {
-#   log_entry "sourcetree::nodemarks::_filter_sexpr" "$1" "(_s=${_s})"
+#   log_entry "sourcetree::nodemarks::do_filter_sexpr" "$1" "(_s=${_s})"
 
    local marks="$1"
    local error_hint="$2"
@@ -568,7 +568,7 @@ sourcetree::nodemarks::_filter_sexpr()
    case "${_s}" in
       '('*)
          _s="${_s:1}"
-         sourcetree::nodemarks::_filter_expr "${marks}" "${error_hint}"
+         sourcetree::nodemarks::do_filter_expr "${marks}" "${error_hint}"
          expr=$?
 
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
@@ -585,7 +585,7 @@ sourcetree::nodemarks::_filter_sexpr()
 
       NOT*)
          _s="${_s:3}"
-         sourcetree::nodemarks::_filter_sexpr "${marks}" "${error_hint}"
+         sourcetree::nodemarks::do_filter_sexpr "${marks}" "${error_hint}"
          if [ $? -eq 0  ]
          then
             return 1
@@ -665,16 +665,16 @@ sourcetree::nodemarks::_filter_sexpr()
 #
 # _s contains the currently parsed qualifier
 #
-sourcetree::nodemarks::_filter_expr()
+sourcetree::nodemarks::do_filter_expr()
 {
-#   log_entry "sourcetree::nodemarks::_filter_expr" "$1" "(_s=${_s})"
+#   log_entry "sourcetree::nodemarks::do_filter_expr" "$1" "(_s=${_s})"
 
    local marks="$1"
    local error_hint="$2"
 
    local expr
 
-   sourcetree::nodemarks::_filter_sexpr "${marks}" "${error_hint}"
+   sourcetree::nodemarks::do_filter_sexpr "${marks}" "${error_hint}"
    expr=$?
 
    while :
@@ -685,7 +685,7 @@ sourcetree::nodemarks::_filter_expr()
             break
          ;;
       esac
-      sourcetree::nodemarks::_filter_iexpr "${marks}" "${expr}" "${error_hint}"
+      sourcetree::nodemarks::do_filter_iexpr "${marks}" "${expr}" "${error_hint}"
       expr=$?
    done
 
@@ -711,7 +711,7 @@ sourcetree::nodemarks::filter_with_qualifier()
 
    _s="${qualifier}"
 
-   sourcetree::nodemarks::_filter_expr "${marks}" "${qualifier}"
+   sourcetree::nodemarks::do_filter_expr "${marks}" "${qualifier}"
 }
 
 

@@ -345,7 +345,7 @@ sourcetree::node::r_to_nodeline()
          fail "Address \"${_address}\" starts with a dot"
       ;;
 
-      # this is is our "easy" URL distinction, so disallowe it as node name
+      # this is is our "easy" URL distinction, so disallow it as node name
       *":"*)
          fail "Address \"${_address}\" contains colon"
       ;;
@@ -628,6 +628,7 @@ sourcetree::node::printf()
 
    local value
    local switch
+   local _formatstring
 
    while [ ! -z "${formatstring}" ]
    do
@@ -677,8 +678,6 @@ sourcetree::node::printf()
 
                   if [ "${formatstring:2:2}" = "={" ]
                   then
-                     local _formatstring
-
                      sourcetree::node::_r_get_format_key "${formatstring}"
                      key="${RVAL}"
                      formatstring="${_formatstring}"
@@ -762,8 +761,6 @@ sourcetree::node::printf()
             switch=""
             if [ "${formatstring:2:1}" = "=" ]
             then
-               local _formatstring
-
                sourcetree::node::_r_get_format_key "${formatstring}"
                key="${RVAL}"
                formatstring="${_formatstring}"

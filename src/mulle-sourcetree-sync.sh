@@ -78,9 +78,9 @@ EOF
 # local _filename
 # local _database
 #
-sourcetree::sync::_get_db_descendinfo()
+sourcetree::sync::__get_db_descendinfo()
 {
-   log_entry "sourcetree::sync::_get_db_descendinfo" "$@"
+   log_entry "sourcetree::sync::__get_db_descendinfo" "$@"
 
    local database="$1"
    local address="$2"
@@ -103,9 +103,9 @@ sourcetree::sync::_get_db_descendinfo()
 # local _filename
 # local _database
 #
-sourcetree::sync::_get_config_descendinfo()
+sourcetree::sync::__get_config_descendinfo()
 {
-   log_entry "sourcetree::sync::_get_config_descendinfo" "$@"
+   log_entry "sourcetree::sync::__get_config_descendinfo" "$@"
 
    local config="$1"
    local address="$2"
@@ -113,12 +113,23 @@ sourcetree::sync::_get_config_descendinfo()
    r_filepath_concat "${config}" "${address}"
    _config="${RVAL}"
 
-   _filename="${_config}"
-   if ! is_absolutepath "${_config}"
-   then
-      r_filepath_concat  "${MULLE_VIRTUAL_ROOT}" "${_config}"
-      _filename="${RVAL}"
-   fi
+   # sic use config
+   case "${config}" in
+      /"${MULLE_SOURCETREE_STASH_DIRNAME}"/*)
+         r_basename "${config}"
+         r_filepath_concat "${MULLE_SOURCETREE_STASH_DIR}" "${_config#"/${MULLE_SOURCETREE_STASH_DIRNAME}"/}"
+         _filename="${RVAL}"
+      ;;
+
+      /*)
+         _filename="${RVAL}"
+      ;;
+
+      *)
+         r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${_config}"
+         _filename="${RVAL}"
+      ;;
+   esac
 
    _config="${_config}/"
    _database="${_config}"
@@ -133,9 +144,9 @@ sourcetree::sync::_get_config_descendinfo()
 #     : 4 symlink
 #
 # input: parsed nodeline + filename
-sourcetree::sync::_check_descend_nodeline()
+sourcetree::sync::check_descend_nodeline()
 {
-   log_entry "sourcetree::sync::_check_descend_nodeline" "$@"
+   log_entry "sourcetree::sync::check_descend_nodeline" "$@"
 
    local filename="$1"
    local marks="$2"
@@ -218,7 +229,7 @@ sourcetree::sync::_descend_db_nodeline()
    local _database
    local _symbol
 
-   sourcetree::sync::_get_db_descendinfo "${database}" "${_address}" "${_uuid}"
+   sourcetree::sync::__get_db_descendinfo "${database}" "${_address}" "${_uuid}"
 
    # remove duplicate marker from _filename
    _filename="${_filename%#*}"
@@ -234,7 +245,7 @@ sourcetree::sync::_descend_db_nodeline()
    local _style
    local rval
 
-   sourcetree::sync::_check_descend_nodeline "${_filename}" "${_marks}"
+   sourcetree::sync::check_descend_nodeline "${_filename}" "${_marks}"
    rval=$?
 
    if sourcetree::sync::_style_for_${style} ${rval}
@@ -245,9 +256,9 @@ sourcetree::sync::_descend_db_nodeline()
 }
 
 
-sourcetree::sync::_descend_config_nodeline()
+sourcetree::sync::descend_config_nodeline()
 {
-   log_entry "sourcetree::sync::_descend_config_nodeline" "$@"
+   log_entry "sourcetree::sync::descend_config_nodeline" "$@"
 
    [ "$#" -ne 4 ] && _internal_fail "api error"
 
@@ -278,7 +289,7 @@ sourcetree::sync::_descend_config_nodeline()
    local _database
    local _symbol
 
-   sourcetree::sync::_get_config_descendinfo "${config}" "${_address}"
+   sourcetree::sync::__get_config_descendinfo "${config}" "${_address}"
 
    log_setting "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
    log_setting "config             : ${config}"
@@ -288,9 +299,10 @@ sourcetree::sync::_descend_config_nodeline()
    log_setting "newdatabase        : ${_database}"
    log_setting "symbol             : ${_symbol}"
 
-   sourcetree::sync::_check_descend_nodeline "${_filename}"
-
-   [ $? -ne 0 ] && return 1
+   if ! sourcetree::sync::check_descend_nodeline "${_filename}"
+   then
+      return 1
+   fi
 
    sourcetree::sync::_sync_${style} "${_config}" "${_database}" "${_symbol}"
 }
@@ -300,9 +312,9 @@ sourcetree::sync::_descend_config_nodeline()
 # A flat update has run. Now walk over the DB entries (actually existing
 # stuff at proper position) and recursively do the inferior sourcetrees
 #
-sourcetree::sync::_descend_db_nodelines()
+sourcetree::sync::descend_db_nodelines()
 {
-   log_entry "sourcetree::sync::_descend_db_nodelines" "$@"
+   log_entry "sourcetree::sync::descend_db_nodelines" "$@"
 
    local style="$1"; shift
 
@@ -324,14 +336,11 @@ it is empty (${PWD#"${MULLE_USER_PWD}/"})"
 
    local nodeline
 
-   shell_disable_glob; IFS=$'\n'
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
-
+   .foreachline nodeline in ${nodelines}
+   .do
       if [ -z "${nodeline}" ]
       then
-         continue
+         .continue
       fi
 
       # needed for root database only
@@ -339,7 +348,7 @@ it is empty (${PWD#"${MULLE_USER_PWD}/"})"
       then
          if find_line "${VISITED}" "${nodeline}"
          then
-            continue
+            .continue
          fi
          r_add_line "${VISITED}" "${nodeline}"
          VISITED="${RVAL}"
@@ -353,9 +362,7 @@ it is empty (${PWD#"${MULLE_USER_PWD}/"})"
       then
          return $rval
       fi
-   done
-
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 }
 
 
@@ -364,9 +371,9 @@ it is empty (${PWD#"${MULLE_USER_PWD}/"})"
 # A flat update has run. Now walk over the DB entries (actually existing
 # stuff at proper position) and recursively do the inferior sourcetrees
 #
-sourcetree::sync::_descend_config_nodelines()
+sourcetree::sync::descend_config_nodelines()
 {
-   log_entry "sourcetree::sync::_descend_config_nodelines" "$@"
+   log_entry "sourcetree::sync::descend_config_nodelines" "$@"
 
    local style="$1"; shift
 
@@ -408,7 +415,7 @@ nodelines \"${nodelines}\" from config \"${config:-ROOT}\" (${PWD#"${MULLE_USER_
          VISITED="${RVAL}"
       fi
 
-      sourcetree::sync::_descend_config_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+      sourcetree::sync::descend_config_nodeline "${nodeline}" "${style}" "${config}" "${database}"
    .done
 }
 
@@ -436,9 +443,9 @@ sourcetree::sync::_style_for_only_share()
 }
 
 
-sourcetree::sync::_nodeline_sync_only_share()
+sourcetree::sync::nodeline_sync_only_share()
 {
-   log_entry "sourcetree::sync::_nodeline_sync_only_share" "$@"
+   log_entry "sourcetree::sync::nodeline_sync_only_share" "$@"
 
    local nodeline="$1"
    local config="$2"
@@ -503,14 +510,11 @@ sourcetree::sync::_sync_only_share()
 
    local nodeline
 
-   shell_disable_glob; IFS=$'\n'
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
-
+   .foreachline nodeline in ${nodelines}
+   .do
       if [ -z "${nodeline}" ]
       then
-         continue
+         .continue
       fi
 
       # needed for root database only
@@ -518,20 +522,19 @@ sourcetree::sync::_sync_only_share()
       then
          if find_line "${VISITED}" "${nodeline}"
          then
-            continue
+            .continue
          fi
 
          r_add_line "${VISITED}" "${nodeline}"
          VISITED="${RVAL}"
       fi
 
-      sourcetree::sync::_nodeline_sync_only_share "${nodeline}" "${config}" "${database}"
-   done
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+      sourcetree::sync::nodeline_sync_only_share "${nodeline}" "${config}" "${database}"
+   .done
 
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
-   sourcetree::sync::_descend_config_nodelines "only_share" "${config}" "${database}" "${symbol}" || return 1
+   sourcetree::sync::descend_config_nodelines "only_share" "${config}" "${database}" "${symbol}" || return 1
 }
 
 
@@ -719,7 +722,7 @@ sourcetree::sync::_sync_share()
       before="`sourcetree::db::fetch_all_nodelines "${database}" | LC_ALL=C sort`"  \
       || return 1
 
-      sourcetree::sync::_descend_db_nodelines "share" "${config}" "${database}" \
+      sourcetree::sync::descend_db_nodelines "share" "${config}" "${database}" \
       || return 1
 
       while :
@@ -734,12 +737,12 @@ sourcetree::sync::_sync_share()
 
          log_debug "Redo root because lines have changed"
 
-         sourcetree::sync::_descend_db_nodelines "share" "${config}" "${database}" || return 1
+         sourcetree::sync::descend_db_nodelines "share" "${config}" "${database}" || return 1
 
          before="${nodelines}"
       done
    else
-      sourcetree::sync::_descend_db_nodelines "share" "${config}" "${database}" || return 1
+      sourcetree::sync::descend_db_nodelines "share" "${config}" "${database}" || return 1
    fi
 
    if [ "${need_db}" = 'YES' ]
@@ -879,7 +882,7 @@ sourcetree::sync::_sync_recurse()
 
    # until now, it was just like flat. Now recurse through nodelines.
 
-   sourcetree::sync::_descend_db_nodelines "recurse" "${config}" "${database}"  || return 1
+   sourcetree::sync::descend_db_nodelines "recurse" "${config}" "${database}"  || return 1
 
    # bury rest of zombies
    sourcetree::db::bury_zombies "${database}" &&

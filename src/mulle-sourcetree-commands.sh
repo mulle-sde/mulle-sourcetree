@@ -1298,14 +1298,14 @@ sourcetree::commands::remove()
    log_entry "sourcetree::commands::remove" "$@"
 
    local input
+   local nodeline
+   local uuid
 
    while [ $# -ne 0 ]
    do
       input="$1"
       shift 
       
-      local nodeline
-
       if ! nodeline="`sourcetree::commands::get_nodeline "${input}" `"
       then
          if [ "${OPTION_IF_PRESENT}" = 'YES' ]
@@ -1316,8 +1316,6 @@ sourcetree::commands::remove()
          return 3  # also return non 0 , but lets's not be dramatic about it
                    # 1 is an error, 2 stacktraces
       fi
-
-      local uuid
 
       sourcetree::nodeline::r_get_uuid "${nodeline}"
       uuid="${RVAL}"

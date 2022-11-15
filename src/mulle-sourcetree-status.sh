@@ -424,11 +424,11 @@ sourcetree::status::walk()
    local rval
 
    sourcetree::status::r_emit "${NODE_ADDRESS}" \
-                 "${WALK_VIRTUAL_ADDRESS}" \
-                 "${WALK_DATASOURCE}" \
-                 "${NODE_MARKS}" \
-                 "${WALK_MODE}" \
-                 "${NODE_FILENAME}"
+                              "${WALK_VIRTUAL_ADDRESS}" \
+                              "${WALK_DATASOURCE}" \
+                              "${NODE_MARKS}" \
+                              "${WALK_MODE}" \
+                              "${NODE_FILENAME}"
    rval=$?
 
    case $rval in
@@ -486,11 +486,11 @@ sourcetree::status::do()
    output="${RVAL}"
 
    output2="`sourcetree::walk::walk_config_uuids "ALL" \
-                                "" \
-                                "" \
-                                "" \
-                                "${mode}" \
-                                "sourcetree::status::walk"`"
+                                                 "" \
+                                                 "" \
+                                                 "" \
+                                                 "${mode}" \
+                                                 "sourcetree::status::walk"`"
    rval="$?"
    if [ $rval -eq 2 ]
    then

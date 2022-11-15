@@ -103,22 +103,20 @@ sourcetree::fix::r_locate_fix_file()
    r_basename "${SOURCETREE_FIX_FILENAME}"
    fixname=${RVAL}
 
-   IFS=$'\n'
-   for found in `rexekutor find "${start}" -name "${fixname}" -type f -print`
-   do
-      IFS="${DEFAULT_IFS}"
+   local nodeline
+   local fix
 
+
+   .foreachline found in `rexekutor find "${start}" -name "${fixname}" -type f -print`
+   .do
       if [ "${found}%${SOURCETREE_FIX_FILENAME}" = "${found}" ]
       then
-         continue
+         .continue
       fi
 
       #
       # fix file contains the basename of the old directory
       #
-
-      local nodeline
-      local fix
 
       nodeline="`rexekutor egrep -s -v '^#' "${found}"`"
 
@@ -140,9 +138,7 @@ sourcetree::fix::r_locate_fix_file()
       then
          match="${found}"
       fi
-   done
-
-   IFS="${DEFAULT_IFS}"
+   .done
 
    if [ -z "${match}" ]
    then

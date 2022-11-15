@@ -1061,14 +1061,12 @@ sourcetree::walk::walk_nodeline()
    local evalednodetype
 
    r_expanded_string "${_nodetype}"
-
    evalednodetype="${RVAL}"
 
    case "${evalednodetype}" in
       'comment')
-         log_debug "Hä"
          case ",${mode}," in
-            *,comments,*)
+            *,comment,*)
                r_comma_concat "${mode}" "flat"
                mode="${RVAL}"
             ;;
@@ -1081,7 +1079,7 @@ sourcetree::walk::walk_nodeline()
 
       'error')
          case ",${mode}," in
-            *,comments,*)
+            *,error,*)
                r_comma_concat "${mode}" "flat"
                mode="${RVAL}"
             ;;
@@ -1146,6 +1144,7 @@ sourcetree::walk::walk_nodeline()
    local callbackqualifier="$5"
    local descendqualifier="$6"
    local mode="$7"
+
    shift 7
 
    # "value addition" of a quasi global
@@ -1817,6 +1816,7 @@ sourcetree::walk::main()
    local OPTION_DEDUPE_MODE=''
    local OPTION_MIN_WALK_LEVEL=
    local OPTION_MAX_WALK_LEVEL=
+   local OPTION_VERBATIM='NO'
 
    while [ $# -ne 0 ]
    do
@@ -2023,6 +2023,10 @@ sourcetree::walk::main()
             OPTION_QUALIFIER="$1"
          ;;
 
+         --verbatim)
+            OPTION_VERBATIM='YES'
+         ;;
+
          -*)
             sourcetree::walk::usage "Unknown walk option $1"
          ;;
@@ -2055,7 +2059,6 @@ as one string and use quotes."
       callback="$1"
       shift
    fi
-
 
    #
    # MEMO: as we are not binary tree but really a graph with multiple
@@ -2158,19 +2161,21 @@ ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
       r_comma_concat "${mode}" "walkdb"
       mode="${RVAL}"
    fi
-
+   if [ "${OPTION_VERBATIM}" = 'YES' ]
+   then
+      r_comma_concat "${mode}" "error"
+      mode="${RVAL}"
+   fi
    # convert marks into a qualifier with globals
    if [ ! -z "${OPTION_MARKS}" ]
    then
       local mark
 
-      IFS=","; shell_disable_glob
-      for mark in ${OPTION_MARKS}
-      do
+      .foreachitem mark in ${OPTION_MARKS}
+      .do
          r_concat "${OPTION_QUALIFIER}" "MATCHES ${mark}" " AND "
          OPTION_QUALIFIER="${RVAL}"
-      done
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
+      .done
    fi
 
    #

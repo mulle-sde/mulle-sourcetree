@@ -78,7 +78,6 @@ sourcetree::clean::walk()
    esac
 
    local filename
-   local marks
 
    filename="`sourcetree::db::fetch_filename_for_uuid "${WALK_DATASOURCE}" "${NODE_UUID}" `"
 
@@ -88,6 +87,8 @@ sourcetree::clean::walk()
       log_fluff "\"${NODE_FILENAME}\" has no known update in \"${WALK_DATASOURCE}\", so not cleaning it"
       return
    fi
+
+   local marks
 
    marks="${NODE_MARKS}"
 

@@ -120,6 +120,7 @@ Options:
    --output-no-separator    : suppress separator line if header is printed
    --output-uuid            : print the UUID of each line
    --qualifier <value>      : specify marks qualifier (see \`walk\` command)
+   --verbatim               : don't interpret errors
 
 EOF
   exit 1
@@ -501,6 +502,7 @@ sourcetree::list::main()
    local OPTION_MARKS_QUALIFIER
    local OPTION_FORMAT='DEFAULT'
    local OPTION_DEDUPE_MODE='hacked-marks-nodeline-no-uuid'
+   local OPTION_VERBATIM='NO'
    local OPTION_CONFIG_FILE='DEFAULT'
    local OPTION_NO_OUTPUT_MARKS
 
@@ -776,6 +778,10 @@ sourcetree::list::main()
             OPTION_OUTPUT_SEPARATOR='NO'
          ;;
 
+         --verbatim)
+            OPTION_VERBATIM='YES'
+         ;;
+
          -*)
             sourcetree::list::usage "Unknown option \"$1\""
          ;;
@@ -841,8 +847,14 @@ sourcetree::list::main()
    sourcetree::list::r_augment_mode_with_output_options "${FLAG_SOURCETREE_MODE:-flat}"
    mode="${RVAL}"
 
-   r_comma_concat "${mode}" "comments"
+   r_comma_concat "${mode}" "comment"
    mode="${RVAL}"
+
+   if [ "${OPTION_VERBATIM}" = 'YES' ]
+   then
+      r_comma_concat "${mode}" "error"
+      mode="${RVAL}"
+   fi
 
    sourcetree::list::r_convert_marks_to_qualifier "${OPTION_MARKS}" "${OPTION_MARKS_QUALIFIER}" ## UGLY
    OPTION_MARKS_QUALIFIER="${RVAL}"

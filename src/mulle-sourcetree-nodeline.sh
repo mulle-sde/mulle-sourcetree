@@ -94,7 +94,6 @@ sourcetree::nodeline::r_get_uuid()
 
 sourcetree::nodeline::r_get_url()
 {
-   local address
    local nodetype
    local marks
    local uuid
@@ -549,6 +548,7 @@ sourcetree::nodeline::printf_header()
    local name
    local dash
    local tmp
+   local _formatstring
 
    while [ ! -z "${formatstring}" ]
    do
@@ -583,8 +583,6 @@ sourcetree::nodeline::printf_header()
          %v*)
             if [ "${formatstring:2:2}" = "={" ]
             then
-               local _formatstring
-
                sourcetree::node::_r_get_format_key "${formatstring}"
                name="${RVAL}"
                dash="--------"

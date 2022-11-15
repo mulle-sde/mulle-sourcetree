@@ -1224,13 +1224,12 @@ emit_cmake_dependencies()
    local disabler="$4"
 
    local dependency
+   local address
+   local marks
+   local aliases
 
    .foreachline dependency in ${dependencies}
    .do
-      local address
-      local marks
-      local aliases
-
       log_debug "read \"${dependency}\""
 
       IFS=";" read uuid address marks aliases include <<< "${dependency}"

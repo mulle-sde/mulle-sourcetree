@@ -91,24 +91,18 @@ sourcetree::craftorder::r_create_filename()
 }
 
 
-sourcetree::craftorder::collect_line()
+#
+# _filename
+# _datasource
+# _marks
+# _remainder_collection
+# _address
+# _nodetype
+# _raw_userinfo
+#
+sourcetree::craftorder::__augment_line()
 {
-   log_entry "sourcetree::craftorder::collect_line" "$@"
-
-   local filename
-
-   sourcetree::craftorder::r_create_filename "${_filename}"
-   filename="${RVAL}"
-
-   rexekutor printf "%s\n" "${filename}"
-
-   return 0
-}
-
-
-sourcetree::craftorder::augment_line()
-{
-   log_entry "sourcetree::craftorder::augment_line" "$@"
+   log_entry "sourcetree::craftorder::__augment_line" "$@"
 
    local filename
 
@@ -156,6 +150,23 @@ sourcetree::craftorder::augment_line()
    return 0
 }
 
+#
+# _filename
+#
+sourcetree::craftorder::__collect_line()
+{
+   log_entry "sourcetree::craftorder::__collect_line" "$@"
+
+   local filename
+
+   sourcetree::craftorder::r_create_filename "${_filename}"
+   filename="${RVAL}"
+
+   rexekutor printf "%s\n" "${filename}"
+
+   return 0
+}
+
 
 sourcetree::craftorder::output()
 {
@@ -167,12 +178,10 @@ sourcetree::craftorder::output()
    then
       local line
 
-      shell_disable_glob; IFS=$'\n'
-      for line in ${collection}
-      do
+      .foreachline line in ${collection}
+      .do
          eval "echo \"${line}\""
-      done
-      shell_enable_glob; IFS="${DEFAULT_IFS}"
+      .done
    else
       printf "%s\n" "${collection}"
    fi
@@ -197,6 +206,11 @@ sourcetree::craftorder::main()
    local OPTION_SDK
    local OPTION_VERSION
 
+   local input
+   local callbackscript
+   local randomstring
+
+
    while [ $# -ne 0 ]
    do
       case "$1" in
@@ -219,10 +233,6 @@ sourcetree::craftorder::main()
          --callback)
             [ $# -eq 1 ] && sourcetree::craftorder::usage "Missing argument to \"$1\""
             shift
-
-            local input
-            local callbackscript
-            local randomstring
 
             #
             # remove possible cruft before function name
@@ -301,13 +311,20 @@ sourcetree::craftorder::main()
    qualifier="MATCHES build"
 
    local _craftorder_collection
+   local rval
 
    _craftorder_collection="`sourcetree::walk::do "" \
-                                            "" \
-                                            "${qualifier}" \
-                                            "${qualifier}" \
-                                            "${mode},in-order" \
-                                            "sourcetree::craftorder::collect_line"`"
+                                                  "" \
+                                                  "${qualifier}" \
+                                                  "${qualifier}" \
+                                                  "${mode},in-order" \
+                                                  "sourcetree::craftorder::__collect_line"`"
+   rval=$?
+   case "${rval}" in
+      1)
+         exit 1
+      ;;
+   esac
 
    if [ -z "${_craftorder_collection}" ]
    then
@@ -330,23 +347,29 @@ sourcetree::craftorder::main()
 
    _remainder_collection="${_craftorder_collection}"
    _augmented_collection="`sourcetree::walk::do "" \
-                                           "" \
-                                           "${qualifier}" \
-                                           "${qualifier}" \
-                                           "${mode},breadth-order" \
-                                           "sourcetree::craftorder::augment_line"`"
+                                                "" \
+                                                "${qualifier}" \
+                                                "${qualifier}" \
+                                                "${mode},breadth-order" \
+                                                "sourcetree::craftorder::__augment_line"`"
+   rval=$?
+
+   case "${rval}" in
+      1)
+         exit 1
+      ;;
+   esac
 
    local filename
    local collection
    local lines
    local duplicates 
 
-   shell_disable_glob; IFS=$'\n'
-   for filename in ${_craftorder_collection}
-   do
+   .foreachline filename in ${_craftorder_collection}
+   .do
       if find_line "${duplicates}" "${filename}"
       then
-         continue
+         .continue
       fi
       r_add_line "${duplicates}" "${filename}"
       duplicates="${RVAL}"
@@ -356,8 +379,7 @@ sourcetree::craftorder::main()
 
       r_add_line "${lines}" "${line}"
       lines="${RVAL}"
-   done
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 
    sourcetree::craftorder::output "${lines}"
 }

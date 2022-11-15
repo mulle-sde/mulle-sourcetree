@@ -485,22 +485,18 @@ emit_c_header()
    log_setting "headers=${headers}"
 
    local dependency
+   local address
+   local marks
+   local include
+   local uuid
 
-   shell_disable_glob; IFS=$'\n'
-   for header in ${headers}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
-
-      local address
-      local marks
-      local include
-      local uuid
-
+   .foreachline header in ${headers}
+   .do
       IFS=";" read uuid address marks include <<< "${header}"
 
       if [ -z "${uuid}" ]
       then
-         continue
+         .continue
       fi
 
       log_verbose "Emit cmake statements for ${C_MAGENTA}${C_BOLD}${address}"
@@ -522,9 +518,7 @@ emit_c_header()
                                       "$@"
          ;;
       esac
-   done
-
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .done
 }
 
 
@@ -612,7 +606,6 @@ c_include()
          MULLE_SOURCETREE_TO_C_INCLUDE_FILE=""
       ;;
    esac
-
 
    case "${MULLE_SOURCETREE_TO_C_INCLUDE_FILE}" in
       NO|DISABLE*)

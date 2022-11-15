@@ -192,9 +192,9 @@ sourcetree::cfg::__common_configfile()
 sourcetree::cfg::r_configfile_for_read()
 {
    log_entry "sourcetree::cfg::r_configfile_for_read" "$@"
-
+   
    local config="$1"
-   local mode="$2"
+   local mode="${2:-default}"
 
    local _configfile
    local _fallback_configfile
@@ -241,7 +241,7 @@ sourcetree::cfg::r_configfile_for_read()
       #
       if [ -f "${configfile}" ]
       then
-         if [ "${mode}" == "fallback-only" ]
+         if [ "${mode}" = "fallback-only" ]
          then
             if [ -f "${fallback_configfile}" ]
             then
@@ -265,7 +265,7 @@ sourcetree::cfg::r_configfile_for_read()
    # we return 1, if there is only the fallback file or of there was no
    # configfile match (!) ot there is no such fallback file
    #
-   if [ "${mode}" == "fallback-only" ]
+   if [ "${mode}" = "fallback-only" ]
    then
       log_debug "return       : NONE"
       RVAL=""
