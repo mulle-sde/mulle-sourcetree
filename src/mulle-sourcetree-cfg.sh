@@ -88,7 +88,7 @@ sourcetree::cfg::r_absolute_filename()
             # fallback_filename="${fallback_filename}"
          ;;
 
-         /*/)
+         /*)
             RVAL="${config}${filename}"
             return
          ;;

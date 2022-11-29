@@ -529,7 +529,7 @@ sourcetree::sync::_sync_only_share()
          VISITED="${RVAL}"
       fi
 
-      sourcetree::sync::nodeline_sync_only_share "${nodeline}" "${config}" "${database}"
+      sourcetree::sync::nodeline_sync_only_share "${nodeline}" "${config}" "${database}" || return 1
    .done
 
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
@@ -728,7 +728,7 @@ sourcetree::sync::_sync_share()
       while :
       do
          nodelines="`sourcetree::db::fetch_all_nodelines "${database}" | LC_ALL=C sort`" \
-         || exit 1
+         || return 1
 
          if [ "${nodelines}" = "${before}" ]
          then

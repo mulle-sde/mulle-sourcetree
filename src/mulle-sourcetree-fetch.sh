@@ -407,7 +407,9 @@ sourcetree::fetch::r_list_operations()
    local cachekey
    local cachekey_value
 
-   r_uppercase "${nodetype}"
+   include "case"
+
+   r_smart_upcase_identifier "${nodetype}"
    cachekey="_SOURCETREE_OPERATIONS_${RVAL}"
 
    r_shell_indirect_expand "${cachekey}"

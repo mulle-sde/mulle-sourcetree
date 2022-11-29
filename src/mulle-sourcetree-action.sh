@@ -233,7 +233,7 @@ sourcetree::action::_do_fetch_operation()
 
    if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" != 'YES' ] && [ -e "${destination}" ]
    then
-      fail "Should have cleaned \"${destination}\" beforehand. It's in the way."
+      fail "Should have cleaned \"${destination#${MULLE_USER_PWD}/}\" beforehand. It's in the way."
    fi
 
    local parent
@@ -268,9 +268,7 @@ sourcetree::action::_do_fetch_operation()
    fi
 
    r_basename "${_address}"
-   r_tweaked_de_camel_case "${RVAL}"
-   r_identifier "${RVAL}"
-   r_uppercase "${RVAL}"
+   r_smart_upcase_identifier "${RVAL}"
    envvar="MULLE_SOURCETREE_FETCH_${RVAL}"
 
    local value
@@ -844,15 +842,15 @@ sourcetree::action::__update_perform_item()
    case "${item}" in
       "checkout"|"upgrade"|"set-url")
          if ! sourcetree::action::do_operation "${item}" "${_address}" \
-                                     "${_url}" \
-                                     "${filename}" \
-                                     "${_branch}" \
-                                     "${_tag}" \
-                                     "${_nodetype}" \
-                                     "${_marks}" \
-                                     "${_fetchoptions}" \
-                                     "${_raw_userinfo}" \
-                                     "${_uuid}"
+                                                         "${_url}" \
+                                                         "${filename}" \
+                                                         "${_branch}" \
+                                                         "${_tag}" \
+                                                         "${_nodetype}" \
+                                                         "${_marks}" \
+                                                         "${_fetchoptions}" \
+                                                         "${_raw_userinfo}" \
+                                                         "${_uuid}"
          then
             # as these are shortcuts to remove/fetch, but the
             # fetch part didn't work out we need to remove
@@ -988,22 +986,21 @@ sourcetree::action::__update_perform_actions()
    sourcetree::nodeline::parse "${nodeline}"     # !!
 
    local actionitems
-   local dbfilename
 
    sourcetree::action::r_update_actions_for_node "${style}" \
-                             "${nodeline}" \
-                             "${filename}" \
-                             "${previousnodeline}" \
-                             "${previousfilename}" \
-                             "${database}" \
-                             "${config}" \
-                             "${_address}" \
-                             "${_nodetype}" \
-                             "${_marks}" \
-                             "${_uuid}" \
-                             "${_url}" \
-                             "${_branch}" \
-                             "${_tag}"
+                                                 "${nodeline}" \
+                                                 "${filename}" \
+                                                 "${previousnodeline}" \
+                                                 "${previousfilename}" \
+                                                 "${database}" \
+                                                 "${config}" \
+                                                 "${_address}" \
+                                                 "${_nodetype}" \
+                                                 "${_marks}" \
+                                                 "${_uuid}" \
+                                                 "${_url}" \
+                                                 "${_branch}" \
+                                                 "${_tag}"
    actionitems="${RVAL}"
 
    log_debug "${C_INFO}Actions for \"${_address}\": ${actionitems:-none}"
@@ -1024,6 +1021,9 @@ sourcetree::action::__update_perform_actions()
       # if this returns 4 its fine (like a non-required dependency)
       sourcetree::action::__update_perform_item # this will exit on fail
       rval=$?
+
+      log_debug "sourcetree::action::__update_perform_item return $rval"
+
       case $rval in
          0)
             continue
@@ -1042,6 +1042,8 @@ sourcetree::action::__update_perform_actions()
       esac
    done
    shell_enable_glob
+
+   log_debug "sourcetree::action::__update_perform_actions returns $rval"
 
    return $rval
 }
@@ -1117,6 +1119,7 @@ ${nodeline}"
 }
 
 
+# returns 0 1 or 2
 sourcetree::action::_r_do_actions_with_nodeline()
 {
    log_entry "sourcetree::action::_r_do_actions_with_nodeline" "$@"
@@ -1193,7 +1196,7 @@ sourcetree::action::_r_do_actions_with_nodeline()
          ;;
 
          1)
-            exit 1
+            return 1
          ;;
 
          3)
@@ -1296,7 +1299,6 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    #
    local previousnodeline
    local previousfilename
-   local previousaddress
 
    previousnodeline="`sourcetree::db::fetch_nodeline_for_uuid "${database}" "${_uuid}"`"
 
@@ -1344,18 +1346,30 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    local _contentschanged
    local _remember
    local _skip
+   local rval
 
-   # this actually exits on fail
-   if ! sourcetree::action::__update_perform_actions "${style}" \
-                                                     "${nodeline}" \
-                                                     "${filename}" \
-                                                     "${previousnodeline}" \
-                                                     "${previousfilename}" \
-                                                     "${database}" \
-                                                     "${config}"
-   then
-      return 1
-   fi
+   # return 0 or 1
+   sourcetree::action::__update_perform_actions "${style}" \
+                                                "${nodeline}" \
+                                                "${filename}" \
+                                                "${previousnodeline}" \
+                                                "${previousfilename}" \
+                                                "${database}" \
+                                                "${config}"
+   rval=$?
+
+   case $rval in
+      0)
+      ;;
+
+      1)
+         return 1
+      ;;
+
+      *)
+         _internal_fail "unexpected return code ${rval}"
+      ;;
+   esac
 
    _log_debug "\
 contentschanged : ${_contentschanged}
@@ -1463,6 +1477,8 @@ sourcetree::action::do_actions_with_nodelines()
       fi
    .done
 
+   log_debug "sourcetree::action::do_actions_with_nodelines: $rval"
+
    return $rval
 }
 
@@ -1509,6 +1525,8 @@ sourcetree::action::do_actions_with_nodelines_parallel()
 
    _parallel_end
    rval=$? 
+
+   log_debug "sourcetree::action::do_actions_with_nodelines_parallel: $rval"
 
    return $rval
 }

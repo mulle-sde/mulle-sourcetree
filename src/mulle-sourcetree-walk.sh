@@ -1423,13 +1423,7 @@ sourcetree::walk::r_configfile()
    local symbol="$1"
    local config="$2"
 
-   r_identifier "${symbol}"
-   r_uppercase "${RVAL}"
-   upper_symbol="${RVAL}"
-
-   [ "${symbol}" = "${upper_symbol}" ] || _internal_fail "\"${symbol}\" is not an uppercase identifier"
-
-   if [ -z "${upper_symbol}" ]
+   if [ -z "${symbol}" ]
    then
       #
       # override with environment variables
@@ -1456,13 +1450,16 @@ sourcetree::walk::r_configfile()
    local var
    local value
 
-   var="MULLE_SOURCETREE_CONFIG_NAME_${upper_symbol}"
+   var="MULLE_SOURCETREE_CONFIG_NAME_${symbol}"
    r_shell_indirect_expand "${var}"
    value="${RVAL}"
+
+   log_debug "expanded value ${var} to \"${value}\""
+
    SOURCETREE_CONFIG_NAME="${value:-${SOURCETREE_CONFIG_NAME}}"
    log_setting "${var} : ${value}"
 
-#   var="MULLE_SOURCETREE_CONFIG_SCOPES_${upper_symbol}"
+#   var="MULLE_SOURCETREE_CONFIG_SCOPES_${symbol}"
 #   r_shell_indirect_expand "${var}"
 #   value="${RVAL}"
 #   SOURCETREE_CONFIG_SCOPES="${value:-${SOURCETREE_CONFIG_SCOPES}}"

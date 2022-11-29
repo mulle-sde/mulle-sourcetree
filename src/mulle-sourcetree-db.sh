@@ -332,6 +332,8 @@ sourcetree::db::forget()
 # it must have been ascertained that filename is not in use by other nodes
 # filename is relative to _database here
 #
+# Only run bury code in parallel, if original position is moved away
+#
 sourcetree::db::bury()
 {
    log_entry "sourcetree::db::bury" "$@"
@@ -457,12 +459,13 @@ ${C_RESET_BOLD} rm -rf .mulle/var ${KITCHEN_DIR:-kitchen} ${MULLE_SOURCETREE_STA
    # protect to prevent accidental "surprise" edits.
    #
    TAR="`command -v "tar"`"
-   if [ ! -z "${TAR}" -a -d "${gravepath}" ]
+   if [ ! -z "${TAR}" -a -d "${filename}" ]
    then
       _log_info "Burying charred \
 ${C_MAGENTA}${C_BOLD}${filename#"${MULLE_USER_PWD}/"}${C_INFO} in grave \
 \"${gravepath#"${MULLE_VIRTUAL_ROOT}/"}\""
-      exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}.tmp" >&2 &&
+      exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}.tmp" >&2 \
+      || fail "Could not place \"${filename}\" into temporary grave \"${gravepath}.tmp\""
       (
          rexekutor cd "${gravepath}.tmp" &&
          exekutor "${TAR}" cfz "${gravepath}" . &&
@@ -472,8 +475,11 @@ ${C_MAGENTA}${C_BOLD}${filename#"${MULLE_USER_PWD}/"}${C_INFO} in grave \
       _log_info "Burying \
 ${C_MAGENTA}${C_BOLD}${filename#"${MULLE_USER_PWD}/"}${C_INFO} in grave \
 \"${gravepath#"${MULLE_VIRTUAL_ROOT}/"}\""
-      exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}" >&2
-      exekutor find "${gravepath}" -type f -exec chmod a-w {} \;
+      exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}" >&2 \
+      || fail "Could not place \"${filename}\" into grave \"${gravepath}\""
+      (
+         exekutor find "${gravepath}" -type f -exec chmod a-w {} \;
+      ) &
    fi
 }
 
@@ -1418,7 +1424,7 @@ sourcetree::db::__zombiedir()
 {
    local databasedir="$1"
 
-   zombiedir="${databasedir}/.zombies"
+   _zombiedir="${databasedir}/.zombies"
 }
 
 
@@ -1506,10 +1512,10 @@ sourcetree::db::zombify_nodes()
 
    log_fluff "Marking nodes as zombies for now (${_databasedir})"
 
-   local zombiedir
+   local _zombiedir
 
    sourcetree::db::__zombiedir "${_databasedir}"
-   rmdir_safer "${zombiedir}"
+   rmdir_safer "${_zombiedir}"
 
    local filename
    local set
@@ -1524,11 +1530,11 @@ sourcetree::db::zombify_nodes()
 
       if [ -z "${set}" ]
       then
-         mkdir_if_missing "${zombiedir}"
+         mkdir_if_missing "${_zombiedir}"
          set='YES'
       fi
 
-      exekutor cp ${OPTION_COPYMOVEFLAGS} "${filename}" "${zombiedir}/" \
+      exekutor cp ${OPTION_COPYMOVEFLAGS} "${filename}" "${_zombiedir}/" \
       || exit 1
    done
    shell_disable_nullglob
@@ -1546,17 +1552,17 @@ sourcetree::db::zombify_nodelines()
 
    log_fluff "Marking nodelines as zombies for now (${_databasedir})"
 
-   local zombiedir
+   local _zombiedir
 
    sourcetree::db::__zombiedir "${_databasedir}"
-   rmdir_safer "${zombiedir}"
+   rmdir_safer "${_zombiedir}"
 
    if [ -z "${nodelines}" ]
    then
       return
    fi
 
-   mkdir_if_missing "${zombiedir}"
+   mkdir_if_missing "${_zombiedir}"
 
    local _branch
    local _address
@@ -1569,28 +1575,24 @@ sourcetree::db::zombify_nodelines()
    local _userinfo
    local _uuid
 
-   shell_disable_glob; IFS=$'\n'
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
-
+   .foreachline nodeline in ${nodelines}
+   .do
       if [ ! -z "${nodeline}" ]
       then
          sourcetree::nodeline::parse "${nodeline}"  # memo: _marks unused
 
          if sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
          then
-            exekutor cp ${OPTION_COPYMOVEFLAGS} "${dbfilepath}" "${zombiedir}/"
+            exekutor cp ${OPTION_COPYMOVEFLAGS} "${dbfilepath}" "${_zombiedir}/"
          fi
       fi
-   done
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .done
 }
 
 
-sourcetree::db::_bury_zombiefile()
+sourcetree::db::do_bury_zombiefile()
 {
-   log_entry "sourcetree::db::_bury_zombiefile" "$@"
+   log_entry "sourcetree::db::do_bury_zombiefile" "$@"
 
    local database="$1"
    local zombiefile="$2"
@@ -1637,7 +1639,7 @@ sourcetree::db::bury_zombie()
 
    if [ -e "${_zombiefile}" ]
    then
-      sourcetree::db::_bury_zombiefile "${_database}" "${_zombiefile}"
+      sourcetree::db::do_bury_zombiefile "${_database}" "${_zombiefile}"
    else
       log_fluff "There is no zombie for \"${uuid}\""
    fi
@@ -1694,23 +1696,25 @@ sourcetree::db::bury_zombies()
 
    sourcetree::db::__common_databasedir "$1"
 
-   local zombiedir
+   local _zombiedir
 
    sourcetree::db::__zombiedir "${_databasedir}"
 
    local zombiefile
 
-   if dir_has_files "${zombiedir}" f
+   if dir_has_files "${_zombiedir}" f
    then
       log_fluff "Moving zombies into graveyard"
 
-      for zombiefile in `ls -1 "${zombiedir}/"* 2> /dev/null`
+      for zombiefile in `dir_list_files "${_zombiedir}"`
       do
-         sourcetree::db::_bury_zombiefile "${_database}" "${zombiefile}"
+         sourcetree::db::do_bury_zombiefile "${_database}" "${zombiefile}"
       done
    fi
 
-   rmdir_safer "${zombiedir}"
+   rmdir_safer "${_zombiedir}"
+
+   wait # wait for parallel processes to complete
 
    :
 }
@@ -1725,24 +1729,26 @@ sourcetree::db::bury_flat_zombies()
 
    sourcetree::db::__common_databasedir "$1"
 
-   local zombiedir
+   local _zombiedir
 
    sourcetree::db::__zombiedir "${_databasedir}"
 
    local zombiefile
 
-   if dir_has_files "${zombiedir}" f
+   if dir_has_files "${_zombiedir}" f
    then
       log_fluff "Moving flat zombies into graveyard"
 
-      for zombiefile in `ls -1 "${zombiedir}/"* 2> /dev/null`
+      for zombiefile in `dir_list_files "${_zombiedir}"`
       do
          if [ "`sourcetree::db::_owner <"${zombiefile}" `" = "$1" ]
          then
-            sourcetree::db::_bury_zombiefile "${_database}" "${zombiefile}"
+            sourcetree::db::do_bury_zombiefile "${_database}" "${zombiefile}"
          fi
       done
    fi
+
+   wait
 }
 
 
@@ -1755,7 +1761,7 @@ sourcetree::db::bury_zombie_nodelines()
 
    sourcetree::db::__common_databasedir "$1"
 
-   local zombiedir
+   local _zombiedir
 
    sourcetree::db::__zombiedir "${_databasedir}"
 
@@ -1771,27 +1777,24 @@ sourcetree::db::bury_zombie_nodelines()
    local _uuid
 
    local zombiefile
+   local nodeline
 
-   shell_disable_glob; IFS=$'\n'
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
-
+   .foreachline nodeline in ${nodelines}
+   .do
       if [ ! -z "${nodeline}" ]
       then
          sourcetree::nodeline::parse "${nodeline}"     # memo: _marks unused
 
-         zombiefile="${zombiedir}/${_uuid}"
+         zombiefile="${_zombiedir}/${_uuid}"
          if [ -e "${zombiefile}" ]
          then
-            sourcetree::db::_bury_zombiefile "${_database}" "${zombiefile}" || return 1
+            sourcetree::db::do_bury_zombiefile "${_database}" "${zombiefile}" || return 1
          fi
       fi
-   done
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .done
 
    # will be done later
-   # rmdir_if_empty "${zombiedir}"
+   # rmdir_if_empty "${_zombiedir}"
 }
 
 
