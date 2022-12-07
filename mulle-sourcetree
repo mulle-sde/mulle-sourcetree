@@ -33,7 +33,7 @@
 [ "${TRACE:-}" = 'YES' -o "${MULLE_SOURCETREE_TRACE:-}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="1.1.0"
+MULLE_EXECUTABLE_VERSION="1.2.0"
 
 #
 # Determine location of own libexec directory. Which is `src` in development
@@ -253,22 +253,6 @@ sourcetree::__check_sane_stash_dir()
 
 sourcetree::main()
 {
-   local MULLE_FLAG_MAGNUM_FORCE='NO'
-   local MULLE_FLAG_IGNORE_GRAVEYARD='NO'
-
-   # technical flags
-   local MULLE_TRACE
-   local MULLE_FLAG_EXEKUTOR_DRY_RUN='NO'
-   local MULLE_FLAG_LOG_LOCAL='NO'
-   local MULLE_FLAG_LOG_DEBUG='NO'
-   local MULLE_FLAG_LOG_EXEKUTOR='NO'
-   local MULLE_FLAG_LOG_FLUFF='NO'
-   local MULLE_FLAG_LOG_SCRIPTS='NO'
-   local MULLE_FLAG_LOG_SETTINGS='NO'
-   local MULLE_FLAG_LOG_VERBOSE='NO'
-   local MULLE_FLAG_LOG_MERGE='NO'
-   local MULLE_TRACE_POSTPONE='NO'
-
    local MULLE_FLAG_DEFER=""  # test also uses this ?
 
    local FLAG_USE_FALLBACK='NO'     # should probably remove
@@ -414,6 +398,16 @@ sourcetree::main()
 
    options_setup_trace "${MULLE_TRACE}" && set -x
 
+   cmd="${1}"
+   [ $# -eq 0 ] || shift
+
+   case "${cmd}" in 
+      libexec-dir|library-path)
+         printf "%s\n" "${MULLE_SOURCETREE_LIBEXEC_DIR}"
+         exit 0
+      ;;
+   esac
+
    # shellcheck source=mulle-sourcetree-environment.sh
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-environment.sh" || exit 1
 
@@ -428,8 +422,6 @@ sourcetree::main()
                                     "${FLAG_USE_FALLBACK}" \
                                     "${MULLE_FLAG_DEFER}"
 
-   cmd="${1}"
-   [ $# -eq 0 ] || shift
 
    #
    # dbstatus should be fast and doesn't need share
@@ -523,10 +515,6 @@ sourcetree::main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-filter.sh"
 
          sourcetree::filter::main "$@"
-      ;;
-
-      libexec-dir|library-path)
-         printf "%s\n" "${MULLE_SOURCETREE_LIBEXEC_DIR}"
       ;;
 
       mode)

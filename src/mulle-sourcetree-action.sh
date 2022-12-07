@@ -1510,20 +1510,20 @@ sourcetree::action::do_actions_with_nodelines_parallel()
    local _parallel_jobs
    local _parallel_fails
 
-   _parallel_begin
+   __parallel_begin
 
    .foreachline nodeline in ${nodelines}
    .do
       if [ ! -z "${nodeline}" ]
       then
-         _parallel_execute sourcetree::action::do_actions_with_nodeline "${nodeline}" \
+         __parallel_execute sourcetree::action::do_actions_with_nodeline "${nodeline}" \
                                                                         "${style}" \
                                                                         "${config}" \
                                                                         "${database}"
       fi
    .done
 
-   _parallel_end
+   __parallel_end
    rval=$? 
 
    log_debug "sourcetree::action::do_actions_with_nodelines_parallel: $rval"

@@ -204,7 +204,7 @@ sourcetree::clean::do()
    local _parallel_jobs
    local _parallel_fails
 
-   _parallel_begin
+   __parallel_begin
 
    .foreachline line in ${commands}
    .do
@@ -221,12 +221,12 @@ sourcetree::clean::do()
          ;;
 
          L*)
-            _parallel_execute remove_file_if_present "${filename}"
+            __parallel_execute remove_file_if_present "${filename}"
          ;;
       esac
    .done
 
-   _parallel_end
+   __parallel_end
 
    :
 }

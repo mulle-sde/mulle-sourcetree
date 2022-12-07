@@ -501,6 +501,7 @@ sourcetree::list::main()
    local OPTION_MARKS
    local OPTION_MARKS_QUALIFIER
    local OPTION_FORMAT='DEFAULT'
+   local OPTION_FORCE_FORMAT
    local OPTION_DEDUPE_MODE='hacked-marks-nodeline-no-uuid'
    local OPTION_VERBATIM='NO'
    local OPTION_CONFIG_FILE='DEFAULT'
@@ -570,7 +571,7 @@ sourcetree::list::main()
             [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
 
-            OPTION_FORMAT="$1"
+            OPTION_FORCE_FORMAT="$1"
          ;;
 
          --output-format)
@@ -869,10 +870,11 @@ sourcetree::list::main()
       fi
    fi
 
+   # manually given format rules
    sourcetree::list::do "${mode}" \
                         "${OPTION_NODETYPES}" \
                         "${OPTION_MARKS_QUALIFIER}" \
-                        "${OPTION_FORMAT}" \
+                        "${OPTION_FORCE_FORMAT:-${OPTION_FORMAT}}" \
                         "${OPTION_OUTPUT_CMDLINE}"
 }
 

@@ -33,7 +33,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_C_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="1.1.0"
+MULLE_EXECUTABLE_VERSION="1.2.0"
 
 
 usage()
@@ -486,7 +486,6 @@ emit_c_header()
 
    local dependency
    local address
-   local marks
    local include
    local uuid
 

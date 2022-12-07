@@ -63,7 +63,7 @@ main()
 
    local i
 
-   log_verbose "mulle-sourcetree: `mulle-sourcetree version` (`mulle-sourcetree libexec-dir`)"
+   log_verbose "mulle-sourcetree: `"${MULLE_SOURCETREE}" version` (`"${MULLE_SOURCETREE}" libexec-dir`)"
 
    OUTPUT_DEVICE=
    for i in "${TEST_DIR}"/*
