@@ -1410,7 +1410,7 @@ sourcetree::walk::r_symbol_for_address()
    include "case"
 
    r_basename "${address}"
-   r_smart_upcase_identifier "${RVAL}"
+   r_smart_file_upcase_identifier "${RVAL}"
 
    [ ! -z "${RVAL}" ]
 }

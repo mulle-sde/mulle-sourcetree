@@ -268,7 +268,7 @@ sourcetree::action::_do_fetch_operation()
    fi
 
    r_basename "${_address}"
-   r_smart_upcase_identifier "${RVAL}"
+   r_smart_file_upcase_identifier "${RVAL}"
    envvar="MULLE_SOURCETREE_FETCH_${RVAL}"
 
    local value

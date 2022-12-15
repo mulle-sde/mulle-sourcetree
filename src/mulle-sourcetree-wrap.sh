@@ -88,7 +88,7 @@ sourcetree::wrap::config()
 
       sourcetree::nodeline::parse "${nodeline}"  # memo: _marks not used
 
-      r_smart_upcase_identifier "${_address}"
+      r_smart_file_upcase_identifier "${_address}"
       identifier="${RVAL}"
 
       nodetype_identifier="${identifier}_NODETYPE"
