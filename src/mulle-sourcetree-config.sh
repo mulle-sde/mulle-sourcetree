@@ -79,7 +79,7 @@ Usage:
    List the available sourcetree configuration files. The "config"
    configuration is the default configuration used my ${MULLE_USAGE_NAME},
    unless overridden by a
-   MULLE_SOURCETREE_CONFIG_NAME_\${PROJECT_UPCASE_IDENTIFIER} environment
+   MULLE_SOURCETREE_CONFIG_NAME_\${PROJECT_FILE_UPCASE_IDENTIFIER} environment
    variable.
 
 Options:

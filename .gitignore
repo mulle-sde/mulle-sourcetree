@@ -19,3 +19,4 @@ benchmark
 research/
 .gitignore
 .mulle-make-build-dir
+var/
