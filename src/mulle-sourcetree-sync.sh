@@ -117,7 +117,8 @@ sourcetree::sync::__get_config_descendinfo()
    case "${config}" in
       /"${MULLE_SOURCETREE_STASH_DIRNAME}"/*)
          r_basename "${config}"
-         r_filepath_concat "${MULLE_SOURCETREE_STASH_DIR}" "${_config#"/${MULLE_SOURCETREE_STASH_DIRNAME}"/}"
+         r_filepath_concat "${MULLE_SOURCETREE_STASH_DIR}" \
+                           "${_config#"/${MULLE_SOURCETREE_STASH_DIRNAME}"/}"
          _filename="${RVAL}"
       ;;
 
@@ -354,7 +355,10 @@ it is empty (${PWD#"${MULLE_USER_PWD}/"})"
          VISITED="${RVAL}"
       fi
 
-      sourcetree::sync::_descend_db_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+      sourcetree::sync::_descend_db_nodeline "${nodeline}" \
+                                             "${style}" \
+                                             "${config}" \
+                                             "${database}"
       rval=$?
 
       # 127 is not really an error in a descendant 
@@ -363,6 +367,8 @@ it is empty (${PWD#"${MULLE_USER_PWD}/"})"
          return $rval
       fi
    .done
+
+   return 0
 }
 
 
@@ -415,7 +421,10 @@ nodelines \"${nodelines}\" from config \"${config:-ROOT}\" (${PWD#"${MULLE_USER_
          VISITED="${RVAL}"
       fi
 
-      sourcetree::sync::descend_config_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+      sourcetree::sync::descend_config_nodeline "${nodeline}" \
+                                                "${style}" \
+                                                "${config}" \
+                                                "${database}"
    .done
 }
 
@@ -529,12 +538,17 @@ sourcetree::sync::_sync_only_share()
          VISITED="${RVAL}"
       fi
 
-      sourcetree::sync::nodeline_sync_only_share "${nodeline}" "${config}" "${database}" || return 1
+      sourcetree::sync::nodeline_sync_only_share "${nodeline}" \
+                                                 "${config}" \
+                                                 "${database}" || return 1
    .done
 
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
-   sourcetree::sync::descend_config_nodelines "only_share" "${config}" "${database}" "${symbol}" || return 1
+   sourcetree::sync::descend_config_nodelines "only_share" \
+                                              "${config}" \
+                                              "${database}" \
+                                              "${symbol}" || return 1
 }
 
 
@@ -624,7 +638,13 @@ sourcetree::sync::_sync_share()
    # if there are no nodelines that's OK, we still want to do zombification
    # but if there's also no database then just bail
    #
-   if ! sourcetree::walk::r_configfile "${symbol}" "${config}"
+   local nodelines
+   local rval
+
+   nodelines="`sourcetree::walk::cfg_read "${symbol}" "${config}"`"
+   rval=$?
+
+   if [ $rval -eq 2 ]
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
 
@@ -643,14 +663,6 @@ sourcetree::sync::_sync_share()
       fi
    fi
 
-   local configfile
-
-   configfile="${RVAL}"
-
-   local nodelines
-
-   nodelines="`sourcetree::cfg::_read "${configfile}" `"
-
    local need_db='NO'
 
    if [ "${database}" = "/" ]
@@ -663,6 +675,7 @@ sourcetree::sync::_sync_share()
          ;;
       esac
    fi
+
    #
    # We run through the nodelines and check if there is a match for
    # no-share, if yes, then we will need to manage a database. Else it will
@@ -825,7 +838,13 @@ sourcetree::sync::_sync_recurse()
    # if there are no nodelines that's OK, we still want to do zombification
    # but if there's also no database then just bail
    #
-   if ! sourcetree::walk::r_configfile "${symbol}" "${config}"
+   local nodelines
+   local rval
+
+   nodelines="`sourcetree::walk::cfg_read "${symbol}" "${config}"`"
+   rval=$?
+
+   if [ $rval -eq 2 ]
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! sourcetree::db::dir_exists "${database}"
@@ -834,14 +853,6 @@ sourcetree::sync::_sync_recurse()
          return 127
       fi
    fi
-
-   local configfile
-
-   configfile="${RVAL}"
-
-   local nodelines
-
-   nodelines="`sourcetree::cfg::_read "${configfile}" `"
 
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 
@@ -854,7 +865,6 @@ sourcetree::sync::_sync_recurse()
    sourcetree::db::zombify_nodes "${database}"
 
    local count
-   local rval
 
    r_count_lines "${nodelines}"
    count="${RVAL}"
@@ -928,7 +938,14 @@ sourcetree::sync::_sync_flat()
    # but if there's also no database then just bail. We remember the actual
    # config that was used, to make it easier to debug symlink problems later
    #
-   if ! sourcetree::walk::r_configfile "${symbol}" "${config}"
+
+   local nodelines
+   local rval
+
+   nodelines="`sourcetree::walk::cfg_read "${symbol}" "${config}"`"
+   rval=$?
+
+   if [ $rval -eq 2 ]
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! sourcetree::db::dir_exists "${database}"
@@ -937,14 +954,6 @@ sourcetree::sync::_sync_flat()
          return 127
       fi
    fi
-
-   local configfile
-
-   configfile="${RVAL}"
-
-   local nodelines
-
-   nodelines="`sourcetree::cfg::__read`"
 
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
 

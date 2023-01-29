@@ -96,7 +96,7 @@ EOF
    (
       printf "%s\n" "${SOURCETREE_COMMON_OPTIONS}"
       echo "--if-missing           : only add, if a node with same adddress is not present"
-   )  | sed "s|^|$*|" | sort
+   )  | sed "s|^|   |" | sort
    echo >&2
    exit 1
 }
@@ -829,6 +829,8 @@ in the sourcetree (${RVAL#"${MULLE_USER_PWD}/"}). Use -f to skip this check."
       fi
    fi
 
+   log_debug "uuid is ${_uuid}"
+
 #   if [ "${OPTION_UNSAFE}" = 'YES' ]
 #   then
 #      r_comma_concat "${mode}" "unsafe"
@@ -1380,11 +1382,11 @@ no-share
 no-update
 only-standalone
 only-framework
-only-camke-platform-darwin
-only-camke-platform-freebsd
-only-camke-platform-linux
-only-camke-platform-windows
-only-camke-platform-mingw
+only-cmake-platform-darwin
+only-cmake-platform-freebsd
+only-cmake-platform-linux
+only-cmake-platform-windows
+only-cmake-platform-mingw
 only-platform-darwin
 only-platform-freebsd
 only-platform-linux
@@ -1403,7 +1405,7 @@ sourcetree::commands::_add_mark_known_absent()
 
    if [ "${OPTION_EXTENDED_MARK}" != 'YES' ]
    then
-      if ! fgrep -x -q -e "${mark}" <<< "${KNOWN_MARKS}"
+      if ! grep -F -x -q -e "${mark}" <<< "${KNOWN_MARKS}"
       then
          case "${mark}" in
             version-min-*|version-max-*)
@@ -1435,7 +1437,7 @@ sourcetree::commands::_remove_mark_known_present()
 
    if [ "${OPTION_EXTENDED_MARK}" != 'YES' ]
    then
-      if ! fgrep -x -q -e "${mark}" <<< "${KNOWN_MARKS}"
+      if ! grep -F -x -q -e "${mark}" <<< "${KNOWN_MARKS}"
       then
          fail "mark \"${mark}\" is unknown.
 ${C_INFO}If this is not a typo use:
@@ -1495,16 +1497,14 @@ sourcetree::commands::mark()
    # this loop is suboptimal as we are constantly rewriting the line
    # it was added as an afterthought
 
-   shell_disable_glob ; IFS=","
-   for mark in ${marks}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .foreachitem mark in ${marks}
+   .do
       case "${mark}" in
          no-*|only-*|version-*)
             if sourcetree::nodemarks::_contain "${_marks}" "${mark}"
             then
                log_info "Node \"${_address}\" is already marked as \"${mark}\"."
-               continue
+               .continue
             fi
             sourcetree::commands::_add_mark_known_absent "${mark}"
             rval=$?
@@ -1540,7 +1540,7 @@ sourcetree::commands::mark()
             fail "Malformed mark \"${mark}\" for node \"${_address}\" (only lowercase identifiers please)"
          ;;
       esac
-   done
+   .done
 
    sourcetree::commands::write_nodeline_changed_marks "${oldnodeline}"
 }

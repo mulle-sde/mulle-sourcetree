@@ -7,7 +7,7 @@ then
   exit 1
 fi
 
-egrep -h '[^_]read_[a-z0-9_]*setting \"' "$@" | \
+grep -E -h '[^_]read_[a-z0-9_]*setting \"' "$@" | \
    sed 's/^[^`]*`\(.*\)$/\1/' | \
    sed 's/^[ \t]*\(.*\)/\1/'  | \
    LC_ALL=C sort | \

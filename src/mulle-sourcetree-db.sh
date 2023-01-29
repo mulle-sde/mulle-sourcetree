@@ -216,13 +216,14 @@ sourcetree::db::__common_dbfilepath()
    local databasedir="$1"
    local uuid="$2"
 
-   dbfilepath="${databasedir}/${uuid}"
-   if [ ! -f "${dbfilepath}" ]
+   _dbfilepath="${databasedir}/${uuid}"
+   if [ ! -f "${_dbfilepath}" ]
    then
       log_debug "No address found for ${uuid} in ${databasedir}"
+      _dbfilepath=
       return 1
    fi
-   log_debug "Found \"${dbfilepath}\""
+   log_debug "Found \"${_dbfilepath}\""
    return 0
 }
 
@@ -295,14 +296,14 @@ sourcetree::db::recall()
 
    sourcetree::db::__common_databasedir_uuid "$@"
 
-   local dbfilepath
+   local _dbfilepath
 
    if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       return 1
    fi
 
-   cat "${dbfilepath}"
+   cat "${_dbfilepath}"
 }
 
 
@@ -316,12 +317,12 @@ sourcetree::db::forget()
 
    sourcetree::db::__common_databasedir_uuid "$@"
 
-   local dbfilepath
+   local _dbfilepath
 
    if sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       log_debug "Forgetting about uuid \"${_uuid}\" ($_databasedir)"
-      remove_file_if_present "${dbfilepath}"
+      remove_file_if_present "${_dbfilepath}"
    fi
 }
 
@@ -469,6 +470,7 @@ ${C_MAGENTA}${C_BOLD}${filename#"${MULLE_USER_PWD}/"}${C_INFO} in grave \
       (
          rexekutor cd "${gravepath}.tmp" &&
          exekutor "${TAR}" cfz "${gravepath}" . &&
+         cd .. &&
          rmdir_safer "${gravepath}.tmp"
       ) &
    else
@@ -546,14 +548,14 @@ sourcetree::db::fetch_nodeline_for_uuid()
 
    sourcetree::db::__common_databasedir_uuid "$@"
 
-   local dbfilepath
+   local _dbfilepath
 
    if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       return 1
    fi
 
-   sourcetree::db::_nodeline <"${dbfilepath}"
+   sourcetree::db::_nodeline < "${_dbfilepath}"
 }
 
 
@@ -587,14 +589,14 @@ sourcetree::db::fetch_filename_for_uuid()
 
    sourcetree::db::__common_databasedir_uuid "$@"
 
-   local dbfilepath
+   local _dbfilepath
 
    if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       return 1
    fi
 
-   sourcetree::db::_filename < "${dbfilepath}"
+   sourcetree::db::_filename < "${_dbfilepath}"
 }
 
 
@@ -608,14 +610,14 @@ sourcetree::db::fetch_evaledurl_for_uuid()
 
    sourcetree::db::__common_databasedir_uuid "$@"
 
-   local dbfilepath
+   local _dbfilepath
 
    if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       return 1
    fi
 
-   sourcetree::db::_evaledurl < "${dbfilepath}"
+   sourcetree::db::_evaledurl < "${_dbfilepath}"
 }
 
 
@@ -670,14 +672,16 @@ sourcetree::db::fetch_uuid_for_address()
 
    [ -z "${address}" ] && _internal_fail "address is empty"
 
-   if dir_has_files "${_databasedir}" f
+   if ! dir_has_files "${_databasedir}" f
    then
-      local pattern
-
-      r_escaped_grep_pattern "${address}"
-      pattern="${RVAL}"
-      egrep -s "^${pattern};" "${_databasedir}"/* | cut -s '-d;' -f 4
+      return 1
    fi
+
+   local pattern
+
+   r_escaped_grep_pattern "${address}"
+   pattern="${RVAL}"
+   rexekutor grep -E "^${pattern};" "${_databasedir}"/* | cut -s '-d;' -f 4
 }
 
 
@@ -704,7 +708,7 @@ sourcetree::db::r_fetch_uuid_for_evaledurl()
    local candidate
 
    IFS=$'\n'
-   for candidate in `( fgrep -l -x -s -e "${searchurl}" "${_databasedir}"/* )`
+   for candidate in `( grep -F -l -x -s -e "${searchurl}" "${_databasedir}"/* )`
    do
       IFS="${DEFAULT_IFS}"
 
@@ -746,7 +750,7 @@ sourcetree::db::r_fetch_uuid_for_evaledurl()
 #
 #       cd "${_databasedir}"
 #       IFS=$'\n'
-#       for candidate in `fgrep -l -x -s -e "${searchfilename}" *`
+#       for candidate in `grep -F -l -x -s -e "${searchfilename}" *`
 #       do
 #          IFS="${DEFAULT_IFS}"
 #
@@ -1280,73 +1284,6 @@ If you want to change that to \"${dbtype}\" do:
 }
 
 
-# sets external variables!!
-sourcetree::db::_set_default_mode()
-{
-   log_entry "sourcetree::db::_set_default_mode" "$@"
-
-   local database="$1"
-   local usertype="$2"
-
-   local actualdbtype
-
-   actualdbtype="`sourcetree::db::get_dbtype "${database}"`"
-
-   local _rootdir
-
-   # que ??
-   if [ ! -z "${actualdbtype}"  ]
-   then
-      sourcetree::db::__common__rootdir "${database}"
-   fi
-
-   local dbtype
-
-   dbtype="${usertype}"
-   if [ -z "${dbtype}" ]
-   then
-      dbtype="${actualdbtype}"
-      if [ -z "${dbtype}" ]
-      then
-         dbtype="share"       # the default
-      else
-         r_simplified_absolutepath "${_rootdir}"
-         log_fluff "Database: ${C_RESET_BOLD}${RVAL} ${C_MAGENTA}${C_BOLD}${actualdbtype}${C_INFO}"
-      fi
-   fi
-
-   case "${dbtype}" in
-      share|recurse|flat)
-         SOURCETREE_MODE="${dbtype}"
-      ;;
-
-      partial)
-         # partial means it's created by a parent share
-         # but itself is not shared, but inherently partially recurse
-         SOURCETREE_MODE="recurse"
-      ;;
-
-      no-share)
-         SOURCETREE_MODE="recurse"
-      ;;
-
-      *)
-         _internal_fail "unknown dbtype \"${dbtype}\""
-      ;;
-   esac
-
-   if [ ! -z "${SOURCETREE_MODE}" ]
-   then
-      log_debug "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
-      if [ "${SOURCETREE_MODE}" = share ]
-      then
-         [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && _internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
-         log_debug "Stash directory: ${C_RESET_BOLD}${MULLE_SOURCETREE_STASH_DIR}${C_INFO}"
-      fi
-   fi
-}
-
-
 sourcetree::db::has_graveyard()
 {
    log_entry "sourcetree::db::has_graveyard" "$@"
@@ -1492,7 +1429,7 @@ sourcetree::db::is_filename_inuse()
    local inuse
 
    inuse="`sourcetree::db::fetch_all_filenames "${database}"`"
-   fgrep -q -s -x "${filename}" <<< "${inuse}"
+   grep -F -q -s -x "${filename}" <<< "${inuse}"
 }
 
 
@@ -1575,6 +1512,8 @@ sourcetree::db::zombify_nodelines()
    local _userinfo
    local _uuid
 
+   local _dbfilepath
+
    .foreachline nodeline in ${nodelines}
    .do
       if [ ! -z "${nodeline}" ]
@@ -1583,7 +1522,7 @@ sourcetree::db::zombify_nodelines()
 
          if sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
          then
-            exekutor cp ${OPTION_COPYMOVEFLAGS} "${dbfilepath}" "${_zombiedir}/"
+            exekutor cp ${OPTION_COPYMOVEFLAGS} "${_dbfilepath}" "${_zombiedir}/"
          fi
       fi
    .done

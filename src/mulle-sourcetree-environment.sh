@@ -116,7 +116,7 @@ sourcetree::environment::minimal()
       log_fluff "Sourcetree sets MULLE_VIRTUAL_ROOT to \"${MULLE_VIRTUAL_ROOT}\""
    fi
 
-   MULLE_HOSTNAME="${MULLE_HOSTNAME:-`hostname -s`}"
+   MULLE_HOSTNAME="${MULLE_HOSTNAME:-`hostname`}" # -s doesn't work on solaris
 }
 
 
@@ -169,8 +169,8 @@ sourcetree::environment::default()
    local option_configdir="$2"
    local option_confignames="$3"
    local option_use_fallback="$4"
-   local defer="$6"
-   local mode="$7"
+   local defer="$5"
+   local mode="$6"
 
    sourcetree::environment::basic "" \
                                   "${option_configdir}" \
@@ -206,7 +206,7 @@ sourcetree::environment::default()
    # was probably to have a common stash directory for multiple projects.
    # TODO: get rid of this ?
    #
-   sourcetree::environment::_set_share_dir "${option_sharedir}"
+   sourcetree::environment::set_share_dir "${option_sharedir}"
 }
 
 
@@ -245,9 +245,9 @@ Use -e if this is desired."
 }
 
 
-sourcetree::environment::_set_share_dir()
+sourcetree::environment::set_share_dir()
 {
-   log_entry "sourcetree::environment::_set_share_dir" "$@"
+   log_entry "sourcetree::environment::set_share_dir" "$@"
 
    local usershare_dir="$1"
 
@@ -313,38 +313,177 @@ sourcetree::environment::_set_share_dir()
 }
 
 
+sourcetree::environment::check_sane_stash_dir()
+{
+   log_entry "sourcetree::environment::check_sane_stash_dir" "$@"
+
+   local physical
+
+   r_physicalpath "${MULLE_SOURCETREE_STASH_DIR}"
+   physical="${RVAL}"
+
+   # if it doesn't exist then we can't say much about it
+   if [ ! -z "${physical}" ]
+   then
+      if [ "${physical}" != "${MULLE_SOURCETREE_STASH_DIR}" ]
+      then
+         log_warning "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) is traversing symlinks. Will use \"${physical}\""
+         MULLE_SOURCETREE_STASH_DIR="${physical}"
+      fi
+   fi
+
+   #
+   # check that an absolute MULLE_SOURCETREE_STASH_DIR does not go outside
+   # MULLE_VIRTUAL_ROOT.
+   # MEMO: I think this is actually a cool feature.
+   #
+   # Ensure that stash dir is at least three levels deep, /tmp/xxx/stash is
+   # OK
+   #
+   case "${MULLE_SOURCETREE_STASH_DIR}" in
+      *".."*)
+        fail "MULLE_SOURCETREE_STASH_DIR contains .."
+      ;;
+
+      /*)
+#          local relative
+#
+#          relative="`symlink_relpath "${MULLE_SOURCETREE_STASH_DIR}" "${MULLE_VIRTUAL_ROOT}" `"
+#          case "${relative}" in
+#             *..*)
+#                case "${MULLE_SHELL_MODE}" in
+#                   SUBSHELL*)
+#                   ;;
+#
+#                   *)
+#                      _log_warning "MULLE_SOURCETREE_STASH_DIR \
+# (${MULLE_SOURCETREE_STASH_DIR}) lies outside of MULLE_VIRTUAL_ROOT \
+# ($MULLE_VIRTUAL_ROOT)."
+#                      log_fluff "Hint: MULLE_SOURCETREE_STASH_DIR must not contain symlinks."
+#                   ;;
+#                esac
+#             ;;
+#          esac
+      ;;
+
+      "")
+         _internal_fail "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) is empty"
+      ;;
+
+      *"/")
+         _internal_fail "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) ends with /"
+      ;;
+
+      *)
+         _internal_fail "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) is not absolute"
+      ;;
+   esac
+
+   r_path_depth "${MULLE_SOURCETREE_STASH_DIR}"
+   case ${RVAL} in
+      0|1|2)
+         _internal_fail "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) is too close to root"
+      ;;
+   esac
+}
+
+
+
+# sets external variables!!
+sourcetree::environment::set_default_db_mode()
+{
+   log_entry "sourcetree::environment::set_default_db_mode" "$@"
+
+   local database="$1"
+   local usertype="$2"
+
+   local actualdbtype
+
+   actualdbtype="`sourcetree::db::get_dbtype "${database}"`"
+
+   local _rootdir
+
+   # que ??
+   if [ ! -z "${actualdbtype}"  ]
+   then
+      sourcetree::db::__common__rootdir "${database}"
+   fi
+
+   local dbtype
+
+   dbtype="${usertype}"
+   if [ -z "${dbtype}" ]
+   then
+      dbtype="${actualdbtype}"
+      if [ -z "${dbtype}" ]
+      then
+         dbtype="share"       # the default
+      else
+         r_simplified_absolutepath "${_rootdir}"
+         log_fluff "Database: ${C_RESET_BOLD}${RVAL} ${C_MAGENTA}${C_BOLD}${actualdbtype}${C_INFO}"
+      fi
+   fi
+
+   case "${dbtype}" in
+      share|recurse|flat)
+         SOURCETREE_MODE="${dbtype}"
+      ;;
+
+      partial)
+         # partial means it's created by a parent share
+         # but itself is not shared, but inherently partially recurse
+         SOURCETREE_MODE="recurse"
+      ;;
+
+      no-share)
+         SOURCETREE_MODE="recurse"
+      ;;
+
+      *)
+         _internal_fail "unknown dbtype \"${dbtype}\""
+      ;;
+   esac
+
+   if [ ! -z "${SOURCETREE_MODE}" ]
+   then
+      log_debug "Mode: ${C_MAGENTA}${C_BOLD}${SOURCETREE_MODE}${C_INFO}"
+      if [ "${SOURCETREE_MODE}" = "share" ]
+      then
+         [ -z "${MULLE_SOURCETREE_STASH_DIR}" ] && _internal_fail "MULLE_SOURCETREE_STASH_DIR is empty"
+         log_debug "Stash directory: ${C_RESET_BOLD}${MULLE_SOURCETREE_STASH_DIR}${C_INFO}"
+      fi
+   fi
+}
+
+
+sourcetree::environment::setup()
+{
+   log_entry "sourcetree::environment::setup" "$@"
+
+   local option_sharedir="${1:-}"
+   local option_dirname="${2:-}"
+   local option_mode="${3:-}"
+
+   sourcetree::environment::default "" \
+                                    "${option_dirname}" \
+                                    "" \
+                                    "" \
+                                    "" \
+                                    "" \
+                                    "${option_mode}"
+   sourcetree::environment::set_share_dir "${option_sharedir}"
+   sourcetree::environment::check_sane_stash_dir
+   sourcetree::environment::set_default_db_mode "/"
+}
+
 
 sourcetree::environment::initialize()
 {
-   if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-db.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_SOURCETREE_NODEMARKS_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-nodemarks.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
-   fi
-
-   if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-node.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_SOURCETREE_NODELINE_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-nodeline.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_SOURCETREE_CFG_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-cfg.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh" || exit 1
-   fi
+   include "sourcetree::cfg"
+   include "sourcetree::db"
+   include "sourcetree::node"
+   include "sourcetree::nodeline"
+   include "sourcetree::nodemarks"
 }
 
 sourcetree::environment::initialize

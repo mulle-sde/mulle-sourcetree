@@ -50,31 +50,39 @@ EOF
    then
       cat <<EOF  >&2
 
-      NODE_FILENAME     : the place where the node will be fetched to
+      WALK_NODE            : the complete contents of the node
+      NODE_FILENAME        : the place where the node will be fetched to
 
-      NODE_ADDRESS      : address part of WALK_NODE
-      NODE_BRANCH       : branch part of WALK_NODE
-      NODE_FETCHOPTIONS : the fetchoptions part of WALK_NODE
-      NODE_MARKS        : the marks part of WALK_NODE
-      NODE_TAG          : tag part of WALK_NODE
-      NODE_TYPE         : the type (nodetype) part of the WALK_NODE
-      NODE_URL          : the URL part of WALK_NODE
-      NODE_USERINFO     : the userinfo part of WALK_NODE (possibly base64)
-      NODE_UUID         : the uuid part of WALK_NODE
+      NODE_ADDRESS         : address part of WALK_NODE
+      NODE_BRANCH          : branch part of WALK_NODE
+      NODE_FETCHOPTIONS    : the fetchoptions part of WALK_NODE
+      NODE_MARKS           : the marks part of WALK_NODE
+      NODE_RAW_USERINFO    : the userinfo part of WALK_NODE (possibly base64)
+      NODE_TAG             : tag part of WALK_NODE
+      NODE_TYPE            : the type (nodetype) part of the WALK_NODE
+      NODE_URL             : the URL part of WALK_NODE
+      NODE_UUID            : the uuid part of WALK_NODE
 
-      WALK_NODE         : the complete contents of the node
-      WALK_DATASOURCE   : the current node sourcetree config path
-      WALK_DESTINATION  : what will be used to recurse the current node
-      WALK_MODE         : current internal mode used for walking
-      WALK_INDEX        : current node index of all nodes walked
-      WALK_LEVEL        : recursion depth of current node
+      WALK_DATASOURCE      : the current node sourcetree config path
+      WALK_DEPENDENCY      : like parent but uses '/' for root instead of '.'
+      WALK_DESTINATION     : what will be used to recurse the current node
+      WALK_INDENT          : spaces for indenting according to level
+      WALK_INDEX           : current node index of all nodes walked
+      WALK_LEVEL           : recursion depth of current node
+      WALK_MODE            : current internal mode used for walking
+      WALK_PARENT          : the name of the dependency owning the config
+      WALK_VIRTUAL         : ???
+      WALK_VIRTUAL_ADDRESS : ???
 
 EOF
    else
       cat <<EOF  >&2
-   NODE_URL, NODE_ADDRESS, NODE_BRANCH, NODE_TAG, NODE_FILENAME,
-   NODE_TYPE, NODE_UUID, NODE_MARKS, NODE_FETCHOPTIONS, NODE_USERINFO,
-   WALK_NODE. WALK_DESTINATION, WALK_MODE, WALK_INDEX, WALK_LEVEL.
+      WALK_NODE, NODE_FILENAME, NODE_ADDRESS, NODE_BRANCH, NODE_FETCHOPTIONS,
+      NODE_MARKS, NODE_RAW_USERINFO, NODE_TAG, NODE_TYPE, NODE_URL, NODE_UUID,
+      WALK_DATASOURCE, WALK_DEPENDENCY, WALK_DESTINATION, WALK_INDENT,
+      WALK_INDEX, WALK_LEVEL, WALK_MODE, WALK_PAREN, WALK_VIRTUAL,
+      WALK_VIRTUAL_ADDRESS.
+      (Use -v for info about the variables)
 
 EOF
    fi
@@ -144,7 +152,7 @@ Options:
    --backwards      : walk tree nodes backwards, rarely useful
    --in-order       : walk tree depth first  (Root, Left, Right
    --no-dedupe      : walk all nodes in the tree (very slow)
-   --bequeath       : ignore bequeath marks (this is erroneously inverted)
+   --bequeath       : ignore bequeath marks (name is erroneously inverted)
    --pre-order      : walk tree in pre-order  (Root, Left, Right)
    --breadth-first  : walk tree breadth first (first all top levels)
    --post-order     : walk tree depth first for all siblings (Left, Right, Root)
@@ -468,17 +476,25 @@ doesn't jive with permissions \"${filterpermissions}\""
          if [ -d "${_filename}" ]
          then
             sourcetree::walk::__docd_preamble "${_filename}"
-               sourcetree::callback::call "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
+               sourcetree::callback::call "${datasource}" \
+                                          "${virtual}" \
+                                          "${mode}" \
+                                          "${callback}" \
+                                          "$@"
                rval=$?
             sourcetree::walk::__docd_postamble
-            log_debug "callback returned $rval"
+            log_debug "(docd) callback returned $rval"
          else
             log_fluff "\"${_filename}\" not there, so no callback"
          fi
       ;;
 
       *)
-         sourcetree::callback::call "${datasource}" "${virtual}" "${mode}" "${callback}" "$@"
+         sourcetree::callback::call "${datasource}" \
+                                    "${virtual}" \
+                                    "${mode}" \
+                                    "${callback}" \
+                                    "$@"
          rval=$?
          log_debug "callback returned $rval"
       ;;
@@ -538,8 +554,8 @@ with \"${descendqualifier}\""
    if [ ! -z "${filterpermissions}" ]
    then
       if ! sourcetree::walk::_descend_permissions "${_filename}" \
-                                                 "${_marks}" \
-                                                 "${filterpermissions}"
+                                                  "${_marks}" \
+                                                  "${filterpermissions}"
       then
          _log_debug "Node \"${_address}\" with filename \"${_filename}\" \
 doesn't jive with permissions \"${filterpermissions}\""
@@ -670,9 +686,8 @@ ${_raw_userinfo}"
          local i
          local linkmarks
 
-         shell_disable_glob ; IFS=","
-         for i in ${_marks}
-         do
+         .foreachitem i in ${_marks}
+         .do
             case "${i}" in
                no-configuration-${CONFIGURATION})
                   r_comma_concat "${linkmarks}" "${i}"
@@ -688,8 +703,7 @@ ${_raw_userinfo}"
                   linkmarks="${RVAL}"
                ;;
             esac
-         done
-         IFS="${DEFAULT_IFS}" ; shell_enable_glob
+         .done
 
          RVAL="${_address};${linkmarks:-DEFAULT}" #;${_filename}"
          return 0
@@ -793,7 +807,7 @@ sourcetree::walk::remove_from_visited()
 #
 sourcetree::walk::_visit_node()
 {
-   # log_entry "sourcetree::walk::_visit_node" "$2/${_address}"
+   log_entry "sourcetree::walk::_visit_node" "$@"
 
    local datasource="$1"
    local virtual="$2"
@@ -841,7 +855,7 @@ sourcetree::walk::_visit_node()
 
    case ",${mode}," in
       *,flat,*|*,in-flat,*|*,post-flat,*|*,breadth-flat,*)
-         log_debug "No descend"
+         log_debug "No descend in flat mode variant"
          sourcetree::walk::_visit_callback "$@"
          rval=$?
       ;;
@@ -912,7 +926,7 @@ sourcetree::walk::_visit_node()
 
 sourcetree::walk::_share_node()
 {
-   # log_entry "sourcetree::walk::_share_node" "$2/${_address}"
+   log_entry "sourcetree::walk::_share_node" "$@"
 
    local datasource="$1"
    local virtual="$2"
@@ -1469,6 +1483,11 @@ sourcetree::walk::r_configfile()
 }
 
 
+
+#
+# same as above but reads directly, which is more efficient because we
+# don't do (possibly) two extra stats (which is supercostly on MINGW)
+#
 sourcetree::walk::cfg_read()
 {
    log_entry "sourcetree::walk::cfg_read" "$@"
@@ -1476,19 +1495,49 @@ sourcetree::walk::cfg_read()
    local symbol="$1"
    local config="$2"
 
-   if ! sourcetree::walk::r_configfile "${symbol}" "${config}"
+   if [ -z "${symbol}" ]
    then
-      return 1
+      #
+      # override with environment variables
+      #
+      # local SOURCETREE_CONFIG_NAME="${MULLE_SOURCETREE_CONFIG_NAME:-${SOURCETREE_CONFIG_NAME}}"
+      # local SOURCETREE_CONFIG_SCOPES="${MULLE_SOURCETREE_CONFIG_SCOPES:-${SOURCETREE_CONFIG_SCOPES}}"
+
+      sourcetree::cfg::read "${config}"
+      return $?
    fi
 
-   local rval
+   # for descends we need to reset some internal variables temporarily
+   # make local copies of previous values, only valid for the lifetime
+   # of this function call
 
-   sourcetree::cfg::_read "${RVAL}"
-   rval=$?
+   local SOURCETREE_CONFIG_NAME="${MULLE_SOURCETREE_DEFAULT_CONFIG_NAME:-config}"
+   # local SOURCETREE_CONFIG_SCOPES="${MULLE_SOURCETREE_DEFAULT_CONFIG_SCOPES:-${SOURCETREE_CONFIG_SCOPES:-default}}"
+   local SOURCETREE_CONFIG_DIR="${SOURCETREE_CONFIG_DIR}"
+   local SOURCETREE_FALLBACK_CONFIG_DIR="${SOURCETREE_FALLBACK_CONFIG_DIR}"
 
-   log_debug "Configfile \"${symbol}\" \"${config}\" is \"${RVAL}\" read returns $rval"
+   #
+   # override with environment variables
+   #
+   local var
+   local value
 
-   return $rval
+   var="MULLE_SOURCETREE_CONFIG_NAME_${symbol}"
+   r_shell_indirect_expand "${var}"
+   value="${RVAL}"
+
+   log_debug "expanded value ${var} to \"${value}\""
+
+   SOURCETREE_CONFIG_NAME="${value:-${SOURCETREE_CONFIG_NAME}}"
+   log_setting "${var} : ${value}"
+
+#   var="MULLE_SOURCETREE_CONFIG_SCOPES_${symbol}"
+#   r_shell_indirect_expand "${var}"
+#   value="${RVAL}"
+#   SOURCETREE_CONFIG_SCOPES="${value:-${SOURCETREE_CONFIG_SCOPES}}"
+#   log_setting "${var} : ${value}"
+
+   sourcetree::cfg::read "${config}"
 }
 
 

@@ -44,6 +44,8 @@ Options:
    -n <value>    : node types to walk (default: ALL)
    -p <value>    : specify permissions (missing)
    -m <value>    : specify marks to match (e.g. build)
+   --lr          : use left/right layout (default)
+   --td          : use top/down layout
    --walk-config : traverse the config file (default)
    --walk-db     : walk over information contained in the database instead
    --output-html : emit HTML Graphviz nodes, for more information
@@ -546,7 +548,7 @@ sourcetree::dotdump::walk()
 
    # remove destinatipn from toemit, as we are emitting it now
    identifier="\"${destination}\""
-   TOEMIT_DIRECTORIES="`fgrep -v -s -x -e "${identifier}" <<< "${TOEMIT_DIRECTORIES}"`"
+   TOEMIT_DIRECTORIES="`grep -F -v -s -x -e "${identifier}" <<< "${TOEMIT_DIRECTORIES}"`"
    log_debug "[-] TOEMIT_DIRECTORIES='${TOEMIT_DIRECTORIES}'"
 
    if [ "${OPTION_OUTPUT_HTML}" = 'YES' ]
@@ -704,9 +706,11 @@ sourcetree::dotdump::do()
 digraph sourcetree
 {
 EOF
-
-   if [ "${OPTION_OUTPUT_HTML}" = 'YES' ]
+   # LR is default now
+   if [ "${OPTION_LR}" = 'NO' ]
    then
+      echo "   rankdir=TD;"
+   else
       echo "   rankdir=LR;"
    fi
 
@@ -731,6 +735,7 @@ sourcetree::dotdump::main()
    local OPTION_OUTPUT_HTML='NO'
    local OPTION_OUTPUT_EVAL='NO'
    local OPTION_OUTPUT_STATE='NO'
+   local OPTION_LR="DEFAULT"
 
    while [ $# -ne 0 ]
    do
@@ -769,6 +774,14 @@ sourcetree::dotdump::main()
 
          --no-output-html)
             OPTION_OUTPUT_HTML='NO'
+         ;;
+
+         --lr)
+            OPTION_LR="YES"
+         ;;
+
+         --td)
+            OPTION_LR="NO"
          ;;
 
          #
@@ -848,19 +861,7 @@ sourcetree::dotdump::initialize()
 {
    log_entry "sourcetree::dotdump::initialize"
 
-   if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
-   then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && _internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
-
-      # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-walk.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
-   fi
+   include "sourcetree::walk"
 }
 
 

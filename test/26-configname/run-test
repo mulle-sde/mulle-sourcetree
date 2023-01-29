@@ -86,7 +86,9 @@ main()
 
    log_info "----- ALL PASSED -----"
 
-   # rmdir_safer "${directory}"
+   cd /
+   
+   rmdir_safer "${directory}"
 }
 
 

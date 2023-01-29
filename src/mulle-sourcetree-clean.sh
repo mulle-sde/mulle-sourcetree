@@ -135,7 +135,10 @@ sourcetree::clean::bury()
    sourcetree::db::bury "${SOURCETREE_START}" "${uuid}" "${filename}"
 }
 
-
+# TODO: in a share configuration, we can probably simplify and just
+#       walk flat for embedded dependecies and then wipe the share
+#       directory wholesale
+#
 sourcetree::clean::do()
 {
    log_entry "sourcetree::clean::do" "$@"

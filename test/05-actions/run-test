@@ -237,7 +237,7 @@ main()
 
    r_make_tmp_directory || exit 1
    directory="${RVAL}"
-   cd "${directory}"
+
    r_physicalpath "${directory}"
    MULLE_VIRTUAL_ROOT="${RVAL}"
 
@@ -245,6 +245,7 @@ main()
       cd "${directory}" &&
       run_git_tests
    ) || exit 1
+
    rmdir_safer "${directory}"
 
    r_make_tmp_directory || exit 1
@@ -253,9 +254,10 @@ main()
       cd "${directory}" &&
       run_tar_tests
    ) || exit 1
-   rmdir_safer "${directory}"
 
    log_info "----- ALL PASSED -----"
+
+   rmdir_safer "${directory}"
 
 }
 

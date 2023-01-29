@@ -98,12 +98,28 @@ r_uname_to_cmake()
          fail "uname is empty"
       ;;
 
+      'dragonfly')
+         RVAL="DragonFlyBSD"  # guess
+      ;;
+
       'freebsd')
          systemname="FreeBSD"
       ;;
 
-      'mingw')
+      'openbsd')
+         systemname="OpenBSD"
+      ;;
+
+      'netbsd')
+         systemname="NetBSD"
+      ;;
+
+      'mingw'|'msys')
          systemname="Windows"
+      ;;
+
+      'sun'|'sunos')
+         RVAL="Solaris"
       ;;
 
       *)
@@ -336,8 +352,9 @@ _emit_dependencies_loader_cmake_code()
    # all-load is a bad obj-c differentiator
    #
    emit_objc_loader='NO'
+
    case ",${marks}," in
-      *,no-all-load,*)
+      *,no-all-load,*|*,no-cmake-loader,*)
          emit_objc_loader='YES'
          case ",${marks}," in
             *,no-cmake-loader,*)
@@ -347,11 +364,11 @@ _emit_dependencies_loader_cmake_code()
       ;;
    esac
 
-   case ",${marks}," in
-      *,no-all-load,*|*,no-cmake-loader,*)
-         emit_objc_loader='YES'
-      ;;
-   esac
+#   case ",${marks}," in
+#      *,no-all-load,*)
+#         emit_objc_loader='YES'
+#      ;;
+#   esac
 
    if [ "${OPTION_CMAKE_SEARCHPATH_ENABLED}" = 'YES' ]
    then
@@ -592,9 +609,8 @@ _emit_cmake_find_library()
    local library_key
    local types
 
-   IFS=","; shell_disable_glob
-   for i in ${names}
-   do
+   .foreachitem i in ${names}
+   .do
       # Split Release:curl into Release (type) and curl (name)
       name=""
       type=""
@@ -691,8 +707,7 @@ _emit_cmake_find_library()
       esac
 
       printf -v "${library_key}" "%s" "${libraries}"
-   done
-   IFS="${DEFAULT_IFS}"; shell_disable_glob
+   .done
 
    local failstring
    local failstatus
@@ -1097,7 +1112,6 @@ emit_cmake_dependency()
    then
       r_osexclude_configuration_to_cmake_if "${marks}" "platform" "cmake-platform"
       ifstatement1="${RVAL}"
-
       if [ ! -z "${ifstatement1}" ]
       then
          indent="   "
@@ -1105,7 +1119,6 @@ emit_cmake_dependency()
 
       r_sdk_exclude_configuration_to_cmake_if "${marks}" "sdk" "cmake-sdk"
       ifstatement2="${RVAL}"
-
       if [ ! -z "${ifstatement2}" ]
       then
          indent="${indent}   "
@@ -1242,7 +1255,7 @@ emit_cmake_dependencies()
 
       if [ ! -z "${address}" ]
       then
-         log_verbose "Emit cmake statements for ${uuid} ${C_MAGENTA}${C_BOLD}${address}"
+         log_verbose "Emit cmake statements for ${C_MAGENTA}${C_BOLD}${address}"
          emit_cmake_dependency "${emitter}" \
                                "${containername}" \
                                "${uuid}" \
@@ -1277,7 +1290,7 @@ MATCHES header AND \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                               --no-bequeath \
-                              --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                              --force-format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
                               --qualifier "${qualifier}" \
                               --output-format raw \
                               --no-output-header`" || return 1
@@ -1297,7 +1310,7 @@ NOT MATCHES only-framework"
                               ${MULLE_TECHNICAL_FLAGS} \
                            list \
                               --no-bequeath \
-                              --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                              --force-format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
                               --qualifier "${qualifier}" \
                               --output-format raw \
                               --no-output-header`" || return 1
@@ -1318,7 +1331,7 @@ MATCHES only-framework"
                               ${MULLE_TECHNICAL_FLAGS} \
                            list \
                               --no-bequeath \
-                              --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                              --force-format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
                               --qualifier "${qualifier}" \
                               --output-format raw \
                               --no-output-header`" || return 1
@@ -1353,7 +1366,7 @@ MATCHES no-fs AND \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                            --no-bequeath \
-                           --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                           --force-format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
                            --qualifier "${qualifier}" \
                            --output-format raw \
                            --no-output-header`" || return 1
@@ -1374,7 +1387,7 @@ NOT MATCHES only-framework"
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                            --no-bequeath \
-                           --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                           --force-format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
                            --qualifier "${qualifier}" \
                            --output-format raw \
                            --no-output-header`" || return 1
@@ -1395,7 +1408,7 @@ MATCHES only-framework"
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                            --no-bequeath \
-                           --format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                           --force-format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
                            --qualifier "${qualifier}" \
                            --output-format raw \
                            --no-output-header`" || return 1

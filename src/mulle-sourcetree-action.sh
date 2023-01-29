@@ -32,6 +32,31 @@
 MULLE_SOURCETREE_ACTION_SH="included"
 
 
+sourcetree::action::is_embedded()
+{
+   local marks="$1"
+
+   case ",${marks}," in
+      *,no-build,*)
+      ;;
+
+      *)
+         return 1
+      ;;
+   esac
+
+   case ",${marks}," in
+      *,no-share,*)
+      ;;
+
+      *)
+         return 1
+      ;;
+   esac
+   return 0
+}
+
+
 sourcetree::action::r_fetch_eval_options()
 {
    log_entry "sourcetree::action::r_fetch_eval_options" "$@"
@@ -40,32 +65,49 @@ sourcetree::action::r_fetch_eval_options()
 
    local options
 
-   if sourcetree::nodemarks::disable "${_marks}" "symlink" || \
-      sourcetree::nodemarks::disable "${_marks}" "symlink-${MULLE_UNAME}"
+   if sourcetree::nodemarks::disable "${marks}" "symlink" || \
+      sourcetree::nodemarks::disable "${marks}" "symlink-${MULLE_UNAME}"
    then
       r_concat "${options}" "--no-symlink"
       options="${RVAL}"
    else
+      local option_symlink="${OPTION_FETCH_SYMLINK}"
+
+      case "${MULLE_UNAME}" in
+         'windows'|'mingw'|'msys')
+            # cl.exe/cmake.exe don't like embedded symlinks,so turn off
+            if sourcetree::action::is_embedded "${marks}"
+            then
+               option_symlink='NO'
+            fi
+         ;;
+      esac
+
       # this implictily sets --symlink
-      case "${OPTION_FETCH_SYMLINK}" in
+      case "${option_symlink}" in
          'NO')
+            r_concat "${options}" "--no-symlink"
+            options="${RVAL}"
          ;;
 
          'YES')
             r_concat "${options}" "--symlink-returns-4"
             options="${RVAL}"
+            option_symlink='YES'
          ;;
 
          "DEFAULT")
+            option_symlink='NO'
             if [ "${MULLE_SOURCETREE_SYMLINK}" = 'YES' ]
             then
                r_concat "${options}" "--symlink-returns-4"
                options="${RVAL}"
+               option_symlink='YES'
             fi
          ;;
       esac
 
-      if [ "${OPTION_FETCH_ABSOLUTE_SYMLINK}" = 'YES' ]
+      if [ "${option_symlink}" = 'YES' -a "${OPTION_FETCH_ABSOLUTE_SYMLINK}" = 'YES' ]
       then
          r_concat "${options}" "--absolute-symlink"
          options="${RVAL}"
@@ -115,18 +157,22 @@ sourcetree::action::r_fetch_eval_options()
 ##
 ## CLONE
 ##
+
+#
+# this is questionable and possibly even bad
+#
 sourcetree::action::has_system_include()
 {
    log_entry "sourcetree::action::has_system_include" "$@"
 
-   local _uuid="$1"
+   local uuid="$1"
 
    local include_search_path="${HEADER_SEARCH_PATH}"
 
    if [ -z "${include_search_path}" ]
    then
       case "${MULLE_UNAME}" in
-         mingw)
+         'mingw'|'msys'|'android')
             include_search_path="~/include"
          ;;
 
@@ -134,7 +180,7 @@ sourcetree::action::has_system_include()
             fail "UNAME not set yet"
          ;;
 
-         darwin)
+         'darwin')
             # should check xcode paths too
             include_search_path="/usr/local/include:/usr/include"
          ;;
@@ -148,22 +194,19 @@ sourcetree::action::has_system_include()
    local includedir
    local includefile
 
-   includedir="${_uuid//-/_}"
+   includedir="${uuid//-/_}"
    includefile="${includedir}.h"
 
-   if [ "${includedir}" = "${_uuid}" ]
+   if [ "${includedir}" = "${uuid}" ]
    then
       includedir=""
    fi
 
    local i
 
-   shell_disable_glob ; IFS=':'
-   for i in ${include_search_path}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
-
-      if [ -d "${i}/${_uuid}" -o -f "${i}/${includefile}" ]
+   .foreachpath i in ${include_search_path}
+   .do
+      if [ -d "${i}/${uuid}" -o -f "${i}/${includefile}" ]
       then
          return 0
       fi
@@ -172,62 +215,37 @@ sourcetree::action::has_system_include()
       then
          return 0
       fi
-   done
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 
    return 1
 }
 
-
-# _is_embedded()
-# {
-#    local marks="$1"
-#
-#    case ",${marks}," in
-#       *,no-build,*)
-#       ;;
-#
-#       *)
-#          return 1
-#       ;;
-#    esac
-#
-#    case ",${marks}," in
-#       *,no-share,*)
-#       ;;
-#
-#       *)
-#          return 1
-#       ;;
-#    esac
-#    return 0
-# }
 
 
 sourcetree::action::_do_fetch_operation()
 {
    log_entry "sourcetree::action::_do_fetch_operation" "$@"
 
-   local _address="$1"        # address of this node
+   local address="$1"        # address of this node
    shift
 
-   local _url="$1"            # URL of the node
-   local destination="$2"     # destination
-   local _branch="$3"         # branch of the node
-   local _tag="$4"            # tag to checkout of the node
-   local _nodetype="$5"       # nodetype to use for this node
-   local _marks="$6"          # marks on node
-   local _fetchoptions="$7"   # options to use on _nodetype
-   local _raw_userinfo="$8"   # unused
-   local _uuid="$9"           # uuid of the node
+   local url="$1"            # URL of the node
+   local destination="$2"    # destination
+   local branch="$3"         # branch of the node
+   local tag="$4"            # tag to checkout of the node
+   local nodetype="$5"       # nodetype to use for this node
+   local marks="$6"          # marks on node
+   local fetchoption="$7"    # options to use on nodetype
+   local raw_userinfo="$8"   # unused
+   local uuid="$9"           # uuid of the node
 
    [ -z "${destination}" ] && _internal_fail "destination is empty"
 
    [ $# -eq 9 ] || _internal_fail "fail"
 
-   if [ "${OPTION_CHECK_USR_LOCAL_INCLUDE}" = 'YES' ] && sourcetree::action::has_system_include "${_uuid}"
+   if [ "${OPTION_CHECK_USR_LOCAL_INCLUDE}" = 'YES' ] && sourcetree::action::has_system_include "${uuid}"
    then
-      log_info "${C_MAGENTA}${C_BOLD}${_uuid}${C_INFO} is a system library, so not fetching it"
+      log_info "${C_MAGENTA}${C_BOLD}${uuid}${C_INFO} is a system library, so not fetching it"
       return 1
    fi
 
@@ -245,12 +263,12 @@ sourcetree::action::_do_fetch_operation()
 
    if [ ! -z "${OPTION_OVERRIDE_BRANCH}" ]
    then
-      _branch="${OPTION_OVERRIDE_BRANCH}"
+      branch="${OPTION_OVERRIDE_BRANCH}"
    fi
 
    local options
 
-   sourcetree::action::r_fetch_eval_options "${_marks}"
+   sourcetree::action::r_fetch_eval_options "${marks}"
    options="${RVAL}"
 
    #
@@ -261,13 +279,9 @@ sourcetree::action::_do_fetch_operation()
    #
    local envvar
 
-   if [ -z "${MULLE_CASE_SH}" ]
-   then
-      # shellcheck source=mulle-case.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-case.sh" || return 1
-   fi
+   include "case"
 
-   r_basename "${_address}"
+   r_basename "${address}"
    r_smart_file_upcase_identifier "${RVAL}"
    envvar="MULLE_SOURCETREE_FETCH_${RVAL}"
 
@@ -276,10 +290,10 @@ sourcetree::action::_do_fetch_operation()
    r_shell_indirect_expand "${envvar}"
    value="${RVAL}"
 
-   log_fluff "Check \"${envvar}\" for \"${_address}\""
+   log_fluff "Check \"${envvar}\" for \"${address}\""
    if [ "${value}" = 'NO' ]
    then
-      log_warning "${_address} not fetched as \"${envvar}\" is NO"
+      log_warning "${address} not fetched as \"${envvar}\" is NO"
       return 1
    fi
 
@@ -291,9 +305,9 @@ sourcetree::action::_do_fetch_operation()
    #
    if [ "${MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH}" = 'YES' ]
    then
-      if sourcetree::nodemarks::disable "${_marks}" "platform-${MULLE_UNAME}"
+      if sourcetree::nodemarks::disable "${marks}" "platform-${MULLE_UNAME}"
       then
-         _log_info "${C_RESET_BOLD}${_address#"${MULLE_USER_PWD}/"}${C_INFO} \
+         _log_info "${C_RESET_BOLD}${address#"${MULLE_USER_PWD}/"}${C_INFO} \
 not fetched as ${C_MAGENTA}${C_BOLD}platform-${MULLE_UNAME}${C_INFO} is \
 disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
          return
@@ -301,11 +315,11 @@ disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
    fi
 
    sourcetree::fetch::sync_operation "${opname}" "${options}" \
-                                                 "${_url}" \
+                                                 "${url}" \
                                                  "${destination}" \
-                                                 "${_branch}" \
-                                                 "${_tag}" \
-                                                 "${_nodetype}" \
+                                                 "${branch}" \
+                                                 "${tag}" \
+                                                 "${nodetype}" \
                                                  "${fetchoptions}"
    rval="$?"
    case $rval in
@@ -316,7 +330,7 @@ disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
       ;;
 
       111)
-         fail "Source \"${_nodetype}\" is unknown"
+         fail "Source \"${nodetype}\" is unknown"
       ;;
 
       *)
@@ -324,15 +338,15 @@ disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
       ;;
    esac
 
-   if sourcetree::nodemarks::disable "${_marks}" "readwrite"
+   if sourcetree::nodemarks::disable "${marks}" "readwrite"
    then
-      log_verbose "Write protecting \"${_address}\""
-      exekutor find "${_address}" -type f -exec chmod a-w {} \;
+      log_verbose "Write protecting \"${address}\""
+      exekutor find "${address}" -type f -exec chmod a-w {} \;
    fi
 
    if [ ! -z "${UPTODATE_MIRRORS_FILE}" ]
    then
-      redirect_append_exekutor "${UPTODATE_MIRRORS_FILE}" printf "%s\n" "${_url}"
+      redirect_append_exekutor "${UPTODATE_MIRRORS_FILE}" printf "%s\n" "${url}"
    fi
 
    return $rval
@@ -353,22 +367,22 @@ sourcetree::action::do_operation()
 
    [ -z "${opname}" ] && _internal_fail "operation is empty"
 
-#   local _address="$1"
-   local _url="$2"            # URL of the node
-   local destination="$3"     # destination
-   local _branch="$4"         # branch of the node
-   local _tag="$5"            # tag to checkout of the node
-   local _nodetype="$6"       # nodetype to use for this node
-#   local _marks="$7"         # marks on node
-   local _fetchoptions="$8"   # options to use on _nodetype
-#   local _raw_userinfo="$9"  # userinfo
-#   shift; local _uuid="$10"          # uuid of the node
+#   local address="$1"
+   local url="$2"            # URL of the node
+   local destination="$3"    # destination
+   local branch="$4"         # branch of the node
+   local tag="$5"            # tag to checkout of the node
+   local nodetype="$6"       # nodetype to use for this node
+#   local marks="$7"         # marks on node
+   local fetchoptions="$8"   # options to use on nodetype
+#   local raw_userinfo="$9"  # userinfo
+#   shift; local uuid="$10"  # uuid of the node
 
    [ -z "${destination}" ] && _internal_fail "Destination is empty"
 
    if [ ! -z "${OPTION_OVERRIDE_BRANCH}" ]
    then
-      _branch="${OPTION_OVERRIDE_BRANCH}"
+      branch="${OPTION_OVERRIDE_BRANCH}"
    fi
 
    local options
@@ -377,12 +391,12 @@ sourcetree::action::do_operation()
    options="${RVAL}"
 
    sourcetree::fetch::sync_operation "${opname}" "${options}" \
-                                                 "${_url}" \
+                                                 "${url}" \
                                                  "${destination}" \
-                                                 "${_branch}" \
-                                                 "${_tag}" \
-                                                 "${_nodetype}" \
-                                                 "${_fetchoptions}"
+                                                 "${branch}" \
+                                                 "${tag}" \
+                                                 "${nodetype}" \
+                                                 "${fetchoptions}"
 }
 
 
@@ -392,12 +406,12 @@ sourcetree::action::update_safe_move_node()
 
    local previousfilename="$1"
    local filename="$2"
-   local _marks="$3"
+   local marks="$3"
 
    [ -z "${previousfilename}" ] && _internal_fail "empty previousfilename"
    [ -z "${filename}" ]         && _internal_fail "empty filename"
 
-   if sourcetree::nodemarks::disable "${_marks}" "delete"
+   if sourcetree::nodemarks::disable "${marks}" "delete"
    then
       fail "Can't move node ${_url} from to \"${previousfilename}\" \
 to \"${filename}\" as it is marked no-delete"
@@ -418,20 +432,20 @@ sourcetree::action::update_safe_remove_node()
    log_entry "sourcetree::action::update_safe_remove_node" "$@"
 
    local filename="$1"
-   local _marks="$2"
-   local _uuid="$3"
+   local marks="$2"
+   local uuid="$3"
    local database="$4"
 
    [ -z "${filename}" ] && _internal_fail "empty filename"
-   [ -z "${_uuid}" ]    && _internal_fail "empty _uuid"
+   [ -z "${uuid}" ]    && _internal_fail "empty uuid"
 
-   if sourcetree::nodemarks::disable "${_marks}" "delete"
+   if sourcetree::nodemarks::disable "${marks}" "delete"
    then
       fail "Can't remove \"${filename}\" as it is marked no-delete"
    fi
 
-   sourcetree::db::bury "${database}" "${_uuid}" "${filename}" &&
-   sourcetree::db::forget "${database}" "${_uuid}"
+   sourcetree::db::bury "${database}" "${uuid}" "${filename}" &&
+   sourcetree::db::forget "${database}" "${uuid}"
 }
 
 
@@ -559,7 +573,7 @@ As node is marked \"no-delete\" just remember it."
          then
             local oldnodeline
 
-            oldnodeline="`rexekutor egrep -s -v '^#' "${newfilename#"${MULLE_USER_PWD}/"}/${SOURCETREE_FIX_FILENAME}"`"
+            oldnodeline="`rexekutor grep -E -v '^#' "${newfilename}/${SOURCETREE_FIX_FILENAME}"`"
             if [ "${oldnodeline}" = "${nodeline}" ]
             then
                log_fluff "Fix info was written by identical config, so it looks ok"
@@ -837,13 +851,13 @@ sourcetree::action::__update_perform_item()
 {
    log_entry "sourcetree::action::__update_perform_item"
 
-   [ -z "${filename}" ] && _internal_fail "filename is empty"
+   [ -z "${_filename}" ] && _internal_fail "filename is empty"
 
    case "${item}" in
       "checkout"|"upgrade"|"set-url")
          if ! sourcetree::action::do_operation "${item}" "${_address}" \
                                                          "${_url}" \
-                                                         "${filename}" \
+                                                         "${_filename}" \
                                                          "${_branch}" \
                                                          "${_tag}" \
                                                          "${_nodetype}" \
@@ -855,7 +869,10 @@ sourcetree::action::__update_perform_item()
             # as these are shortcuts to remove/fetch, but the
             # fetch part didn't work out we need to remove
             # the previousaddress
-            sourcetree::action::update_safe_remove_node "${previousfilename}" "${_marks}" "${_uuid}" "${database}"
+            sourcetree::action::update_safe_remove_node "${_previousfilename}" \
+                                                        "${_marks}" \
+                                                        "${_uuid}" \
+                                                        "${_database}"
             log_fluff "Failed to ${item} ${_url}" # operation should have errored already
             return 1
          fi
@@ -866,7 +883,7 @@ sourcetree::action::__update_perform_item()
       "fetch")
          sourcetree::action::do_operation "fetch" "${_address}" \
                                                   "${_url}" \
-                                                  "${filename}" \
+                                                  "${_filename}" \
                                                   "${_branch}" \
                                                   "${_tag}" \
                                                   "${_nodetype}" \
@@ -893,23 +910,26 @@ sourcetree::action::__update_perform_item()
                # if the fetch fails, it can be that we get a partial remnant
                # here which can really mess up the next fetch. So we remove it
                #
-               if [ -e "${filename}" ]
+               if [ -e "${_filename}" ]
                then
-                   if [ -L "${filename}" ]
+                   if [ -L "${_filename}" ]
                    then
-                      log_verbose "Removing old symlink \"${filename}\""
-                      exekutor rm -f "${filename}" >&2
+                      log_verbose "Removing old symlink \"${_filename}\""
+                      exekutor rm -f "${_filename}" >&2
                   else
-                     sourcetree::action::update_safe_clobber "${database}" "${filename}"
+                     sourcetree::action::update_safe_clobber "${_database}" \
+                                                             "${_filename}"
                   fi
                fi
 
                if sourcetree::nodemarks::disable "${_marks}" "require" ||
                   sourcetree::nodemarks::disable "${_marks}" "require-os-${MULLE_UNAME}"
                then
-                  log_info "${C_MAGENTA}${C_BOLD}${filename}${C_INFO} is not required."
+                  log_info "${C_MAGENTA}${C_BOLD}${_filename}${C_INFO} is not required."
 
-                  sourcetree::db::add_missing "${database}" "${_uuid}" "${nodeline}"
+                  sourcetree::db::add_missing "${_database}" \
+                                              "${_uuid}" \
+                                              "${_nodeline}"
                   return 4
                fi
 
@@ -918,10 +938,10 @@ sourcetree::action::__update_perform_item()
             ;;
          esac
 
-         if [ -f "${filename}/.mulle-sourcetree/config" -a \
-              ! -f "${filename}/.mulle/etc/sourcetree/config" ]
+         if [ -f "${_filename}/.mulle-sourcetree/config" -a \
+              ! -f "${_filename}/.mulle/etc/sourcetree/config" ]
          then
-            _log_warning "\"`basename -- "${filename}"`\" contains an old-fashioned sourcetree \
+            _log_warning "\"`basename -- "${_filename}"`\" contains an old-fashioned sourcetree \
 which must be upgraded to be usable."
          fi
 
@@ -933,16 +953,22 @@ which must be upgraded to be usable."
       ;;
 
       "move")
-         sourcetree::action::update_safe_move_node "${previousfilename}" "${filename}" "${_marks}"
+         sourcetree::action::update_safe_move_node "${_previousfilename}" \
+                                                   "${_filename}" \
+                                                   "${_marks}"
          _remember='YES'
       ;;
 
       "clobber")
-         sourcetree::action::update_safe_clobber "${filename}" "${database}"
+         sourcetree::action::update_safe_clobber "${_filename}" \
+                                                 "${_database}"
       ;;
 
       "remove")
-         sourcetree::action::update_safe_remove_node "${previousfilename}" "${_marks}" "${_uuid}" "${database}"
+         sourcetree::action::update_safe_remove_node "${_previousfilename}" \
+                                                     "${_marks}" \
+                                                     "${_uuid}" \
+                                                     "${_database}"
       ;;
 
       *)
@@ -1009,8 +1035,18 @@ sourcetree::action::__update_perform_actions()
    _remember='NO'
    _skip='NO'
 
+   local _filename
+   local _previousfilename
+   local _database
+   local _nodeline
+
+   _filename="${filename}"
+   _previousfilename="${previousfilename}"
+   _database="${database}"
+   _nodeline="${nodeline}"
+
    local item
-   local rval 
+   local rval
 
    rval=0
    shell_disable_glob
@@ -1019,6 +1055,7 @@ sourcetree::action::__update_perform_actions()
       shell_enable_glob
 
       # if this returns 4 its fine (like a non-required dependency)
+
       sourcetree::action::__update_perform_item # this will exit on fail
       rval=$?
 
@@ -1185,11 +1222,11 @@ sourcetree::action::_r_do_actions_with_nodeline()
       && sourcetree::nodemarks::enable "${_marks}" "share"
    then
       sourcetree::db::r_share_filename "${_address%#*}" \
-                                           "${_evaledurl}" \
-                                           "${_evalednodetype}" \
-                                           "${_marks}" \
-                                           "${_uuid}" \
-                                           "${database}"
+                                       "${_evaledurl}" \
+                                       "${_evalednodetype}" \
+                                       "${_marks}" \
+                                       "${_uuid}" \
+                                       "${database}"
       case $? in
          0)
             filename="${RVAL}"
@@ -1273,6 +1310,9 @@ but it is not required"
    local otheruuid
 
    otheruuid="`sourcetree::db::fetch_uuid_for_address "${database}" "${_address}"`"
+
+   log_debug "uuid \"${otheruuid}\" found for \"${_address}\""
+
    if [ ! -z "${otheruuid}" ]
    then
       if sourcetree::db::is_uuid_alive "${database}" "${otheruuid}"
@@ -1284,7 +1324,8 @@ but it is not required"
 node \"${otheruuid}\" in database \"${database}\". Skip it."
             # don't set alive though
             # RVAL="${otheruuid}" (or set other alive ?)
-            return 2
+            RVAL=
+            return 3
          fi
          log_debug "Filename \"${filename}\" belongs to this node"
       else
@@ -1427,6 +1468,10 @@ sourcetree::action::do_actions_with_nodeline()
       0|2)
       ;;
 
+      3)
+         return
+      ;;
+
       *)
          return $rval
       ;;
@@ -1470,7 +1515,10 @@ sourcetree::action::do_actions_with_nodelines()
    .do
       [ -z "${nodeline}" ] && .continue
 
-      if ! sourcetree::action::do_actions_with_nodeline "${nodeline}" "${style}" "${config}" "${database}"
+      if ! sourcetree::action::do_actions_with_nodeline "${nodeline}" \
+                                                        "${style}" \
+                                                        "${config}" \
+                                                        "${database}"
       then
          rval=1
          .break
@@ -1517,9 +1565,9 @@ sourcetree::action::do_actions_with_nodelines_parallel()
       if [ ! -z "${nodeline}" ]
       then
          __parallel_execute sourcetree::action::do_actions_with_nodeline "${nodeline}" \
-                                                                        "${style}" \
-                                                                        "${config}" \
-                                                                        "${database}"
+                                                                         "${style}" \
+                                                                         "${config}" \
+                                                                         "${database}"
       fi
    .done
 

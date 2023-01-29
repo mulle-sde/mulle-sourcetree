@@ -156,10 +156,7 @@ main()
    include "array"
    include "sourcetree::environment"
 
-   sourcetree::environment::default
-   sourcetree::environment::set_share_dir "${OPTION_SHAREDIR}"
-   sourcetree::environment::check_sane_stash_dir
-   sourcetree::sourcetree::set_default_db_mode "/"
+   sourcetree::environment::setup "${OPTION_SHAREDIR}"
 
    include "sourcetree::node"
    include "sourcetree::walk"

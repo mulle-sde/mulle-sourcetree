@@ -82,16 +82,45 @@ r_uname_to_cpp()
 
    local uname="$1"  # the part after only-os or no
 
+   # https://www.geeksforgeeks.org/how-to-detect-operating-system-through-a-c-program/
    case "${uname}" in
+      'android')
+         RVAL="__ANDROID__"
+      ;;
+
       'darwin')
          RVAL="__APPLE__"
       ;;
 
-      'freebsd')
-         RVAL="__FreeBSD__"  # guess
+      'dragonfly')
+         RVAL="__DragonFly__"
       ;;
 
-      'windows'|'mingw'*)
+      'freebsd')
+         RVAL="__FreeBSD__"
+      ;;
+
+      'hpux')
+         RVAL="__hpux"
+      ;;
+
+      'linux')
+         RVAL="__linux__"
+      ;;
+
+      'netbsd')
+         RVAL="__NetBSD__"
+      ;;
+
+      'openbsd')
+         RVAL="__OpenBSD__"
+      ;;
+
+      'sun*')
+         RVAL="__sun"
+      ;;
+
+      'windows'|'mingw'|'msys')
          RVAL="_WIN32"
       ;;
 
@@ -112,7 +141,7 @@ list_unames()
    printf "%s : %s\n" "${MULLE_UNAME}" "${RVAL}"
 
    shell_disable_glob
-   for i in darwin freebsd mingw
+   for i in darwin freebsd netbsd openbsd dragonfly mingw msys windows linux sunos
    do
       if [ "$i" != "${MULLE_UNAME}" ]
       then
@@ -177,14 +206,10 @@ r_platformexclude_to_cpp_if()
    local excludes
    local onlys
 
-   shell_disable_glob ; IFS=","
-
    local mark
 
-   for mark in ${marks}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
-
+   .foreachitem mark in ${marks}
+   .do
       case "${mark}" in
          only-platform-*)
 				r_uname_to_cpp "${mark:14}"
@@ -210,8 +235,7 @@ r_platformexclude_to_cpp_if()
             excludes="${RVAL}"
          ;;
       esac
-   done
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .done
 
    if [ ! -z "${onlys}" ]
    then
@@ -498,7 +522,7 @@ emit_c_header()
          .continue
       fi
 
-      log_verbose "Emit cmake statements for ${C_MAGENTA}${C_BOLD}${address}"
+      log_verbose "Emit #include statements for ${C_MAGENTA}${C_BOLD}${address}"
 
       case ",${marks}," in
          *,no-dependency,*)

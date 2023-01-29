@@ -93,7 +93,8 @@ function setup_project()
 
    _address="a"
    _url="a"
-   _uuid="`uuidgen`"
+   r_uuidgen
+   _uuid="${RVAL}"
    _nodetype="git"
 
    sourcetree::node::r_to_nodeline
@@ -101,7 +102,8 @@ function setup_project()
 
    _address="b"
    _url="b"
-   _uuid="`uuidgen`"
+   r_uuidgen
+   _uuid="${RVAL}"
    _nodetype="git"
 
    sourcetree::node::r_to_nodeline

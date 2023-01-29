@@ -106,6 +106,7 @@ Options:
    --config-file <file>     : list a specific config file (no recursion)
    --dedupe-mode <mode>     : change the way duplicates are detected
    --format <format>        : supply a custom format (abfimntu_)
+   --force-format <format>  : like --format but unmodifiable by -g, -m etc.
    --marks <value>          : specify marks to match (e.g. build)
    --no-dedupe              : don't remove what are considered duplicates
    --nodetype <value>       : node type to list, can be used multiple times
@@ -171,17 +172,14 @@ sourcetree::list::r_remove_marks()
    local nomarks="$2"
 
    RVAL=
-   shell_disable_glob; IFS=","
-   for mark in ${marks}
-   do
-      shell_enable_glob; IFS="${DEFAULT_IFS}"
+   .foreachitem mark in ${marks}
+   .do
 
       if ! sourcetree::nodemarks::contain "${nomarks}" "${mark}"
       then
          r_comma_concat "${RVAL}" "${mark}"
       fi
-   done
-   shell_enable_glob; IFS="${DEFAULT_IFS}"
+   .done
 }
 
 
@@ -321,13 +319,11 @@ sourcetree::list::r_convert_marks_to_qualifier()
 
    local mark
 
-   IFS=","; shell_disable_glob
-   for mark in ${marks}
-   do
+   .foreachitem mark in ${marks}
+   .do
       r_concat "${qualifier}" "MATCHES ${mark}" " AND "
       qualifier="${RVAL}"
-   done
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .done
 
    RVAL="${qualifier}"
 }
@@ -407,8 +403,6 @@ ${C_RESET}   address address-filename address-url filename nodeline
       ;;
 
       *)
-         [ -z "`command -v column`" ] && fail "Tool \"column\" is not available, use --output-format raw"
-
          if [ "${OPTION_OUTPUT_HEADER}" != 'NO' ]
          then
             r_comma_concat "${RVAL}" "output_header"
@@ -571,6 +565,13 @@ sourcetree::list::main()
             [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
 
+            OPTION_FORMAT="$1"
+         ;;
+
+         --force-format)
+            [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
+            shift
+
             OPTION_FORCE_FORMAT="$1"
          ;;
 
@@ -664,6 +665,10 @@ sourcetree::list::main()
 
          -r)
             FLAG_SOURCETREE_MODE="share"
+            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+            then
+               OPTION_FORMAT="%a;%t;%b\\n"
+            fi
             sourcetree::list::r_add_format "%v={WALK_DEPENDENCY}" "${OPTION_FORMAT}"
             OPTION_FORMAT="${RVAL}"
          ;;

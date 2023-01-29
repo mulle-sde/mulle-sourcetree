@@ -249,8 +249,8 @@ sourcetree::fetch::sync_operation()
       if [ "${MULLE_SOURCETREE_RESOLVE_TAG}" = 'YES' ]
       then
          if sourcetree::fetch::r_resolve_url_with_tag "${_evaledurl}" \
-                                              "${_evaledtag}" \
-                                              "${_evalednodetype}"
+                                                      "${_evaledtag}" \
+                                                      "${_evalednodetype}"
          then
             _evaledurl="${RVAL}"
          else

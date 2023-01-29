@@ -103,7 +103,7 @@ sourcetree::dbstatus::main()
 
       # only complain if there are dependencies in configfile
       # how does mulle-sourcetree know about this though ?
-      dependencies="`sourcetree::cfg::_read "${configfile}" | egrep -v 'no-dependency' `"
+      dependencies="`sourcetree::cfg::_read "${configfile}" | grep -E -v 'no-dependency' `"
       if [ ! -z "${dependencies}" ]
       then
          log_info "No stash here"

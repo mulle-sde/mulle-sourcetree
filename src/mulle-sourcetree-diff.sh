@@ -100,11 +100,12 @@ sourcetree::diff::r_diff_configs()
 
    r_absolutepath "${config_a}"
    config_a="${RVAL}"
+
    if [ -d "${config_a}" ]
    then
       a_nodelines="`sourcetree::cfg::read "#${config_a}" `" || fail "Can't read config of \"$1\""
    else
-      a_nodelines="`egrep -s -v '^#' "${config_a}" `" || fail "Can't read config file \"$1\""
+      a_nodelines="`grep -E -v '^#' "${config_a}" `" || fail "Can't read config file \"$1\""
    fi
    if [ -z "${a_nodelines}" ]
    then
@@ -117,7 +118,7 @@ sourcetree::diff::r_diff_configs()
    then
       b_nodelines="`sourcetree::cfg::read "#${config_b}" `" || fail "Can't read config of \"$2\""
    else
-      b_nodelines="`egrep -s -v '^#' "${config_b}" `" || fail "Can't read config file \"$2\""
+      b_nodelines="`grep -E -v '^#' "${config_b}" `" || fail "Can't read config file \"$2\""
    fi
    if [ -z "${b_nodelines}" ]
    then

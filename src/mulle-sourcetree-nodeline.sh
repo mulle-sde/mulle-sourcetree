@@ -456,8 +456,9 @@ sourcetree::nodeline::read_file()
    local filename="$1"
 
    [ -z "${filename}" ] && _internal_fail "file is empty"
+   [ ! -f "${filename}" ] && return 1
 
-   egrep -s -v '^#' "${filename}"
+   grep -E -v '^#' "${filename}"
 }
 
 

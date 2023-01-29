@@ -91,6 +91,22 @@ EOF
 }
 
 
+
+sourcetree::config::status_usage()
+{
+   [ $# -ne 0 ] && log_error "$*"
+
+   cat <<EOF >&2
+Usage:
+   ${MULLE_USAGE_NAME} config status
+
+   Check if any sourcetree is available. Returns 0 if yes.
+
+EOF
+   exit 1
+}
+
+
 sourcetree::config::copy_usage()
 {
    [ $# -ne 0 ] && log_error "$*"
@@ -215,6 +231,7 @@ sourcetree::config::list_main()
 
    local OPTION_SEPARATOR=" "
    local OPTION_WARN="YES"
+   local OPTION_FAIL_SILENTLY_IF_MISSING='NO'
 
    while [ $# -ne 0 ]
    do
@@ -232,6 +249,10 @@ sourcetree::config::list_main()
             shift
 
             OPTION_SEPARATOR="$1"
+         ;;
+
+         --fail-silently-if-missing)
+            OPTION_FAIL_SILENTLY_IF_MISSING='YES'
          ;;
 
          --no-warn)
@@ -324,6 +345,68 @@ sourcetree::config::list_main()
 }
 
 
+sourcetree::config::status_main()
+{
+   log_entry "sourcetree::config::status_main" "$@"
+
+   while [ $# -ne 0 ]
+   do
+      case "$1" in
+         -h*|--help|help)
+            sourcetree::config::status_usage
+         ;;
+
+         -*)
+            sourcetree::config::status_usage "Unknown config status option $1"
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      shift
+   done
+
+   [ $# -ne 0 ] && sourcetree::config::status_usage "Superflous arguments $*"
+
+   local filename
+
+   shell_enable_nullglob
+
+   if [ -d "${MULLE_SOURCETREE_ETC_DIR}" ]
+   then
+      for filename in "${MULLE_SOURCETREE_ETC_DIR}"/*
+      do
+         if [ -f "${filename}" ] # ignore directories
+         then
+            shell_disable_nullglob
+            log_info "There is a sourcetree here."
+            return 0
+         fi
+      done
+   fi
+
+   if [ -d "${MULLE_SOURCETREE_SHARE_DIR}" ]
+   then
+      for filename in "${MULLE_SOURCETREE_SHARE_DIR}"/*
+      do
+         if [ -f "${filename}" ]  # ignore directories
+         then
+            shell_disable_nullglob
+            log_info "There is a sourcetree here."
+            return 0
+         fi
+      done
+   fi
+
+   shell_disable_nullglob
+
+   log_info "There is no sourcetree here"
+   return 1
+}
+
+
 sourcetree::config::copy_main()
 {
    log_entry "sourcetree::config::copy_main" "$@"
@@ -405,7 +488,7 @@ sourcetree::config::copy_main()
    log_verbose "${RVAL#"${MULLE_USER_PWD}/"} found"
 
    remove_file_if_present "${destination_file}"
-   exekutor cp -a "${RVAL}" "${destination_file}"
+   exekutor cp -p "${RVAL}" "${destination_file}"
 }
 
 
@@ -509,16 +592,8 @@ sourcetree::config::main()
       shift
    done
 
-   if [ -z "${MULLE_PATH_SH}" ]
-   then
-      # shellcheck source=mulle-path.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh" || return 1
-   fi
-   if [ -z "${MULLE_FILE_SH}" ]
-   then
-      # shellcheck source=mulle-file.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh" || return 1
-   fi
+   include "path"
+   include "file"
 
    local cmd="$1"
 
@@ -526,7 +601,7 @@ sourcetree::config::main()
 
    cmd="${cmd:-list}"
    case "${cmd}" in
-      copy|list|remove)
+      copy|list|remove|status)
          sourcetree::config::${cmd}_main "$@"
       ;;
 

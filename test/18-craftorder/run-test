@@ -180,7 +180,7 @@ ${result}
    log_info "----- #3 PASSED -----"
 
    log_info "----- ALL PASSED -----"
-
+   cd /
    rmdir_safer "${directory}"
 }
 

@@ -134,6 +134,7 @@ json_export_callback()
 
 main()
 {
+   local OPTION_SHAREDIR
    #
    # simple option handling
    #
@@ -171,13 +172,11 @@ main()
    options_setup_trace "${MULLE_TRACE}" && set -x
 
    include "array"
-
    include "sourcetree::environment"
 
-   sourcetree::environment::default
+   sourcetree::environment::setup "${OPTION_SHAREDIR}"
 
    include "sourcetree::node"
-
    include "sourcetree::walk"
 
    local text

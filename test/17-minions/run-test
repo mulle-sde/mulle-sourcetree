@@ -181,6 +181,7 @@ main()
 
    r_make_tmp_directory || exit 1
    directory="${RVAL}"
+   
    local project
 
    project="${directory}/project"
@@ -196,6 +197,9 @@ main()
       run_test
    ) || exit 1
 
+   log_info "----- ALL PASSED -----"
+
+   cd /
    rmdir_safer "${directory}"
 }
 

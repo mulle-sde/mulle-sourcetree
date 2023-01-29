@@ -175,81 +175,6 @@ EOF
 }
 
 
-sourcetree::__check_sane_stash_dir()
-{
-   log_entry "sourcetree::__check_sane_stash_dir" "$@"
-
-   local physical
-
-   r_physicalpath "${MULLE_SOURCETREE_STASH_DIR}"
-   physical="${RVAL}"
-
-   # if it doesn't exist then we can't say much about it
-   if [ ! -z "${physical}" ]
-   then
-      if [ "${physical}" != "${MULLE_SOURCETREE_STASH_DIR}" ]
-      then
-         log_warning "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) is traversing symlinks. Will use \"${physical}\""
-         MULLE_SOURCETREE_STASH_DIR="${physical}"
-      fi
-   fi
-
-   #
-   # check that an absolute MULLE_SOURCETREE_STASH_DIR does not go outside
-   # MULLE_VIRTUAL_ROOT.
-   # MEMO: I think this is actually a cool feature.
-   #
-   # Ensure that stash dir is at least three levels deep, /tmp/xxx/stash is
-   # OK
-   #
-   case "${MULLE_SOURCETREE_STASH_DIR}" in
-      *".."*)
-        fail "MULLE_SOURCETREE_STASH_DIR contains .."
-      ;;
-
-      /*)
-#          local relative
-#
-#          relative="`symlink_relpath "${MULLE_SOURCETREE_STASH_DIR}" "${MULLE_VIRTUAL_ROOT}" `"
-#          case "${relative}" in
-#             *..*)
-#                case "${MULLE_SHELL_MODE}" in
-#                   SUBSHELL*)
-#                   ;;
-#
-#                   *)
-#                      _log_warning "MULLE_SOURCETREE_STASH_DIR \
-# (${MULLE_SOURCETREE_STASH_DIR}) lies outside of MULLE_VIRTUAL_ROOT \
-# ($MULLE_VIRTUAL_ROOT)."
-#                      log_fluff "Hint: MULLE_SOURCETREE_STASH_DIR must not contain symlinks."
-#                   ;;
-#                esac
-#             ;;
-#          esac
-      ;;
-
-      "")
-         _internal_fail "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) is empty"
-      ;;
-
-      *"/")
-         _internal_fail "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) ends with /"
-      ;;
-
-      *)
-         _internal_fail "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) is not absolute"
-      ;;
-   esac
-
-   r_path_depth "${MULLE_SOURCETREE_STASH_DIR}"
-   case ${RVAL} in 
-      0|1|2)
-         _internal_fail "MULLE_SOURCETREE_STASH_DIR (${MULLE_SOURCETREE_STASH_DIR}) is too close to root"
-      ;;
-   esac
-}
-
-
 sourcetree::main()
 {
    local MULLE_FLAG_DEFER=""  # test also uses this ?
@@ -446,13 +371,13 @@ sourcetree::main()
       ;;
 
       *)
-         sourcetree::__check_sane_stash_dir
+         sourcetree::environment::check_sane_stash_dir
       ;;
    esac
 
    local SOURCETREE_MODE
 
-   sourcetree::db::_set_default_mode "${SOURCETREE_START}" "${FLAG_SOURCETREE_MODE}" \
+   sourcetree::environment::set_default_db_mode "${SOURCETREE_START}" "${FLAG_SOURCETREE_MODE}" \
    || fail "Could not set database to \"${FLAG_SOURCETREE_MODE}\""
 
    log_setting "MULLE_SOURCETREE_PROJECT_DIR   : ${MULLE_SOURCETREE_PROJECT_DIR}"

@@ -51,9 +51,10 @@ setup_demo_repos()
 
 run_test()
 {
-   local uuidgen
+   local _uuid
 
-   _uuid="`uuidgen`"
+   r_uuidgen
+   _uuid="${RVAL}"
    (
       sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release" "flat" "/" "/"
    ) || fail "failed unexpectedly"
@@ -130,7 +131,6 @@ main()
    ) || exit 1
 
    log_info "----- ALL PASSED -----"
-
    rmdir_safer "${directory}"
 }
 

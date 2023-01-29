@@ -117,8 +117,7 @@ sourcetree::fix::r_locate_fix_file()
       #
       # fix file contains the basename of the old directory
       #
-
-      nodeline="`rexekutor egrep -s -v '^#' "${found}"`"
+      nodeline="`rexekutor grep -E -v '^#' "${found}"`"
 
       sourcetree::nodeline::r_get_address "${nodeline}"
       fix="${RVAL}"
@@ -202,10 +201,16 @@ sourcetree::fix::_fixup_dir_exists()
    local nodeline
    local fix
 
-   nodeline="`rexekutor egrep -s -v '^#' "${filename}/${SOURCETREE_FIX_FILENAME}"`"
-   if [ -z "${nodeline}" ] # can't determine looks ok
+   if [ ! -f "${filename}/${SOURCETREE_FIX_FILENAME}" ]
    then
       log_debug "There is no \"${filename}/${SOURCETREE_FIX_FILENAME}\""
+      return
+   fi
+
+   nodeline="`rexekutor grep -E -v '^#' "${filename}/${SOURCETREE_FIX_FILENAME}"`"
+   if [ -z "${nodeline}" ] # can't determine looks ok
+   then
+      log_warning "There is no content in \"${filename}/${SOURCETREE_FIX_FILENAME}\" ???"
       return
    fi
 

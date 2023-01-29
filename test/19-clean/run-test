@@ -173,7 +173,7 @@ run_test3()
    fi
 
    case "${MULLE_UNAME}" in
-      mingw*)
+      'mingw'|'msys'|'windows')
       ;;
 
       *)
@@ -285,7 +285,9 @@ main()
 
    r_make_tmp_directory || exit 1
    directory="${RVAL}"
+
    local project
+   local repos
 
    project="${directory}/project"
    repos="${directory}/repositories"

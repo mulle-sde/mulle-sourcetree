@@ -170,7 +170,7 @@ sourcetree::cfg::__common_configfile()
 
 
 #
-# config file stuff. The fallback file is usally in "share" and the default
+# config file stuff. The fallback file is usually in "share" and the default
 # in "etc"
 #
 #
@@ -201,111 +201,29 @@ sourcetree::cfg::r_configfile_for_read()
 
    sourcetree::cfg::__common_configfile "${config}"
 
-#  local scopes
-
-#  scopes="${SOURCETREE_CONFIG_SCOPES:-default}"
-#  if [ "${scopes}" = "default" ]
-#  then
-#     scopes="${MULLE_UNAME}:global"
-#  fi
-
-#   local scope
-   local configfile
-   local fallback_configfile
-
-#   .foreachpath scope in ${scopes}
-#   .do
-#      case "${scope}" in
-#         "")
-#            .continue
-#         ;;
-#
-#         'global')
-            configfile="${_configfile}"
-            fallback_configfile="${_fallback_configfile}"
-#         ;;
-#
-#         # address custom scope (don't check for existance here)
-#         *)
-#            configfile="${_configfile}.${scope}"
-#            fallback_configfile="${_fallback_configfile}.${scope}"
-#         ;;
-#      esac
-
-      log_setting "configfile           : ${configfile}"
-      log_setting "fallback_configfile  : ${fallback_configfile}"
-
-      #
-      # if there are more names to search and there are no files here
-      # keep going
-      #
-      if [ -f "${configfile}" ]
+   if [ "${mode}" != "fallback-only" ]
+   then
+      if [ -f "${_configfile}" ]
       then
-         if [ "${mode}" = "fallback-only" ]
-         then
-            if [ -f "${fallback_configfile}" ]
-            then
-               log_debug "return       : ${fallback_configfile}"
-               RVAL="${fallback_configfile}"
-               return 0
-            fi
-            log_debug "return       : NONE"
-            RVAL=
-            return 1
-         fi
-
-         log_debug "return       : ${configfile}"
-         RVAL="${configfile}"
+         log_debug "return       : ${_configfile}"
+         RVAL="${_configfile}"
          return 0
       fi
-#   .done
-
-   #
-   # in fallback-only we look for the fallback file matching the configfile
-   # we return 1, if there is only the fallback file or of there was no
-   # configfile match (!) ot there is no such fallback file
-   #
-   if [ "${mode}" = "fallback-only" ]
-   then
-      log_debug "return       : NONE"
-      RVAL=""
-      return 1
    fi
 
-#   .foreachpath scope in ${scopes}
-#   .do
-#      case "${scope}" in
-#         "")
-#            .continue
-#         ;;
-#
-#         'global')
-            configfile="${_fallback_configfile}"
-#         ;;
-#
-#         # address custom scope (don't check for existance here)
-#         *)
-#            configfile="${_fallback_configfile}.${scope}"
-#         ;;
-#      esac
-
-      log_setting "configfile           : ${configfile}"
-
-      #
-      # if there are more names to search and there are no files here
-      # keep going
-      #
-      if [ -f "${configfile}" ]
+   if [ "${mode}" != "config-only" ]
+   then
+      if [ -f "${_fallback_configfile}" ]
       then
-         log_debug "return       : ${configfile}"
-         RVAL="${configfile}"
+         log_debug "return       : ${fallback_configfile}"
+         RVAL="${_fallback_configfile}"
          return 0
       fi
-#   .done
+   fi
 
    log_debug "return       : NONE"
    RVAL=
-   return 1
+   return 2
 }
 
 
@@ -340,62 +258,10 @@ sourcetree::cfg::r_configfile_for_write()
 
    [ -z "${_configfile}" ] && _internal_fail "configfile must not be empty"
 
-#   local scopes
-#
-#   scopes="${SOURCETREE_CONFIG_SCOPES:-default}"
-#   if [ "${scopes}" = "default" ]
-#   then
-#      scopes="${MULLE_UNAME}:global"
-#   fi
+   log_setting "configfile   : ${_configfile}"
 
-   #
-   # pick the first one that exists, otherwise use last scope
-   #
-#   .foreachpath scope in ${scopes}
-#   .do
-#      case "${scope}" in
-#         "")
-#            .continue
-#         ;;
-#
-#         'global')
-            configfile="${_configfile}"
-#         ;;
-#
-#         # address custom scope (don't check for existance here)
-#         *)
-#            configfile="${_configfile}.${scope}"
-#         ;;
-#      esac
+   RVAL="${_configfile}"
 
-      log_setting "configfile   : ${configfile}"
-
-      #
-      # if there are more names to search and there are no files here
-      # keep going
-      #
-#      if [ -f "${configfile}" ]
-#      then
-#         log_debug "return       : ${configfile}"
-         RVAL="${configfile}"
-#         return 0
-#      fi
-#   .done
-#   local lastscope
-#
-#   lastscope="${scopes##*:}"
-#
-#   case "${lastscope}" in
-#      ''|'global')
-#         RVAL="${_configfile}"
-#      ;;
-#
-#      # address custom scope (don't check for existance here)
-#      *)
-#         RVAL="${_configfile}.${lastscope}"
-#      ;;
-#   esac
-#
    log_debug "return       : ${RVAL}"
    return 0
 }
@@ -500,46 +366,112 @@ sourcetree::cfg::timestamp()
    modification_timestamp "${RVAL}"
 }
 
-
 #
-# egrep return values 0: has lines
-#                     1: no lines
-#                     2: error
+# grep -E return values 0: has lines
+#                       1: no lines
+#                       2: error
 #
-sourcetree::cfg::_read()
+sourcetree::cfg::egrep()
 {
    local configfile="$1"
 
    local  rval
 
-   egrep -s -v '^#' "${configfile}"
-   rval=$?
+   case "${MULLE_UNAME}" in
+      sunos)
+         # slowlaris can't do grep -E -s :(
+         if [ ! -f "${configfile}" ]
+         then
+            log_debug "File not found \"${configfile#"${MULLE_USER_PWD}/"}\" (${PWD#"${MULLE_USER_PWD}/"})"
+            return 2
+         fi
 
-   log_debug "Read config file \"${configfile#"${MULLE_USER_PWD}/"}\" (${PWD#"${MULLE_USER_PWD}/"}) rval:${rval}"
-
-   # egrep error is 2
-   case $rval in 
-      0|1)
-         return 0
+         grep -E -v '^#' "${configfile}"
+         rval=$?
       ;;
    esac
-   return $rval
+
+   grep -E -v -s '^#' "${configfile}"
+   return $?
 }
 
 
+#
+# returns 0 (read something or nothing)
+#         2 configfile not found
+#
 sourcetree::cfg::read()
 {
    log_entry "sourcetree::cfg::read" "$@"
 
    local config="$1"
+   local mode="${2:-default}"
 
-   if ! sourcetree::cfg::r_configfile_for_read "${config}"
+   local _configfile
+   local _fallback_configfile
+
+   sourcetree::cfg::__common_configfile "${config}"
+
+   log_setting "configfile           : ${_configfile}"
+   log_setting "fallback_configfile  : ${_fallback_configfile}"
+
+   if [ "${mode}" != "fallback-only" ]
    then
-      return 1
+      sourcetree::cfg::egrep "${_configfile}"
+      if [ $? -ne 2 ]
+      then
+         return 0
+      fi
    fi
 
-   sourcetree::cfg::_read "${RVAL}"
+   if [ "${mode}" != "config-only" ]
+   then
+      sourcetree::cfg::egrep "${_fallback_configfile}"
+      if [ $? -ne 2 ]
+      then
+         return 0
+      fi
+   fi
+
+   return 2
 }
+
+
+
+#
+# grep -E return values 0: has lines
+#                       1: no lines
+#                       2: error
+#
+sourcetree::cfg::_read()
+{
+   local configfile="$1"
+
+   # sourcetree::cfg::r_configfile_for_read will have returned empty so
+   # there is no file there, but since an empty configfile should act the
+   # same as no config file, we don't complain.
+   if [ -z "${configfile}" ]
+   then
+      return
+   fi
+
+   local  rval
+
+   sourcetree::cfg::egrep "${configfile}"
+   rval=$?
+
+   # grep -E error is 2
+   case $rval in
+      0|1)
+         log_debug "Successfully read config file \"${configfile#"${MULLE_USER_PWD}/"}\" (${PWD#"${MULLE_USER_PWD}/"}) with: ${rval}"
+         return 0
+      ;;
+   esac
+
+   log_debug "Read config file \"${configfile#"${MULLE_USER_PWD}/"}\" (${PWD#"${MULLE_USER_PWD}/"}) failed with: ${rval}"
+   return $rval
+}
+
 
 
 sourcetree::cfg::get_nodeline()

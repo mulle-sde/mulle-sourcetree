@@ -58,7 +58,7 @@ Options:
 
 Environment:
    MULLE_PLATFORM_VERSION  : the OS version used for the build
-   MULLE_PLATFORM    : the platform used for the build
+   MULLE_PLATFORM          : the platform used for the build
 EOF
   exit 1
 }
@@ -237,9 +237,9 @@ sourcetree::craftorder::main()
             #
             # remove possible cruft before function name
             #
-            input="`egrep -v '^#' <<< "$1" | sed -e '/^ *$/d' `"
-            randomstring="`uuidgen | cut -c '1-6'`"
-
+            input="`grep -E -v '^#' <<< "$1" | sed -e '/^ *$/d' `"
+            r_uuidgen
+            randomstring="${RVAL:0:6}"
             callbackscript="_cb_${randomstring}_${input#function}"
             OPTION_CALLBACK="`echo ${callbackscript%%\(*}`"
             eval "function ${callbackscript}" || fail "Callback \"${input}\" could not be parsed"
@@ -314,11 +314,11 @@ sourcetree::craftorder::main()
    local rval
 
    _craftorder_collection="`sourcetree::walk::do "" \
-                                                  "" \
-                                                  "${qualifier}" \
-                                                  "${qualifier}" \
-                                                  "${mode},in-order" \
-                                                  "sourcetree::craftorder::__collect_line"`"
+                                                 "" \
+                                                 "${qualifier}" \
+                                                 "${qualifier}" \
+                                                 "${mode},in-order" \
+                                                 "sourcetree::craftorder::__collect_line"`"
    rval=$?
    case "${rval}" in
       1)
@@ -374,8 +374,8 @@ sourcetree::craftorder::main()
       r_add_line "${duplicates}" "${filename}"
       duplicates="${RVAL}"
 
-      r_escaped_sed_pattern "${filename}"
-      line="`egrep -e "^${RVAL};" <<< "${_augmented_collection}"`"
+      r_escaped_grep_pattern "${filename}"
+      line="`grep -E -e "^${RVAL};" <<< "${_augmented_collection}"`"
 
       r_add_line "${lines}" "${line}"
       lines="${RVAL}"
@@ -389,17 +389,8 @@ sourcetree::craftorder::initialize()
 {
    log_entry "sourcetree::craftorder::initialize"
 
-   if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-walk.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_VERSION_SH}" ]
-   then
-      # shellcheck source=../../mulle-bashfunctions/src/mulle-version.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-version.sh" || exit 1
-   fi
+   include "sourcetree::walk"
+   include "version"
 }
 
 

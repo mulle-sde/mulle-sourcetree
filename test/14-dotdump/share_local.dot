@@ -1,5 +1,6 @@
 digraph sourcetree
 {
+   rankdir=LR;
    node [ shape="box"; style="filled" ]
 
    "project" -> "${MULLE_SOURCETREE_STASH_DIR}" [ style="", label="" ]

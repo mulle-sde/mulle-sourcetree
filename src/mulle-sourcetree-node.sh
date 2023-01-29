@@ -42,8 +42,9 @@ sourcetree::node::r_uuidgen()
    # but who knows if b314406e-371a-4d73-996f-9b5906564dcf !=
    # B314406E-371A-4D73-996F-9B5906564DCF isn't a subtle bug in the future
    #
-   RVAL="`uuidgen`" || fail "Need uuidgen to work"
+   r_uuidgen
    r_uppercase "${RVAL}"
+   log_debug "Generated ${RVAL}"
 }
 
 
@@ -194,7 +195,8 @@ necessary marks \"no-delete,no-update,no-share,require\""
       ;;
 
       'c')
-         log_warning "\"c\" as a node address might trip up cmake, as it generates a C_LIBRARY definition."
+         _log_warning "\"c\" as a node address might trip up cmake, as it \
+generates a C_LIBRARY definition."
       ;;
    esac
 
@@ -218,7 +220,7 @@ sourcetree::node::r_encode_userinfo()
 
       *)
          # basically escape non-printables :isprint: and ';'
-         if egrep -q '[^[:print:]]|;' <<< "${userinfo}"
+         if grep -E -q '[^[:print:]]|;' <<< "${userinfo}"
          then
             convert="YES"
          fi
@@ -227,15 +229,7 @@ sourcetree::node::r_encode_userinfo()
 
    if [ "${convert}" = "YES" ]
    then
-      case "${MULLE_UNAME}" in
-         linux|windows|mingw)
-            RVAL="base64:`base64 -w 0 <<< "${userinfo}"`"
-         ;;
-
-         *)
-            RVAL="base64:`base64 -b 0 <<< "${userinfo}"`"
-         ;;
-      esac
+      RVAL="base64:`mulle_base64 -w 0 <<< "${userinfo}"`"
    else
       RVAL="${userinfo}"
    fi
@@ -250,7 +244,7 @@ sourcetree::node::r_decode_raw_userinfo()
 
    case "${raw_userinfo}" in
       base64:*)
-         if ! RVAL="`base64 --decode <<< "${raw_userinfo:7}" `"
+         if ! RVAL="`mulle_base64 --decode <<< "${raw_userinfo:7}" `"
          then
             _internal_fail "userinfo could not be base64 decoded."
          fi
@@ -265,13 +259,16 @@ sourcetree::node::r_decode_raw_userinfo()
 
 sourcetree::node::show_error()
 {
+   log_entry "sourcetree::node::show_error" "$@"
+
+   # display error node
    if [ ! -z "${_url}" ]
    then
       log_error "${_url}"
    fi
 
    sourcetree::node::r_decode_raw_userinfo "${_raw_userinfo}"
-   log_error "${RVAL%%$'\n'*}"$'\n'"${C_INFO}${RVAL#*$'\n'}"
+   log_error "User supplied config error: ${RVAL%%$'\n'*}"$'\n'"${C_INFO}${RVAL#*$'\n'}"
    return 1
 }
 
@@ -481,12 +478,6 @@ sourcetree::node::_r_get_format_key()
 
    local formatstring="$1"
 
-   if [ -z "${MULLE_ARRAY_SH}" ]
-   then
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-array.sh" || \
-         _internal_fail "Could not load mulle-array.sh via \"${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}\""
-   fi
-
    local key 
 
    key="`sed -n 's/%.={\([^{,]*\)[,]*[^{,]*[,]*[^{}}]*}.*/\1/p' <<< "${formatstring}" `"
@@ -684,6 +675,8 @@ sourcetree::node::printf()
 
                      switch="--${key}"
 
+                     include "array"
+
                      r_assoc_array_get "${_userinfo}" "${key}"
                      value="${RVAL}"
                   else
@@ -832,15 +825,15 @@ sourcetree::node::printf()
 
    case ",${mode}," in
       *,output_cmd,*)
-         rexekutor printf "%s %s\n" "${cmdline}" "'${_address}'"
+         rexekutor printf "%s'%s'\n" "${cmdline}" "${_address}"
       ;;
 
       *,output_cmd2,*)
-         rexekutor printf "%s %s\n" "${cmdline}" "'${_url:-${_address}}'"
+         rexekutor printf "%s '%s'\n" "${cmdline}" "${_url:-${_address}}"
       ;;
 
       *,output_raw,*)
-         rexekutor printf "%s%s" "${indent}" "${line}" | sed 's/;$//g'
+         rexekutor printf "%s%s" "${indent}" "${line%%;}"
       ;;
 
       *)
@@ -848,3 +841,15 @@ sourcetree::node::printf()
       ;;
    esac
 }
+
+
+mulle_sourcetree_inititalize()
+{
+   include "base64"
+}
+
+
+mulle_sourcetree_inititalize
+
+:
+

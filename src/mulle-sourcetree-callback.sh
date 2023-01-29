@@ -84,6 +84,7 @@ sourcetree::callback::call()
    log_setting "NODE_TYPE            : \"${_nodetype}\""
    log_setting "NODE_URL             : \"${_url}\""
    log_setting "NODE_UUID            : \"${_uuid}\""
+
    log_setting "WALK_DATASOURCE      : \"${datasource}\""
    log_setting "WALK_DESTINATION     : \"${_destination}\""
    log_setting "WALK_MODE            : \"${mode}\""

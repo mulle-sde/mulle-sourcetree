@@ -109,7 +109,7 @@ run_test1()
    then
       fail "add failed unexpectedly"
    fi
-   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update --serial
    then
       fail "update failed unexpectedly"
    fi
@@ -127,7 +127,7 @@ run_test2()
       fail "add failed unexpectedly"
    fi
 
-   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update --serial
    then
       fail "update failed unexpectedly"
    fi
@@ -152,7 +152,7 @@ run_test3()
    MULLE_SOURCETREE_STASH_DIRNAME="shared"
    export MULLE_SOURCETREE_STASH_DIRNAME
 
-   if ! run_mulle_sourcetree ${flags} --share update
+   if ! run_mulle_sourcetree ${flags} --share update --serial
    then
       fail "update failed unexpectedly"
    fi
@@ -189,7 +189,7 @@ run_test4()
    MULLE_SOURCETREE_STASH_DIR="${directory}/shared_global"
    export MULLE_SOURCETREE_STASH_DIR
 
-   if ! run_mulle_sourcetree --share update
+   if ! run_mulle_sourcetree --share update --serial
    then
       fail "update failed unexpectedly"
    fi
@@ -264,7 +264,7 @@ main()
    log_verbose "----- #4 PASSED -----"
 
    log_info "----- ALL PASSED -----"
-
+   cd ..
    rmdir_safer "${directory}"
 }
 
