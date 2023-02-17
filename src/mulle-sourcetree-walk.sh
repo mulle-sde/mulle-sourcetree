@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_WALK_SH="included"
+MULLE_SOURCETREE_WALK_SH='included'
 
 
 
@@ -2244,21 +2244,9 @@ sourcetree::walk::initialize()
 {
    log_entry "sourcetree::walk::initialize"
 
-   if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-db.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
-   fi
-   if [ -z "${MULLE_SOURCETREE_NODELINE_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-nodeline.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   fi
-   if [ -z "${MULLE_SOURCETREE_CALLBACK_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-callback.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-callback.sh" || exit 1
-   fi
+   include "sourcetree::db"
+   include "sourcetree::nodeline"
+   include "sourcetree::callback"
 }
 
 

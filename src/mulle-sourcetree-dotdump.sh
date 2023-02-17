@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_DOTDUMP_SH="included"
+MULLE_SOURCETREE_DOTDUMP_SH='included'
 
 
 sourcetree::dotdump::usage()
@@ -777,11 +777,11 @@ sourcetree::dotdump::main()
          ;;
 
          --lr)
-            OPTION_LR="YES"
+            OPTION_LR='YES'
          ;;
 
          --td)
-            OPTION_LR="NO"
+            OPTION_LR='NO'
          ;;
 
          #

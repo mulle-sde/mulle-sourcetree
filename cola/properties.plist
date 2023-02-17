@@ -1,0 +1,12 @@
+{
+   project =
+   {
+      description="🌲 Project composition and maintenance with build support";
+      domain="github";
+      name="mulle-sourcetree";
+      username="mulle-sde";
+      reponame="mulle-sourcetree";
+      homepage="https://github.com/mulle-sde/mulle-sourcetree";
+      license="BSD-3-Clause"
+   };
+}

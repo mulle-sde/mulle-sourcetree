@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_SYNC_SH="included"
+MULLE_SOURCETREE_SYNC_SH='included'
 
 
 sourcetree::sync::usage()
@@ -1005,7 +1005,7 @@ sourcetree::sync::write_cachedir_tag()
 
    local stashdir="$1"
 
-   [ "${MULLE_CACHEDIR_TAG}" != "YES" ] && return
+   [ "${MULLE_CACHEDIR_TAG}" != 'YES' ] && return
 
    # assume one stat is faster than open/write/close
    [ ! -d "${stashdir}" ] || [ -f "${stashdir}/CACHEDIR.TAG" ] && return

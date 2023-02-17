@@ -141,7 +141,8 @@ list_unames()
    printf "%s : %s\n" "${MULLE_UNAME}" "${RVAL}"
 
    shell_disable_glob
-   for i in darwin freebsd netbsd openbsd dragonfly mingw msys windows linux sunos
+   for i in darwin freebsd netbsd openbsd dragonfly mingw msys \
+            windows linux sunos emscripten wasm32
    do
       if [ "$i" != "${MULLE_UNAME}" ]
       then

@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_FETCH_SH="included"
+MULLE_SOURCETREE_FETCH_SH='included'
 
 
 sourcetree::fetch::r_guess_address()
@@ -204,7 +204,7 @@ sourcetree::fetch::sync_operation()
    # original_nodetype="`eval env -i printf "%s" "${_nodetype}"`"
 
    # branch "suddenly" set ? then ignore tag
-   r_expanded_string "${_branch}" "NO" # get default value
+   r_expanded_string "${_branch}" 'NO' # get default value
    original_branch="${RVAL}"
 
    if [ -z "${original_branch}" -a ! -z "${_evaledbranch}" ]
@@ -213,7 +213,7 @@ sourcetree::fetch::sync_operation()
    fi
 
    # tag "suddenly" set ? then ignore branch
-   r_expanded_string "${_tag}" "NO"  # get default value
+   r_expanded_string "${_tag}" 'NO'  # get default value
    original_tag="${RVAL}"
 
    if [ -z "${original_tag}" -a ! -z "${_evaledtag}" ]

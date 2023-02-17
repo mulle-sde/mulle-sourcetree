@@ -1,0 +1,10 @@
+digraph G {
+    graph [rankdir = LR];
+
+    node[ shape=record];
+    edge [ label=" runs", style="dotted" ]
+
+    "mulle-sde"        -> "mulle-sourcetree"
+    "mulle-sourcetree" -> "mulle-fetch"
+    "mulle-sourcetree"   [ color="dodgerblue"; fontcolor="dodgerblue"; penwidth="2"]
+}

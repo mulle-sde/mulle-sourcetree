@@ -1,0 +1,8 @@
+Organize your projects freely with multiple archives and repositories.
+
+* maintain local (file, folder) or external tree nodes (archive, repository)
+* inherit sourcetrees from dependencies
+* override external dependencies with symlinks of local projects
+* give build sub-projects in the correct order
+* create platform specific #ifdefs and #include statements
+* acquire dependencies unique to each platform

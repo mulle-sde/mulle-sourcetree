@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_LIST_SH="included"
+MULLE_SOURCETREE_LIST_SH='included'
 
 
 sourcetree::list::dedupe_mode_help()
@@ -539,7 +539,7 @@ sourcetree::list::main()
             r_comma_concat "${OPTION_NODETYPES}" "$1"
             OPTION_NODETYPES="${RVAL}"
 
-            [ "${OPTION_OUTPUT_INDENT}" = "DEFAULT" ] && OPTION_OUTPUT_INDENT="NO"
+            [ "${OPTION_OUTPUT_INDENT}" = "DEFAULT" ] && OPTION_OUTPUT_INDENT='NO'
          ;;
 
          --qualifier)

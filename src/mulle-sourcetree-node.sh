@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_NODE_SH="included"
+MULLE_SOURCETREE_NODE_SH='included'
 
 
 sourcetree::node::r_uuidgen()
@@ -212,22 +212,22 @@ sourcetree::node::r_encode_userinfo()
 
    local convert
 
-   convert="NO"
+   convert='NO'
    case "${userinfo}" in
       *$'\n'*)
-         convert="YES"
+         convert='YES'
       ;;
 
       *)
          # basically escape non-printables :isprint: and ';'
          if grep -E -q '[^[:print:]]|;' <<< "${userinfo}"
          then
-            convert="YES"
+            convert='YES'
          fi
       ;;
    esac
 
-   if [ "${convert}" = "YES" ]
+   if [ "${convert}" = 'YES' ]
    then
       RVAL="base64:`mulle_base64 -w 0 <<< "${userinfo}"`"
    else

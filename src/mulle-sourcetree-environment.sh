@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_ENVIRONMENT_SH="included"
+MULLE_SOURCETREE_ENVIRONMENT_SH='included'
 
 
 sourcetree::environment::config()
@@ -74,7 +74,7 @@ sourcetree::environment::config()
    then
       case "${MULLE_UNAME}" in
          windows)
-            SOURCETREE_FIX_FILENAME=".mulle/var/${MULLE_HOSTNAME}.fix"
+            SOURCETREE_FIX_FILENAME=".mulle/var/${MULLE_HOSTNAME}/${MULLE_USERNAME}.fix"
          ;;
 
          *)
@@ -229,7 +229,7 @@ sourcetree::environment::_set_sourcetree_global()
 Use -e if this is desired."
       fi
    fi
-   SOURCETREE_START="${SOURCETREE_START}/"
+   SOURCETREE_START="${SOURCETREE_START%%/}/"
 
    #
    # our db is specific to a host
@@ -239,7 +239,7 @@ Use -e if this is desired."
    # for testing let it be overrideable
    if [ -z "${SOURCETREE_DB_FILENAME}" ]
    then
-      SOURCETREE_DB_FILENAME=".mulle/var/${MULLE_HOSTNAME}/sourcetree/db"
+      SOURCETREE_DB_FILENAME=".mulle/var/${MULLE_HOSTNAME}/${MULLE_USERNAME}/sourcetree/db"
       SOURCETREE_DB_FILENAME_RELATIVE="../../../../.."
    fi
 }

@@ -1,0 +1,134 @@
+## Commands
+
+See all available commands with `mulle-sourcetree help`.
+Almost all commands will show a help page with
+`mulle-sourcetree <command> help`.
+
+#### `mulle-sourcetree add` : add nodes with
+
+``` bash
+mulle-sourcetree add \
+   --url https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz \
+   external/expat
+```
+
+You can specify your URL with environment variables (with fallback values), to
+make the sourcetreee more flexible:
+
+``` bash
+mulle-sourcetree add \
+   --url '${ZLIB_URL:-https://github.com/madler/zlib.git}' \
+   external/zlib
+```
+
+#### `mulle-sourcetree json` : see sourcetree
+
+The JSON sourcetree representation gives a nice overview, over its contents:
+
+``` bash
+$ mulle-sourcetree json
+[
+   {
+      "address":      "external/expat",
+      "nodetype":     "tar",
+      "url":          "https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz",
+      "uuid":         "87DFF521-D6FB-4621-8CEB-713E3B495EFA"
+   },
+   {
+      "address":      "external/zlib",
+      "nodetype":     "git",
+      "url":          "${ZLIB_URL:-https://github.com/madler/zlib.git}",
+      "uuid":         "974C7DFA-A353-43D8-871F-3CFF7ADC1E22"
+   }
+]
+```
+
+
+#### `mulle-sourcetree sync` : fetch and update nodes
+
+After changing the sourcetree, run *sync* to reflect the changes back
+into your project by fetching added and deleting removed dependencies:
+
+``` bash
+mulle-sourcetree sync
+```
+
+
+#### `mulle-sourcetree list` : stay in control
+
+See your sourcetree with **list**:
+
+``` bash
+$ mulle-sourcetree list --output-header --output-eval
+address         nodetype  marks  userinfo  url
+-------         --------  -----  --------  ---
+external/expat  tar                        https://github.com/libexpat/libexpat/archive/R_2_2_5.tar.gz
+external/zlib   git                        https://github.com/madler/zlib.git
+```
+
+Use custom format options to retrieve the information you want. This example
+lists all the URLs definitions used in your project:
+
+``` bash
+$ mulle-sourcetree list -r \
+                        --format "%u\n" \
+                        --output-no-header \
+                        --output-no-indent \
+| sed -n 's/^\${\([A-Z_]*\):-\(.*\)}$/\1=\"\2\"/p' \
+| sort -u
+```
+
+#### `mulle-sourcetree move` : change node order
+
+The order in which dependencies are build or libraries are linked can be
+important.
+
+``` bash
+mulle-sourcetree move external/zlib top
+```
+
+
+#### `mulle-sourcetree dotdump` : picture your sourcetree
+
+Get a graphical overview with **dotdump**. The output format is the
+[Graphviz](https://graphviz.org/) `.dot` format. Use `dot` to convert it to
+PNG or SVG:
+
+``` bash
+$ mulle-sourcetree dotdump --td > pic.dot
+dot -Tsvg -o pic.svg pic.dot     #
+open pic.svg
+```
+
+![Picture](doc/pic.png)
+
+Or try `mulle-sourcetree-graph` for a more abstract view.
+
+#### `mulle-sourcetree craftorder` : retrieve projects to build
+
+``` bash
+mulle-sourcetree craftorder
+/private/tmp/a/external/expat
+/private/tmp/a/external/zlib
+```
+
+#### `mulle-sourcetree-import-json` : edit the sourcetree config as JSON
+
+You can edit the JSON output from `mulle-sourcetree-json` and import it back
+with:
+
+``` bash
+mulle-sourcetree-import-json
+```
+
+
+#### `mulle-sourcetree-edit-csv` : edit the sourcetree config with a spreadsheet
+
+These commands need sqlite3 and a spreadsheet editor installed:
+
+``` bash
+mulle-sourcetree-edit-csv
+mulle-sourcetree-export-csv
+mulle-sourcetree-import-csv
+mulle-sourcetree-import-sqlite
+```

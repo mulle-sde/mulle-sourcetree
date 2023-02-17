@@ -1,13 +1,14 @@
 
 PIX=\
-walk-flat.png \
-walk-in-order.png \
-walk-post-order.png \
-walk-pre-order.png \
-walk-breadth-first.png \
-visit.png
+mulle-sde-overview.svg \
+walk-flat.svg \
+walk-in-order.svg \
+walk-post-order.svg \
+walk-pre-order.svg \
+walk-breadth-first.svg \
+visit.svg
 
-%.png: %.dot
-	dot -Tpng -o $*.png $<
+%.svg: %.dot
+	dot -Tsvg -o $*.svg $<
 
 all: $(PIX)

@@ -46,6 +46,8 @@ Usage:
    a name or --write-config is specified. If <json> is ommitted or '-' stdin
    will be read.
 
+   Needs \`jq\` installed to function.
+
 Flags:
    --write-name <name> : name of mulle-sourcetree config to write ()
    --directory <dir>   : directory of config (.mulle/etc/sourcetree)

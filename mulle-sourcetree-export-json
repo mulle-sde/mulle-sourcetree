@@ -36,107 +36,23 @@
 MULLE_EXECUTABLE_VERSION="1.1.0"
 
 
-CONFIG="${1:-.mulle/etc/sourcetree/config}"
-
 
 usage()
 {
       cat <<EOF >&2
 Usage:
-   mulle-sourcetree-export-json [config]
+   "${MULLE_USAGE_NAME}"
 
-   Read a mulle-sourcetree config file and convert it into a JSON file.
-
-   * config    : the sourcetree file (.mulle/etc/sourcetree/config)
-
-   This command needs sqlite to be installed to work.
+   Same as mulle-sourcetree json. It just exists for legacy support.
 
 EOF
       exit 1
 }
 
 
-json_export_userinfo()
-{
-   local raw="$1"
-   include "sourcetree::node"
-
-   printf "      \"userinfo\":     {"
-
-   local userinfo
-
-   sourcetree::node::r_decode_raw_userinfo "${raw}"
-   userinfo="${RVAL}"
-
-   local delimiter=$'\n'
-
-   .foreachline key in `assoc_array_all_keys "${userinfo}"`
-   .do
-      r_assoc_array_get "${userinfo}" "${key}"
-      value="${RVAL}"
-
-      if [ ! -z "${value}" ]
-      then
-         r_escaped_doublequotes "${value}"
-         value="${RVAL}"
-         printf "${delimiter}                          \"%s\": \"%s\"%s"  "${key}" "${value}"
-         delimiter=","$'\n'
-      fi
-   .done
-
-   printf "\n                      },\n"
-}
-
-
-json_export_callback()
-{
-   log_entry "callback" "$@"
-
-   printf "%s" "${DELIMITER}"
-   DELIMITER=","$'\n'
-
-   printf "   {\n"
-   printf "      \"address\":      \"${_address}\",\n"
-
-   if [ ! -z "${_branch}" ]
-   then
-      printf "      \"branch\":       \"${_branch}\",\n"
-   fi
-   if [ ! -z "${_fetchoptions}" ]
-   then
-      printf "      \"fetchoptions\": \"${_fetchoptions}\",\n"
-   fi
-   if [ ! -z "${_marks}" ]
-   then
-      printf "      \"marks\":        \"${_marks}\",\n"
-   fi
-   if [ ! -z "${_raw_userinfo}" ]
-   then
-      json_export_userinfo "${_raw_userinfo}"
-   fi
-   if [ ! -z "${_tag}" ]
-   then
-      printf "      \"tag\":          \"${_tag}\",\n"
-   fi
-   if [ ! -z "${_nodetype}" ]
-   then
-      printf "      \"nodetype\":     \"${_nodetype}\",\n"
-   fi
-   if [ ! -z "${_url}" ]
-   then
-      printf "      \"url\":          \"${_url}\",\n"
-   fi
-
-   printf "      \"uuid\":         \"${_uuid}\"\n"
-   printf "   }"
-}
-
-
 main()
 {
-   local OPTION_SHAREDIR
-   #
-   # simple option handling
+   #   # simple option handling
    #
    while [ $# -ne 0 ]
    do
@@ -171,32 +87,7 @@ main()
 
    options_setup_trace "${MULLE_TRACE}" && set -x
 
-   include "array"
-   include "sourcetree::environment"
-
-   sourcetree::environment::setup "${OPTION_SHAREDIR}"
-
-   include "sourcetree::node"
-   include "sourcetree::walk"
-
-   local text
-
-   text="`rexekutor sourcetree::walk::main \
-                               --lenient \
-                               --no-eval \
-                               --flat \
-                               json_export_callback `"
-   if [ ! -z "${text}" ]
-   then
-      cat <<EOF
-[
-${text}
-]
-EOF
-      return 0
-   fi
-
-   return 1
+   rexekutor mulle-sourcetree ${MULLE_TECHNICAL_FLAGS} json "$@"
 }
 
 

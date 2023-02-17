@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_CONFIG_SH="included"
+MULLE_SOURCETREE_CONFIG_SH='included'
 
 
 sourcetree::config::usage()
@@ -230,7 +230,7 @@ sourcetree::config::list_main()
    log_entry "sourcetree::config::list_main" "$@"
 
    local OPTION_SEPARATOR=" "
-   local OPTION_WARN="YES"
+   local OPTION_WARN='YES'
    local OPTION_FAIL_SILENTLY_IF_MISSING='NO'
 
    while [ $# -ne 0 ]

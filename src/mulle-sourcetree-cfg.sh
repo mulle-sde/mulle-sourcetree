@@ -32,7 +32,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_CFG_SH="included"
+MULLE_SOURCETREE_CFG_SH='included'
 
 
 # some old hack that I should get rid off (only used on one occasion)

@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_TEST_SH="included"
+MULLE_SOURCETREE_TEST_SH='included'
 
 
 sourcetree::test::usage()
@@ -74,9 +74,9 @@ sourcetree::test::main()
 
    if sourcetree::nodemarks::enable "$1" "$2"
    then
-      log_info "YES"
+      log_info 'YES'
       return 0
    fi
-   log_info "NO"
+   log_info 'NO'
    return 2
 }

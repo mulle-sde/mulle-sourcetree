@@ -29,7 +29,7 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_CRAFTORDER_SH="included"
+MULLE_SOURCETREE_CRAFTORDER_SH='included'
 
 
 sourcetree::craftorder::usage()
@@ -246,11 +246,11 @@ sourcetree::craftorder::main()
          ;;
 
          --bequeath)
-            OPTION_BEQUEATH="YES"
+            OPTION_BEQUEATH='YES'
          ;;
 
          --no-bequeath)
-            OPTION_BEQUEATH="NO"
+            OPTION_BEQUEATH='NO'
          ;;
 
          --no-print-env)
