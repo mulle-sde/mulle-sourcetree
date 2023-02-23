@@ -146,15 +146,15 @@ Options:
    -p <value>       : specify permissions (missing)
    -m <value>       : marks to match (e.g. build)
    -q <value>       : qualifier for marks to match (e.g. MATCHES build)
+   --backwards      : walk tree nodes backwards, rarely useful
+   --bequeath       : ignore bequeath marks (name is erroneously inverted)
+   --breadth-first  : walk tree breadth first (first all top levels)
    --cd             : change directory to node's working directory
    --comments       : also walk comment nodes
-   --lenient        : allow shell command to error
-   --backwards      : walk tree nodes backwards, rarely useful
    --in-order       : walk tree depth first  (Root, Left, Right
+   --lenient        : allow shell command to error
    --no-dedupe      : walk all nodes in the tree (very slow)
-   --bequeath       : ignore bequeath marks (name is erroneously inverted)
    --pre-order      : walk tree in pre-order  (Root, Left, Right)
-   --breadth-first  : walk tree breadth first (first all top levels)
    --post-order     : walk tree depth first for all siblings (Left, Right, Root)
    --walk-db        : walk over information contained in the database instead
 EOF
@@ -174,6 +174,9 @@ EOF
    --did-descend-callback <c>  : callback for the descend (default)
    --did-walk-callback <c>     : callback after walk is done
    --eval                      : evaluate callback
+   --eval-node                 : additional variables: NODE_EVALED_URL,
+                                 NODE_EVALED_TAG, NODE_EVALED_BRANCH,
+                                 NODE_EVALED_NODETYPE, NODE_EVALED_FETCHOPTIONS
    --max-walk-level            : restrict callbacks to max recursion depth
    --min-walk-level            : restrict callbacks to min recursion depth
    --no-callback-root          : don't execute callbacks for root level
@@ -422,7 +425,8 @@ sourcetree::walk::_visit_callback()
 
    if [ ! -z "${filternodetypes}" ]
    then
-      if ! sourcetree::walk::_callback_nodetypes "${_nodetype}" "${filternodetypes}"
+      if ! sourcetree::walk::_callback_nodetypes "${_nodetype}" \
+                                                 "${filternodetypes}"
       then
          log_fluff "Node \"${_address}\": \"${_nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
          return 0
@@ -431,7 +435,9 @@ sourcetree::walk::_visit_callback()
 
    if [ ! -z "${filterpermissions}" ]
    then
-      if ! sourcetree::walk::_callback_permissions "${_filename}" "${_marks}" "${filterpermissions}"
+      if ! sourcetree::walk::_callback_permissions "${_filename}" \
+                                                   "${_marks}" \
+                                                   "${filterpermissions}"
       then
          # filter should have fluffed already
          _log_debug "Node \"${_address}\" with filename \"${_filename}\" \
@@ -1846,6 +1852,7 @@ sourcetree::walk::main()
    local OPTION_DESCEND_QUALIFIER=""
    local OPTION_DIRECTION="FORWARD"
    local OPTION_EVAL='YES'
+   local OPTION_EVAL_NODE='YES'
    local OPTION_EXTERNAL_CALL='YES'
    local OPTION_IGNORE
    local OPTION_LENIENT='NO'
@@ -1863,6 +1870,7 @@ sourcetree::walk::main()
    local OPTION_MIN_WALK_LEVEL=
    local OPTION_MAX_WALK_LEVEL=
    local OPTION_VERBATIM='NO'
+
 
    while [ $# -ne 0 ]
    do
@@ -1892,6 +1900,10 @@ sourcetree::walk::main()
 
          -E|--eval)
             OPTION_EVAL='YES'
+         ;;
+
+         --eval-node)
+            OPTION_EVAL_NODE='YES'
          ;;
 
          -N|--no-eval)
@@ -2190,6 +2202,11 @@ ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
    if [ "${OPTION_EVAL}" = 'YES' ]
    then
       r_comma_concat "${mode}" "eval"
+      mode="${RVAL}"
+   fi
+   if [ "${OPTION_EVAL_NODE}" = 'YES' ]
+   then
+      r_comma_concat "${mode}" "eval-node"
       mode="${RVAL}"
    fi
    if [ "${OPTION_EXTERNAL_CALL}" = 'YES' ]

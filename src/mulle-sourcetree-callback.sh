@@ -69,6 +69,7 @@ sourcetree::callback::call()
       ;;
    esac
 
+
 #   local owner
 #
 #   r_basename "${datasource#/}"
@@ -92,6 +93,41 @@ sourcetree::callback::call()
    log_setting "WALK_PARENT          : \"${WALK_PARENT}\""
    log_setting "WALK_VIRTUAL         : \"${virtual}\""
    log_setting "WALK_VIRTUAL_ADDRESS : \"${_virtual_address}\""
+
+   local MULLE_BRANCH
+   local MULLE_TAG
+   local MULLE_URL
+
+   local NODE_EVALED_URL
+   local NODE_EVALED_NODETYPE
+   local NODE_EVALED_BRANCH
+   local NODE_EVALED_TAG
+   local NODE_EVALED_FETCHOPTIONS
+
+   case ",${mode}," in
+      *,eval-node,*)
+
+         local _evaledurl
+         local _evalednodetype
+         local _evaledbranch
+         local _evaledtag
+         local _evaledfetchoptions
+
+         sourcetree::node::__evaluate_values
+
+         NODE_EVALED_URL="${_evaledurl}"
+         NODE_EVALED_NODETYPE="${_evalednodetype}"
+         NODE_EVALED_BRANCH="${_evaledbranch}"
+         NODE_EVALED_TAG="${_evaledtag}"
+         NODE_EVALED_FETCHOPTIONS="${_evaledfetchoptions}"
+
+         log_setting "NODE_EVALED_URL      : \"${NODE_EVALED_URL}\""
+         log_setting "NODE_EVALED_NODETYPE : \"${NODE_EVALED_NODETYPE}\""
+         log_setting "NODE_EVALED_BRANCH   : \"${NODE_EVALED_BRANCH}\""
+         log_setting "NODE_EVALED_TAG      : \"${NODE_EVALED_TAG}\""
+         log_setting "NODE_EVALED_FETCHOPTIONS : \"${NODE_EVALED_FETCHOPTIONS}\""
+      ;;
+   esac
 
    #
    # "pass" these as globals
