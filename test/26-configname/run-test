@@ -46,7 +46,7 @@ main()
    cd "${directory}" || exit 1
 
    # place a into different
-   run_mulle_sourcetree --config-name "different" add a || exit 1
+   run_mulle_sourcetree -s --config-name "different" add a || exit 1
    if [ ! -e .mulle/etc/sourcetree/different ]
    then
       tree -a .mulle >&2
@@ -58,7 +58,7 @@ main()
       tree -a .mulle >&2
       fail "a is gone ($PWD)"
    fi
-   if run_mulle_sourcetree get a > /dev/null
+   if run_mulle_sourcetree -s --no-errors get a > /dev/null
    then
       tree -a .mulle >&2
       fail "a should not have been found ($PWD)"
@@ -66,10 +66,10 @@ main()
    log_verbose "----- #1 PASSED -----"
 
    # place b into config (default)
-   run_mulle_sourcetree add b || exit 1
+   run_mulle_sourcetree -s add b || exit 1
 
    # should not be found, as different supersedes config
-   if run_mulle_sourcetree --config-name "different" get b > /dev/null
+   if run_mulle_sourcetree -s --no-errors --config-name "different" get b > /dev/null
    then
       tree -a .mulle >&2
       fail "b was found, though it shouldn't have been ($PWD)"

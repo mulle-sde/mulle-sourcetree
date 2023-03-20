@@ -56,38 +56,58 @@ run_test()
    r_uuidgen
    _uuid="${RVAL}"
    (
-      sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release" "flat" "/" "/"
-   ) || fail "failed unexpectedly"
+      sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release" \
+                                                   "flat" \
+                                                   "/" \
+                                                   "/" \
+                                                   0
+   ) 2> /dev/null  || fail "failed unexpectedly"
 
    [ -f "ringo/starr/VERSION" ] || fail "ringo/starr/VERSION not there ($PWD)"
    log_verbose "----- #1 PASSED -----"
 
    (
-      sourcetree::action::do_actions_with_nodeline "ringo/star;git;;${_uuid};${repos}/a;release" "flat" "/" "/"
-   ) || fail "failed unexpectedly"
+      sourcetree::action::do_actions_with_nodeline "ringo/star;git;;${_uuid};${repos}/a;release" \
+                                                   "flat" \
+                                                   "/" \
+                                                   "/" \
+                                                   0
+   ) 2> /dev/null  || fail "failed unexpectedly"
 
    [ -f "ringo/starr/VERSION" ] && fail "ringo/starr/VERSION not gone ($PWD)"
    [ -f "ringo/star/VERSION" ]  || fail "ringo/star/VERSION not there ($PWD)"
    log_verbose "----- #2 PASSED -----"
 
    (
-      sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;not_there" "flat" "/" "/"
-   ) && fail "worked unexpectedly"
+      sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;not_there" \
+                                                   "flat" \
+                                                   "/" \
+                                                   "/" \
+                                                   0
+   ) 2> /dev/null && fail "worked unexpectedly"
 
    [ -f "ringo/star/VERSION" ]    && fail "branch not_there should have wiped ringo/star/VERSION"
    log_verbose "----- #3 PASSED -----"
 
    (
-      sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release;2.0.0" "flat" "/" "/"
-   ) || fail "failed unexpectedly"
+      sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release;2.0.0" \
+                                                   "flat" \
+                                                   "/" \
+                                                   "/" \
+                                                   0
+   ) 2> /dev/null || fail "failed unexpectedly"
 
    [ `cat ringo/starr/VERSION` = "2.0.0" ] || fail "Wrong checkout"
 
    log_verbose "----- #4 PASSED -----"
 
    (
-      sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release;1.0.0" "flat" "/" "/"
-   ) || fail "failed unexpectedly"
+      sourcetree::action::do_actions_with_nodeline "ringo/starr;git;;${_uuid};${repos}/a;release;1.0.0" \
+                                                   "flat" \
+                                                   "/" \
+                                                   "/" \
+                                                   0
+   ) 2> /dev/null  || fail "failed unexpectedly"
 
    [ `cat ringo/starr/VERSION` = "1.0.0" ] || fail "Wrong checkout"
 
@@ -142,7 +162,7 @@ init()
 
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"     || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-marks.sh"     || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-cfg.sh"      || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
    . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-action.sh"   || exit 1

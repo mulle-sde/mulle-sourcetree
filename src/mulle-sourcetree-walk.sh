@@ -348,7 +348,7 @@ sourcetree::walk::_callback_filter()
 {
    # log_entry "sourcetree::walk::_callback_filter" "$@"
 
-   sourcetree::nodemarks::filter_with_qualifier "$@"
+   sourcetree::marks::filter_with_qualifier "$@"
 }
 
 
@@ -356,7 +356,7 @@ sourcetree::walk::_descend_filter()
 {
    # log_entry "sourcetree::walk::_descend_filter" "$@"
 
-   sourcetree::nodemarks::filter_with_qualifier "$@"
+   sourcetree::marks::filter_with_qualifier "$@"
 }
 
 
@@ -446,6 +446,16 @@ doesn't jive with permissions \"${filterpermissions}\""
       fi
    fi
 
+   if [ ${WALK_LEVEL} -lt ${OPTION_MIN_WALK_LEVEL:-0} ]
+   then
+      return 0
+   fi
+
+   if [ ${WALK_LEVEL} -ge ${OPTION_MAX_WALK_LEVEL:-9999} ]
+   then
+      return 0
+   fi
+
    if [ ! -z "${OPTION_IGNORE}" ]
    then
       local ignore
@@ -459,16 +469,6 @@ doesn't jive with permissions \"${filterpermissions}\""
             ;;
          esac
       .done
-   fi
-
-   if [ ${WALK_LEVEL} -lt ${OPTION_MIN_WALK_LEVEL:-0} ]
-   then
-      return 0
-   fi
-
-   if [ ${WALK_LEVEL} -ge ${OPTION_MAX_WALK_LEVEL:-9999} ]
-   then
-      return 0
    fi
 
    local rval
@@ -541,7 +541,7 @@ sourcetree::walk::_visit_descend()
    local descendqualifier="$6"
    local mode="$7"
 
-   if sourcetree::nodemarks::disable "${_marks}" "descend"
+   if sourcetree::marks::disable "${_marks}" "descend"
    then
       _log_debug "Do not recurse on \"${virtual}/${_destination}\" due to no-descend mark"
       return 0
@@ -569,6 +569,25 @@ doesn't jive with permissions \"${filterpermissions}\""
       fi
    fi
 
+   if [ ! -z "${OPTION_IGNORE}" -o ! -z "${OPTION_LEAF}" ]
+   then
+      local ignore
+      local ignores_and_leafs
+
+      r_colon_concat "${OPTION_IGNORE}" "${OPTION_LEAF}"
+      ignores_and_leafs="${RVAL}"
+
+      .foreachpath ignore in ${ignores_and_leafs}
+      .do
+         case "${_address}" in
+            ${ignore})
+               log_fluff "Node ${_address} not descended by filename ignore/leaf list"
+               return 0
+            ;;
+         esac
+      .done
+   fi
+
    if [ ! -z "${WILL_DESCEND_CALLBACK}" ]
    then
       if ! "${WILL_DESCEND_CALLBACK}" "$@"
@@ -577,21 +596,6 @@ doesn't jive with permissions \"${filterpermissions}\""
 to WILL_DESCEND_CALLBACK"
          return 0
       fi
-   fi
-
-   if [ ! -z "${OPTION_IGNORE}" ]
-   then
-      local ignore
-
-      .foreachpath ignore in ${OPTION_IGNORE}
-      .do
-         case "${_address}" in
-            ${ignore})
-               log_fluff "Node ${_address} ignored by filename ignore list"
-               return 0
-            ;;
-         esac
-      .done
    fi
 
    #
@@ -1122,7 +1126,7 @@ sourcetree::walk::walk_nodeline()
          if [ ${WALK_LEVEL} -gt 0 ]
          then
             # node marked as no-bequeath   : ignore
-            if sourcetree::nodemarks::disable "${_marks}" "bequeath"
+            if sourcetree::marks::disable "${_marks}" "bequeath"
             then
                log_debug "Do not act on non-toplevel \"${virtual}/${_destination}\" with no-bequeath mark"
                return 0
@@ -1146,7 +1150,7 @@ sourcetree::walk::walk_nodeline()
       ;;
 
       *,share,*)
-         if sourcetree::nodemarks::enable "${_marks}" "share"
+         if sourcetree::marks::enable "${_marks}" "share"
          then
             sourcetree::walk::_share_node "$@"
             return $?
@@ -1279,13 +1283,15 @@ sourcetree::walk::_walk_nodelines()
 
    local nodelines="$1"; shift
 
-   local datasource="$1"; shift
-   local virtual="$1"; shift
-   local filternodetypes="$1"; shift
-   local filterpermissions="$1"; shift
-   local callbackqualifier="$1"; shift
-   local descendqualifier="$1"; shift
-   local mode="$1" ; shift
+   local datasource="$1"
+   local virtual="$2"
+   local filternodetypes="$3"
+   local filterpermissions="$4"
+   local callbackqualifier="$5"
+   local descendqualifier="$6"
+   local mode="$7"
+
+   shift 7
 
    sourcetree::walk::_print_info "${datasource}" "${nodelines}" "${mode}"
 
@@ -1298,6 +1304,7 @@ sourcetree::walk::_walk_nodelines()
 
    local rval
    local tmpmode
+   local NODE_INDEX
 
    case ",${mode}," in
       *,breadth-order,*)
@@ -1305,8 +1312,10 @@ sourcetree::walk::_walk_nodelines()
          r_comma_concat "${mode}" 'breadth-flat'
          tmpmode="${RVAL}"
 
+         NODE_INDEX=-1
          .foreachline nodeline in ${nodelines}
          .do
+            NODE_INDEX=$((NODE_INDEX + 1))
             [ -z "${nodeline}" ] && .continue
 
             sourcetree::walk::walk_nodeline "${nodeline}" \
@@ -1324,8 +1333,11 @@ sourcetree::walk::_walk_nodelines()
       ;;
    esac
 
+
+   NODE_INDEX=-1
    .foreachline nodeline in ${nodelines}
    .do
+      NODE_INDEX=$((NODE_INDEX + 1))
       [ -z "${nodeline}" ] && .continue
 
       sourcetree::walk::walk_nodeline "${nodeline}" \
@@ -1366,8 +1378,10 @@ sourcetree::walk::_walk_nodelines()
          r_comma_concat "${mode}" 'post-flat'
          tmpmode="${RVAL}"
 
+         NODE_INDEX=-1
          .foreachline nodeline in ${nodelines}
          .do
+            NODE_INDEX=$((NODE_INDEX + 1))
             [ -z "${nodeline}" ] && .continue
 
             sourcetree::walk::walk_nodeline "${nodeline}" \
@@ -1608,16 +1622,18 @@ sourcetree::walk::walk_config_uuids()
 
    local VISITED
    local WALKED
-   local rval
    local WALK_INDENT=""
    local WALK_LEVEL=0
-   local WALK_INDEX=0
+   local WALK_INDEX=-1
    local WALK_PARENT="${WALK_PARENT:-.}"
 
    [ -z "${SOURCETREE_START}" ] && _internal_fail "SOURCETREE_START is undefined"
 
    WALKED=
    VISITED=
+
+   local rval
+
    sourcetree::walk::_walk_config_uuids "" "${SOURCETREE_START}" "" "$@"
    rval=$?
 
@@ -1701,7 +1717,7 @@ sourcetree::walk::walk_db_uuids()
    local WALKED
    local WALK_INDENT=""
    local WALK_LEVEL=0
-   local WALK_INDEX=0
+   local WALK_INDEX=-1
 
    [ -z "${SOURCETREE_START}" ] && _internal_fail "SOURCETREE_START is undefined"
 
@@ -1855,6 +1871,7 @@ sourcetree::walk::main()
    local OPTION_EVAL_NODE='YES'
    local OPTION_EXTERNAL_CALL='YES'
    local OPTION_IGNORE
+   local OPTION_LEAF
    local OPTION_LENIENT='NO'
    local OPTION_MARKS=""
    local OPTION_NODETYPES=""
@@ -1879,6 +1896,22 @@ sourcetree::walk::main()
             sourcetree::walk::usage
          ;;
 
+         --bequeath)
+            OPTION_BEQUEATH='YES'
+         ;;
+
+         --no-bequeath)
+            OPTION_BEQUEATH='NO'
+         ;;
+
+         --cd)
+            OPTION_CD='YES'
+         ;;
+
+         --no-cd)
+            OPTION_CD='NO'
+         ;;
+
          --configuration)
             [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
@@ -1896,6 +1929,17 @@ sourcetree::walk::main()
 
          --callback-root)
             OPTION_CALLBACK_ROOT='YES'
+         ;;
+
+         --no-dedupe)
+            OPTION_DEDUPE_MODE="none"
+         ;;
+
+         --dedupe|--dedupe-mode)
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
+            shift
+
+            OPTION_DEDUPE_MODE="$1"
          ;;
 
          -E|--eval)
@@ -1918,14 +1962,6 @@ sourcetree::walk::main()
             OPTION_CALLBACK_ROOT='NO'
          ;;
 
-         --cd)
-            OPTION_CD='YES'
-         ;;
-
-         --no-cd)
-            OPTION_CD='NO'
-         ;;
-
          --walk-db|--walk-db-dir)
             OPTION_WALK_DB='YES'
          ;;
@@ -1934,23 +1970,10 @@ sourcetree::walk::main()
             OPTION_WALK_DB='NO'
          ;;
 
-         --no-dedupe)
-            OPTION_DEDUPE_MODE="none"
-         ;;
-
-         --bequeath)
-            OPTION_BEQUEATH='YES'
-         ;;
-
-         --no-bequeath)
-            OPTION_BEQUEATH='NO'
-         ;;
-
-         --dedupe|--dedupe-mode)
-            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
-            shift
-
-            OPTION_DEDUPE_MODE="$1"
+         #
+         #
+         --backwards)
+            OPTION_DIRECTION="BACKWARDS"
          ;;
 
          --flat)
@@ -1971,10 +1994,6 @@ sourcetree::walk::main()
 
          --breadth-order|--breadth-first)
             OPTION_TRAVERSE_STYLE="BREADTH"
-         ;;
-
-         --backwards)
-            OPTION_DIRECTION="BACKWARDS"
          ;;
 
          -l|--lenient)
@@ -2044,6 +2063,13 @@ sourcetree::walk::main()
             OPTION_DESCEND_QUALIFIER="$1"
          ;;
 
+         -q|--qualifier|--marks-qualifier)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            OPTION_QUALIFIER="$1"
+         ;;
+
          -m|--marks)
             [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
@@ -2060,6 +2086,14 @@ sourcetree::walk::main()
             OPTION_IGNORE="${RVAL}"
          ;;
 
+         --leaf)
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
+            shift
+
+            r_colon_concat "${OPTION_LEAF}" "$1"
+            OPTION_LEAF="${RVAL}"
+         ;;
+
          -n|--nodetypes)
             [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
             shift
@@ -2074,12 +2108,6 @@ sourcetree::walk::main()
             OPTION_PERMISSIONS="$1"
          ;;
 
-         -q|--qualifier|--marks-qualifier)
-            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
-            shift
-
-            OPTION_QUALIFIER="$1"
-         ;;
 
          --verbatim)
             OPTION_VERBATIM='YES'
@@ -2229,6 +2257,7 @@ ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
       r_comma_concat "${mode}" "error"
       mode="${RVAL}"
    fi
+
    # convert marks into a qualifier with globals
    if [ ! -z "${OPTION_MARKS}" ]
    then

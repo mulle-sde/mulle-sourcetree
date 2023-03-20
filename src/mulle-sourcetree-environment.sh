@@ -240,7 +240,7 @@ Use -e if this is desired."
    if [ -z "${SOURCETREE_DB_FILENAME}" ]
    then
       SOURCETREE_DB_FILENAME=".mulle/var/${MULLE_HOSTNAME}/${MULLE_USERNAME}/sourcetree/db"
-      SOURCETREE_DB_FILENAME_RELATIVE="../../../../.."
+      SOURCETREE_DB_FILENAME_RELATIVE="../../../../../.."
    fi
 }
 
@@ -483,7 +483,7 @@ sourcetree::environment::initialize()
    include "sourcetree::db"
    include "sourcetree::node"
    include "sourcetree::nodeline"
-   include "sourcetree::nodemarks"
+   include "sourcetree::marks"
 }
 
 sourcetree::environment::initialize

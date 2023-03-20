@@ -82,10 +82,10 @@ sourcetree::node::r_sanitized_marks()
    local marks="$1"
    local address="$2"
 
-   sourcetree::nodemarks::check_consistency "${marks}" "${address}"
+   sourcetree::marks::check_consistency "${marks}" "${address}"
 
-   sourcetree::nodemarks::r_simplify "${marks}"
-   sourcetree::nodemarks::sort "${RVAL}"
+   sourcetree::marks::r_simplify "${marks}"
+   sourcetree::marks::r_sort "${RVAL}"
 }
 
 
@@ -129,13 +129,13 @@ sourcetree::node::__augment()
 
          before="${_marks}"
 
-         sourcetree::nodemarks::r_remove "${before}" "share"
+         sourcetree::marks::r_remove "${before}" "share"
          after="${RVAL}"
-         sourcetree::nodemarks::r_remove "${after}" "delete"
+         sourcetree::marks::r_remove "${after}" "delete"
          after="${RVAL}"
-         sourcetree::nodemarks::r_remove "${after}" "update"
+         sourcetree::marks::r_remove "${after}" "update"
          after="${RVAL}"
-         sourcetree::nodemarks::r_add "${after}" "require"
+         sourcetree::marks::r_add "${after}" "require"
          after="${RVAL}"
 
          if [ "${before}" != "${after}" ]
@@ -268,7 +268,7 @@ sourcetree::node::show_error()
    fi
 
    sourcetree::node::r_decode_raw_userinfo "${_raw_userinfo}"
-   log_error "User supplied config error: ${RVAL%%$'\n'*}"$'\n'"${C_INFO}${RVAL#*$'\n'}"
+   log_error "User supplied sourcetree config error: ${RVAL%%$'\n'*}"$'\n'"${C_INFO}${RVAL#*$'\n'}"
    return 1
 }
 
@@ -469,8 +469,11 @@ sourcetree::node::same_string()
 }
 
 #
-# returns _formatstring
 # and key in RVAL
+#
+# local _key
+# local _title
+# local _dashes
 #
 sourcetree::node::_r_get_format_key()
 {
@@ -478,25 +481,25 @@ sourcetree::node::_r_get_format_key()
 
    local formatstring="$1"
 
-   local key 
+   local s
 
-   key="`sed -n 's/%.={\([^{,]*\)[,]*[^{,]*[,]*[^{}}]*}.*/\1/p' <<< "${formatstring}" `"
+   # remove %[vi]={ and }
+   s="${formatstring#\%?=\{}"
+   s="${s%%\}*}"
 
-   local remainder
+   _key=
+   _title=
+   _dashes=
 
-   remainder="`sed 's/^%.={[^}]*}//' <<< "${formatstring}" `"
-   if [ -z "${key}" ] || sourcetree::node::same_string "${remainder}" "${formatstring}"
-   then
-      fail "malformed formatstring \"${formatstring:1}\". Need ={<title>,<dashes>,<key>} (offending: \"${remainder}\")"
-   fi
+   IFS="," read -r _key _title _dashes <<< "${s}"
 
-   _formatstring="XX${remainder}" ## XX is used for skipping first two chars
-
-   RVAL="${key}"
+   # dial forward
+   RVAL="${formatstring#*\}}"
 }
 
+
 #
-# specify indentfor ':' with parameter
+# specify indent for ':' with parameter
 # use sed to shift the output to right or left
 #
 sourcetree::node::printf_format_help()
@@ -609,6 +612,24 @@ sourcetree::node::printf()
       ;;
    esac
 
+   local supermarks
+
+   case "${formatstring}" in
+      *\%s*)
+         case "${evalednodetype}" in
+            comment)
+            ;;
+
+            *)
+               include "sourcetree::supermarks"
+
+               sourcetree::supermarks::r_compose "${_marks}"
+               supermarks="${RVAL}"
+            ;;
+         esac
+      ;;
+   esac
+
    local line
    local lf=$'\n'
 
@@ -620,6 +641,9 @@ sourcetree::node::printf()
    local value
    local switch
    local _formatstring
+   local _key
+   local _dashes
+   local _title
 
    while [ ! -z "${formatstring}" ]
    do
@@ -670,8 +694,8 @@ sourcetree::node::printf()
                   if [ "${formatstring:2:2}" = "={" ]
                   then
                      sourcetree::node::_r_get_format_key "${formatstring}"
-                     key="${RVAL}"
-                     formatstring="${_formatstring}"
+                     formatstring="XX${RVAL}"
+                     key="${_key}"
 
                      switch="--${key}"
 
@@ -704,6 +728,11 @@ sourcetree::node::printf()
          %n*)
             switch="--nodetype"
             value="${_nodetype}"
+         ;;
+
+         %s*)
+            switch="--supermarks"
+            value="${supermarks}"
          ;;
 
          %t!*)
@@ -755,8 +784,8 @@ sourcetree::node::printf()
             if [ "${formatstring:2:1}" = "=" ]
             then
                sourcetree::node::_r_get_format_key "${formatstring}"
-               key="${RVAL}"
-               formatstring="${_formatstring}"
+               formatstring="XX${RVAL}"
+               key="${_key}"
                switch=""
 
                r_shell_indirect_expand "${key}"

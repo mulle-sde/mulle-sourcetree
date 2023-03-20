@@ -84,14 +84,17 @@ sourcetree::print_commands()
    info           : print current sourcetree information
    libexec-dir    : print path to ${MULLE_USAGE_NAME} libexec
    knownmarks     : list known marks
-   sourcetree-dir : print path to project (if a sourcetree exists)
+   plugin         : list available plugins
+   rcopy          : copy a node from another sourcetree
    rename         : rename a node in the sourcetree
    rename-marks   : rename marks in the sourcetree
    remove         : remove a node from the sourcetree
    reset          : clear the database, to force a sync
    reuuid         : create new uuids for the sourcetree
    rewrite        : clean up marks of a sourcetree
+   sourcetree-dir : print path to project (if a sourcetree exists)
    star-search    : search for duplicates by name listed as '*' in list
+   supermark      : inspect supermarks
    wrap           : wrap nodetypes,branches,URLs in environment variables
    test           : test if a mark matches against a list of marks
    touch          : mark sourcetree as dirty
@@ -396,7 +399,7 @@ sourcetree::main()
    log_setting "SOURCETREE_START               : ${SOURCETREE_START}"
 
    case "${cmd}" in
-      add|copy|get|duplicate|info|knownmarks|mark|move|rename|rename-marks|remove|set|unmark)
+      add|copy|get|duplicate|info|knownmarks|mark|move|rcopy|rename|rename-marks|remove|set|unmark)
          # shellcheck source=src/mulle-sourcetree-commands.sh
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
 
@@ -407,6 +410,12 @@ sourcetree::main()
          . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-${cmd}.sh"
 
          sourcetree::${cmd}::main "$@"
+      ;;
+
+      supermark)
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-${cmd}s.sh"
+
+         sourcetree::${cmd}s::main "$@"
       ;;
 
       commands)
@@ -431,8 +440,10 @@ libexec-dir
 list
 mark
 move
+plugin
 project-dir
 pwd
+rcopy
 remove
 rename
 rename-marks
@@ -443,6 +454,7 @@ set
 sourcetree-dir
 star-search
 status
+supermark
 sync
 test
 touch
@@ -488,6 +500,13 @@ wrap"
 
       mode)
          printf "%s\n" "${SOURCETREE_MODE}"
+      ;;
+
+      plugin|plugins)
+         # shellcheck source=src/mulle-sourcetree-fix.sh
+         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-plugin.sh"
+
+         sourcetree::plugin::main "$@"
       ;;
 
       pwd|path)

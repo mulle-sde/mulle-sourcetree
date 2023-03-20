@@ -79,6 +79,7 @@ sourcetree::callback::call()
    log_setting "NODE_BRANCH          : \"${_branch}\""
    log_setting "NODE_FETCHOPTIONS    : \"${_fetchoptions}\""
    log_setting "NODE_FILENAME        : \"${_filename}\""
+   log_setting "NODE_INDEX           : \"${NODE_INDEX}\""
    log_setting "NODE_MARKS           : \"${_marks}\""
    log_setting "NODE_RAW_USERINFO    : \"${_raw_userinfo}\""
    log_setting "NODE_TAG             : \"${_tag}\""
@@ -162,6 +163,7 @@ sourcetree::callback::call()
    NODE_BRANCH="${_branch}" \
    NODE_FETCHOPTIONS="${_fetchoptions}" \
    NODE_FILENAME="${_filename}" \
+   NODE_INDEX="${NODE_INDEX}" \
    NODE_MARKS="${_marks}" \
    NODE_RAW_USERINFO="${_raw_userinfo}" \
    NODE_TAG="${_tag}" \

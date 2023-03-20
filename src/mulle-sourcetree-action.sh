@@ -64,15 +64,15 @@ sourcetree::action::r_fetch_eval_options()
    local marks="$1"
 
    local options
+   local option_symlink="${OPTION_FETCH_SYMLINK}"
 
-   if sourcetree::nodemarks::disable "${marks}" "symlink" || \
-      sourcetree::nodemarks::disable "${marks}" "symlink-${MULLE_UNAME}"
+   if sourcetree::marks::disable "${marks}" "symlink" || \
+      sourcetree::marks::disable "${marks}" "symlink-${MULLE_UNAME}"
    then
       r_concat "${options}" "--no-symlink"
       options="${RVAL}"
+      option_symlink='NO'
    else
-      local option_symlink="${OPTION_FETCH_SYMLINK}"
-
       case "${MULLE_UNAME}" in
          'windows'|'mingw'|'msys')
             # cl.exe/cmake.exe don't like embedded symlinks,so turn off
@@ -114,11 +114,20 @@ sourcetree::action::r_fetch_eval_options()
       fi
    fi
    
-   if [ "${OPTION_CHECK_USR_LOCAL_INCLUDE}" = 'YES' ]
+   if [ "${option_symlink}" = 'NO' ]
    then
-      r_concat "${options}" "--check-system-includes"
-      options="${RVAL}"
+      if sourcetree::marks::disable "${marks}" "readwrite"
+      then
+         r_concat "${options}" "--write-protect"
+         options="${RVAL}"
+      fi
    fi
+
+#   if [ "${OPTION_CHECK_USR_LOCAL_INCLUDE}" = 'YES' ]
+#   then
+#      r_concat "${options}" "--check-system-includes"
+#      options="${RVAL}"
+#   fi
 
    if [ ! -z "${OPTION_FETCH_CACHE_DIR}"  ]
    then
@@ -144,7 +153,8 @@ sourcetree::action::r_fetch_eval_options()
          options="${RVAL}"
       ;;
       NO)
-         r_concat "${options}" "--no-refresh"
+         r_concat "${options}" "
+         "
          options="${RVAL}"
       ;;
    esac
@@ -305,7 +315,7 @@ sourcetree::action::_do_fetch_operation()
    #
    if [ "${MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH}" = 'YES' ]
    then
-      if sourcetree::nodemarks::disable "${marks}" "platform-${MULLE_UNAME}"
+      if sourcetree::marks::disable "${marks}" "platform-${MULLE_UNAME}"
       then
          _log_info "${C_RESET_BOLD}${address#"${MULLE_USER_PWD}/"}${C_INFO} \
 not fetched as ${C_MAGENTA}${C_BOLD}platform-${MULLE_UNAME}${C_INFO} is \
@@ -338,11 +348,6 @@ disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
       ;;
    esac
 
-   if sourcetree::nodemarks::disable "${marks}" "readwrite"
-   then
-      log_verbose "Write protecting \"${address}\""
-      exekutor find "${address}" -type f -exec chmod a-w {} \;
-   fi
 
    if [ ! -z "${UPTODATE_MIRRORS_FILE}" ]
    then
@@ -411,7 +416,7 @@ sourcetree::action::update_safe_move_node()
    [ -z "${previousfilename}" ] && _internal_fail "empty previousfilename"
    [ -z "${filename}" ]         && _internal_fail "empty filename"
 
-   if sourcetree::nodemarks::disable "${marks}" "delete"
+   if sourcetree::marks::disable "${marks}" "delete"
    then
       fail "Can't move node ${_url} from to \"${previousfilename}\" \
 to \"${filename}\" as it is marked no-delete"
@@ -439,7 +444,7 @@ sourcetree::action::update_safe_remove_node()
    [ -z "${filename}" ] && _internal_fail "empty filename"
    [ -z "${uuid}" ]    && _internal_fail "empty uuid"
 
-   if sourcetree::nodemarks::disable "${marks}" "delete"
+   if sourcetree::marks::disable "${marks}" "delete"
    then
       fail "Can't remove \"${filename}\" as it is marked no-delete"
    fi
@@ -550,7 +555,7 @@ broken symlink \"${newfilename}\". Clobbering it"
          #    at this point in time, that should have already been checked
          #    against
 
-         if sourcetree::nodemarks::disable "${newmarks}" "delete"
+         if sourcetree::marks::disable "${newmarks}" "delete"
          then
             case "${newnodetype}" in
                local)
@@ -922,8 +927,8 @@ sourcetree::action::__update_perform_item()
                   fi
                fi
 
-               if sourcetree::nodemarks::disable "${_marks}" "require" ||
-                  sourcetree::nodemarks::disable "${_marks}" "require-os-${MULLE_UNAME}"
+               if sourcetree::marks::disable "${_marks}" "require" ||
+                  sourcetree::marks::disable "${_marks}" "require-os-${MULLE_UNAME}"
                then
                   log_info "${C_MAGENTA}${C_BOLD}${_filename}${C_INFO} is not required."
 
@@ -1086,39 +1091,6 @@ sourcetree::action::__update_perform_actions()
 }
 
 
-sourcetree::action::_memorize_node_in_db()
-{
-   log_entry "sourcetree::action::_memorize_node_in_db" "$@"
-
-   local database="$1"
-   local config="$2"
-   local filename="$3"
-#
-   local nodeline
-
-   sourcetree::node::r_to_nodeline
-   nodeline="${RVAL}"
-
-   local _evaledurl
-   local _evalednodetype
-   local _evaledbranch
-   local _evaledtag
-   local _evaledfetchoptions
-
-   sourcetree::node::__evaluate_values
-
-   _log_debug "${C_INFO}Remembering ${_address} located at \"${filename}\" \
-in \"${database}\"..."
-
-   sourcetree::db::memorize "${database}" \
-               "${_uuid}" \
-               "${nodeline}" \
-               "${config}" \
-               "${filename}" \
-               "${_evaledurl}"
-}
-
-
 sourcetree::action::write_fix_info()
 {
    log_entry "sourcetree::action::write_fix_info" "$@"
@@ -1156,6 +1128,59 @@ ${nodeline}"
 }
 
 
+sourcetree::action::_memorize_node_in_db()
+{
+   log_entry "sourcetree::action::_memorize_node_in_db" "$@"
+
+   local database="$1"
+   local config="$2"
+   local filename="$3"
+   local index="$4"
+   local fix="${5:-NO}"
+
+#   if ! is_absolutepath "${filename}"
+#   then
+#      r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${filename}"
+#      filename="${RVAL}"
+#   fi
+
+   local rval
+   local nodeline
+
+   sourcetree::node::r_to_nodeline
+   nodeline="${RVAL}"
+
+   local _evaledurl
+   local _evalednodetype
+   local _evaledbranch
+   local _evaledtag
+   local _evaledfetchoptions
+
+   sourcetree::node::__evaluate_values
+
+   _log_debug "${C_INFO}Remembering ${_address} located at \"${filename}\" \
+in \"${database}\"..."
+
+   sourcetree::db::memorize "${database}" \
+                            "${_uuid}" \
+                            "${nodeline}" \
+                            "${config}" \
+                            "${filename}" \
+                            "${_evaledurl}" \
+                            "${index}"
+
+   rval=$?
+
+   if [ "${fix}" != 'NO' ] && [ -d "${filename}" ]
+   then
+      # we memorize the original config nodeline for easier comparison
+      sourcetree::action::write_fix_info "${nodeline}" "${filename}"
+   fi
+
+   return $rval
+}
+
+
 # returns 0 1 or 2
 sourcetree::action::_r_do_actions_with_nodeline()
 {
@@ -1165,11 +1190,13 @@ sourcetree::action::_r_do_actions_with_nodeline()
    local style="$2"
    local config="$3"
    local database="$4"
+   local index="$5"
 
-   [ "$#" -ne 4 ]     && _internal_fail "api error"
+   [ $# -ne 5 ]       && _internal_fail "api error"
 
    [ -z "$style" ]    && _internal_fail "style is empty"
    [ -z "$nodeline" ] && _internal_fail "nodeline is empty"
+   [ -z "$index" ]    && _internal_fail "nodeline is empty"
 
    local _branch
    local _address
@@ -1184,7 +1211,7 @@ sourcetree::action::_r_do_actions_with_nodeline()
 
    sourcetree::nodeline::parse "${nodeline}"  # !!
 
-   if sourcetree::nodemarks::disable "${_marks}" "fs"
+   if sourcetree::marks::disable "${_marks}" "fs"
    then
       log_fluff "\"${_address}\" is marked as no-fs, so nothing to update"
       RVAL="${_uuid}"
@@ -1208,9 +1235,36 @@ sourcetree::action::_r_do_actions_with_nodeline()
 
       'error')
          sourcetree::node::show_error
+         RVAL=
          return 1
       ;;
    esac
+
+   local enables_share
+   local squat
+
+   squat='NO'
+   enables_share='NO'
+   if sourcetree::marks::enable "${_marks}" "share"
+   then
+      enables_share='YES'
+   fi
+
+   if [ "${style}" = 'only_share' ]
+   then
+      if [ ! -z "${_evaledurl}" -a ${enables_share} = 'NO' ]
+      then
+         RVAL=
+         return 3
+      fi
+      style="share"
+   fi
+
+   if [ "${style}" = 'share' ] && sourcetree::marks::disable "${_marks}" "share-shirk"
+   then
+      log_verbose "Squatting share space for \"${_address}\" as no-share-shirk is set"
+      squat='YES'
+   fi
 
    #
    # the address is what is relative to the current config (configfile)
@@ -1218,8 +1272,7 @@ sourcetree::action::_r_do_actions_with_nodeline()
    #
    local filename
 
-   if [ ! -z "${_evaledurl}" -a "${style}" = "share" ] \
-      && sourcetree::nodemarks::enable "${_marks}" "share"
+   if [ ! -z "${_evaledurl}" -a "${style}" = "share" -a "${enables_share}" = 'YES' ]
    then
       sourcetree::db::r_share_filename "${_address%#*}" \
                                        "${_evaledurl}" \
@@ -1253,28 +1306,38 @@ sourcetree::action::_r_do_actions_with_nodeline()
       database='/'
    else
       # TODO: fix
-      sourcetree::cfg::r_old_absolute_filename "${config}" "${_address%#*}" "${style}"
+      sourcetree::cfg::r_old_absolute_filename "${config}" \
+                                               "${_address%#*}" \
+                                               "${style}"
       filename="${RVAL}"
+
+      # embedded can now squat in root database instead
    fi
+
+   [ -z "${database}" ] && _internal_fail "A share-only update gone wrong"
+   [ -z "${filename}" ] && _internal_fail "Filename is empty for \"${_address}\""
 
    r_simplified_absolutepath "${filename}"
    filename="${RVAL}"
 
-   [ -z "${filename}" ] && _internal_fail "Filename is empty for \"${_address}\""
-
    log_fluff "Filename for node \"${_address}\" is \"${filename}\""
 
-   [ -z "${database}" ] && _internal_fail "A share-only update gone wrong"
+   # save in "shared database"
+   if [ "${squat}" = 'YES' ]
+   then
+      database="/"
+   fi
 
-   if sourcetree::nodemarks::disable "${_marks}" "update"
+   if sourcetree::marks::disable "${_marks}" "update"
    then
       if [ ! -e "${filename}"  ]
       then
-         if sourcetree::nodemarks::disable "${_marks}" "require" ||
-            sourcetree::nodemarks::disable "${_marks}" "require-os-${MULLE_UNAME}"
+         if sourcetree::marks::disable "${_marks}" "require" ||
+            sourcetree::marks::disable "${_marks}" "require-os-${MULLE_UNAME}"
          then
             _log_fluff "\"${_address}\" is marked as no-update and doesn't exist, \
 but it is not required"
+            RVAL="${_uuid}"
             return 2
          fi
 
@@ -1283,16 +1346,12 @@ but it is not required"
 
       log_fluff "\"${_address}\" is marked as no-update and exists"
 
-      # still need to memorize this though, so it can be shared
-      if ! is_absolutepath "${filename}"
-      then
-         r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${filename}"
-         filename="${RVAL}"
-      fi
-
-      sourcetree::action::_memorize_node_in_db "${database}" "${config}" "${filename}"
-      RVAL="${_uuid}"
-      return 0
+      sourcetree::action::_memorize_node_in_db "${database}" \
+                                               "${config}" \
+                                               "${filename}" \
+                                               "${index}"
+      RVAL=${_uuid}
+      return $?
    fi
 
    #
@@ -1308,10 +1367,19 @@ but it is not required"
    # Search for absolute path, as that is what gets stored into the DB
    #
    local otheruuid
+   local compare
 
-   otheruuid="`sourcetree::db::fetch_uuid_for_address "${database}" "${_address}"`"
+   compare="${_address}"
+   if sourcetree::marks::enable "${_marks}" "basename"
+   then
+      r_basename "${_address}"
+      compare="${RVAL}"
+   fi
 
-   log_debug "uuid \"${otheruuid}\" found for \"${_address}\""
+   otheruuid="`sourcetree::db::fetch_uuid_for_address "${database}" \
+                                                      "${compare}"`"
+
+   log_debug "uuid \"${otheruuid}\" found for \"${_address}\" (compared: \"${compare}\")"
 
    if [ ! -z "${otheruuid}" ]
    then
@@ -1376,7 +1444,10 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    then
       log_debug "Skip update of \"${filename}\" since it's a symlink."
 
-      sourcetree::action::_memorize_node_in_db "${database}" "${config}" "${filename}"
+      sourcetree::action::_memorize_node_in_db "${database}" \
+                                               "${config}" \
+                                               "${filename}" \
+                                               "${index}"
       RVAL="${_uuid}"
       return 0
    fi
@@ -1421,23 +1492,19 @@ nodetype        : ${_nodetype}"
    if [ "${_skip}" = 'YES' ]
    then
       log_debug "Skipping to next nodeline as indicated..."
+      RVAL=${_uuid}
       return 0
    fi
 
    if [ "${_remember}" = 'YES' ]
    then
-      if ! is_absolutepath "${filename}"
+      if ! sourcetree::action::_memorize_node_in_db "${database}" \
+                                                    "${config}" \
+                                                    "${filename}" \
+                                                    "${index}" \
+                                                    "${OPTION_FIX}"
       then
-         r_filepath_concat "${MULLE_VIRTUAL_ROOT}" "${filename}"
-         filename="${RVAL}"
-      fi
-
-      sourcetree::action::_memorize_node_in_db "${database}" "${config}" "${filename}"
-
-      if [ "${OPTION_FIX}" != 'NO' ] && [ -d "${filename}" ]
-      then
-         # we memorize the original config nodeline for easier comparison
-         sourcetree::action::write_fix_info "${nodeline}" "${filename}"
+         fail "Could not remember \"${filename}\" in database \"${database}\""
       fi
    else
       log_debug "Don't need to remember \"${nodeline}\" (should be unchanged)"
@@ -1456,6 +1523,7 @@ sourcetree::action::do_actions_with_nodeline()
 #   local style="$2"
 #   local config="$3"
    local database="$4"
+#   local index=$5
 
    local uuid 
    local rval 
@@ -1501,7 +1569,7 @@ sourcetree::action::do_actions_with_nodelines()
 
    if [ -z "${nodelines}" ]
    then
-      log_fluff "There is nothing to do for \"${style}\""
+      log_fluff "There is nothing to do for \"${style}\" as there are no nodes"
       return 0
    fi
 
@@ -1509,16 +1577,20 @@ sourcetree::action::do_actions_with_nodelines()
 
    local nodeline
    local rval
+   local index
 
+   index=-1
    rval=0
    .foreachline nodeline in ${nodelines}
    .do
+      index=$(( index + 1 ))
       [ -z "${nodeline}" ] && .continue
 
       if ! sourcetree::action::do_actions_with_nodeline "${nodeline}" \
                                                         "${style}" \
                                                         "${config}" \
-                                                        "${database}"
+                                                        "${database}" \
+                                                        "${index}"
       then
          rval=1
          .break
@@ -1552,6 +1624,9 @@ sourcetree::action::do_actions_with_nodelines_parallel()
 
    local nodeline
    local rval 
+   local index
+
+   index=-1
 
    local _parallel_statusfile
    local _parallel_maxjobs
@@ -1562,12 +1637,14 @@ sourcetree::action::do_actions_with_nodelines_parallel()
 
    .foreachline nodeline in ${nodelines}
    .do
+      index=$(( index + 1 ))
       if [ ! -z "${nodeline}" ]
       then
          __parallel_execute sourcetree::action::do_actions_with_nodeline "${nodeline}" \
                                                                          "${style}" \
                                                                          "${config}" \
-                                                                         "${database}"
+                                                                         "${database}" \
+                                                                         "${index}"
       fi
    .done
 
@@ -1584,25 +1661,10 @@ sourcetree::action::initialize()
 {
    log_entry "sourcetree::action::initialize"
 
-   if [ -z "${MULLE_SOURCETREE_DB_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-db.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"
-   fi
-   if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-node.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh" || exit 1
-   fi
-   if [ -z "${MULLE_SOURCETREE_FETCH_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-callback.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-fetch.sh" || exit 1
-   fi
-   if [ -z "${MULLE_PARALLEL_SH}" ]
-   then
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-parallel.sh" || exit 1
-   fi
+   include "parallel"
+   include "sourcetree::db"
+   include "sourcetree::node"
+   include "sourcetree::fetch"
 }
 
 

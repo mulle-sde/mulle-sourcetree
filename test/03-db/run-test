@@ -43,7 +43,13 @@ main()
    local sourcenodeline
 
    # just store some cruft in nodeline, easier for testing
-   sourcetree::db::memorize "/" 1 "text" "" "/filename"
+   sourcetree::db::memorize "/" \
+                            1 \
+                            "text" \
+                            "" \
+                            "/filename" \
+                            "" \
+                            0
 
    nodeline="`sourcetree::db::fetch_nodeline_for_uuid "/" 1`"
    expect "${nodeline}" "text"
@@ -51,7 +57,13 @@ main()
    expect "${nodeline}" "/filename"
    log_verbose "----- #1 PASSED -----"
 
-   sourcetree::db::memorize "/" 2 "other" "owner" "/owner/other"
+   sourcetree::db::memorize "/" \
+                            2 \
+                            "other" \
+                            "owner" \
+                            "/owner/other" \
+                            "" \
+                            1
 
    nodeline="`sourcetree::db::fetch_nodeline_for_uuid "/" 1`"
    expect "${nodeline}" "text"
@@ -92,7 +104,13 @@ main()
       _internal_fail "did not forget"
    fi
 
-   sourcetree::db::memorize "/" 1 "_address;git;;1" "the_owner" "${PWD}/the_owner/_address"
+   sourcetree::db::memorize "/" \
+                            1 \
+                            "_address;git;;1" \
+                            "the_owner" \
+                            "${PWD}/the_owner/_address" \
+                            "" \
+                            2
 
    mkdir -p the_owner/_address
 

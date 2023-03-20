@@ -152,7 +152,7 @@ sourcetree::sync::check_descend_nodeline()
    local filename="$1"
    local marks="$2"
 
-   if sourcetree::nodemarks::disable "${marks}" "descend"
+   if sourcetree::marks::disable "${marks}" "descend"
    then
       log_fluff "Node \"${filename}\" is marked no-descend"
       return 1
@@ -182,7 +182,7 @@ a directory"
          return 1
       fi
 
-      if sourcetree::nodemarks::enable "${marks}" "share"
+      if sourcetree::marks::enable "${marks}" "share"
       then
          log_fluff "Destination \"${filename}\" does not exist."
       else
@@ -464,24 +464,10 @@ sourcetree::sync::nodeline_sync_only_share()
    [ -z "$style" ]    && _internal_fail "style is empty"
    [ -z "$nodeline" ] && _internal_fail "nodeline is empty"
 
-   local _branch
-   local _address
-   local _fetchoptions
-   local _marks
-   local _nodetype
-   local _raw_userinfo
-   local _userinfo
-   local _tag
-   local _url
-   local _uuid
-
-   sourcetree::nodeline::parse "${nodeline}" # !!!
-
-   if [ ! -z "${_url}" ] && sourcetree::nodemarks::enable "${_marks}" "share"
-   then
-      sourcetree::action::do_actions_with_nodeline "${nodeline}" "share" "${config}" "${database}"
-      return $?
-   fi
+   sourcetree::action::do_actions_with_nodeline "${nodeline}" \
+                                                "only_share" \
+                                                "${config}" \
+                                                "${database}"
 }
 
 
@@ -518,9 +504,12 @@ sourcetree::sync::_sync_only_share()
    fi
 
    local nodeline
+   local index
 
+   index=-1
    .foreachline nodeline in ${nodelines}
    .do
+      index=$(( index + 1 ))
       if [ -z "${nodeline}" ]
       then
          .continue
@@ -538,9 +527,11 @@ sourcetree::sync::_sync_only_share()
          VISITED="${RVAL}"
       fi
 
-      sourcetree::sync::nodeline_sync_only_share "${nodeline}" \
-                                                 "${config}" \
-                                                 "${database}" || return 1
+      sourcetree::action::do_actions_with_nodeline "${nodeline}" \
+                                                   "only_share" \
+                                                   "${config}" \
+                                                   "${database}" \
+                                                   "${index}" || return 1
    .done
 
    log_fluff "Doing a \"${style}\" update for \"${config}\"."
@@ -652,7 +643,7 @@ sourcetree::sync::_sync_share()
       then
          log_debug "It's the root \"${database}\" so nothing more to do."
          sourcetree::db::clear_update "${database}"
-         sourcetree::db::set_ready "${database}"
+         sourcetree::db::set_ready "${database}" # "${config}"
          return 127
       fi
 
@@ -695,18 +686,23 @@ sourcetree::sync::_sync_share()
    fi
 
    local count
-   local rval
 
    r_count_lines "${nodelines}"
    count="${RVAL}"
 
    if [ "${OPTION_PARALLEL}" = 'YES' -a ${count} -gt 1 ]
    then
-      sourcetree::action::do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
+      sourcetree::action::do_actions_with_nodelines_parallel "${nodelines}" \
+                                                             "${style}" \
+                                                             "${config}" \
+                                                             "${database}"
       rval=$?
       log_debug "Parallel share update of ${config}: ${rval}"
    else
-      sourcetree::action::do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
+      sourcetree::action::do_actions_with_nodelines "${nodelines}" \
+                                                    "${style}" \
+                                                    "${config}" \
+                                                    "${database}"
       rval=$?
       log_debug "Share update of ${config}: ${rval}"
    fi
@@ -1262,17 +1258,8 @@ sourcetree::sync::initialize()
 {
    log_entry "sourcetree::sync::initialize" "$@"
 
-   if [ -z "${MULLE_STRING_SH}" ]
-   then
-      # shellcheck source=mulle-string.sh
-      . "${MULLE_BASHFUNTCIONS_LIBEXEC_DIR}/mulle-string.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_SOURCETREE_ACTION_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-action.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-action.sh" || exit 1
-   fi
+   include "string"
+   include "sourcetree::action"
 }
 
 

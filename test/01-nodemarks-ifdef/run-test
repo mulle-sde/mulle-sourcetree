@@ -19,8 +19,8 @@ main()
    # absent version mark matches everything
    unset GLOBAL_FOO 
 
-   sourcetree::nodemarks::filter_with_qualifier "${_marks}" "IFDEF GLOBAL_FOO"      && _internal_fail "Undefined GLOBAL_FOO should not match"
-   sourcetree::nodemarks::filter_with_qualifier "${_marks}" "NOT IFDEF GLOBAL_FOO"  || _internal_fail "Undefined GLOBAL_FOO should not match"
+   sourcetree::marks::filter_with_qualifier "${_marks}" "IFDEF GLOBAL_FOO"      && _internal_fail "Undefined GLOBAL_FOO should not match"
+   sourcetree::marks::filter_with_qualifier "${_marks}" "NOT IFDEF GLOBAL_FOO"  || _internal_fail "Undefined GLOBAL_FOO should not match"
 
    log_verbose "----- #1 PASSED -----"
 
@@ -28,8 +28,8 @@ main()
    GLOBAL_FOO="whatever"
    export GLOBAL_FOO
 
-   sourcetree::nodemarks::filter_with_qualifier "${_marks}" "IFDEF GLOBAL_FOO"   || _internal_fail "Defined GLOBAL_FOO should match"
-   sourcetree::nodemarks::filter_with_qualifier "${_marks}" "NOT IFDEF GLOBAL_FOO" && _internal_fail "Defined GLOBAL_FOO should match"
+   sourcetree::marks::filter_with_qualifier "${_marks}" "IFDEF GLOBAL_FOO"   || _internal_fail "Defined GLOBAL_FOO should match"
+   sourcetree::marks::filter_with_qualifier "${_marks}" "NOT IFDEF GLOBAL_FOO" && _internal_fail "Defined GLOBAL_FOO should match"
 
    log_verbose "----- #2 PASSED -----"
 
@@ -43,7 +43,7 @@ init()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-marks.sh" || exit 1
 }
 
 

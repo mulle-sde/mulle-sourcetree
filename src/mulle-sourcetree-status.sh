@@ -252,7 +252,7 @@ sourcetree::status::r_emit()
    log_setting "mode           : ${mode}"
    log_setting "filename       : ${filename}"
 
-   if sourcetree::nodemarks::enable "${marks}" "fs"
+   if sourcetree::marks::enable "${marks}" "fs"
    then
       fs="missing"
       configexists='NO'
@@ -297,8 +297,8 @@ sourcetree::status::r_emit()
             fs="broken"
          fi
 
-         if sourcetree::nodemarks::disable "${marks}" "require" ||
-            sourcetree::nodemarks::disable "${marks}" "require-os-${MULLE_UNAME}"
+         if sourcetree::marks::disable "${marks}" "require" ||
+            sourcetree::marks::disable "${marks}" "require-os-${MULLE_UNAME}"
          then
             #
             # if we say not uptodate here, it will retrigger
@@ -738,20 +738,7 @@ sourcetree::status::initialize()
 {
    log_entry "sourcetree::status::initialize"
 
-   if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
-   then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] &&
-         _internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
-
-      # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-walk.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
-   fi
+   include "sourcetree::walk"
 }
 
 

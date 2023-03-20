@@ -34,6 +34,7 @@
 
 MULLE_EXECUTABLE_VERSION=1.0.0
 
+
 usage()
 {
    cat <<EOF >&2
@@ -62,7 +63,9 @@ Usage:
 
 Environment:
    GRAPH_DEDUPE    : set to NO to show all edges. (${GRAPH_DEDUPE})
-   GRAPH_DIRECTION : set graph direction to TD or LR ($GRAPH_DIRECTION)
+   GRAPH_DIRECTION : set graph direction to TD or LR (${GRAPH_DIRECTION})
+   GRAPH_IGNORES   : dont graph and traverse these dependencies ($GRAPH_IGNORES)
+   GRAPH_LEAFS     : stop graph traversal at these dependencies ($GRAPH_LEAFS)
    GRAPH_LIBRARIES : set to YES to also dump libraries. (${GRAPH_LIBRARIES})
    GRAPH_MAX_LEVEL : set maximum recursion depth (${GRAPH_MAX_LEVEL})
    GRAPH_OPTIONS   : options for mulle-sourcetree walk (${GRAPH_OPTIONS})
@@ -80,9 +83,10 @@ dot_dump()
    local level="$2"
    local dedupe="$3"
    local libraries="$4"
-   local options="$5"
+   local ignorelist="$5"
+   local options="$6"
 
-   shift 5
+   shift 6
 
    cat <<EOF
 digraph sourcetree
@@ -101,6 +105,9 @@ EOF
       echo "${GRAPH_HEADER}"
    fi
 
+   local descendqualifier
+
+
    (
       if [ "${dedupe}" = 'NO' ]
       then
@@ -114,26 +121,32 @@ EOF
       then
          WALK_PARENT="${WALK_PARENT}" \
             rexekutor mulle-sourcetree \
+                                  ${MULLE_TECHNICAL_FLAGS} \
+                                  ${MULLE_SOURCETREE_FLAGS} \
                                   walk \
                                   ${dedupe} \
                                   --eval-node \
                                   --max-walk-level ${level} \
                                   ${options} \
+                                  ${ignorelist} \
                                   "$@" \
                                   'echo "\"${WALK_PARENT}\" -> \"${NODE_ADDRESS}\"
-\"${NODE_ADDRESS}\" [ href=\"`mulle-domain homepage-url \"${NODE_EVALED_URL}\"`\" ]"'
+\"${NODE_ADDRESS}\" [ href=\"`mulle-domain '"${MULLE_TECHNICAL_FLAGS}"' homepage-url \"${NODE_EVALED_URL:-https://unknown.com}\"`\" ]"'
       else
          WALK_PARENT="${WALK_PARENT}" \
             rexekutor mulle-sourcetree \
+                                  ${MULLE_TECHNICAL_FLAGS} \
+                                  ${MULLE_SOURCETREE_FLAGS} \
                                   walk \
                                   --qualifier 'MATCHES fs' \
                                   ${dedupe} \
                                   ${options} \
+                                  ${ignorelist} \
                                   --eval-node \
                                   --max-walk-level ${level} \
                                   "$@" \
                                   'eval  ; echo "\"${WALK_PARENT}\" -> \"${NODE_ADDRESS}\"
-\"${NODE_ADDRESS}\" [ href=\"`mulle-domain homepage-url \"${NODE_EVALED_URL}\"`\" ]"'
+\"${NODE_ADDRESS}\" [ href=\"`mulle-domain '"${MULLE_TECHNICAL_FLAGS}"' homepage-url \"${NODE_EVALED_URL:-https://unknown.com}\"`\" ]"'
       fi
 
    ) \
@@ -173,6 +186,20 @@ main()
 {
    local OPTION_FORMAT
 
+
+   # per project settings, if available if we do this before options
+   # the usage info is much nicer
+   if [ -f .mulle/etc/sourcetree/graph/environment ]
+   then
+      . .mulle/etc/sourcetree/graph/environment
+   fi
+
+   GRAPH_DEDUPE="${GRAPH_DEDUPE:-YES}"
+   GRAPH_DIRECTION="${GRAPH_DIRECTION:-TD}"
+   GRAPH_LIBRARIES="${GRAPH_LIBRARIES:-NO}"
+   GRAPH_MAX_LEVEL="${GRAPH_MAX_LEVEL:-3}"
+   GRAPH_OPTIONS="${GRAPH_OPTIONS:---ignore mulle-objc-list}"
+
    while [ $# -ne 0 ]
    do
       if options_technical_flags "$1"
@@ -210,20 +237,10 @@ main()
 
    options_setup_trace "${MULLE_TRACE}" && set -x
 
-   # per project settings, if available
-   if [ -f .mulle/etc/sourcetree/graph/environment ]
-   then
-      . .mulle/etc/sourcetree/graph/environment
-   fi
-
-   GRAPH_DEDUPE="${GRAPH_DEDUPE:-YES}"
-   GRAPH_DIRECTION="${GRAPH_DIRECTION:-TD}"
-   GRAPH_LIBRARIES="${GRAPH_LIBRARIES:-NO}"
-   GRAPH_MAX_LEVEL="${GRAPH_MAX_LEVEL:-3}"
-   GRAPH_OPTIONS="${GRAPH_OPTIONS:---ignore mulle-objc-list}"
-
    log_setting "GRAPH_DEDUPE    : ${GRAPH_DEDUPE}"
    log_setting "GRAPH_DIRECTION : ${GRAPH_DIRECTION}"
+   log_setting "GRAPH_LEAFS     : ${GRAPH_LEAFS}"
+   log_setting "GRAPH_IGNORES   : ${GRAPH_IGNORES}"
    log_setting "GRAPH_LIBRARIES : ${GRAPH_LIBRARIES}"
    log_setting "GRAPH_MAX_LEVEL : ${GRAPH_MAX_LEVEL}"
    log_setting "GRAPH_OPTIONS   : ${GRAPH_OPTIONS}"
@@ -243,6 +260,23 @@ main()
    dedupe="${1:-${GRAPH_DEDUPE}}"
    [ $# -ne 0 ] && shift
 
+   local ignorelist
+
+   r_split "${GRAPH_LEAFS}" ":"
+   r_betwixt " --leaf " "${RVAL[@]}"
+   if [ ! -z "${RVAL}" ]
+   then
+      ignorelist="--leaf ${RVAL}"
+   fi
+
+   r_split "${GRAPH_IGNORES}" ":"
+   r_betwixt " --ignore " "${RVAL[@]}"
+   if [ ! -z "${RVAL}" ]
+   then
+      r_concat "${ignorelist}" "${RVAL}" " --ignore "
+      ignorelist="${RVAL}"
+   fi
+
    libraries="${GRAPH_LIBRARIES}"
    options="${GRAPH_OPTIONS}"
 
@@ -251,7 +285,8 @@ main()
       options=""
    fi
 
-   dot_dump "${direction}" "${level}" "${dedupe}" "${libraries}" "${options}" \
+   dot_dump "${direction}" "${level}" "${dedupe}" \
+            "${libraries}" "${ignorelist}" "${options}"  \
    | cat_output "${OPTION_FORMAT}"
 }
 

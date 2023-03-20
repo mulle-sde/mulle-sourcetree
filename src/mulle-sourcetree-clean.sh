@@ -95,7 +95,7 @@ sourcetree::clean::walk()
    #
    # the actual desired filename for a config file is pretty complicated though
    #
-   if sourcetree::nodemarks::disable "${marks}" "delete"
+   if sourcetree::marks::disable "${marks}" "delete"
    then
       log_fluff "\"${filename}\" is protected from delete"
       echo "P ${filename}"
@@ -304,16 +304,8 @@ sourcetree::clean::main()
    [ "$#" -eq 0 ] || sourcetree::clean::usage "Superflous arguments $*"
 
 
-   if [ -z "${MULLE_PATH_SH}" ]
-   then
-      # shellcheck source=mulle-path.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"      || return 1
-   fi
-   if [ -z "${MULLE_FILE_SH}" ]
-   then
-      # shellcheck source=mulle-file.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh"      || return 1
-   fi
+   include "path"
+   include "file"
 
    case "${OPTION_CLEAN_GRAVEYARD}" in
       NO|DEFAULT)

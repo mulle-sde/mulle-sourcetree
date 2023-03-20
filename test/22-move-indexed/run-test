@@ -1,0 +1,163 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_sourcetree()
+{
+   log_fluff "####################################" >&2
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS:-} "$@"
+   log_fluff "####################################" >&2
+
+   (
+      set +e
+      
+      MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
+
+      . "${MULLE_SOURCETREE}" ${MULLE_SOURCETREE_FLAGS:-} "$@"
+   )
+}
+
+
+expect_order()
+{
+   local expect="$1"
+
+   result="`run_mulle_sourcetree list --output-no-header | tr '\n' ' '`"
+   r_trim_whitespace "${result}"
+   result="${RVAL}"
+
+   if [ "${expect}" != "${result}" ]
+   then
+      fail "Got \"${result}\", expected \"${expect}\""
+   fi
+}
+
+#
+#  a -> b
+#  a -> c
+#  b -> c
+#
+main()
+{
+   MULLE_SOURCETREE_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
+
+
+   log_verbose "------- START-------"
+
+   cd "${directory}" &&
+   run_mulle_sourcetree -s -f add a &&
+   run_mulle_sourcetree -s -f add b || fail "failed"
+
+   run_mulle_sourcetree  move 0 to 1
+   expect_order "b a"
+   log_verbose "----- #1 PASSED -----"
+
+
+   run_mulle_sourcetree move 1 to 0
+   expect_order "a b"
+   log_verbose "----- #2 PASSED -----"
+
+   run_mulle_sourcetree -s -f add c
+   expect_order "a b c"
+
+   run_mulle_sourcetree move a after b
+   expect_order "b a c"
+   log_verbose "----- #3 PASSED -----"
+
+   run_mulle_sourcetree move a after c
+   expect_order "b c a"
+   log_verbose "----- #4 PASSED -----"
+
+   run_mulle_sourcetree move a before c
+   expect_order "b a c"
+   log_verbose "----- #5 PASSED -----"
+
+   run_mulle_sourcetree move a before b
+   expect_order "a b c"
+   log_verbose "----- #6 PASSED -----"
+
+   run_mulle_sourcetree move a to 3
+   expect_order "b c a"
+   log_verbose "----- #7 PASSED -----"
+
+   run_mulle_sourcetree move a to 1
+   expect_order "b a c"
+   log_verbose "----- #8 PASSED -----"
+
+   run_mulle_sourcetree move a to 0
+   expect_order "a b c"
+   log_verbose "----- #9 PASSED -----"
+
+   run_mulle_sourcetree move a down
+   expect_order "b a c"
+   log_verbose "----- #10 PASSED -----"
+
+   run_mulle_sourcetree move a top
+   expect_order "a b c"
+   log_verbose "----- #11 PASSED -----"
+
+   run_mulle_sourcetree move a after c
+   expect_order "b c a"
+   log_verbose "----- #12 PASSED -----"
+
+   run_mulle_sourcetree move a before b
+   expect_order "a b c"
+   log_verbose "----- #13 PASSED -----"
+
+   run_mulle_sourcetree -s -f add d
+   expect_order "a b c d"
+
+   run_mulle_sourcetree move a after c
+   expect_order "b c a d"
+   log_verbose "----- #14 PASSED -----"
+
+   run_mulle_sourcetree move b after d
+   expect_order "c a d b"
+   log_verbose "----- #15 PASSED -----"
+
+   run_mulle_sourcetree move c after b
+   run_mulle_sourcetree move d after c
+   expect_order "a b c d"
+   log_verbose "----- #16 PASSED -----"
+
+   run_mulle_sourcetree move a before d
+   expect_order "b c a d"
+   log_verbose "----- #17 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+   cd /
+   rmdir_safer "${directory}"
+}
+
+
+init()
+{
+   MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
+   MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
+
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-callback.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-sync.sh"     || exit 1
+}
+
+
+init "$@"
+main "$@"
+

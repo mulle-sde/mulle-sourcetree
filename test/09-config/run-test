@@ -139,7 +139,7 @@ main()
    (
       cd "${directory}" &&
 
-      run_mulle_sourcetree --config-name other add --url c --nodetype git c
+      run_mulle_sourcetree -s --config-name other add --url c --nodetype git c
       result="`run_mulle_sourcetree --config-name other list --output-no-header --output-no-indent --output-no-column`"
       expect_string "${result}" "b
 c"

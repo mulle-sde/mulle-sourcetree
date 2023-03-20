@@ -38,7 +38,7 @@ _setup_demo_repo_a()
 
    redirect_exekutor VERSION echo "1.0.0"
    run_mulle_sourcetree add --nodetype git "file://${reporoot}/b"
-   run_mulle_sourcetree add --nodetype git --url "file://${reporoot}/d" "c/d"
+   run_mulle_sourcetree -s add --nodetype git --url "file://${reporoot}/d" "c/d"
    exekutor git add VERSION .mulle
    exekutor git commit -m "a: initial version"
 }

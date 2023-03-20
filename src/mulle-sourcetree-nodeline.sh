@@ -237,33 +237,32 @@ sourcetree::nodeline::parse()
 #
 #
 #
-sourcetree::nodeline::remove()
+sourcetree::nodeline::r_index()
 {
-   log_entry "sourcetree::nodeline::remove" "..." "$2"
+   log_entry "sourcetree::nodeline::r_index" "..." "$2"
 
    local nodelines="$1"
-   local addresstoremove="$2"
+   local value="$2"
+
+   [ $# -ne 2 ] && _internal_fail "API error"
 
    local nodeline
+   local index
 
-   shell_disable_glob; IFS=$'\n'
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
-      case "${nodeline}" in
-         ^#*)
-            printf "%s\n" "${nodeline}"
-            continue
-         ;;
-      esac
-
-      sourcetree::nodeline::r_get_address "${nodeline}"
-      if [ "${RVAL}" != "${addresstoremove}" ]
+   index=0
+   .foreachline nodeline in ${nodelines}
+   .do
+      if [ "${nodeline}" = "${value}" ]
       then
-         printf "%s\n" "${nodeline}"
+         log_debug "Found \"${nodeline}\" at index ${index} "
+         RVAL="${index}"
+         return 0
       fi
-   done
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+      index=$(( index + 1 ))
+   .done
+
+   RVAL=-1
+   return 1
 }
 
 
@@ -306,7 +305,7 @@ sourcetree::nodeline::_r_find()
       then
          case "${other}" in
             ${value})
-               log_debug "Found \"${nodeline}\""
+               log_debug "Found \"${_nodeline}\""
                RVAL="${nodeline}"
                return 0
             ;;
@@ -329,59 +328,41 @@ sourcetree::nodeline::r_find()
 
    [ -z "${address}" ] && _internal_fail "address is empty"
 
-   sourcetree::nodeline::_r_find "${nodelines}" "${address}" sourcetree::nodeline::r_get_address "${fuzzy}"
+   sourcetree::nodeline::_r_find "${nodelines}" \
+                                 "${address}" \
+                                 sourcetree::nodeline::r_get_address \
+                                 "${fuzzy}"
 }
 
-
-sourcetree::nodeline::find()
+sourcetree::nodeline::r_find_by_url()
 {
-   log_entry "sourcetree::nodeline::find" ... "$2" "$3"
-
-   local nodelines="$1"
-   local address="$2"
-   local fuzzy="${3:-NO}"
-
-   [ -z "${address}" ] && _internal_fail "address is empty"
-
-   if ! sourcetree::nodeline::_r_find "${nodelines}" "${address}" sourcetree::nodeline::r_get_address "${fuzzy}"
-   then
-      return 1
-   fi
-   printf "%s\n" "${RVAL}"
-}
-
-
-sourcetree::nodeline::find_by_url()
-{
-   log_entry "sourcetree::nodeline::find_by_url" "..." "$2"
+   log_entry "sourcetree::nodeline::r_find_by_url" "..." "$2"
 
    local nodelines="$1"
    local url="$2"
 
    [ -z "${url}" ] && _internal_fail "url is empty"
 
-   if ! sourcetree::nodeline::_r_find "${nodelines}" "${url}" sourcetree::nodeline::r_get_url NO
-   then
-      return 1
-   fi
-   printf "%s\n" "${RVAL}"
+   sourcetree::nodeline::_r_find "${nodelines}" \
+                                 "${url}" \
+                                 sourcetree::nodeline::r_get_url \
+                                 'NO'
 }
 
 
-sourcetree::nodeline::find_by_evaled_url()
+sourcetree::nodeline::r_find_by_evaled_url()
 {
-   log_entry "sourcetree::nodeline::find_by_evaled_url" "..." "$2"
+   log_entry "sourcetree::nodeline::r_find_by_evaled_url" "..." "$2"
 
    local nodelines="$1"
    local url="$2"
 
    [ -z "${url}" ] && _internal_fail "url is empty"
 
-   if ! sourcetree::nodeline::_r_find "${nodelines}" "${url}" sourcetree::nodeline::r_get_evaled_url NO
-   then
-      return 1
-   fi
-   printf "%s\n" "${RVAL}"
+   sourcetree::nodeline::_r_find "${nodelines}" \
+                                  "${url}" \
+                                  sourcetree::nodeline::r_get_evaled_url \
+                                  'NO'
 }
 
 
@@ -394,24 +375,84 @@ sourcetree::nodeline::r_find_by_uuid()
 
    [ -z "${uuid}" ] && _internal_fail "uuid is empty"
 
-   sourcetree::nodeline::_r_find "${nodelines}" "${uuid}" sourcetree::nodeline::r_get_uuid NO
+
+   sourcetree::nodeline::_r_find "${nodelines}" \
+                                 "${uuid}" \
+                                 sourcetree::nodeline::r_get_uuid NO
 }
 
 
-sourcetree::nodeline::find_by_uuid()
+sourcetree::nodeline::r_find_by_index()
 {
-   log_entry "sourcetree::nodeline::find_by_uuid"  "..." "$2"
+   log_entry "sourcetree::cfg::r_find_by_index" "..." "$2"
 
    local nodelines="$1"
-   local uuid="$2"
+   local index="$2"
 
-   [ -z "${uuid}" ] && _internal_fail "uuid is empty"
+   case ${index} in
+      ''|*[!0-9]*)
+         log_debug "Need an integer for index"
+         return 1
+      ;;
+   esac
 
-   if ! sourcetree::nodeline::_r_find "${nodelines}" "${uuid}" sourcetree::nodeline::r_get_uuid NO
+   r_line_at_index "${nodelines}" "${index}"
+}
+
+
+sourcetree::nodeline::r_find_by_address_url_uuid()
+{
+   log_entry "sourcetree::nodeline::r_find_by_address_url_uuid" "$@"
+
+   local nodelines="$1"
+   local address="$2"
+   local url="$3"
+   local uuid="$4"
+   local fuzzy="${5:-NO}"
+   local regex="${6:-NO}"
+
+   if [ ! -z "${uuid}" ]
    then
-      return 1
+      if sourcetree::nodeline::r_find_by_uuid "${nodelines}" \
+                                              "${uuid}"
+      then
+         return $?
+      fi
+      if [ "${fuzzy}" = 'NO' ]
+      then
+         return 1
+      fi
+      address="${address:-${uuid}}"
    fi
-   printf "%s\n" "${RVAL}"
+
+   if [ ! -z "${address}" ]
+   then
+      if sourcetree::nodeline::r_find_by_index "${nodelines}" \
+                                               "${address}"
+      then
+         return 0
+      fi
+
+      if sourcetree::nodeline::r_find "${nodelines}" \
+                                      "${address}" \
+                                      "${regex}"
+      then
+         return 0
+      fi
+
+      if [ "${fuzzy}" = 'NO' ]
+      then
+         return 1
+      fi
+      url="${url:-${address}}"
+   fi
+
+   if sourcetree::nodeline::r_find_by_evaled_url "${nodelines}" "${url}"
+   then
+      return 0
+   fi
+
+   sourcetree::nodeline::r_find_by_url "${nodelines}" "${url}"
 }
 
 
@@ -428,11 +469,8 @@ sourcetree::nodeline::has_duplicate()
    local _marks
    local _uuid
 
-   shell_disable_glob; IFS=$'\n'
-   for nodeline in ${nodelines}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
-
+   .foreachline nodeline in ${nodelines}
+   .do
       sourcetree::nodeline::__get_address_nodetype_marks_uuid "${nodeline}"
 
       if [ "${address}" = "${_address}" ]
@@ -442,25 +480,36 @@ sourcetree::nodeline::has_duplicate()
             return 0
          fi
       fi
-   done
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .done
 
    return 1
 }
 
-# TODO: this needs to die
-sourcetree::nodeline::read_file()
+sourcetree::nodeline::remove()
 {
-   log_entry "sourcetree::nodeline::read_file" "$@"
+   log_entry "sourcetree::nodeline::remove" "..." "$2"
 
-   local filename="$1"
+   local nodelines="$1"
+   local addresstoremove="$2"
 
-   [ -z "${filename}" ] && _internal_fail "file is empty"
-   [ ! -f "${filename}" ] && return 1
+   local nodeline
 
-   grep -E -v '^#' "${filename}"
+   .foreachline nodeline in ${nodelines}
+   .do
+      case "${nodeline}" in
+         ^#*)
+            printf "%s\n" "${nodeline}"
+            .continue
+         ;;
+      esac
+
+      sourcetree::nodeline::r_get_address "${nodeline}"
+      if [ "${RVAL}" != "${addresstoremove}" ]
+      then
+         printf "%s\n" "${nodeline}"
+      fi
+   .done
 }
-
 
 sourcetree::nodeline::r_get_sep()
 {
@@ -550,6 +599,9 @@ sourcetree::nodeline::printf_header()
    local dash
    local tmp
    local _formatstring
+   local _key
+   local _title
+   local _dashes
 
    while [ ! -z "${formatstring}" ]
    do
@@ -585,11 +637,11 @@ sourcetree::nodeline::printf_header()
             if [ "${formatstring:2:2}" = "={" ]
             then
                sourcetree::node::_r_get_format_key "${formatstring}"
-               name="${RVAL}"
-               dash="--------"
-               formatstring="${_formatstring}"
+               formatstring="XX${RVAL}"
+               name="${_title:-${_key}}"
+               dash="${_dashes:-'--------'}"
             else
-               name="userinfo"
+               name="variable"
                dash="--------"
             fi
          ;;
@@ -597,22 +649,10 @@ sourcetree::nodeline::printf_header()
          %i*)
             if [ "${formatstring:2:2}" = "={" ]
             then
-               name="`sed -n 's/%.={[^,]*,\([^,]*\)[,]*[^{}]*}.*/\1/p' <<< "${formatstring}" `"
-               if [ -z "${name}" ]
-               then
-                  name="`sed -n 's/%.={\([^,]*\)[,]*[^,]*[,]*[^{}]*}.*/\1/p' <<< "${formatstring}" `"
-               fi
-               dash="`sed -n 's/%.={[^,]*,[^,]*,\([^{}]*\)}.*/\1/p' <<< "${formatstring}" `"
-               if [ -z "${dash}" ]
-               then
-                  dash="------"
-               fi
-               # skip over format string
-               tmp="`sed 's/%.={[^{}]*}//' <<< "${formatstring}" `"
-               if [ "${tmp}" != "${formatstring}" ]
-               then
-                  formatstring="XX${tmp}"
-               fi
+               sourcetree::node::_r_get_format_key "${formatstring}"
+               formatstring="XX${RVAL}"
+               name="${_title:-${_key}}"
+               dash="${_dashes:-'--------'}"
             else
                name="userinfo"
                dash="--------"
@@ -633,6 +673,11 @@ sourcetree::nodeline::printf_header()
          %n*)
             name="nodetype"
             dash="--------"
+         ;;
+
+         %s*)
+            name="supermarks"
+            dash="----------"
          ;;
 
          %t!*)
@@ -787,7 +832,7 @@ sourcetree::nodeline::r_diff()
             if [ "${field}" = "marks" ]
             then
                memo="${RVAL}"
-                  sourcetree::nodemarks::r_diff "${field_value}" "${u_field_value}"
+                  sourcetree::marks::r_diff "${field_value}" "${u_field_value}"
                   diffed_value="${RVAL}"
                RVAL="${memo}"
             else
@@ -809,16 +854,8 @@ sourcetree::nodeline::initialize()
 {
    log_entry "sourcetree::nodeline::initialize"
 
-   if [ -z "${MULLE_SOURCETREE_NODE_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-nodemarks.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"|| exit 1
-   fi
-   if [ -z "${MULLE_SOURCETREE_NODEMARKS_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-nodemarks.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
-   fi
+   include "sourcetree::node"
+   include "sourcetree::marks"
 }
 
 sourcetree::nodeline::initialize

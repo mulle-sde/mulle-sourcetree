@@ -473,10 +473,9 @@ sourcetree::cfg::_read()
 }
 
 
-
-sourcetree::cfg::get_nodeline()
+sourcetree::cfg::r_get_nodeline()
 {
-   log_entry "sourcetree::cfg::get_nodeline" "$@"
+   log_entry "sourcetree::cfg::r_get_nodeline" "$@"
 
    local projectdir="$1"
    local address="$2"
@@ -485,49 +484,7 @@ sourcetree::cfg::get_nodeline()
    local nodelines
 
    nodelines="`sourcetree::cfg::read "${projectdir}"`"
-   sourcetree::nodeline::find "${nodelines}" "${address}" "${fuzzy}"
-}
-
-
-sourcetree::cfg::get_nodeline_by_url()
-{
-   log_entry "sourcetree::cfg::get_nodeline_by_url" "$@"
-
-   local projectdir="$1"
-   local url="$2"
-
-   local nodelines
-
-   nodelines="`sourcetree::cfg::read "${projectdir}"`"
-   sourcetree::nodeline::find_by_url "${nodelines}" "${url}"
-}
-
-
-sourcetree::cfg::get_nodeline_by_uuid()
-{
-   log_entry "sourcetree::cfg::get_nodeline_by_uuid" "$@"
-
-   local projectdir="$1"
-   local uuid="$2"
-
-   local nodelines
-
-   nodelines="`sourcetree::cfg::read "${projectdir}"`"
-   sourcetree::nodeline::find_by_uuid "${nodelines}" "${uuid}"
-}
-
-
-sourcetree::cfg::get_nodeline_by_evaled_url()
-{
-   log_entry "sourcetree::cfg::get_nodeline_by_evaled_url" "$@"
-
-   local projectdir="$1"
-   local url="$2"
-
-   local nodelines
-
-   nodelines="`sourcetree::cfg::read "${projectdir}"`"
-   sourcetree::nodeline::find_by_evaled_url "${nodelines}" "${url}"
+   sourcetree::nodeline::r_find "${nodelines}" "${address}" "${fuzzy}"
 }
 
 

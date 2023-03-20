@@ -104,7 +104,7 @@ main()
 
       for a in 1.0.0 2.0.0 1.0.0
       do
-         if ! run_mulle_sourcetree -N add --nodetype git --tag "${a}" "file://${repos}/a"
+         if ! run_mulle_sourcetree -s -N add --nodetype git --tag "${a}" "file://${repos}/a"
          then
            _internal_fail "add failed unexpectedly ($PWD)"
          fi

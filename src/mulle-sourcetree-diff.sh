@@ -103,6 +103,7 @@ sourcetree::diff::r_diff_configs()
 
    if [ -d "${config_a}" ]
    then
+      # the hash prefix is a hack in sourcetree::cfg::r_absolute_filename
       a_nodelines="`sourcetree::cfg::read "#${config_a}" `" || fail "Can't read config of \"$1\""
    else
       a_nodelines="`grep -E -v '^#' "${config_a}" `" || fail "Can't read config file \"$1\""
@@ -116,6 +117,7 @@ sourcetree::diff::r_diff_configs()
    config_b="${RVAL}"
    if [ -d "${config_b}" ]
    then
+      # the hash prefix is a hack in sourcetree::cfg::r_absolute_filename
       b_nodelines="`sourcetree::cfg::read "#${config_b}" `" || fail "Can't read config of \"$2\""
    else
       b_nodelines="`grep -E -v '^#' "${config_b}" `" || fail "Can't read config file \"$2\""

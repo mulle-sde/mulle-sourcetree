@@ -38,17 +38,17 @@ test_run()
       _internal_fail "add failed unexpectedly"
    fi
 
-   if run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "a"
+   if run_mulle_sourcetree --no-errors -s -N add --marks "no-delete,no-update,no-share" "a"
    then
       _internal_fail "duplicate add succeeded unexpectedly"
    fi
 
-   if run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "."
+   if run_mulle_sourcetree --no-errors -s -N add --marks "no-delete,no-update,no-share" "."
    then
       _internal_fail "add \".\" succeeded unexpectedly"
    fi
 
-   if run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" -s local "/"
+   if run_mulle_sourcetree --no-errors -s -N add --marks "no-delete,no-update,no-share" -s local "/"
    then
       _internal_fail "/ add succeeded unexpectedly"
    fi
@@ -58,7 +58,7 @@ test_run()
       _internal_fail "config should exist now"
    fi
 
-   if ! run_mulle_sourcetree -N add --marks "no-delete,no-update,no-share" "b"
+   if ! run_mulle_sourcetree -s -N add --marks "no-delete,no-update,no-share" "b"
    then
       _internal_fail "add of b failed unexpectedly"
    fi
@@ -68,12 +68,12 @@ test_run()
       _internal_fail "remove \"a\" failed unexpectedly"
    fi
 
-   if run_mulle_sourcetree -N remove "a"
+   if run_mulle_sourcetree --no-errors -s -N remove "a"
    then
-      _internal_fail "superflous remove \"a\" succeeded"
+      _internal_fail "superflous remove \"a\" succeeded unexpectedly"
    fi
 
-   if run_mulle_sourcetree -N remove "."
+   if run_mulle_sourcetree --no-errors -s -N remove "."
    then
       _internal_fail "remove \".\" succeeded unexpectedly"
    fi
@@ -105,7 +105,6 @@ main()
    mkdir_if_missing "${directory}/a/b"
 
    cd "${directory}"
-
 
    if [ -f ".mulle/etc/sourcetree/config" ]
    then
@@ -175,7 +174,7 @@ main()
    #
    # add a git url
    #
-   if ! run_mulle_sourcetree -N add "https://a.com/a.git"
+   if ! run_mulle_sourcetree -s -N add "https://a.com/a.git"
    then
       _internal_fail "add URL, failed unexpectedly"
    fi
@@ -211,7 +210,7 @@ main()
 
    log_verbose "----- #4 PASSED -----"
 
-   if ! run_mulle_sourcetree -N add --nodetype symlink --url "/a.com/a" c
+   if ! run_mulle_sourcetree -s -N add --nodetype symlink --url "/a.com/a" c
    then
       _internal_fail "add URL, failed unexpectedly"
    fi

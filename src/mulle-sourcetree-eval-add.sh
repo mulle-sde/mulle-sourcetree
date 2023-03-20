@@ -118,6 +118,8 @@ sourcetree::eval_add::commands()
       sourcetree::eval_add::append_add "${arguments_list}" "${arguments}"
       arguments_list="${RVAL}"
 
+      include "sourcetree::commands"
+
       for arguments in ${arguments_list}
       do
          # This is somewhat dangerous as we
@@ -186,19 +188,7 @@ sourcetree::eval_add::initialize()
 {
    log_entry "sourcetree::eval_add::initialize"
 
-   if [ -z "${MULLE_BASHFUNCTIONS_SH}" ]
-   then
-      [ -z "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}" ] && _internal_fail "MULLE_BASHFUNCTIONS_LIBEXEC_DIR is empty"
-
-      # shellcheck source=../../mulle-bashfunctions/src/mulle-bashfunctions.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
-   fi
-
-   if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-commands.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh" || exit 1
-   fi
+   include "sourcetree::walk"
 }
 
 

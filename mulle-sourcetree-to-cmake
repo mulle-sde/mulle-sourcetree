@@ -386,11 +386,7 @@ ${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-searc
 ${indent}      #
 ${indent}      set( _TMP_${identifier}_DIR "\${_TMP_${identifier}_ROOT}/${headerdir_name}")
 ${indent}      if( IS_DIRECTORY "\${_TMP_${identifier}_DIR}")
-${indent}         set( INHERITED_INCLUDE_DIRS
-${indent}            \${INHERITED_INCLUDE_DIRS}
-${indent}            "\${_TMP_${identifier}_DIR}"
-${indent}            CACHE INTERNAL "need to cache this"
-${indent}         )
+${indent}         list( APPEND INHERITED_INCLUDE_DIRS "\${_TMP_${identifier}_DIR}")
 ${indent}      else()
 ${indent}         message( STATUS "\${_TMP_${identifier}_DIR} not found")
 ${indent}      endif()
@@ -406,11 +402,7 @@ ${indent}      #
 ${indent}      foreach( _TMP_${identifier}_NAME ${quoted_names})
 ${indent}         set( _TMP_${identifier}_DIR "\${_TMP_${identifier}_ROOT}/${headerdir_name}/\${_TMP_${identifier}_NAME}")
 ${indent}         if( IS_DIRECTORY "\${_TMP_${identifier}_DIR}")
-${indent}            set( INHERITED_INCLUDE_DIRS
-${indent}               \${INHERITED_INCLUDE_DIRS}
-${indent}               "\${_TMP_${identifier}_DIR}"
-${indent}               CACHE INTERNAL "need to cache this"
-${indent}            )
+${indent}            list( APPEND INHERITED_INCLUDE_DIRS "\${_TMP_${identifier}_DIR}")
 ${indent}            break()
 ${indent}         else()
 ${indent}            message( STATUS "\${_TMP_${identifier}_DIR} not found")
@@ -453,11 +445,7 @@ ${indent}         list( GET _TMP_INHERIT_OBJC_LOADERS -1 NO_INHERIT_OBJC_LOADERS
 ${indent}         list( REMOVE_AT _TMP_INHERIT_OBJC_LOADERS -1)
 ${indent}         #
 ${indent}         list( REMOVE_ITEM CMAKE_MODULE_PATH "\${_TMP_${identifier}_DIR}")
-${indent}         set( INHERITED_DEFINITIONS
-${indent}            \${INHERITED_DEFINITIONS}
-${indent}            \${${identifier}_DEFINITIONS}
-${indent}            CACHE INTERNAL "need to cache this"
-${indent}         )
+${indent}         list( APPEND INHERITED_DEFINITIONS \${${identifier}_DEFINITIONS})
 ${indent}      else()
 ${indent}         message( STATUS "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake not found")
 ${indent}      endif()
@@ -505,11 +493,7 @@ EOF
                cat <<EOF
 ${indent}            #
 ${indent}            list( REMOVE_ITEM CMAKE_MODULE_PATH "\${_TMP_${identifier}_DIR}")
-${indent}            set( INHERITED_DEFINITIONS
-${indent}               \${INHERITED_DEFINITIONS}
-${indent}               \${${identifier}_DEFINITIONS}
-${indent}               CACHE INTERNAL "need to cache this"
-${indent}            )
+${indent}            list( APPEND INHERITED_DEFINITIONS \${${identifier}_DEFINITIONS})
 ${indent}            break()
 ${indent}         else()
 ${indent}            message( STATUS "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake not found")
@@ -540,11 +524,7 @@ ${indent}      if( NOT NO_INHERIT_OBJC_LOADERS)
 ${indent}         get_filename_component( _TMP_${identifier}_NAME "\${_TMP_${identifier}_ROOT}" NAME_WE)
 ${indent}         set( _TMP_${identifier}_FILE "\${_TMP_${identifier}_ROOT}/Headers/MulleObjCLoader+\${_TMP_${identifier}_NAME}.h")
 ${indent}         if( EXISTS "\${_TMP_${identifier}_FILE}")
-${indent}            set( INHERITED_OBJC_LOADERS
-${indent}               \${INHERITED_OBJC_LOADERS}
-${indent}               \${_TMP_${identifier}_FILE}
-${indent}               CACHE INTERNAL "need to cache this"
-${indent}            )
+${indent}            list( APPEND INHERITED_OBJC_LOADERS \${_TMP_${identifier}_FILE})
 ${indent}         endif()
 ${indent}      endif()
 EOF
@@ -560,11 +540,7 @@ ${indent}      if( NOT NO_INHERIT_OBJC_LOADERS)
 ${indent}         foreach( _TMP_${identifier}_NAME ${quoted_names})
 ${indent}            set( _TMP_${identifier}_FILE "\${_TMP_${identifier}_ROOT}/include/\${_TMP_${identifier}_NAME}/MulleObjCLoader+\${_TMP_${identifier}_NAME}.h")
 ${indent}            if( EXISTS "\${_TMP_${identifier}_FILE}")
-${indent}               set( INHERITED_OBJC_LOADERS
-${indent}                  \${INHERITED_OBJC_LOADERS}
-${indent}                  \${_TMP_${identifier}_FILE}
-${indent}                  CACHE INTERNAL "need to cache this"
-${indent}               )
+${indent}               list( APPEND INHERITED_OBJC_LOADERS \${_TMP_${identifier}_FILE})
 ${indent}               break()
 ${indent}            endif()
 ${indent}         endforeach()
@@ -820,11 +796,7 @@ ${indent}      #
 ${indent}      # Add ${key} to ${containername} list.
 ${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-add\`
 ${indent}      #
-${indent}      set( ${containername}
-${indent}         \${${containername}}
-${indent}         \${${key}}
-${indent}         CACHE INTERNAL "need to cache this"
-${indent}      )
+${indent}      list( APPEND ${containername} \${${key}})
 EOF
       ;;
    esac
@@ -1024,7 +996,6 @@ ${indent}   #
 ${indent}   set( ${containername}
 ${indent}      \${${key}}
 ${indent}      \${${containername}}
-${indent}      CACHE INTERNAL "need to cache this"
 ${indent}   )
 EOF
       ;;
@@ -1137,27 +1108,22 @@ emit_cmake_dependency()
       esac
    fi
 
+   local defaultname
    local identifiername
    local identifier
    local filename
    local names
 
+   r_basename "${address%#*}"
+   defaultname="${RVAL}"
+
    names="${aliases}"
    if [ -z "${names}" ]
    then
-      r_basename "${address%#*}"
-      names="${RVAL}"
+      names="${defaultname}"
    fi
 
-   # first of the names determines the identifier
-   r_basename "${names%%,*}"
-   identifiername="${RVAL#*:}"
-
-   if [ -z "${MULLE_CASE_SH}" ]
-   then
-      # shellcheck source=mulle-case.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-case.sh" || return 1
-   fi
+   identifiername="${defaultname#*:}"
 
    r_tweaked_de_camel_case "${identifiername}"
    r_identifier "${RVAL}"
@@ -1656,6 +1622,8 @@ main()
 
       shift
    done
+
+   include "case"
 
    MULLE_SDE="${MULLE_SDE:-`command -v mulle-sde`}"
    [ -z "${MULLE_SDE}" ] && fail "mulle-sde not in PATH"

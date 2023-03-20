@@ -29,10 +29,10 @@
 #   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 #   POSSIBILITY OF SUCH DAMAGE.
 #
-MULLE_SOURCETREE_NODEMARKS_SH='included'
+MULLE_SOURCETREE_MARKS_SH='included'
 
 
-sourcetree::nodemarks::_key_check()
+sourcetree::marks::_key_check()
 {
    [ -z "${DEFAULT_IFS}" ] && _internal_fail "DEFAULT_IFS not set"
 
@@ -58,13 +58,13 @@ sourcetree::nodemarks::_key_check()
 #
 # node marking
 #
-sourcetree::nodemarks::_r_add()
+sourcetree::marks::_r_add()
 {
    local marks="$1"
    local key="$2"
 
    # avoid duplicates and reorg
-   if ! sourcetree::nodemarks::_contain "${marks}" "${key}"
+   if ! sourcetree::marks::_contain "${marks}" "${key}"
    then
       r_comma_concat "${marks}" "${key}"
    fi
@@ -73,7 +73,7 @@ sourcetree::nodemarks::_r_add()
 #
 # node marking
 #
-sourcetree::nodemarks::_r_find_prefix()
+sourcetree::marks::_r_find_prefix()
 {
    local marks="$1"
    local prefix="$2"
@@ -95,7 +95,7 @@ sourcetree::nodemarks::_r_find_prefix()
 }
 
 
-sourcetree::nodemarks::_r_remove()
+sourcetree::marks::_r_remove()
 {
    local marks="$1"
    local key="$2"
@@ -113,37 +113,37 @@ sourcetree::nodemarks::_r_remove()
 # If you add a no- mark or only- mark. That's OK
 # Otherwise you are actually removing a no- or only- mark!
 #
-sourcetree::nodemarks::r_add()
+sourcetree::marks::r_add()
 {
-   log_entry "sourcetree::nodemarks::r_add" "$@"
+   log_entry "sourcetree::marks::r_add" "$@"
 
    local marks="$1"
    local key="$2"
 
    case "${key}" in
       "no-"*)
-         sourcetree::nodemarks::_r_remove "${marks}" "only-${key:3}"
-         sourcetree::nodemarks::_r_add "${RVAL}" "${key}"
+         sourcetree::marks::_r_remove "${marks}" "only-${key:3}"
+         sourcetree::marks::_r_add "${RVAL}" "${key}"
       ;;
 
       "only-"*)
-         sourcetree::nodemarks::_r_remove "${marks}" "no-${key:5}"
-         sourcetree::nodemarks::_r_add "${RVAL}" "${key}"
+         sourcetree::marks::_r_remove "${marks}" "no-${key:5}"
+         sourcetree::marks::_r_add "${RVAL}" "${key}"
       ;;
 
       "version-"*)
          # remove old version with same same prefix
-         if sourcetree::nodemarks::_r_find_prefix "${marks}" "${key%-*}"
+         if sourcetree::marks::_r_find_prefix "${marks}" "${key%-*}"
          then
-            sourcetree::nodemarks::_r_remove "${marks}" "${RVAL}"
+            sourcetree::marks::_r_remove "${marks}" "${RVAL}"
             marks="${RVAL}"
          fi
-         sourcetree::nodemarks::_r_add "${marks}" "${key}"
+         sourcetree::marks::_r_add "${marks}" "${key}"
       ;;
 
       *)
-         sourcetree::nodemarks::_r_remove "${marks}" "no-${key}"
-         sourcetree::nodemarks::_r_remove "${RVAL}" "only-${key}"
+         sourcetree::marks::_r_remove "${marks}" "no-${key}"
+         sourcetree::marks::_r_remove "${RVAL}"  "only-${key}"
       ;;
    esac
 
@@ -151,48 +151,30 @@ sourcetree::nodemarks::r_add()
 }
 
 
-sourcetree::nodemarks::r_remove()
+sourcetree::marks::r_remove()
 {
    local marks="$1"
    local key="$2"
 
    case "${key}" in
       "no-"*|"only-"*|"version-"*)
-         sourcetree::nodemarks::_r_remove "${marks}" "${key}"
+         sourcetree::marks::_r_remove "${marks}" "${key}"
       ;;
 
       *)
-         sourcetree::nodemarks::_r_remove "${marks}" "only-${key}"
-         sourcetree::nodemarks::_r_add    "${RVAL}"  "no-${key}"
+         sourcetree::marks::_r_remove "${marks}" "only-${key}"
+         sourcetree::marks::_r_add    "${RVAL}"  "no-${key}"
       ;;
    esac
 }
 
 
-sourcetree::nodemarks::add()
-{
-   sourcetree::nodemarks::r_add "$@"
-
-   [ ! -z "${RVAL}" ] && printf "%s\n" "${RVAL}"
-
-   :
-}
-
-
-sourcetree::nodemarks::remove()
-{
-   sourcetree::nodemarks::r_remove "$@"
-
-   [ ! -z "${RVAL}" ] && printf "%s\n" "${RVAL}"
-
-   :
-}
 
 #
 # check for existence of a no-key or an only-key
 # case is a bit faster than IFS=, parsing but not much
 #
-sourcetree::nodemarks::_contain()
+sourcetree::marks::_contain()
 {
 #   local marks="$1"
 #   local key="$2"
@@ -217,14 +199,14 @@ sourcetree::nodemarks::_contain()
 # 1 no
 # 2 no mark found
 #
-sourcetree::nodemarks::version_match()
+sourcetree::marks::version_match()
 {
    local marks="$1"
    local key="$2"
    local operator="$3"
    local value="$4"
 
-   sourcetree::nodemarks::_key_check "${key}"
+   sourcetree::marks::_key_check "${key}"
 
    local result
    local i
@@ -286,7 +268,7 @@ sourcetree::nodemarks::version_match()
 
 #
 # The "clever" existence check. (Not thaaaat clever though, use
-# sourcetree::nodemarks::enable for that)
+# sourcetree::marks::enable for that)
 #
 # Input         | Matches
 #               | absent   | no-<key> | only-<key>
@@ -301,25 +283,25 @@ sourcetree::nodemarks::version_match()
 #
 # The version keys are ignored
 #
-sourcetree::nodemarks::contain()
+sourcetree::marks::contain()
 {
    local marks="$1"
    local key="$2"
 
    case "${key}" in
       "no-"*|"only-"*|"version-"*)
-         sourcetree::nodemarks::_contain "${marks}" "${key}"
+         sourcetree::marks::_contain "${marks}" "${key}"
       ;;
 
       *)
-         ! sourcetree::nodemarks::_contain "${marks}" "no-${key}"
+         ! sourcetree::marks::_contain "${marks}" "no-${key}"
       ;;
    esac
 }
 
 
 # match can use wildcard *
-sourcetree::nodemarks::match()
+sourcetree::marks::match()
 {
    local marks="$1"
    local pattern="$2"
@@ -351,17 +333,17 @@ sourcetree::nodemarks::match()
       ;;
 
       "no-"*|"only-"*|"version-"*)
-         sourcetree::nodemarks::_contain "${marks}" "${pattern}"
+         sourcetree::marks::_contain "${marks}" "${pattern}"
       ;;
 
       *)
-         ! sourcetree::nodemarks::_contain "${marks}" "no-${pattern}"
+         ! sourcetree::marks::_contain "${marks}" "no-${pattern}"
       ;;
    esac
 }
 
 
-sourcetree::nodemarks::enable()
+sourcetree::marks::enable()
 {
    local marks="$1"
    local key="$2"
@@ -373,30 +355,30 @@ sourcetree::nodemarks::enable()
    esac
 
    # if key is enabled with only- like only-platform-linux it's cool
-   if sourcetree::nodemarks::_contain "${marks}" "only-${key}"
+   if sourcetree::marks::_contain "${marks}" "only-${key}"
    then
       return 0
    fi
 
    # a no key disables
-   if sourcetree::nodemarks::_contain "${marks}" "no-${key}"
+   if sourcetree::marks::_contain "${marks}" "no-${key}"
    then
       return 1
    fi
 
-   # for platform-linux cut of last -linux and see if only-platform-* matches anything
-   # if yes we disable
-   ! sourcetree::nodemarks::match "${marks}" "only-${key%-*}-*"
+   # for platform-linux cut of last -linux and see if only-platform-* matches
+   # anything if yes we disable, that's very rare though
+   ! sourcetree::marks::match "${marks}" "only-${key%-*}-*"
 }
 
 
-sourcetree::nodemarks::disable()
+sourcetree::marks::disable()
 {
-   ! sourcetree::nodemarks::enable "$@"
+   ! sourcetree::marks::enable "$@"
 }
 
 
-sourcetree::nodemarks::compatible_with_nodemarks()
+sourcetree::marks::compatible_with_marks()
 {
    local marks="$1"
    local anymarks="$2"
@@ -419,14 +401,14 @@ sourcetree::nodemarks::compatible_with_nodemarks()
          ;;
       esac
 
-      if sourcetree::nodemarks::enable "${marks}" "${key}"
+      if sourcetree::marks::enable "${marks}" "${key}"
       then
-         if sourcetree::nodemarks::disable "${anymarks}" "${key}"
+         if sourcetree::marks::disable "${anymarks}" "${key}"
          then
             return 1
          fi
       else
-         if sourcetree::nodemarks::enable "${anymarks}" "${key}"
+         if sourcetree::marks::enable "${anymarks}" "${key}"
          then
             return 1
          fi
@@ -438,7 +420,7 @@ sourcetree::nodemarks::compatible_with_nodemarks()
 
 
 # this is low level
-sourcetree::nodemarks::intersect()
+sourcetree::marks::intersect()
 {
    local marks="$1"
    local anymarks="$2"
@@ -447,7 +429,7 @@ sourcetree::nodemarks::intersect()
 
    .foreachitem key in ${anymarks}
    .do
-      if sourcetree::nodemarks::_contain "${marks}" "${key}"
+      if sourcetree::marks::_contain "${marks}" "${key}"
       then
          return 0
       fi
@@ -457,10 +439,11 @@ sourcetree::nodemarks::intersect()
 }
 
 
+
 #
 # remove marks that cancel each other out
 #
-sourcetree::nodemarks::r_simplify()
+sourcetree::marks::r_simplify()
 {
    local marks="$1"
 
@@ -469,7 +452,7 @@ sourcetree::nodemarks::r_simplify()
 
    .foreachitem key in ${marks}
    .do
-      sourcetree::nodemarks::r_add "${result}" "${key}"
+      sourcetree::marks::r_add "${result}" "${key}"
       result="${RVAL}"
    .done
 
@@ -477,29 +460,42 @@ sourcetree::nodemarks::r_simplify()
 }
 
 
-sourcetree::nodemarks::sort()
+sourcetree::marks::r_sort()
 {
    local marks="$1"
 
-   local i
-   local result
+   include "sort"
 
-   .foreachline i in `tr ',' '\n' <<< "${marks}" | LC_ALL=C sort -u`
+   local array
+
+   r_split "${marks}" ","
+   array=( "${RVAL[@]}" )
+   r_mergesort "${array[@]}"
+   array=( "${RVAL[@]}" )
+   r_betwixt "," "${array[@]}"
+}
+
+
+sourcetree::marks::r_clean_marks()
+{
+   local marks="$1"
+   local other="$2"
+
+   .foreachitem key in ${other}
    .do
-      r_comma_concat "${result}" "${i}"
-      result="${RVAL}"
+      sourcetree::marks::_r_remove "${marks}" "only-${key}"
+      sourcetree::marks::_r_remove "${RVAL}"  "no-${key}"
+      marks="${RVAL}"
    .done
-
-   RVAL="${result}"
 }
 
 
 #
 # A small parser
 #
-sourcetree::nodemarks::do_filter_iexpr()
+sourcetree::marks::do_filter_iexpr()
 {
-#   log_entry "sourcetree::nodemarks::do_filter_iexpr" "$1" "$2" "(_s=${_s})"
+#   log_entry "sourcetree::marks::do_filter_iexpr" "$1" "$2" "(_s=${_s})"
 
    local marks="$1"
    local expr=$2
@@ -509,7 +505,7 @@ sourcetree::nodemarks::do_filter_iexpr()
    case "${_s}" in
       AND*)
          _s="${_s:3}"
-         sourcetree::nodemarks::do_filter_expr "${marks}" "${error_hint}"
+         sourcetree::marks::do_filter_expr "${marks}" "${error_hint}"
          if [ $? -eq 1  ]
          then
             return 1
@@ -519,7 +515,7 @@ sourcetree::nodemarks::do_filter_iexpr()
 
       OR*)
          _s="${_s:2}"
-         sourcetree::nodemarks::do_filter_expr "${marks}" "${error_hint}"
+         sourcetree::marks::do_filter_expr "${marks}" "${error_hint}"
          if [ $? -eq 0  ]
          then
             return 0
@@ -548,9 +544,9 @@ sourcetree::nodemarks::do_filter_iexpr()
 }
 
 
-sourcetree::nodemarks::do_filter_sexpr()
+sourcetree::marks::do_filter_sexpr()
 {
-#   log_entry "sourcetree::nodemarks::do_filter_sexpr" "$1" "(_s=${_s})"
+#   log_entry "sourcetree::marks::do_filter_sexpr" "$1" "(_s=${_s})"
 
    local marks="$1"
    local error_hint="$2"
@@ -568,24 +564,24 @@ sourcetree::nodemarks::do_filter_sexpr()
    case "${_s}" in
       '('*)
          _s="${_s:1}"
-         sourcetree::nodemarks::do_filter_expr "${marks}" "${error_hint}"
+         sourcetree::marks::do_filter_expr "${marks}" "${error_hint}"
          expr=$?
 
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
-         if [ "${_closer}" != 'YES' ]
-         then
+#         if [ "${_closer}" != 'YES' ]
+#         then
             if [ "${_s:0:1}" != ")" ]
             then
                fail "Closing ) missing at \"${_s}\" of marks qualifier \"${error_hint}\""
             fi
             _s="${_s:1}"
-         fi
+#         fi
          return $expr
       ;;
 
       NOT*)
          _s="${_s:3}"
-         sourcetree::nodemarks::do_filter_sexpr "${marks}" "${error_hint}"
+         sourcetree::marks::do_filter_sexpr "${marks}" "${error_hint}"
          if [ $? -eq 0  ]
          then
             return 1
@@ -612,8 +608,8 @@ sourcetree::nodemarks::do_filter_sexpr()
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
          key="${_s%%[[:space:])]*}"
          _s="${_s#"${key}"}"
-         #log_entry sourcetree::nodemarks::match "${marks}" "${key}"
-         sourcetree::nodemarks::match "${marks}" "${key}"
+         #log_entry sourcetree::marks::match "${marks}" "${key}"
+         sourcetree::marks::match "${marks}" "${key}"
          return $?
       ;;
 
@@ -623,8 +619,8 @@ sourcetree::nodemarks::do_filter_sexpr()
          _s="${_s#"${_s%%[![:space:]]*}"}" # remove leading whitespace characters
          key="${_s%%[[:space:])]*}"
          _s="${_s#"${key}"}"
-         #log_entry sourcetree::nodemarks::match "${marks}" "${key}"
-         sourcetree::nodemarks::enable "${marks}" "${key}"
+         #log_entry sourcetree::marks::match "${marks}" "${key}"
+         sourcetree::marks::enable "${marks}" "${key}"
          return $?
       ;;
 
@@ -645,8 +641,8 @@ sourcetree::nodemarks::do_filter_sexpr()
          [ -z "${value}" ] && fail "Missing version value after operator"
          _s="${_s#"${value}"}"
 
-         log_entry sourcetree::nodemarks::version_match "${marks}" "${key}"
-         sourcetree::nodemarks::version_match "${marks}" "${key}" "${operator}" "${value}"
+         log_entry sourcetree::marks::version_match "${marks}" "${key}"
+         sourcetree::marks::version_match "${marks}" "${key}" "${operator}" "${value}"
          [ $? -ne 1 ]  # 0 ok, 2 also ok
          return $?
       ;;
@@ -665,16 +661,16 @@ sourcetree::nodemarks::do_filter_sexpr()
 #
 # _s contains the currently parsed qualifier
 #
-sourcetree::nodemarks::do_filter_expr()
+sourcetree::marks::do_filter_expr()
 {
-#   log_entry "sourcetree::nodemarks::do_filter_expr" "$1" "(_s=${_s})"
+#   log_entry "sourcetree::marks::do_filter_expr" "$1" "(_s=${_s})"
 
    local marks="$1"
    local error_hint="$2"
 
    local expr
 
-   sourcetree::nodemarks::do_filter_sexpr "${marks}" "${error_hint}"
+   sourcetree::marks::do_filter_sexpr "${marks}" "${error_hint}"
    expr=$?
 
    while :
@@ -685,7 +681,7 @@ sourcetree::nodemarks::do_filter_expr()
             break
          ;;
       esac
-      sourcetree::nodemarks::do_filter_iexpr "${marks}" "${expr}" "${error_hint}"
+      sourcetree::marks::do_filter_iexpr "${marks}" "${expr}" "${error_hint}"
       expr=$?
    done
 
@@ -693,9 +689,9 @@ sourcetree::nodemarks::do_filter_expr()
 }
 
 
-sourcetree::nodemarks::filter_with_qualifier()
+sourcetree::marks::filter_with_qualifier()
 {
-#   log_entry "sourcetree::nodemarks::filter_with_qualifier" "$@"
+#   log_entry "sourcetree::marks::filter_with_qualifier" "$@"
 
    local marks="$1"
    local qualifier="$2"
@@ -706,16 +702,16 @@ sourcetree::nodemarks::filter_with_qualifier()
       return 0
    fi
 
-   local _closer
+#   local _closer
    local _s
 
    _s="${qualifier}"
 
-   sourcetree::nodemarks::do_filter_expr "${marks}" "${qualifier}"
+   sourcetree::marks::do_filter_expr "${marks}" "${qualifier}"
 }
 
 
-sourcetree::nodemarks::walk()
+sourcetree::marks::walk()
 {
    local marks="$1"; shift
    local callback="$1"; shift
@@ -723,28 +719,24 @@ sourcetree::nodemarks::walk()
    local i
    local rval=0
 
-   shell_disable_glob ; IFS=","
-   for i in ${marks}
-   do
-      IFS="${DEFAULT_IFS}" ; shell_enable_glob
-
+   .foreachitem i in ${marks}
+   .do
       "${callback}" "${i}" "$@"
       rval=$?
 
       if [ $rval -ne 0 ]
       then
-         break
+         .break
       fi
-   done
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 
    return $rval
 }
 
 
-sourcetree::nodemarks::is_sane_nodemark()
+sourcetree::marks::is_sane_nodemark()
 {
-#   log_entry "sourcetree::nodemarks::is_sane_nodemark" "$@"
+#   log_entry "sourcetree::marks::is_sane_nodemark" "$@"
 
    case "$1" in
       "")
@@ -758,11 +750,11 @@ sourcetree::nodemarks::is_sane_nodemark()
 }
 
 
-sourcetree::nodemarks::assert_sane_nodemark()
+sourcetree::marks::assert_sane_nodemark()
 {
-#   log_entry "sourcetree::nodemarks::assert_sane_nodemark" "$@"
+#   log_entry "sourcetree::marks::assert_sane_nodemark" "$@"
 
-   if ! sourcetree::nodemarks::is_sane_nodemark "$1"
+   if ! sourcetree::marks::is_sane_nodemark "$1"
    then
       fail "mark \"$1\" must not contain characters other than a-z 0-9 . - _ \
 and not be empty"
@@ -770,24 +762,20 @@ and not be empty"
 }
 
 
-sourcetree::nodemarks::assert_sane()
+sourcetree::marks::assert_sane()
 {
-   log_entry "sourcetree::nodemarks::assert_sane" "$@"
+   log_entry "sourcetree::marks::assert_sane" "$@"
 
    local marks="$1"
 
    local mark
 
-   IFS=","; shell_disable_glob
-   for mark in ${marks}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .foreachitem mark in ${marks}
+   .do
+      [ -z "${mark}" ] && .continue
 
-      [ -z "${mark}" ] && continue
-
-      sourcetree::nodemarks::assert_sane_nodemark "${mark}"
-   done
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+      sourcetree::marks::assert_sane_nodemark "${mark}"
+   .done
 }
 
 
@@ -797,84 +785,81 @@ sourcetree::nodemarks::assert_sane()
 # for now we have a small collection of hardcoded functions
 #
 
-sourcetree::nodemarks::framework_consistency_check()
+sourcetree::marks::framework_consistency_check()
 {
-   log_entry "sourcetree::nodemarks::framework_consistency_check" "$@"
+   log_entry "sourcetree::marks::framework_consistency_check" "$@"
 
    local marks="$1"
    local mark="$2"
    local address="$3"
 
-   if sourcetree::nodemarks::disable "${marks}" singlephase
+   if sourcetree::marks::disable "${marks}" singlephase
    then
       log_warning "Framework \"${address}\" needs singlephase mark (singlephase)"
    fi
 
-   if sourcetree::nodemarks::enable "${marks}" cmake-inherit
+   if sourcetree::marks::enable "${marks}" cmake-inherit
    then
       log_warning "Framework \"${address}\" should not inherit dependencies (no-cmake-inherit)"
    fi
 
-#   if sourcetree::nodemarks::enable "${marks}" cmake-add
+#   if sourcetree::marks::enable "${marks}" cmake-add
 #   then
 #      log_info "Framework \"${address}\" implicitly defines cmake-add, which generates superflous cmake code. (Use no-cmake-add)"
 #   fi
 }
 
-sourcetree::nodemarks::no_cmake_inherit_consistency_check()
+# called by sourcetree::marks::check_consistency below
+sourcetree::marks::no_cmake_inherit_consistency_check()
 {
-   log_entry "sourcetree::nodemarks::no_cmake_inherit_consistency_check" "$@"
+   log_entry "sourcetree::marks::no_cmake_inherit_consistency_check" "$@"
 
    local marks="$1"
    local mark="$2"
    local address="$3"
 
-   if sourcetree::nodemarks::disable "${marks}" cmake-searchpath
+   if sourcetree::marks::disable "${marks}" cmake-searchpath
    then
       log_warning "\"${address}\": mark (no-cmake-searchpath) is made superflous by no-cmake-inherit"
    fi
 
-   if sourcetree::nodemarks::disable "${marks}" cmake-dependency
+   if sourcetree::marks::disable "${marks}" cmake-dependency
    then
       log_warning "\"${address}\": mark (no-cmake-dependency) is made superflous by no-cmake-inherit"
    fi
 
-   if sourcetree::nodemarks::disable "${marks}" cmake-loader
+   if sourcetree::marks::disable "${marks}" cmake-loader
    then
       log_warning "\"${address}\": mark (no-cmake-loader) is made superflous by no-cmake-inherit"
    fi
 }
 
 
-sourcetree::nodemarks::check_consistency()
+sourcetree::marks::check_consistency()
 {
-   log_entry "sourcetree::nodemarks::check_consistency" "$@"
+   log_entry "sourcetree::marks::check_consistency" "$@"
 
    local marks="$1"
    local address="$2"
 
    local f
 
-   IFS=","; shell_disable_glob
-   for mark in ${marks}
-   do
-      IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .foreachitem mark in ${marks}
+   .do
+      [ -z "${mark}" ] && .continue
 
-      [ -z "${mark}" ] && continue
-
-      f="sourcetree::nodemarks::${mark//-/_}_consistency_check"
+      f="sourcetree::marks::${mark//-/_}_consistency_check"
       if shell_is_function "${f}"
       then
          ${f} "${marks}" "${mark}" "${address}"
       fi
-   done
-   IFS="${DEFAULT_IFS}"; shell_enable_glob
+   .done
 } 
 
 
-sourcetree::nodemarks::r_diff()
+sourcetree::marks::r_diff()
 {
-   log_entry "sourcetree::nodemarks::r_diff" "$@"
+   log_entry "sourcetree::marks::r_diff" "$@"
 
    local nodemarks1="$1"
    local nodemarks2="$2"
@@ -884,31 +869,29 @@ sourcetree::nodemarks::r_diff()
    local differences
 
 
-   IFS=","; shell_disable_glob
-   for mark in ${nodemarks1}
-   do
-      if sourcetree::nodemarks::contain "${nodemarks2}" "${mark}"
+   .foreachitem mark in ${nodemarks1}
+   .do
+      if sourcetree::marks::contain "${nodemarks2}" "${mark}"
       then
          r_comma_concat "${matched}" "${mark}"
          matched="${RVAL}"
-         continue
+         .continue
       fi
 
       r_comma_concat "${differences}" "+${mark}"
       differences="${RVAL}"
-   done
+   .done
 
-   for mark in ${nodemarks2}
-   do
-      if sourcetree::nodemarks::contain "${matched}" "${mark}"
+   .foreachitem mark in ${nodemarks2}
+   .do
+      if sourcetree::marks::contain "${matched}" "${mark}"
       then
-         continue
+         .continue
       fi
 
       r_comma_concat "${differences}" "-${mark}"
       differences="${RVAL}"
-   done
-   IFS="${DEFAULT_IFS}" ; shell_enable_glob
+   .done
 
    RVAL="${differences}"
 }

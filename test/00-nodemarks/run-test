@@ -10,172 +10,193 @@ export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
 ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
 
 
+sourcetree::marks::add()
+{
+   sourcetree::marks::r_add "$@"
+
+   [ ! -z "${RVAL}" ] && printf "%s\n" "${RVAL}"
+
+   :
+}
+
+
+
+sourcetree::marks::remove()
+{
+   sourcetree::marks::r_remove "$@"
+
+   [ ! -z "${RVAL}" ] && printf "%s\n" "${RVAL}"
+
+   :
+}
+
+
 main()
 {
    _options_mini_main "$@" && set -x
 
    local _marks
 
-   sourcetree::nodemarks::contain  "${_marks}" "build"   || _internal_fail "Did expect build as default"
-   sourcetree::nodemarks::contain  "${_marks}" "descend" || _internal_fail "Did expect descend as default"
-   sourcetree::nodemarks::contain  "${_marks}" "delete"  || _internal_fail "Did expect delete as default"
-   sourcetree::nodemarks::contain  "${_marks}" "require" || _internal_fail "Did expect require as default"
-   sourcetree::nodemarks::contain  "${_marks}" "update"  || _internal_fail "Did expect update as default"
+   sourcetree::marks::contain  "${_marks}" "build"   || _internal_fail "Did expect build as default"
+   sourcetree::marks::contain  "${_marks}" "descend" || _internal_fail "Did expect descend as default"
+   sourcetree::marks::contain  "${_marks}" "delete"  || _internal_fail "Did expect delete as default"
+   sourcetree::marks::contain  "${_marks}" "require" || _internal_fail "Did expect require as default"
+   sourcetree::marks::contain  "${_marks}" "update"  || _internal_fail "Did expect update as default"
 
    log_verbose "----- #1 PASSED -----"
 
-   sourcetree::nodemarks::contain  "${_marks}" "no-build"    && _internal_fail "Did not expect no-build as default"
-   sourcetree::nodemarks::contain  "${_marks}" "no-delete"   && _internal_fail "Did not expect no-delete as default"
-   sourcetree::nodemarks::contain  "${_marks}" "no-descend"  && _internal_fail "Did not expect no-descend as default"
-   sourcetree::nodemarks::contain  "${_marks}" "no-require"  && _internal_fail "Did not expect no-require as default"
-   sourcetree::nodemarks::contain  "${_marks}" "no-update"   && _internal_fail "Did not expect no-update as default"
+   sourcetree::marks::contain  "${_marks}" "no-build"    && _internal_fail "Did not expect no-build as default"
+   sourcetree::marks::contain  "${_marks}" "no-delete"   && _internal_fail "Did not expect no-delete as default"
+   sourcetree::marks::contain  "${_marks}" "no-descend"  && _internal_fail "Did not expect no-descend as default"
+   sourcetree::marks::contain  "${_marks}" "no-require"  && _internal_fail "Did not expect no-require as default"
+   sourcetree::marks::contain  "${_marks}" "no-update"   && _internal_fail "Did not expect no-update as default"
 
    log_verbose "----- #2 PASSED -----"
 
-   _marks="`sourcetree::nodemarks::remove "${_marks}" "build"`"
+   _marks="`sourcetree::marks::remove "${_marks}" "build"`"
 
-   sourcetree::nodemarks::contain "${_marks}" "build"     && _internal_fail "Did expect no-build ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "delete"    || _internal_fail "Did not expect no-delete ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "descend"   || _internal_fail "Did not expect no-descend ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "require"   || _internal_fail "Did not expect no-require ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "update"    || _internal_fail "Did not expect no-update ($_marks)"
+   sourcetree::marks::contain "${_marks}" "build"     && _internal_fail "Did expect no-build ($_marks)"
+   sourcetree::marks::contain "${_marks}" "delete"    || _internal_fail "Did not expect no-delete ($_marks)"
+   sourcetree::marks::contain "${_marks}" "descend"   || _internal_fail "Did not expect no-descend ($_marks)"
+   sourcetree::marks::contain "${_marks}" "require"   || _internal_fail "Did not expect no-require ($_marks)"
+   sourcetree::marks::contain "${_marks}" "update"    || _internal_fail "Did not expect no-update ($_marks)"
 
    log_verbose "----- #3 PASSED -----"
 
-   _marks="`sourcetree::nodemarks::remove "${_marks}" "delete"`"
+   _marks="`sourcetree::marks::remove "${_marks}" "delete"`"
 
-   sourcetree::nodemarks::contain "${_marks}" "build"     && _internal_fail "Did expect no-build ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "delete"    && _internal_fail "Did expect no-delete ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "descend"   || _internal_fail "Did not expect no-descend ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "require"   || _internal_fail "Did not expect no-require ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "update"    || _internal_fail "Did not expect no-update ($_marks)"
+   sourcetree::marks::contain "${_marks}" "build"     && _internal_fail "Did expect no-build ($_marks)"
+   sourcetree::marks::contain "${_marks}" "delete"    && _internal_fail "Did expect no-delete ($_marks)"
+   sourcetree::marks::contain "${_marks}" "descend"   || _internal_fail "Did not expect no-descend ($_marks)"
+   sourcetree::marks::contain "${_marks}" "require"   || _internal_fail "Did not expect no-require ($_marks)"
+   sourcetree::marks::contain "${_marks}" "update"    || _internal_fail "Did not expect no-update ($_marks)"
 
    log_verbose "----- #4 PASSED -----"
 
-   _marks="`sourcetree::nodemarks::remove "${_marks}" "descend"`"
+   _marks="`sourcetree::marks::remove "${_marks}" "descend"`"
 
-   sourcetree::nodemarks::contain "${_marks}" "build"     && _internal_fail "Did expect no-build ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "delete"    && _internal_fail "Did expect no-delete ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "descend"   && _internal_fail "Did expect no-descend ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "require"   || _internal_fail "Did not expect no-require ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "update"    || _internal_fail "Did not expect no-update ($_marks)"
+   sourcetree::marks::contain "${_marks}" "build"     && _internal_fail "Did expect no-build ($_marks)"
+   sourcetree::marks::contain "${_marks}" "delete"    && _internal_fail "Did expect no-delete ($_marks)"
+   sourcetree::marks::contain "${_marks}" "descend"   && _internal_fail "Did expect no-descend ($_marks)"
+   sourcetree::marks::contain "${_marks}" "require"   || _internal_fail "Did not expect no-require ($_marks)"
+   sourcetree::marks::contain "${_marks}" "update"    || _internal_fail "Did not expect no-update ($_marks)"
 
    log_verbose "----- #5 PASSED -----"
 
-   _marks="`sourcetree::nodemarks::remove "${_marks}" "require"`"
+   _marks="`sourcetree::marks::remove "${_marks}" "require"`"
 
-   sourcetree::nodemarks::contain "${_marks}" "build"    && _internal_fail "Did expect no-build ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "delete"   && _internal_fail "Did expect no-delete ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "descend"  && _internal_fail "Did expect no-descend ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "require"  && _internal_fail "Did expect no-require ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "update"   || _internal_fail "Did not expect no-update ($_marks)"
+   sourcetree::marks::contain "${_marks}" "build"    && _internal_fail "Did expect no-build ($_marks)"
+   sourcetree::marks::contain "${_marks}" "delete"   && _internal_fail "Did expect no-delete ($_marks)"
+   sourcetree::marks::contain "${_marks}" "descend"  && _internal_fail "Did expect no-descend ($_marks)"
+   sourcetree::marks::contain "${_marks}" "require"  && _internal_fail "Did expect no-require ($_marks)"
+   sourcetree::marks::contain "${_marks}" "update"   || _internal_fail "Did not expect no-update ($_marks)"
 
    log_verbose "----- #6 PASSED -----"
 
-   _marks="`sourcetree::nodemarks::remove "${_marks}" "update"`"
+   _marks="`sourcetree::marks::remove "${_marks}" "update"`"
 
-   sourcetree::nodemarks::contain "${_marks}" "build"   && _internal_fail "Did expect no-build ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "delete"  && _internal_fail "Did expect no-delete ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "descend" && _internal_fail "Did expect no-descend ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "require" && _internal_fail "Did expect no-require ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "update"  && _internal_fail "Did expect no-update ($_marks)"
+   sourcetree::marks::contain "${_marks}" "build"   && _internal_fail "Did expect no-build ($_marks)"
+   sourcetree::marks::contain "${_marks}" "delete"  && _internal_fail "Did expect no-delete ($_marks)"
+   sourcetree::marks::contain "${_marks}" "descend" && _internal_fail "Did expect no-descend ($_marks)"
+   sourcetree::marks::contain "${_marks}" "require" && _internal_fail "Did expect no-require ($_marks)"
+   sourcetree::marks::contain "${_marks}" "update"  && _internal_fail "Did expect no-update ($_marks)"
 
    log_verbose "----- #7 PASSED -----"
 
 # remove stuff
 
-   _marks="`sourcetree::nodemarks::add "${_marks}" "build"`"
+   _marks="`sourcetree::marks::add "${_marks}" "build"`"
 
-   sourcetree::nodemarks::contain "${_marks}" "build"    || _internal_fail "Did not expect no-build ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "delete"   && _internal_fail "Did expect no-delete ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "descend"  && _internal_fail "Did expect no-descend ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "require"  && _internal_fail "Did expect no-require ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "update"   && _internal_fail "Did expect no-update ($_marks)"
+   sourcetree::marks::contain "${_marks}" "build"    || _internal_fail "Did not expect no-build ($_marks)"
+   sourcetree::marks::contain "${_marks}" "delete"   && _internal_fail "Did expect no-delete ($_marks)"
+   sourcetree::marks::contain "${_marks}" "descend"  && _internal_fail "Did expect no-descend ($_marks)"
+   sourcetree::marks::contain "${_marks}" "require"  && _internal_fail "Did expect no-require ($_marks)"
+   sourcetree::marks::contain "${_marks}" "update"   && _internal_fail "Did expect no-update ($_marks)"
 
    log_verbose "----- #8 PASSED -----"
 
-   _marks="`sourcetree::nodemarks::add "${_marks}" "delete"`"
+   _marks="`sourcetree::marks::add "${_marks}" "delete"`"
 
-   sourcetree::nodemarks::contain "${_marks}" "build"    || _internal_fail "Did not expect no-build ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "delete"   || _internal_fail "Did not expect no-delete ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "descend"  && _internal_fail "Did expect no-descend ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "require"  && _internal_fail "Did expect no-require ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "update"   && _internal_fail "Did expect no-update ($_marks)"
+   sourcetree::marks::contain "${_marks}" "build"    || _internal_fail "Did not expect no-build ($_marks)"
+   sourcetree::marks::contain "${_marks}" "delete"   || _internal_fail "Did not expect no-delete ($_marks)"
+   sourcetree::marks::contain "${_marks}" "descend"  && _internal_fail "Did expect no-descend ($_marks)"
+   sourcetree::marks::contain "${_marks}" "require"  && _internal_fail "Did expect no-require ($_marks)"
+   sourcetree::marks::contain "${_marks}" "update"   && _internal_fail "Did expect no-update ($_marks)"
 
    log_verbose "----- #9 PASSED -----"
 
-   _marks="`sourcetree::nodemarks::add "${_marks}" "descend"`"
+   _marks="`sourcetree::marks::add "${_marks}" "descend"`"
 
-   sourcetree::nodemarks::contain "${_marks}" "build"    || _internal_fail "Did not expect no-build ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "delete"   || _internal_fail "Did not expect no-delete ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "descend"  || _internal_fail "Did not expect no-descend ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "require"  && _internal_fail "Did expect no-require ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "update"   && _internal_fail "Did expect no-update ($_marks)"
+   sourcetree::marks::contain "${_marks}" "build"    || _internal_fail "Did not expect no-build ($_marks)"
+   sourcetree::marks::contain "${_marks}" "delete"   || _internal_fail "Did not expect no-delete ($_marks)"
+   sourcetree::marks::contain "${_marks}" "descend"  || _internal_fail "Did not expect no-descend ($_marks)"
+   sourcetree::marks::contain "${_marks}" "require"  && _internal_fail "Did expect no-require ($_marks)"
+   sourcetree::marks::contain "${_marks}" "update"   && _internal_fail "Did expect no-update ($_marks)"
 
    log_verbose "----- #10 PASSED -----"
 
-   _marks="`sourcetree::nodemarks::add "${_marks}" "require"`"
+   _marks="`sourcetree::marks::add "${_marks}" "require"`"
 
-   sourcetree::nodemarks::contain "${_marks}" "build"   || _internal_fail "Did not expect no-build ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "delete"  || _internal_fail "Did not expect no-delete ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "descend" || _internal_fail "Did not expect no-descend ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "require" || _internal_fail "Did not expect no-require ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "update"  && _internal_fail "Did expect no-update ($_marks)"
+   sourcetree::marks::contain "${_marks}" "build"   || _internal_fail "Did not expect no-build ($_marks)"
+   sourcetree::marks::contain "${_marks}" "delete"  || _internal_fail "Did not expect no-delete ($_marks)"
+   sourcetree::marks::contain "${_marks}" "descend" || _internal_fail "Did not expect no-descend ($_marks)"
+   sourcetree::marks::contain "${_marks}" "require" || _internal_fail "Did not expect no-require ($_marks)"
+   sourcetree::marks::contain "${_marks}" "update"  && _internal_fail "Did expect no-update ($_marks)"
 
    log_verbose "----- #11 PASSED -----"
 
-   _marks="`sourcetree::nodemarks::add "${_marks}" "update"`"
+   _marks="`sourcetree::marks::add "${_marks}" "update"`"
 
-   sourcetree::nodemarks::contain "${_marks}" "build"    || _internal_fail "Did not expect no-build ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "delete"   || _internal_fail "Did not expect no-delete ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "descend"  || _internal_fail "Did not expect no-descend ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "require"  || _internal_fail "Did not expect no-require ($_marks)"
-   sourcetree::nodemarks::contain "${_marks}" "update"   || _internal_fail "Did not expect no-update ($_marks)"
+   sourcetree::marks::contain "${_marks}" "build"    || _internal_fail "Did not expect no-build ($_marks)"
+   sourcetree::marks::contain "${_marks}" "delete"   || _internal_fail "Did not expect no-delete ($_marks)"
+   sourcetree::marks::contain "${_marks}" "descend"  || _internal_fail "Did not expect no-descend ($_marks)"
+   sourcetree::marks::contain "${_marks}" "require"  || _internal_fail "Did not expect no-require ($_marks)"
+   sourcetree::marks::contain "${_marks}" "update"   || _internal_fail "Did not expect no-update ($_marks)"
 
    log_verbose "----- #12 PASSED -----"
 
    local other
 
-   _marks="`sourcetree::nodemarks::remove "" "update"`"
-   _marks="`sourcetree::nodemarks::remove "${_marks}" "delete"`"
+   _marks="`sourcetree::marks::remove "" "update"`"
+   _marks="`sourcetree::marks::remove "${_marks}" "delete"`"
 
-   other="`sourcetree::nodemarks::remove "" "delete"`"
+   other="`sourcetree::marks::remove "" "delete"`"
 
-   sourcetree::nodemarks::intersect "no-delete,no.u" "${other}" || _internal_fail "intersect \"${_marks}\" \"${other}\""
+   sourcetree::marks::intersect "no-delete,no.u" "${other}" || _internal_fail "intersect \"${_marks}\" \"${other}\""
 
    log_verbose "----- #13 PASSED -----"
 
-   _marks="`sourcetree::nodemarks::remove "" "update"`"
-   other="`sourcetree::nodemarks::remove "" "delete"`"
+   _marks="`sourcetree::marks::remove "" "update"`"
+   other="`sourcetree::marks::remove "" "delete"`"
 
-   sourcetree::nodemarks::intersect "${_marks}" "${other}" && _internal_fail "! intersect \"${_marks}\" \"${other}\""
+   sourcetree::marks::intersect "${_marks}" "${other}" && _internal_fail "! intersect \"${_marks}\" \"${other}\""
 
    log_verbose "----- #14 PASSED -----"
 
    _marks="no-c,no-a,no-b"
-   sourcetree::nodemarks::sort "${_marks}"
+   sourcetree::marks::r_sort "${_marks}"
    other="${RVAL}"
 
-   [ "${other}" = "no-a,no-b,no-c" ] || _internal_fail "did not sort \"${other}\""
+   [ "${other}" = "no-a,no-b,no-c" ] || _internal_fail "15: did not sort \"${other}\""
 
    log_verbose "----- #15 PASSED -----"
 
    _marks="no-b,no-c,no-a"
-   sourcetree::nodemarks::sort "${_marks}"
+   sourcetree::marks::r_sort "${_marks}"
    other="${RVAL}"
 
-   [ "${other}" = "no-a,no-b,no-c" ] || _internal_fail "did not sort \"${other}\""
+   [ "${other}" = "no-a,no-b,no-c" ] || _internal_fail "16: did not sort \"${other}\""
 
    log_verbose "----- #16 PASSED -----"
 
    _marks="no-b,no-c,no-a,only-d"
 
-   sourcetree::nodemarks::match "${_marks}" "no-b"       || _internal_fail "Did not match no-b ($_marks)"
-   sourcetree::nodemarks::match "${_marks}" "no-x"       && _internal_fail "Did match no-x ($_marks)"
-   sourcetree::nodemarks::match "${_marks}" "no-[ab]"    || _internal_fail "Did not match no-[ab] ($_marks)"
-   sourcetree::nodemarks::match "${_marks}" "no-*"       || _internal_fail "Did not match no-* ($_marks)"
-   sourcetree::nodemarks::match "${_marks}" "only-*"     || _internal_fail "Did not match only-* ($_marks)"
-   sourcetree::nodemarks::match "${_marks}" "only-c"     && _internal_fail "Did match only-c ($_marks)"
+   sourcetree::marks::match "${_marks}" "no-b"       || _internal_fail "Did not match no-b ($_marks)"
+   sourcetree::marks::match "${_marks}" "no-x"       && _internal_fail "Did match no-x ($_marks)"
+   sourcetree::marks::match "${_marks}" "no-[ab]"    || _internal_fail "Did not match no-[ab] ($_marks)"
+   sourcetree::marks::match "${_marks}" "no-*"       || _internal_fail "Did not match no-* ($_marks)"
+   sourcetree::marks::match "${_marks}" "only-*"     || _internal_fail "Did not match only-* ($_marks)"
+   sourcetree::marks::match "${_marks}" "only-c"     && _internal_fail "Did match only-c ($_marks)"
 
    log_verbose "----- #17 PASSED -----"
 
@@ -189,7 +210,7 @@ init()
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
    MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-marks.sh" || exit 1
 }
 
 

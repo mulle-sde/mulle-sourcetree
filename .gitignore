@@ -23,3 +23,9 @@ var/
 cola/wilted/
 mulle-markdown-preview-*.html
 build-*/
+CMakeFiles/
+CMakeCache.txt
+CPackConfig.cmake
+CPackSourceConfig.cmake
+Makefile
+cmake_install.cmake

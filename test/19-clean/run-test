@@ -98,18 +98,26 @@ setup_demo_repos()
 }
 
 
+dump_n_fail()
+{
+   "${MULLE_SOURCETREE}" list -m
+   tree ..
+
+   _internal_fail "$*"
+}
+
 
 # no update no clean
 run_test1()
 {
    if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
    then
-      _internal_fail "#1 add failed unexpectedly"
+      dump_n_fail "#1 add failed unexpectedly"
    fi
 
-   if ! run_mulle_sourcetree add --nodetype git --marks no-share "file://${repos}/c"
+   if ! run_mulle_sourcetree -s add --nodetype git --marks no-share "file://${repos}/c"
    then
-      _internal_fail "#1 add failed unexpectedly"
+      dump_n_fail "#1 add failed unexpectedly"
    fi
 
    MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
@@ -120,32 +128,32 @@ run_test2()
 {
    if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
    then
-      _internal_fail "#2 add failed unexpectedly"
+      dump_n_fail "#2 add failed unexpectedly"
    fi
 
-   if ! run_mulle_sourcetree add --nodetype git --marks no-share "file://${repos}/c"
+   if ! run_mulle_sourcetree -s add --nodetype git --marks no-share "file://${repos}/c"
    then
-      _internal_fail "#2 add failed unexpectedly"
+      dump_n_fail "#2 add failed unexpectedly"
    fi
 
    if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
    then
-      _internal_fail "#2 update failed unexpectedly"
+      dump_n_fail "#2 update failed unexpectedly"
    fi
 
-   [ -d "shared/a" ] || _internal_fail "#2.1 shared/a should exist"
-   [ -d "shared/b" ] || _internal_fail "#2.1 shared/b should exist"
-   [ -d "c" ]        || _internal_fail "#2.1 c should exist"
+   [ -d "shared/a" ] || dump_n_fail "#2.1 shared/a should exist"
+   [ -d "shared/b" ] || dump_n_fail "#2.1 shared/b should exist"
+   [ -d "c" ]        || dump_n_fail "#2.1 c should exist"
 
    if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
    then
       _internal_fail "clean failed unexpectedly"
    fi
 
-   [ ! -d "shared/a" ] || _internal_fail "#2.2 shared/a should not exist"
-   [ ! -d "shared/b" ] || _internal_fail "#2.2 shared/b should not exist"
-   [ ! -d "c" ]        || _internal_fail "#2.2 shared/c should not exist"
-   [ ! -d "shared" ]   || log_warning   "#2.2 shared could have been removed"
+   [ ! -d "shared/a" ] || dump_n_fail "#2.2 shared/a should not exist"
+   [ ! -d "shared/b" ] || dump_n_fail "#2.2 shared/b should not exist"
+   [ ! -d "c" ]        || dump_n_fail "#2.2 shared/c should not exist"
+   [ ! -d "shared" ]   || log_warning "#2.2 shared could have been removed"
 }
 
 
@@ -156,12 +164,12 @@ run_test3()
 {
    if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
    then
-      _internal_fail "#3 add failed unexpectedly"
+      dump_n_fail "#3 add failed unexpectedly"
    fi
 
-   if ! run_mulle_sourcetree add --nodetype symlink --marks no-share "${repos}/c"
+   if ! run_mulle_sourcetree -s add --nodetype symlink --marks no-share "${repos}/c"
    then
-      _internal_fail "#3 add failed unexpectedly"
+      dump_n_fail "#3 add failed unexpectedly"
    fi
 
    export MULLE_FETCH_SEARCH_PATH="${repos}"
@@ -169,7 +177,7 @@ run_test3()
 
    if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
    then
-      _internal_fail "#3 update failed unexpectedly"
+      dump_n_fail "#3 update failed unexpectedly"
    fi
 
    case "${MULLE_UNAME}" in
@@ -177,30 +185,30 @@ run_test3()
       ;;
 
       *)
-         [ -L "shared/a" ]      || _internal_fail "#3.1 shared/a should exist as a symlink"
-         [ ! -e "shared/b" ]    || _internal_fail "#3.1 shared/b should not exist"
-         [ ! -e "shared/a/b" ]  || _internal_fail "#3.1 shared/a/b should not exist"
-         [ -L "c" ]             || _internal_fail "#3.1 c should exist as a symlink"
+         [ -L "shared/a" ]      || dump_n_fail "#3.1 shared/a should exist as a symlink"
+         [ ! -e "shared/b" ]    || dump_n_fail "#3.1 shared/b should not exist"
+         [ ! -e "shared/a/b" ]  || dump_n_fail "#3.1 shared/a/b should not exist"
+         [ -L "c" ]             || dump_n_fail "#3.1 c should exist as a symlink"
       ;;
    esac
 
    run_mulle_sourcetree status
 
-   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree -vvv clean
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
    then
-      _internal_fail "#3 clean failed unexpectedly"
+      dump_n_fail "#3 clean failed unexpectedly"
    fi
 
    run_mulle_sourcetree status
 
    ls -lR  ${project}
 
-   [ ! -e "shared/a" ] || _internal_fail "#3.2 shared/a should not exist"
-   [ -d "${repos}/a" ] || _internal_fail "#3.2 ${repos}/a should still exist"
-   [ ! -e "c" ]        || _internal_fail "#3.2 c should not exist"
-   [ -d "${repos}/c" ] || _internal_fail "#3.2 ${repos}/c should still exist"
+   [ ! -e "shared/a" ] || dump_n_fail "#3.2 shared/a should not exist"
+   [ -d "${repos}/a" ] || dump_n_fail "#3.2 ${repos}/a should still exist"
+   [ ! -e "c" ]        || dump_n_fail "#3.2 c should not exist"
+   [ -d "${repos}/c" ] || dump_n_fail "#3.2 ${repos}/c should still exist"
 
-   [ ! -d "shared" ]   || log_warning   "3.2 shared could have been removed"
+   [ ! -d "shared" ]   || log_warning "3.2 shared could have been removed"
 }
 
 
@@ -211,31 +219,31 @@ run_test4()
 {
    if ! run_mulle_sourcetree add --nodetype git "file://${repos}/a"
    then
-      _internal_fail "#4 add failed unexpectedly"
+      dump_n_fail "#4 add failed unexpectedly"
    fi
 
-   if ! run_mulle_sourcetree add --nodetype git --marks no-share "file://${repos}/c"
+   if ! run_mulle_sourcetree -s add --nodetype git --marks no-share "file://${repos}/c"
    then
-      _internal_fail "#4 add failed unexpectedly"
+      dump_n_fail "#4 add failed unexpectedly"
    fi
 
    if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
    then
-      _internal_fail "#4 update failed unexpectedly"
+      dump_n_fail "#4 update failed unexpectedly"
    fi
 
-   [ -d "shared/a" ]   || _internal_fail "#4.1 shared/a should exist"
-   [ -d "shared/a/b" ] || _internal_fail "#4.1 shared/a/b should exist"
-   [ -d "c" ]          || _internal_fail "#4.1 shared/c should exist"
+   [ -d "shared/a" ]   || dump_n_fail "#4.1 shared/a should exist"
+   [ -d "shared/a/b" ] || dump_n_fail "#4.1 shared/a/b should exist"
+   [ -d "c" ]          || dump_n_fail "#4.1 shared/c should exist"
 
    if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
    then
-      _internal_fail "#4 clean failed unexpectedly"
+      dump_n_fail "#4 clean failed unexpectedly"
    fi
 
-   [ ! -d "shared/a" ] || _internal_fail "#4.2 shared/a should not exist"
-   [ ! -d "c" ]        || _internal_fail "#4.2 shared/c should not exist"
-   [ ! -d "shared" ]   || log_warning   "#4.2 shared could have been removed"
+   [ ! -d "shared/a" ] || dump_n_fail "#4.2 shared/a should not exist"
+   [ ! -d "c" ]        || dump_n_fail "#4.2 shared/c should not exist"
+   [ ! -d "shared" ]   || log_warning "#4.2 shared could have been removed"
 }
 
 
@@ -244,31 +252,31 @@ run_test5()
 {
    if ! run_mulle_sourcetree add --nodetype git --marks no-delete "file://${repos}/a"
    then
-      _internal_fail "#5 add failed unexpectedly"
+      dump_n_fail "#5 add failed unexpectedly"
    fi
 
-   if ! run_mulle_sourcetree add --nodetype git --marks no-share "file://${repos}/c"
+   if ! run_mulle_sourcetree -s add --nodetype git --marks no-share "file://${repos}/c"
    then
-      _internal_fail "#5 add failed unexpectedly"
+      dump_n_fail "#5 add failed unexpectedly"
    fi
 
    if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
    then
-      _internal_fail "#5 update failed unexpectedly"
+      dump_n_fail "#5 update failed unexpectedly"
    fi
 
-   [ -d "shared/a" ]   || _internal_fail "#5.1 shared/a should exist"
-   [ -d "shared/a/b" ] || _internal_fail "#5.1 shared/a/b should exist"
-   [ -d "c" ]          || _internal_fail "#5.1 shared/c should exist"
+   [ -d "shared/a" ]   || dump_n_fail "#5.1 shared/a should exist"
+   [ -d "shared/a/b" ] || dump_n_fail "#5.1 shared/a/b should exist"
+   [ -d "c" ]          || dump_n_fail "#5.1 shared/c should exist"
 
    if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
    then
       _internal_fail "clean failed unexpectedly"
    fi
 
-   [ -d "shared/a" ]     || _internal_fail "#5.2 shared/a should exist"
-   [ ! -d "shared/a/b" ] || _internal_fail "#5.2 shared/a/b should exist"
-   [ ! -d "c" ]          || _internal_fail "#5.2 shared/c should not exist"
+   [ -d "shared/a" ]     || dump_n_fail "#5.2 shared/a should exist"
+   [ ! -d "shared/a/b" ] || dump_n_fail "#5.2 shared/a/b should exist"
+   [ ! -d "c" ]          || dump_n_fail "#5.2 shared/c should not exist"
 }
 
 

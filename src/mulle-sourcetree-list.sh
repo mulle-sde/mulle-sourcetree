@@ -65,6 +65,7 @@ Usage:
 
    This command only reads config files.
 
+   A '/' indicates the project (which is no dependency)
    A '-' indicates a no-bequeath entry.
    A '*' indicates a duplicate (most often conflicting marks). Use the 
         \`${MULLE_USAGE_NAME} star-search\` command to list duplicates by name.
@@ -99,6 +100,7 @@ Options:
    -ll                      : output full information (except UUID)
    -g                       : output branch/tag information (-G for raw output)
    -m                       : output marks
+   -s                       : output supermarks, supermarks are mark macros
    -r                       : recursive list
    -u                       : output URL information  (use -U for raw output)
    --bequeath               : inherit from nodes marked no-bequeath
@@ -175,7 +177,7 @@ sourcetree::list::r_remove_marks()
    .foreachitem mark in ${marks}
    .do
 
-      if ! sourcetree::nodemarks::contain "${nomarks}" "${mark}"
+      if ! sourcetree::marks::contain "${nomarks}" "${mark}"
       then
          r_comma_concat "${RVAL}" "${mark}"
       fi
@@ -220,8 +222,8 @@ sourcetree::list::walk_callback()
       indent="${WALK_INDENT}"
    fi
 
-   if sourcetree::nodemarks::disable "${_marks}" "bequeath" || \
-      sourcetree::nodemarks::disable "${_marks}" "bequeath-os-${MULLE_UNAME}"
+   if sourcetree::marks::disable "${_marks}" "bequeath" || \
+      sourcetree::marks::disable "${_marks}" "bequeath-os-${MULLE_UNAME}"
    then
       if [ "${OPTION_OUTPUT_INDENT}" != 'NO' ]
       then
@@ -385,21 +387,21 @@ ${C_RESET}   address address-filename address-url filename nodeline
    fi
 
    case "${OPTION_OUTPUT_FORMAT}" in
-      "RAW")
-         r_comma_concat "${RVAL}" "output_raw"
+      'RAW')
+         r_comma_concat "${RVAL}" 'output_raw'
          if [ "${OPTION_OUTPUT_HEADER}" != 'NO' ]
          then
-            r_comma_concat "${RVAL}" "output_header"
+            r_comma_concat "${RVAL}" 'output_header'
          fi
          OPTION_OUTPUT_CMDLINE=""
       ;;
 
-      "CMD")
-         r_comma_concat "${RVAL}" "output_cmd"
+      'CMD')
+         r_comma_concat "${RVAL}" 'output_cmd'
       ;;
 
-      "CMD2")
-         r_comma_concat "${RVAL}" "output_cmd2"
+      'CMD2')
+         r_comma_concat "${RVAL}" 'output_cmd2'
       ;;
 
       *)
@@ -427,26 +429,42 @@ ${C_RESET}   address address-filename address-url filename nodeline
 }
 
 
-sourcetree::list::r_add_format()
+sourcetree::list::r_remove_escaped_linefeed()
 {
-   log_entry "sourcetree::list::r_add_format" "$@"
+   RVAL="${1%\\n}"
+   [ "${a}" != "${RVAL}" ]
+}
 
+# format char
+sourcetree::list::r_append_format_char_if_needed()
+{
    case ";$1;" in
       *\;$2\;*)
          RVAL="$1"
-      ;;
-
-      *\\n\;)
-         # remove escaped linefeed
-         # append format character
-         RVAL="${1%??};$2\\n"
-      ;;
-
-      *)
-         RVAL="$1;$2"
+         return
       ;;
    esac
+
+   RVAL="$1;$2"
+   if sourcetree::list::r_remove_escaped_linefeed "$1"
+   then
+      RVAL="${RVAL}\\n"
+   fi
 }
+
+# also format char
+sourcetree::list::r_prepend_format_char_if_needed()
+{
+   case ";$1;" in
+      *\;$2\;*)
+         RVAL="$1"
+         return
+      ;;
+   esac
+
+   RVAL="$2;$1"
+}
+
 
 
 sourcetree::list::warn_if_sync_outstanding()
@@ -523,6 +541,17 @@ sourcetree::list::main()
             OPTION_CONFIG_FILE="$1"
          ;;
 
+         --dedupe-mode)
+            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
+            shift
+
+            OPTION_DEDUPE_MODE="$1"
+         ;;
+
+         --no-dedupe)
+            OPTION_DEDUPE_MODE="none"
+         ;;
+
          --marks)
             [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
@@ -550,18 +579,7 @@ sourcetree::list::main()
             OPTION_MARKS_QUALIFIER="$1"
          ;;
 
-         --dedupe-mode)
-            [ $# -eq 1 ] && sourcetree::walk::usage "Missing argument to \"$1\""
-            shift
-
-            OPTION_DEDUPE_MODE="$1"
-         ;;
-
-         --no-dedupe)
-            OPTION_DEDUPE_MODE="none"
-         ;;
-
-         --format)
+         -f|--format)
             [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
 
@@ -613,9 +631,10 @@ sourcetree::list::main()
          -_|--output-uuid)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
-               OPTION_FORMAT="%_;%a\\n" #prepend
+               OPTION_FORMAT='%_;%a\n' #prepend
             else
-               OPTION_FORMAT="%_;${OPTION_FORMAT}"
+               sourcetree::list::r_prepend_format_char_if_needed "${OPTION_FORMAT}" '%_'
+               OPTION_FORMAT="${RVAL}"
             fi
             OPTION_OUTPUT_UUID='YES' # needed for -ll
          ;;
@@ -623,10 +642,10 @@ sourcetree::list::main()
          -g|--output-git)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
-               OPTION_FORMAT="%a;%t!;%b!\\n"
+               OPTION_FORMAT='%a;%t!;%b!\n'
             else
-               sourcetree::list::r_add_format "${OPTION_FORMAT}" "%t!"
-               sourcetree::list::r_add_format "${RVAL}" "%b!"
+               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%t!'
+               sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%b!'
                OPTION_FORMAT="${RVAL}"
             fi
          ;;
@@ -634,10 +653,22 @@ sourcetree::list::main()
          -G)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
-               OPTION_FORMAT="%a;%t;%b\\n"
+               OPTION_FORMAT='%a;%t;%b\n'
             else
-               sourcetree::list::r_add_format "${OPTION_FORMAT}" "%t"
-               sourcetree::list::r_add_format "${RVAL}" "%b"
+               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%t'
+               sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%b'
+               OPTION_FORMAT="${RVAL}"
+            fi
+         ;;
+
+         -i|--output-index)
+            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+            then
+               # <title>,<dashes>,<key>
+               OPTION_FORMAT='%v={NODE_INDEX,#,-};%a\n'
+            else
+               sourcetree::list::r_prepend_format_char_if_needed "${OPTION_FORMAT}" \
+                                                                 '%v={NODE_INDEX,#,-}'
                OPTION_FORMAT="${RVAL}"
             fi
          ;;
@@ -645,10 +676,10 @@ sourcetree::list::main()
          -l|--output-more)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
-               OPTION_FORMAT="%a;%n;%m\\n"
+               OPTION_FORMAT='%a;%n;%s\n'
             else
-               sourcetree::list::r_add_format "${OPTION_FORMAT}" "%n"
-               sourcetree::list::r_add_format "${RVAL}" "%m"
+               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%n'
+               sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%s'
                OPTION_FORMAT="${RVAL}"
             fi
          ;;
@@ -656,29 +687,31 @@ sourcetree::list::main()
          -m|--output-marks)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
-               OPTION_FORMAT="%a;%m\\n"
+               OPTION_FORMAT='%a;%m\n'
             else
-               sourcetree::list::r_add_format "${RVAL}" "%m"
+               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%m'
                OPTION_FORMAT="${RVAL}"
             fi
+            OPTION_NO_OUTPUT_MARKS=NO
          ;;
 
          -r)
             FLAG_SOURCETREE_MODE="share"
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
-               OPTION_FORMAT="%a;%t;%b\\n"
+               OPTION_FORMAT='%a;%t;%b\n'
             fi
-            sourcetree::list::r_add_format "%v={WALK_DEPENDENCY}" "${OPTION_FORMAT}"
+            sourcetree::list::r_prepend_format_char_if_needed "${OPTION_FORMAT}" \
+                                                              '%v={WALK_DEPENDENCY}'
             OPTION_FORMAT="${RVAL}"
          ;;
 
-         -m)
+         -s|--output-smartmarks)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
-               OPTION_FORMAT="%a;%m\\n"
+               OPTION_FORMAT='%a;%s\n'
             else
-               sourcetree::list::r_add_format "${OPTION_FORMAT}" "%m"
+               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%s'
                OPTION_FORMAT="${RVAL}"
             fi
             OPTION_NO_OUTPUT_MARKS=NO
@@ -687,10 +720,11 @@ sourcetree::list::main()
          -u)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
-               OPTION_FORMAT="%a;%u!;%f\\n"
+               OPTION_FORMAT='%a;%u!;%f\n'
             else
-               sourcetree::list::r_add_format "${OPTION_FORMAT}" "%u!"
-               sourcetree::list::r_add_format "${RVAL}" "%f"
+               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" \
+                                                               '%u!'
+               sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%f'
                OPTION_FORMAT="${RVAL}"
             fi
          ;;
@@ -700,10 +734,16 @@ sourcetree::list::main()
             then
                OPTION_FORMAT="%a;%u;%f\\n"
             else
-               sourcetree::list::r_add_format "${OPTION_FORMAT}" "%u"
-               sourcetree::list::r_add_format "${RVAL}" "%f"
+               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%u'
+               sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%f'
                OPTION_FORMAT="${RVAL}"
             fi
+         ;;
+
+         --output-node)
+            OPTION_FORCE_FORMAT='%v={WALK_NODE}\n'
+            OPTION_OUTPUT_HEADER='NO'
+            OPTION_OUTPUT_FORMAT='RAW'
          ;;
 
          -ll|--output-full)
@@ -888,11 +928,7 @@ sourcetree::list::initialize()
 {
    log_entry "sourcetree::list::initialize"
 
-   if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-walk.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
-   fi
+   include "sourcetree::walk"
 }
 
 

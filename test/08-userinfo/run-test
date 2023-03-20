@@ -152,7 +152,7 @@ main()
 
    cd "${directory}"
 
-   if ! run_mulle_sourcetree -N add  "a"
+   if ! run_mulle_sourcetree -s -N add  "a"
    then
       _internal_fail "add failed unexpectedly"
    fi

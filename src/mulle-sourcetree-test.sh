@@ -63,16 +63,12 @@ sourcetree::test::main()
 
    [ $# -ne 2 ] && sourcetree::test::usage
 
-   if [ -z "${MULLE_SOURCETREE_NODEMARKS_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-nodemarks.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"|| exit 1
-   fi
+   include "sourcetree::marks"
 
-   sourcetree::nodemarks::assert_sane "$1"
-   sourcetree::nodemarks::assert_sane_nodemark  "$2"
+   sourcetree::marks::assert_sane "$1"
+   sourcetree::marks::assert_sane_nodemark  "$2"
 
-   if sourcetree::nodemarks::enable "$1" "$2"
+   if sourcetree::marks::enable "$1" "$2"
    then
       log_info 'YES'
       return 0

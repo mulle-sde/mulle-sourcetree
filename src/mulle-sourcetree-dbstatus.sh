@@ -55,15 +55,13 @@ sourcetree::dbstatus::main()
 {
    log_entry "sourcetree::dbstatus::main" "$@"
 
-   [ "$#" -eq 0 ] || sourcetree::status::usage
+   [ "$#" -eq 0 ] || sourcetree::dbstatus::usage
 
    include "sourcetree::cfg"
    include "sourcetree::db"
 
    local configfile
 
-   include "sourcetree::cfg"
-   
    sourcetree::cfg::r_configfile_for_read "${SOURCETREE_START}"
    configfile="${RVAL}"
 
@@ -103,7 +101,7 @@ sourcetree::dbstatus::main()
 
       # only complain if there are dependencies in configfile
       # how does mulle-sourcetree know about this though ?
-      dependencies="`sourcetree::cfg::_read "${configfile}" | grep -E -v 'no-dependency' `"
+      dependencies="`sourcetree::cfg::_read "${configfile}" | grep -E -v 'no-share|no-dependency' `"
       if [ ! -z "${dependencies}" ]
       then
          log_info "No stash here"
@@ -112,5 +110,6 @@ sourcetree::dbstatus::main()
    fi
 
    log_info "Is up-to-date"
+   return 0
 }
 

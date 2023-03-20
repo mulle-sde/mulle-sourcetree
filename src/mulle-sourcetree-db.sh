@@ -37,7 +37,7 @@ MULLE_SOURCETREE_DB_SH='included'
 #
 sourcetree::db::_nodeline()
 {
-   head -1
+   head -1 | sed -e 's/^[^;]*\;//'
 }
 
 
@@ -50,6 +50,12 @@ sourcetree::db::_owner()
 sourcetree::db::_filename()
 {
    sed -n '3p'
+}
+
+
+sourcetree::db::_index()
+{
+   head -1 | sed -e 's/^\([^;]\)*\;.*/\1/'
 }
 
 
@@ -242,10 +248,12 @@ sourcetree::db::memorize()
    local owner="$4"
    local filename="$5"
    local evaledurl="$6"
+   local index="$7"
 
    [ -z "${nodeline}" ] && _internal_fail "nodeline is missing"
    [ -z "${uuid}" ]     && _internal_fail "uuid is missing"
    [ -z "${filename}" ] && _internal_fail "filename is missing"
+   [ -z "${index}" ]    && _internal_fail "index is missing"
 
 #   case "${owner}" in
 #      .*/)
@@ -275,9 +283,10 @@ sourcetree::db::memorize()
    mkdir_if_missing "${_databasedir}"
    dbfilepath="${_databasedir}/${uuid}"
 
-   content="${nodeline}
+   content="${index};${nodeline}
 ${owner}
 ${filename}
+${index}
 ${evaledurl}"
 
    log_debug "Remembering uuid \"${uuid}\" ($_databasedir)"
@@ -487,7 +496,11 @@ ${C_MAGENTA}${C_BOLD}${filename#"${MULLE_USER_PWD}/"}${C_INFO} in grave \
 
 
 #
-# the owner is unused it seems
+# local _nodeline
+# local _owner
+# local _filename
+# local _index
+# local _evaledurl
 #
 sourcetree::db::__parse_dbentry()
 {
@@ -500,18 +513,22 @@ sourcetree::db::__parse_dbentry()
       return 1
    fi
 
-   while read -r nodeline
+   while read -r _nodeline
    do
-      read -r owner
-      read -r filename
-      read -r evaledurl
+      read -r _owner
+      read -r _filename
+      read -r _evaledurl
       break
    done <<< "${dbentry}"
 
-   log_setting "nodeline  : ${nodeline}"
-   log_setting "owner     : ${owner}"
-   log_setting "filename  : ${filename}"
-   log_setting "evaledurl : ${evaledurl}"
+   _index="${_nodeline%%;*}"
+   _nodeline="${_nodeline#*;}"
+
+   log_setting "nodeline  : ${_nodeline}"
+   log_setting "owner     : ${_owner}"
+   log_setting "filename  : ${_filename}"
+   log_setting "index     : ${_index}"
+   log_setting "evaledurl : ${_evaledurl}"
 }
 
 
@@ -643,19 +660,19 @@ sourcetree::db::fetch_all_nodelines()
 
    sourcetree::db::__common_databasedir "$1"
 
-   local i
+   # nodelines have a prefixed sort index, that we use for the proper
+   # order but then strip it off
+   (
+      local i
 
-#   if shopt -poq noglob
-#   then
-#      _internal_fail "noglob should be off"
-#   fi
-
-   shell_enable_nullglob
-   for i in "${_databasedir}"/*
-   do
-      head -1 "${i}" || _internal_fail "malformed file $i"
-   done
-   shell_disable_nullglob
+      shell_enable_nullglob
+      for i in "${_databasedir}"/*
+      do
+         head -1 "${i}" || _internal_fail "malformed file $i"
+      done
+   ) \
+   | sort -d -t';' -k 1,1 \
+   | sed -e 's/^[^;]*\;//'
 }
 
 
@@ -681,7 +698,7 @@ sourcetree::db::fetch_uuid_for_address()
 
    r_escaped_grep_pattern "${address}"
    pattern="${RVAL}"
-   rexekutor grep -E "^${pattern};" "${_databasedir}"/* | cut -s '-d;' -f 4
+   rexekutor grep -E "^[^;]*;${pattern};" "${_databasedir}"/* | cut -s '-d;' -f 5
 }
 
 
@@ -1044,6 +1061,7 @@ sourcetree::db::is_ready()
       return 2
    fi
 
+   log_debug "database is ready"
    return 0
 }
 
@@ -1339,16 +1357,8 @@ sourcetree::db::reset()
       return 0
    fi
 
-   if [ -z "${MULLE_PATH_SH}" ]
-   then
-      # shellcheck source=../../mulle-bashfunctions/src/mulle-path.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh" || exit 1
-   fi
-   if [ -z "${MULLE_FILE_SH}" ]
-   then
-      # shellcheck source=../../mulle-bashfunctions/src/mulle-fike.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-file.sh" || exit 1
-   fi
+   include "path"
+   include "file"
 
    rmdir_safer "${_databasedir}"
 }
@@ -1460,7 +1470,8 @@ sourcetree::db::zombify_nodes()
    shell_enable_nullglob
    for filename in "${_databasedir}"/*
    do
-      if [ ! -z "${owner}" ] && [ "`sourcetree::db::_owner < "${filename}"`" != "${owner}" ]
+      if [ ! -z "${owner}" ] && \
+         [ "`sourcetree::db::_owner < "${filename}"`" != "${owner}" ]
       then
          continue
       fi
@@ -1536,10 +1547,7 @@ sourcetree::db::do_bury_zombiefile()
    local database="$1"
    local zombiefile="$2"
 
-   local nodeline
-   local owner
    local entry
-   local filename
 
    if ! entry="`cat "${zombiefile}"`"
    then
@@ -1547,8 +1555,17 @@ sourcetree::db::do_bury_zombiefile()
       return
    fi
 
-   sourcetree::db::__parse_dbentry "${entry}"
-   sourcetree::db::safe_bury_dbentry "${database}" "${nodeline}" "${owner}" "${filename}" || return 1
+   local _nodeline
+   local _owner
+   local _filename
+   local _index
+   local _evaledurl
+
+   sourcetree::db::__parse_dbentry "${entry}" &&
+   sourcetree::db::safe_bury_dbentry "${database}" \
+                                     "${_nodeline}" \
+                                     "${_owner}" \
+                                     "${_filename}" || return 1
    remove_file_if_present "${zombiefile}"
 
    :

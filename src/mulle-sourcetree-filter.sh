@@ -84,10 +84,10 @@ sourcetree::filter::main()
 
    [ $# -eq 2 ] || sourcetree::filter::usage
 
-   # shellcheck source=src/mulle-sourcetree-fix.sh
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodemarks.sh"
+   # shellcheck source=src/mulle-sourcetree-marks.sh
+   include "sourcetree::marks"
 
-   if sourcetree::nodemarks::filter_with_qualifier "$@"
+   if sourcetree::marks::filter_with_qualifier "$@"
    then
       echo 'YES'
    else
