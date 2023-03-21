@@ -130,8 +130,8 @@ EOF
                                   ${options} \
                                   ${ignorelist} \
                                   "$@" \
-                                  'echo "\"${WALK_PARENT}\" -> \"${NODE_ADDRESS}\"
-\"${NODE_ADDRESS}\" [ href=\"`mulle-domain '"${MULLE_TECHNICAL_FLAGS}"' homepage-url \"${NODE_EVALED_URL:-https://unknown.com}\"`\" ]"'
+                                  'echo "\"${WALK_PARENT}\" -> \"${NODE_NAME}\"
+\"${NODE_NAME}\" [ href=\"`mulle-domain '"${MULLE_TECHNICAL_FLAGS}"' homepage-url \"${NODE_EVALED_URL:-https://unknown.com}\"`\" ]"'
       else
          WALK_PARENT="${WALK_PARENT}" \
             rexekutor mulle-sourcetree \
@@ -145,8 +145,8 @@ EOF
                                   --eval-node \
                                   --max-walk-level ${level} \
                                   "$@" \
-                                  'eval  ; echo "\"${WALK_PARENT}\" -> \"${NODE_ADDRESS}\"
-\"${NODE_ADDRESS}\" [ href=\"`mulle-domain '"${MULLE_TECHNICAL_FLAGS}"' homepage-url \"${NODE_EVALED_URL:-https://unknown.com}\"`\" ]"'
+                                  'eval  ; echo "\"${WALK_PARENT}\" -> \"${NODE_NAME}\"
+\"${NODE_NAME}\" [ href=\"`mulle-domain '"${MULLE_TECHNICAL_FLAGS}"' homepage-url \"${NODE_EVALED_URL:-https://unknown.com}\"`\" ]"'
       fi
 
    ) \

@@ -70,12 +70,16 @@ sourcetree::callback::call()
    esac
 
 
+   r_basename "${_address}"
+   NODE_NAME="${RVAL}"
+
 #   local owner
 #
 #   r_basename "${datasource#/}"
 #   owner="${RVAL:-.}"
 
    log_setting "NODE_ADDRESS         : \"${_address}\""
+   log_setting "NODE_NAME            : \"${NODE_NAME}\""
    log_setting "NODE_BRANCH          : \"${_branch}\""
    log_setting "NODE_FETCHOPTIONS    : \"${_fetchoptions}\""
    log_setting "NODE_FILENAME        : \"${_filename}\""
@@ -164,6 +168,7 @@ sourcetree::callback::call()
    NODE_FETCHOPTIONS="${_fetchoptions}" \
    NODE_FILENAME="${_filename}" \
    NODE_INDEX="${NODE_INDEX}" \
+   NODE_NAME="${NODE_NAME}" \
    NODE_MARKS="${_marks}" \
    NODE_RAW_USERINFO="${_raw_userinfo}" \
    NODE_TAG="${_tag}" \
