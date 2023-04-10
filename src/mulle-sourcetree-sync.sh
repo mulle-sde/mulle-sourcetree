@@ -54,7 +54,6 @@ Options:
    --parallel                 : fetch dependencies in parallel (default)
    --quick-check              : if present in filesystem assume node is OK
    --no-fix                   : do not write ${SOURCETREE_FIX_FILENAME} files
-   --share                    : create database in shared configuration
    --override-branch <branch> : temporary override of the _branch for all nodes
 
    The following options are passed through to ${MULLE_FETCH:-mulle-fetch}.
@@ -88,7 +87,7 @@ sourcetree::sync::__get_db_descendinfo()
 
    _filename="`sourcetree::db::fetch_filename_for_uuid "${database}" "${uuid}" `"
 
-   [ -z "${_filename}" ] && _internal_fail "corrupted db, better clean it"
+   [ -z "${_filename}" ] && _internal_fail "corrupted db ${database} for ${uuid}, better clean it (${MULLE_VIRTUAL_ROOT:-$PWD})"
 
    _config="${_filename#${MULLE_VIRTUAL_ROOT}}"
    _config="${_config}/"

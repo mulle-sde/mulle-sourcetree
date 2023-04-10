@@ -41,7 +41,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_CMAKE_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="1.2.0"
+MULLE_EXECUTABLE_VERSION="1.3.0"
 
 
 usage()
@@ -429,8 +429,7 @@ ${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-depen
 ${indent}      #
 ${indent}      set( _TMP_${identifier}_DIR "\${_TMP_${identifier}_ROOT}/${headerdir_name}/cmake")
 ${indent}      # use explicit path to avoid "surprises"
-${indent}      if( EXISTS "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake")
-${indent}         unset( ${identifier}_DEFINITIONS)
+${indent}      if( IS_DIRECTORY "\${_TMP_${identifier}_DIR}")
 ${indent}         list( INSERT CMAKE_MODULE_PATH 0 "\${_TMP_${identifier}_DIR}")
 ${indent}         # we only want top level INHERIT_OBJC_LOADERS, so disable them
 ${indent}         if( NOT NO_INHERIT_OBJC_LOADERS)
@@ -439,15 +438,17 @@ ${indent}         endif()
 ${indent}         list( APPEND _TMP_INHERIT_OBJC_LOADERS \${NO_INHERIT_OBJC_LOADERS})
 ${indent}         set( NO_INHERIT_OBJC_LOADERS ON)
 ${indent}         #
-${indent}         include( "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake")
+${indent}         include( "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake" OPTIONAL)
 ${indent}         #
 ${indent}         list( GET _TMP_INHERIT_OBJC_LOADERS -1 NO_INHERIT_OBJC_LOADERS)
 ${indent}         list( REMOVE_AT _TMP_INHERIT_OBJC_LOADERS -1)
-${indent}         #
 ${indent}         list( REMOVE_ITEM CMAKE_MODULE_PATH "\${_TMP_${identifier}_DIR}")
+${indent}         #
+${indent}         unset( ${identifier}_DEFINITIONS)
+${indent}         include( "\${_TMP_${identifier}_DIR}/Definitions.cmake" OPTIONAL)
 ${indent}         list( APPEND INHERITED_DEFINITIONS \${${identifier}_DEFINITIONS})
 ${indent}      else()
-${indent}         message( STATUS "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake not found")
+${indent}         message( STATUS "\${_TMP_${identifier}_DIR} not found")
 ${indent}      endif()
 EOF
             ;;
@@ -455,14 +456,13 @@ EOF
             *)
                cat <<EOF
 ${indent}      #
-${indent}      # Search for "DependenciesAndLibraries.cmake" to include.
+${indent}      # Search for "Definitions.cmake" and "DependenciesAndLibraries.cmake" to include.
 ${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-dependency\`
 ${indent}      #
 ${indent}      foreach( _TMP_${identifier}_NAME ${quoted_names})
 ${indent}         set( _TMP_${identifier}_DIR "\${_TMP_${identifier}_ROOT}/${headerdir_name}/\${_TMP_${identifier}_NAME}/cmake")
 ${indent}         # use explicit path to avoid "surprises"
-${indent}         if( EXISTS "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake")
-${indent}            unset( ${identifier}_DEFINITIONS)
+${indent}         if( IS_DIRECTORY "\${_TMP_${identifier}_DIR}")
 ${indent}            list( INSERT CMAKE_MODULE_PATH 0 "\${_TMP_${identifier}_DIR}")
 EOF
 
@@ -480,7 +480,7 @@ EOF
                fi
                cat <<EOF
 ${indent}            #
-${indent}            include( "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake")
+${indent}            include( "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake" OPTIONAL)
 ${indent}            #
 EOF
                if [ "${emit_objc_loader}" = 'YES' ]
@@ -491,12 +491,14 @@ ${indent}            list( REMOVE_AT _TMP_INHERIT_OBJC_LOADERS -1)
 EOF
                fi
                cat <<EOF
-${indent}            #
 ${indent}            list( REMOVE_ITEM CMAKE_MODULE_PATH "\${_TMP_${identifier}_DIR}")
+${indent}            #
+${indent}            unset( ${identifier}_DEFINITIONS)
+${indent}            include( "\${_TMP_${identifier}_DIR}/Definitions.cmake" OPTIONAL)
 ${indent}            list( APPEND INHERITED_DEFINITIONS \${${identifier}_DEFINITIONS})
 ${indent}            break()
 ${indent}         else()
-${indent}            message( STATUS "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake not found")
+${indent}            message( STATUS "\${_TMP_${identifier}_DIR} not found")
 ${indent}         endif()
 ${indent}      endforeach()
 EOF
@@ -553,6 +555,57 @@ EOF
 }
 
 
+_emit_find_library_names()
+{
+   local libraries="$1"
+   local indent="$2"
+
+   local library
+
+   .foreachline library in ${libraries}
+   .do
+      printf "%s%s\n" "${indent}" "${library}"
+   .done
+}
+
+
+_emit_find_library_command()
+{
+   local key="$1"
+   local libraries="$2"
+   local findoptions="$3"
+   local indent="$4"
+
+   printf "%s%s\n" "${indent}" "find_library( ${key} NAMES"
+   _emit_find_library_names "${libraries}" "${indent}   "
+   if [ ! -z "${findoptions}" ]
+   then
+      printf "%s%s\n" "${indent}   " "${findoptions}"
+   fi
+   printf "%s%s\n" "${indent}" ")"
+}
+
+_emit_find_library()
+{
+   local key="$1"
+   local libraries="$2"
+   local findoptions="$3"
+   local findoptionskey="$4"
+   local indent="$5"
+
+   if [ ! -z "${findoptions}" ]
+   then
+      printf "%s%s\n" "${indent}" "if( ${findoptionskey})"
+      _emit_find_library_command "${key}" "${libraries}" "${findoptions}" "${indent}   "
+      printf "%s%s\n" "${indent}" "else()"
+      _emit_find_library_command "${key}" "${libraries}" "" "${indent}   "
+      printf "%s%s\n" "${indent}" "endif()"
+   else
+      _emit_find_library_command "${key}" "${libraries}" "" "${indent}"
+   fi
+}
+
+
 #
 # no-require-link and no-require, means that find_library may fail and it's OK
 # no-cmake-add is hack for subprojects, all the "logic" of a dependency
@@ -566,6 +619,7 @@ _emit_cmake_find_library()
 
    local preference="$1"; shift
    local findoptions="$1"; shift
+   local findoptionskey="$1"; shift
 
    local names="$1"
    local address="$2"
@@ -623,7 +677,7 @@ _emit_cmake_find_library()
             libraries="${RVAL}"
 
             printf -v "${library_key}" "%s" "${libraries}"
-            break
+            .break
          ;;
       esac
 
@@ -653,20 +707,20 @@ _emit_cmake_find_library()
 
       case "${preference}" in
          'static')
-            r_concat "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            r_add_line "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
             libraries="${RVAL}"
 
             # fallback to non CMAKE_DEBUG_POSTFIX
-            r_concat "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
+            r_add_line "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
             libraries="${RVAL}"
          ;;
 
          'shared')
-            r_concat "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
+            r_add_line "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
             libraries="${RVAL}"
 
             # fallback to non CMAKE_DEBUG_POSTFIX
-            r_concat "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${name}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
+            r_add_line "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${name}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
             libraries="${RVAL}"
          ;;
       esac
@@ -677,7 +731,7 @@ _emit_cmake_find_library()
          ;;
 
          *)
-            r_concat "${libraries}" "${name}"
+            r_add_line "${libraries}" "${name}"
             libraries="${RVAL}"
          ;;
       esac
@@ -737,9 +791,11 @@ EOF
    # if ir's just the default emit a simple line
    if [ "${types}" = "Release" ]
    then
-      cat  <<EOF
-${indent}   find_library( ${key} NAMES ${Release_libraries}${findoptions})
-EOF
+      _emit_find_library "${key}" \
+                         "${Release_libraries}" \
+                         "${findoptions}" \
+                         "${findoptionskey}" \
+                         "${indent}   "
    else
       local clause
       #
@@ -762,7 +818,13 @@ EOF
 
             cat  <<EOF
 ${indent}   if(${clause} "\${CMAKE_BUILD_TYPE}" STREQUAL "${type}")
-${indent}      find_library( ${identifier}_LIBRARY NAMES ${libraries}${findoptions})
+EOF
+            _emit_find_library "${key}" \
+                               "${libraries}" \
+                               "${findoptions}" \
+                               "${findoptionskey}" \
+                               "${indent}      "
+            cat  <<EOF
 ${indent}   endif()
 EOF
             clause=" NOT ${key} AND"
@@ -773,7 +835,13 @@ EOF
       # fallback Reelase
       cat  <<EOF
 ${indent}   if( NOT ${key})
-${indent}      find_library( ${key} NAMES ${Release_libraries}${findoptions})
+EOF
+            _emit_find_library "${key}" \
+                               "${Release_libraries}" \
+                               "${findoptions}" \
+                               "${findoptionskey}" \
+                               "${indent}      "
+      cat  <<EOF
 ${indent}   endif()
 EOF
    fi
@@ -861,7 +929,7 @@ _emit_cmake_library()
 {
    log_entry "_emit_cmake_library" "$@"
 
-   _emit_cmake_find_library "any" "" "$@"
+   _emit_cmake_find_library "any" "" "" "$@"
 }
 
 
@@ -877,16 +945,18 @@ _emit_cmake_dependency()
    local indent="$7"
 
    local findoptions
-
+   local findoptionskey
    #
    # w/o NO_SYSTEM_ENVIRONMENT_PATH, cmake picks up libraries from
    # /usr/local/lib
    #
-   findoptions=" NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH"
+   findoptions="NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH"
+   findoptionskey="DEPENDENCY_IGNORE_SYSTEM_LIBARIES"
 
    case ",${marks}," in
       *,no-cmake-suppress-system-path,*)
          findoptions=""
+         findoptionskey=""
       ;;
    esac
 
@@ -896,7 +966,7 @@ _emit_cmake_dependency()
 #${indent}      NO_DEFAULT_PATH
 #${indent}   )"
 
-   _emit_cmake_find_library "static" "${findoptions}" "$@"
+   _emit_cmake_find_library "static" "${findoptions}" "${findoptionskey}" "$@"
 }
 
 

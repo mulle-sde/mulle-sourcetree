@@ -445,10 +445,13 @@ sourcetree::list::r_append_format_char_if_needed()
       ;;
    esac
 
-   RVAL="$1;$2"
+   local lf
+
    if sourcetree::list::r_remove_escaped_linefeed "$1"
    then
-      RVAL="${RVAL}\\n"
+      RVAL="${RVAL};$2\n"
+   else
+      RVAL="$1;$2"
    fi
 }
 
@@ -717,13 +720,12 @@ sourcetree::list::main()
             OPTION_NO_OUTPUT_MARKS=NO
          ;;
 
-         -u)
+         -u|--output-url)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
                OPTION_FORMAT='%a;%u!;%f\n'
             else
-               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" \
-                                                               '%u!'
+               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%u!'
                sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%f'
                OPTION_FORMAT="${RVAL}"
             fi

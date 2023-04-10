@@ -44,7 +44,7 @@ Usage:
 
 Returns:
     0 : yes
-    1 : error
+    1 : no sourcetree
     2 : no
 EOF
   exit 1
@@ -68,7 +68,7 @@ sourcetree::dbstatus::main()
    local _database
    local _databasedir
 
-   sourcetree::db::__common_databasedir "/"
+   sourcetree::db::__common_databasedir "${SOURCETREE_START}"
 
    dbdonefile="${_databasedir}/.db_done"
 
@@ -97,15 +97,18 @@ sourcetree::dbstatus::main()
 
    if rexekutor [ ! -e "${MULLE_SOURCETREE_STASH_DIR}" ]
    then
-      local dependencies
-
-      # only complain if there are dependencies in configfile
-      # how does mulle-sourcetree know about this though ?
-      dependencies="`sourcetree::cfg::_read "${configfile}" | grep -E -v 'no-share|no-dependency' `"
-      if [ ! -z "${dependencies}" ]
+      if [ "`sourcetree::db::get_dbtype "${SOURCETREE_START}"`" = "share" ]
       then
-         log_info "No stash here"
-         return 2
+         local dependencies
+
+         # only complain if there are dependencies in configfile
+         # how does mulle-sourcetree know about this though ?
+         dependencies="`sourcetree::cfg::_read "${configfile}" | grep -E -v 'no-share|no-dependency' `"
+         if [ ! -z "${dependencies}" ]
+         then
+            log_info "No stash here"
+            return 2
+         fi
       fi
    fi
 

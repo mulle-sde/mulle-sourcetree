@@ -228,7 +228,7 @@ The output of mulle-sourcetree-to-cmake is also self documenting!
 | `all-load`                   | Will be linked "wholesale" for Objective-C.                 |
 | `cmake-add`                  | Add to the list of libraries to link.                       |
 | `cmake-all-load`             | A library that needs all symbols (ObjC).                    |
-| `cmake-dependency`           | Inherit foreign `DependenciesAndLibraries.cmake`.           |
+| `cmake-dependency`           | Inherit foreign `Definitions.cmake` and `DependenciesAndLibraries.cmake`.           |
 | `cmakeinherit`               | Old spelling of `cmake-inherit`.                            |
 | `cmake-inherit`              | Participate in cmake dependency inclusion scheme.           |
 | `cmake-intermediate-link`    | Prefixes generated container name with `STARTUP_`           |
