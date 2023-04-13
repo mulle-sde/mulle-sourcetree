@@ -554,6 +554,14 @@ broken symlink \"${newfilename}\". Clobbering it"
          # 3. it's a shared repo, that's been already placed there. Though
          #    at this point in time, that should have already been checked
          #    against
+         if sourcetree::marks::disable "${newmarks}" "clobber"
+         then
+            _log_fluff "Node is new but \"${newfilename#"${MULLE_USER_PWD}/"}\" exists. \
+As node is marked \"no-clobber\" just remember it."
+            ACTIONS="remember"
+            RVAL="${ACTIONS}"
+            return
+         fi
 
          if sourcetree::marks::disable "${newmarks}" "delete"
          then
