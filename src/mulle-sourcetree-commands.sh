@@ -1222,6 +1222,7 @@ sourcetree::commands::set()
 
    if ! sourcetree::commands::r_get_nodeline_by_input "${input}"
    then
+      fail "Node \"${input}\" does not exist"
       return 2
    fi
    oldnodeline="${RVAL}"

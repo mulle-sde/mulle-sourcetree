@@ -287,7 +287,7 @@ MULLE_SOURCETREE_RESOLVE_TAG is NO"
    MULLE_TAG_OR_BRANCH="${_evaledtag:-${_evaledbranch}}" \
    MULLE_URL="${_evaledurl}" \
       r_expanded_string "${_fetchoptions}"
-      _evaledfetchoptions="${RVAL}"
+   _evaledfetchoptions="${RVAL}"
 
    local cmdoptions
 
@@ -303,7 +303,7 @@ MULLE_SOURCETREE_RESOLVE_TAG is NO"
    fi
    if [ ! -z "${_evaledfetchoptions}" ]
    then
-      r_concat "${cmdoptions}" "--cmdoptions '${_evaledfetchoptions}'"
+      r_concat "${cmdoptions}" "--options '${_evaledfetchoptions}'"
       cmdoptions="${RVAL}"
    fi
 

@@ -384,7 +384,7 @@ sourcetree::nodeline::r_find_by_uuid()
 
 sourcetree::nodeline::r_find_by_index()
 {
-   log_entry "sourcetree::cfg::r_find_by_index" "..." "$2"
+   log_entry "sourcetree::nodeline::r_find_by_index" "..." "$2"
 
    local nodelines="$1"
    local index="$2"

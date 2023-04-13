@@ -245,7 +245,7 @@ sourcetree::action::_do_fetch_operation()
    local tag="$4"            # tag to checkout of the node
    local nodetype="$5"       # nodetype to use for this node
    local marks="$6"          # marks on node
-   local fetchoption="$7"    # options to use on nodetype
+   local fetchoptions="$7"    # options to use on nodetype
    local raw_userinfo="$8"   # unused
    local uuid="$9"           # uuid of the node
 
@@ -378,7 +378,7 @@ sourcetree::action::do_operation()
    local branch="$4"         # branch of the node
    local tag="$5"            # tag to checkout of the node
    local nodetype="$6"       # nodetype to use for this node
-#   local marks="$7"         # marks on node
+   local marks="$7"         # marks on node
    local fetchoptions="$8"   # options to use on nodetype
 #   local raw_userinfo="$9"  # userinfo
 #   shift; local uuid="$10"  # uuid of the node
@@ -392,7 +392,7 @@ sourcetree::action::do_operation()
 
    local options
 
-   sourcetree::action::r_fetch_eval_options
+   sourcetree::action::r_fetch_eval_options "${marks}"
    options="${RVAL}"
 
    sourcetree::fetch::sync_operation "${opname}" "${options}" \
