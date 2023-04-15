@@ -160,28 +160,12 @@ sourcetree::supermarks::__r_supermarks()
    sourcetree::supermarks::r_supermarks_marks "${remaining}" recurse
    remaining="${RVAL}"
 
-   if sourcetree::marks::disable "${remaining}" readwrite
-   then
-      r_comma_concat "${_supermarks}" "WriteProtect"
-      _supermarks="${RVAL}"
-   fi
-   sourcetree::supermarks::r_supermarks_marks "${remaining}" readwrite
-   remaining="${RVAL}"
-
    if sourcetree::marks::disable "${remaining}" bequeath
    then
       r_comma_concat "${_supermarks}" "TreePrivate"
       _supermarks="${RVAL}"
    fi
    sourcetree::supermarks::r_supermarks_marks "${remaining}" bequeath
-   remaining="${RVAL}"
-
-   if sourcetree::marks::disable "${remaining}" share-shirk
-   then
-      r_comma_concat "${_supermarks}" "Amalgamated"
-      _supermarks="${RVAL}"
-   fi
-   sourcetree::supermarks::r_supermarks_marks "${remaining}" share-shirk
    remaining="${RVAL}"
 
    if sourcetree::marks::compatible_with_marks "${remaining}" \
@@ -203,6 +187,21 @@ sourcetree::supermarks::__r_supermarks()
       _supermarks="${RVAL}"
       sourcetree::supermarks::r_supermarks_marks "${remaining}" \
                                             'delete,header,link,share,update'
+      remaining="${RVAL}"
+
+      _type='EMBEDDED'
+   fi
+
+   # check if algamated, pretty much all the other flags are irrelevant
+   # for display
+   if sourcetree::marks::compatible_with_marks "${remaining}" \
+         'fs,no-build,no-header,no-link,no-share,no-share-shirk,no-readwrite,no-clobber'
+   then
+      r_comma_concat "${_supermarks}" 'Amalgamated'
+      _supermarks="${RVAL}"
+
+      sourcetree::supermarks::r_supermarks_marks "${remaining}" \
+                       'build,header,link,share,share-shirk,readwrite,clobber'
       remaining="${RVAL}"
 
       _type='EMBEDDED'
@@ -273,6 +272,14 @@ sourcetree::supermarks::__r_supermarks()
       fi
    fi
 
+   if sourcetree::marks::disable "${remaining}" readwrite
+   then
+      r_comma_concat "${_supermarks}" "WriteProtect"
+      _supermarks="${RVAL}"
+   fi
+   sourcetree::supermarks::r_supermarks_marks "${remaining}" readwrite
+   remaining="${RVAL}"
+
    RVAL="${remaining}"
 }
 
@@ -286,7 +293,7 @@ sourcetree::supermarks::r_decompose_supermark()
    RVAL=
    case "${supermark}" in
       'Amalgamated')
-         RVAL='no-share-shirk'
+         RVAL='no-build,no-clobber,no-header,no-link,no-readwrite,no-share,no-share-shirk'
          return 0
       ;;
 

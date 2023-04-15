@@ -140,6 +140,7 @@ interface. Internally only marks are considered.
 | Supermark      | Description
 |----------------|----------------------------------------------------------------------|
 | C              | C language                                                           |
+| Amalgamated    | Fetch dependency if missing and place into the project. Don't craft  |
 | Embedded       | Fetch dependency and place into the project but don't craft it       |
 | HeaderLess     | A dependency that provides no include files                          |
 | HeaderOnly     | A dependency that only provides include files                        |
@@ -178,24 +179,25 @@ Ideally a user only needs to interact with supermarks.
 These are a list of marks that are interpreted by mulle-sourcetree during
 "sync":
 
-| Mark              | Description                                              |
-|-------------------|----------------------------------------------------------|
-| `basename`        | Use last path component of the address for share test    |
-| `bequeath`        | Node should be used by parent project.                   |
-| `descend`         | An inferior sourcetree within this node will be used.    |
-| `fs`              | The node has/should have a corresponding file or folder. |
-| `require`         | Failure to fetch this node is an error.                  |
-| `require-os-<u>`  | Failure to fetch this node on this OS is an error.       |
-| `set`             | The node itself can be modified.                         |
-| `share`           | The node is shareable with other sourcetree nodes.       |
-| `share-shirk`     | If disabled no-share nodes can squat the share test      |
-| `update`          | The node will be updated after an initial fetch.         |
+| Mark             | Description                                              |
+|------------------|----------------------------------------------------------|
+| `basename`       | Use last path component of the address for share test    |
+| `clobber`        | Clobber previous content, at the node address            |
+| `bequeath`       | Node should be used by parent project.                   |
+| `descend`        | An inferior sourcetree within this node will be used.    |
+| `fs`             | The node has/should have a corresponding file or folder. |
+| `require`        | Failure to fetch this node is an error.                  |
+| `require-os-<u>` | Failure to fetch this node on this OS is an error.       |
+| `set`            | The node itself can be modified.                         |
+| `share`          | The node is shareable with other sourcetree nodes.       |
+| `share-shirk`    | The node does not squat the "share test"                 |
+| `update`         | The node will be updated after an initial fetch.         |
 
 and during "clean":
 
-| Mark              | Description                                              |
-|-------------------|----------------------------------------------------------|
-| `delete`          | Can be deleted in a `mulle-sourcetree clean`.            |
+| Mark             | Description                                              |
+|------------------|----------------------------------------------------------|
+| `delete`         | Can be deleted in a `mulle-sourcetree clean`.            |
 
 
 
