@@ -1,3 +1,25 @@
+## 1.3.0
+
+* support no-clobber mark for embedded/almagametes nodes
+* improve `find_library` command output for cmake
+* add ``NODE_NAME`` to callback environment
+* added rcopy command for convenience node copies from other projects
+* mulle-sourcetree-graph now supports ``GRAPH_LEAFS`` for prettier more concise output
+* fix mulle-sourcetree-to-cmake library name when aliases are used
+* rename sourcetree::nodemarks to sourcetree::marks for conciseness
+* new callback variable ``NODE_INDEX``
+* you can now output the node index in the config file. you can also use this index to address the node in sourcetree commands.
+* the db files are now read back in non-random order, which facilitates proper squatting of previous share and no-share-shirk nodes
+* new **smartmarks** make marks more readable and understandavle use -s and %s to display them
+* added a **plugin** system, mainly for the benefit of supermarks so that they can be extended
+* new --eval-node option for **walk** command
+* mulle-sourcetree-graph now emits hyperlinks
+* the old mulle-sourcetree-export-json command is now mainlined into mulle-sourcetree and is avaliable as the **json** command
+* the var directory now also has a username subdirectory, which fixes bugs when you switch users on the same project
+* improved sync speed
+* list commands gains a --force-format options, which makes --option additive and --force-format not
+
+
 ## 1.2.0
 
 * added --varbatim option to list and walk, so that error nodes show up and dont abort the listing
