@@ -1559,6 +1559,7 @@ no-actual-link
 no-all-load
 no-bequeath
 no-build
+no-clobber
 no-cmake-add
 no-cmake-all-load
 no-cmake-dependency
@@ -1589,6 +1590,7 @@ no-platform-linux
 no-platform-windows
 no-public
 no-readwrite
+no-recurse
 no-require
 no-set
 no-singlephase
@@ -1596,6 +1598,12 @@ no-singlephase-link
 no-static-link
 no-share
 no-share-shirk
+no-symlink-mingw
+no-symlink-darwin
+no-symlink-freebsd
+no-symlink-linux
+no-symlink-windows
+no-public
 no-update
 only-standalone
 only-framework
