@@ -60,10 +60,10 @@ sourcetree::callback::call()
       ;;
 
       *)
-         evaluator="rexekutor"
+         evaluator="" # rexekutor"
          case ",${mode}," in
             *,eval,*)
-               evaluator="eval_rexekutor"
+               evaluator="eval" #_rexekutor"
             ;;
          esac
       ;;

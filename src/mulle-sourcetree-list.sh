@@ -709,6 +709,14 @@ sourcetree::list::main()
             OPTION_FORMAT="${RVAL}"
          ;;
 
+         -r-)
+            FLAG_SOURCETREE_MODE="share"
+            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+            then
+               OPTION_FORMAT='%a;%t;%b\n'
+            fi
+         ;;
+
          -s|--output-smartmarks)
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then

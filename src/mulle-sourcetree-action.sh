@@ -651,7 +651,7 @@ sourcetree \"${pretty_config}\" is missing, so fetch"
       fi
 
       # someone removed it, fetch again
-      RVAL="fetch"
+      r_add_line "${ACTIONS}" "fetch"
       return
    fi
 
@@ -705,6 +705,13 @@ chickening out"
       then
          ACTIONS="remove"
       fi
+
+      if ! sourcetree::marks::disable "${newmarks}" "fetch"
+      then
+         RVAL="${ACTIONS}"
+         return
+      fi
+
       r_add_line "${ACTIONS}" "fetch"
       return
    fi
@@ -716,6 +723,7 @@ chickening out"
    then
       _log_fluff "Previous destination \"${previousfilename}\" and \
 current destination \"${newfilename}\" do not exist."
+
       r_add_line "${ACTIONS}" "fetch"
       return
    fi
@@ -868,6 +876,18 @@ sourcetree::action::__update_perform_item()
 
    case "${item}" in
       "checkout"|"upgrade"|"set-url")
+         if sourcetree::marks::disable "${_marks}" "fetch" ||
+            sourcetree::marks::disable "${_marks}" "platform-${MULLE_UNAME}" ||
+            sourcetree::marks::disable "${_marks}" "fetch-platform-${MULLE_UNAME}"
+         then
+            log_verbose "${C_MAGENTA}${C_BOLD}${_filename}${C_INFO} is set to no-fetch."
+
+            sourcetree::db::add_missing "${_database}" \
+                                        "${_uuid}" \
+                                        "${_nodeline}"
+            return 4
+         fi
+
          if ! sourcetree::action::do_operation "${item}" "${_address}" \
                                                          "${_url}" \
                                                          "${_filename}" \
@@ -894,6 +914,18 @@ sourcetree::action::__update_perform_item()
       ;;
 
       "fetch")
+         if sourcetree::marks::disable "${_marks}" "fetch" ||
+            sourcetree::marks::disable "${_marks}" "platform-${MULLE_UNAME}" ||
+            sourcetree::marks::disable "${_marks}" "fetch-platform-${MULLE_UNAME}"
+         then
+            log_verbose "${C_MAGENTA}${C_BOLD}${_filename}${C_INFO} is set to no-fetch."
+
+            sourcetree::db::add_missing "${_database}" \
+                                        "${_uuid}" \
+                                        "${_nodeline}"
+            return 4
+         fi
+
          sourcetree::action::do_operation "fetch" "${_address}" \
                                                   "${_url}" \
                                                   "${_filename}" \
@@ -1387,10 +1419,10 @@ but it is not required"
    otheruuid="`sourcetree::db::fetch_uuid_for_address "${database}" \
                                                       "${compare}"`"
 
-   log_debug "uuid \"${otheruuid}\" found for \"${_address}\" (compared: \"${compare}\")"
-
    if [ ! -z "${otheruuid}" ]
    then
+      log_debug "uuid \"${otheruuid}\" found for \"${_address}\" (compared: \"${compare}\")"
+
       if sourcetree::db::is_uuid_alive "${database}" "${otheruuid}"
       then
          if [ "${otheruuid}" != "${_uuid}" ]

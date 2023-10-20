@@ -404,13 +404,13 @@ sourcetree::supermarks::r_compose()
       remaining="${RVAL}"
    .done
 
-   local marks
+   local sorted_marks
 
    sourcetree::marks::r_sort "${_supermarks}"
-   marks="${RVAL}"
+   sorted_marks="${RVAL}"
 
    sourcetree::marks::r_simplify "${remaining}"
-   r_comma_concat "${marks}" "${RVAL}"
+   r_comma_concat "${sorted_marks}" "${RVAL}"
 }
 
 
@@ -448,6 +448,12 @@ sourcetree::supermarks::r_decompose()
          marks="${RVAL}"
       fi
    .done
+
+   if [ "${marks}" != "${supermarks}" ]
+   then
+      log_fluff "Supermarks (and marks) ${C_RESET_BOLD}${supermarks}${C_FLUFF} decomposed to ${C_RESET_BOLD}${marks}"
+   fi
+
 
    RVAL="${marks}"
 }

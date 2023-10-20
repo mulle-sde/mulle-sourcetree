@@ -100,10 +100,12 @@ sourcetree::dbstatus::main()
       if [ "`sourcetree::db::get_dbtype "${SOURCETREE_START}"`" = "share" ]
       then
          local dependencies
+         local grep_cmdline
 
          # only complain if there are dependencies in configfile
          # how does mulle-sourcetree know about this though ?
-         dependencies="`sourcetree::cfg::_read "${configfile}" | grep -E -v 'no-share|no-dependency' `"
+         grep_cmdline="no-share|no-dependency|no-platform-${MULLE_UNAME}|no-fetch-platform-${MULLE_UNAME}"
+         dependencies="`sourcetree::cfg::_read "${configfile}" | grep -E -v "${grep_cmdline}" `"
          if [ ! -z "${dependencies}" ]
          then
             log_info "No stash here"

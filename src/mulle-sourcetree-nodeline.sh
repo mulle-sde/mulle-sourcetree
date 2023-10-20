@@ -215,8 +215,16 @@ sourcetree::nodeline::parse()
 
    # correct some legacy stuff, because i was too lazy to write a script
    # probably only used by MulleObjCOSFoundation
-   _marks="${_marks//only-os-/only-platform-}"
-   _marks="${_marks//no-os-/no-platform-}"
+   local hacked 
+
+   hacked="${_marks//only-os-/only-platform-}"
+   hacked="${hacked//no-os-/no-platform-}"
+
+   if [ "${hacked}" != "${_marks}" ]
+   then 
+      log_verbose "Changed some marks of node ${_address} for backwards compatibility: ${_marks} -> ${hacked}"
+      _marks="${hacked}"
+   fi
 
    # early escape here
 
@@ -739,10 +747,10 @@ sourcetree::nodeline::printf_header()
       formatstring="${formatstring:2}"
    done
 
-   rexekutor printf "%s" "${h_line}"
+   printf "%s" "${h_line}"
    case ",${mode}," in
       *,output_separator,*)
-         rexekutor printf "%s" "${s_line}"
+         printf "%s" "${s_line}"
       ;;
    esac
 }

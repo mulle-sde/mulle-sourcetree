@@ -176,7 +176,12 @@ cat_output()
       ;;
 
       *)
-         dot -T${format}
+         DOT="${DOT:-`command -v dot`}"
+         if [ -z "${DOT}" ]
+         then
+            fail "dot (graphviz) is not in PATH ($PATH)"
+         fi
+         "${DOT}" -T${format}
       ;;
    esac
 }

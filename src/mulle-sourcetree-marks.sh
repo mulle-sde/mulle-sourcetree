@@ -366,7 +366,7 @@ sourcetree::marks::enable()
       return 1
    fi
 
-   # for platform-linux cut of last -linux and see if only-platform-* matches
+   # for platform-linux cut off last -linux and see if only-platform-* matches
    # anything if yes we disable, that's very rare though
    ! sourcetree::marks::match "${marks}" "only-${key%-*}-*"
 }

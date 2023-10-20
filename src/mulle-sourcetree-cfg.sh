@@ -870,7 +870,7 @@ sourcetree::cfg::determine_working_directory()
 
          if [ "${directory}" != "${physpwd}" ]
          then
-            log_debug "Immediate parent found"
+            log_debug "Immediate parent config found"
             printf "%s\n" "${directory}"
             return 0
          fi
@@ -881,11 +881,11 @@ sourcetree::cfg::determine_working_directory()
          sourcetree::cfg::search_for_configfile "${parent}" "/"
          if [ $? -eq 0 ]
          then
-            log_debug "Actual parent found"
+            log_debug "Actual parent config found"
             return 0
          fi
 
-         log_fluff "No parent found"
+         log_debug "No parent config found to touch"
          return 1
       ;;
 

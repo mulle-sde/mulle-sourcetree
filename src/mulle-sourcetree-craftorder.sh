@@ -136,9 +136,9 @@ sourcetree::craftorder::__augment_line()
 
    if [ "${OUTPUT_RAW_USERINFO}" = 'YES' ]
    then
-      rexekutor printf "%s\n" "${filename};${marks};${_raw_userinfo}"
+      printf "%s\n" "${filename};${marks};${_raw_userinfo}"
    else
-      rexekutor printf "%s\n" "${filename};${marks}"
+      printf "%s\n" "${filename};${marks}"
    fi
 
    if [ -z "${_remainder_collection}" ]
@@ -162,7 +162,7 @@ sourcetree::craftorder::__collect_line()
    sourcetree::craftorder::r_create_filename "${_filename}"
    filename="${RVAL}"
 
-   rexekutor printf "%s\n" "${filename}"
+   printf "%s\n" "${filename}"
 
    return 0
 }

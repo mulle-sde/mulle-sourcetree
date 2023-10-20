@@ -79,12 +79,12 @@ sourcetree::json::usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} json
+   ${MULLE_USAGE_NAME} json [--expand]
 
       cat <<EOF >&2
 
    Show sourcetree config file as JSON. This will dump the current config
-   flat.
+   flat. If you specify --expand, the variables will be expanded.
 
 EOF
    exit 1
@@ -126,7 +126,7 @@ sourcetree::json::userinfo()
 
 sourcetree::json::callback()
 {
-   log_entry "sourcetree::json::callback(" "$@"
+   log_entry "sourcetree::json::callback" "$@"
 
    printf "%s" "${DELIMITER}"
    DELIMITER=","$'\n'
@@ -168,9 +168,56 @@ sourcetree::json::callback()
 }
 
 
+
+sourcetree::json::expandedcallback()
+{
+   log_entry "sourcetree::json::expandedcallback" "$@"
+
+   printf "%s" "${DELIMITER}"
+   DELIMITER=","$'\n'
+
+   printf "   {\n"
+   printf "      \"address\":      \"${_address}\",\n"
+
+   if [ ! -z "${_branch}" ]
+   then
+      printf "      \"branch\":       \"${_evaledbranch}\",\n"
+   fi
+   if [ ! -z "${_evaledfetchoptions}" ]
+   then
+      printf "      \"fetchoptions\": \"${_evaledfetchoptions}\",\n"
+   fi
+   if [ ! -z "${_marks}" ]
+   then
+      printf "      \"marks\":        \"${_marks}\",\n"
+   fi
+   if [ ! -z "${_evalednodetype}" ]
+   then
+      printf "      \"nodetype\":     \"${_evalednodetype}\",\n"
+   fi
+   if [ ! -z "${_evaledtag}" ]
+   then
+      printf "      \"tag\":          \"${_evaledtag}\",\n"
+   fi
+   if [ ! -z "${_evaledurl}" ]
+   then
+      printf "      \"url\":          \"${_evaledurl}\",\n"
+   fi
+   if [ ! -z "${_raw_userinfo}" ]
+   then
+      sourcetree::json::userinfo "${_raw_userinfo}"
+   fi
+
+   printf "      \"uuid\":         \"${_uuid}\"\n"
+   printf "   }"
+}
+
+
 sourcetree::json::main()
 {
    local OPTION_SHAREDIR
+   local OPTION_EXPAND
+
    #
    # simple option handling
    #
@@ -185,6 +232,14 @@ sourcetree::json::main()
       case "$1" in
          -h*|--help|help)
             sourcetree::json::usage
+         ;;
+
+         --expand)
+            OPTION_EXPAND='YES'
+         ;;
+
+         --no-expand)
+            OPTION_EXPAND='NO'
          ;;
 
          --version)
@@ -210,12 +265,19 @@ sourcetree::json::main()
    include "sourcetree::walk"
 
    local text
+   local callback
+
+   callback="sourcetree::json::callback"
+   if [ "${OPTION_EXPAND}" = 'YES' ]
+   then
+      callback="sourcetree::json::expandedcallback"
+   fi
 
    text="`rexekutor sourcetree::walk::main \
                                --lenient \
                                --no-eval \
                                --flat \
-                               sourcetree::json::callback `"
+                               "${callback}" `"
    if [ ! -z "${text}" ]
    then
       cat <<EOF

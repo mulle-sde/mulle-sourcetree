@@ -111,7 +111,8 @@ Usage:
    ${MULLE_EXECUTABLE_NAME} copy <field> <dst> [config [src]]
 
    Copy a node or parts of a node from another node. The copy command is
-   special in that it allows you to copy from another sourcetree.
+   special in that it allows you to copy from another sourcetree. Use the
+   rcopy command to copy complete nodes from another tree.
 
    "field" is one of the fields name (see below) or "ALL" to copy the whole
    node.
@@ -271,8 +272,9 @@ Usage:
    (This command only affects the local sourcetree.)
 
 Options:
-   --match         : use regular expression to find address to match
    --extended-mark : allow the use of non-predefined marks
+   --regex         : use regular expression to find address
+   --set           : clear previous marks and set new marks
 
 Marks:
    Some commonly used marks:
@@ -337,7 +339,7 @@ Usage:
    (This command only affects the local sourcetree.)
 
 Options:
-   --match         : use regular expression to find address to match
+   --regex         : use regular expression to find node
    --extended-mark : allow the use of non-predefined marks
 
    Example:
@@ -362,7 +364,7 @@ Usage:
    (This command only affects the local sourcetree.)
 
 Options:
-   --match         : use regular expression to find address to match
+   --regex         : use regular expression to find node
    --extended-mark : allow the use of non-predefined marks
 
 Marks:
@@ -903,7 +905,6 @@ sourcetree::commands::add()
    sourcetree::supermarks::r_decompose "${_marks}"
    _marks="${RVAL}"
 
-
    # local is just used for subprojects,
    # none is used for closed-source libraries ( like -ldl)
    case "${_nodetype}" in
@@ -1365,7 +1366,7 @@ sourcetree::commands::get()
 
    if [ "$#" -eq 0 ]
    then
-      rexekutor printf "%s\n" "${_address}"
+      printf "%s\n" "${_address}"
       return
    fi
 
@@ -1373,17 +1374,17 @@ sourcetree::commands::get()
    do
       case "$1" in
          branch|address|fetchoptions|marks|nodetype|tag|url|uuid)
-            rexekutor eval echo \$"_${1}"
+            eval echo \$"_${1}"
          ;;
 
          raw_userinfo)
-            rexekutor printf "%s\n" "${_raw_userinfo}"
+            printf "%s\n" "${_raw_userinfo}"
          ;;
 
          userinfo)
             sourcetree::node::r_decode_raw_userinfo "${_raw_userinfo}"
             _userinfo="${RVAL}"
-            rexekutor printf "%s\n" "${_userinfo}"
+            printf "%s\n" "${_userinfo}"
          ;;
 
          *)
@@ -1721,6 +1722,13 @@ sourcetree::commands::_mark()
 
    sourcetree::nodeline::parse "${oldnodeline}" # !!
 
+   if [ "${OPTION_CLEAR}" = "YES" ]
+   then
+      log_debug "Cleaning previous marks: ${_marks}"
+      _marks=""
+   fi
+
+
    # this loop is suboptimal as we are constantly rewriting the line
    # it was added as an afterthought
 
@@ -1774,6 +1782,26 @@ sourcetree::commands::_mark()
    .done
 
    sourcetree::commands::write_nodeline_changed_marks "${oldnodeline}"
+}
+
+
+sourcetree::commands::mark()
+{
+   log_entry "sourcetree::commands::mark" "$@"
+
+   local input="$1"
+   local marks="$2"
+
+   [ -z "${input}" ] && fail "input is empty"
+   [ -z "${marks}" ] && fail "marks are empty"
+
+   include "sourcetree::supermarks"
+
+   # turn macros into marks
+   sourcetree::supermarks::r_decompose "${marks}"
+   marks="${RVAL}"
+
+   sourcetree::commands::_mark "${input}" "${marks}"
 }
 
 
@@ -1863,31 +1891,11 @@ sourcetree::commands::unmark()
       then
          .break
       fi
-      r_colon_concat "${unmarks}" "${RVAL}"
+      r_comma_concat "${unmarks}" "${RVAL}"
       unmarks="${RVAL}"
    .done
 
    sourcetree::commands::_mark "${input}" "${unmarks}"
-}
-
-
-sourcetree::commands::mark()
-{
-   log_entry "sourcetree::commands::mark" "$@"
-
-   local input="$1"
-   local marks="$2"
-
-   [ -z "${input}" ] && fail "input is empty"
-   [ -z "${marks}" ] && fail "marks are empty"
-
-   include "sourcetree::supermarks"
-
-   # turn macros into marks
-   sourcetree::supermarks::r_decompose "${marks}"
-   marks="${RVAL}"
-
-   sourcetree::commands::_mark "${input}" "${marks}"
 }
 
 
@@ -2198,6 +2206,7 @@ sourcetree::commands::common()
 
    local OPTION_URL
    local OPTION_DSTFILE
+   local OPTION_CLEAR
    local OPTION_BRANCH
    local OPTION_TAG
    local OPTION_NODETYPE
@@ -2275,11 +2284,23 @@ sourcetree::commands::common()
             OPTION_BRANCH="$1"
          ;;
 
+         --clear)
+            OPTION_CLEAR='YES'
+         ;;
+
          -f|--fetchoptions)
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
             OPTION_FETCHOPTIONS="$1"
+         ;;
+
+         --fuzzy)
+            OPTION_FUZZY='YES'
+         ;;
+
+         --no-fuzzy)
+            OPTION_FUZZY='NO'
          ;;
 
          -m|--marks)
@@ -2294,6 +2315,14 @@ sourcetree::commands::common()
             shift
 
             OPTION_NODETYPE="$1"
+         ;;
+
+         --regex)
+            OPTION_REGEX='YES'
+         ;;
+
+         --no-regex)
+            OPTION_REGEX='NO'
          ;;
 
          -t|--tag)
@@ -2315,22 +2344,6 @@ sourcetree::commands::common()
             shift
 
             OPTION_USERINFO="$1"
-         ;;
-
-         --regex)
-            OPTION_REGEX='YES'
-         ;;
-
-         --no-regex)
-            OPTION_REGEX='NO'
-         ;;
-
-         --fuzzy)
-            OPTION_FUZZY='YES'
-         ;;
-
-         --no-fuzzy)
-            OPTION_FUZZY='NO'
          ;;
 
          -*)
@@ -2368,7 +2381,7 @@ sourcetree::commands::common()
    if [ -z "${FLAG_SOURCETREE_MODE}" -a "${COMMAND}" != "info" ]
    then
       SOURCETREE_MODE="flat"
-      log_fluff "Sourcetree mode set to \"flat\" for config operations"
+      log_debug "Sourcetree mode set to \"flat\" for config operations"
    fi
 
    [ -z "${SOURCETREE_CONFIG_DIR}" ]   && fail "SOURCETREE_CONFIG_DIR is empty"

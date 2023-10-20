@@ -854,19 +854,19 @@ sourcetree::node::printf()
 
    case ",${mode}," in
       *,output_cmd,*)
-         rexekutor printf "%s'%s'\n" "${cmdline}" "${_address}"
+         printf "%s '%s'\n" "${cmdline}" "${_address}"
       ;;
 
       *,output_cmd2,*)
-         rexekutor printf "%s '%s'\n" "${cmdline}" "${_url:-${_address}}"
+         printf "%s '%s'\n" "${cmdline}" "${_url:-${_address}}"
       ;;
 
       *,output_raw,*)
-         rexekutor printf "%s%s" "${indent}" "${line%%;}"
+         printf "%s%s" "${indent}" "${line%%;}"
       ;;
 
       *)
-         rexekutor printf "%s%s%s" "${prefix}" "${indent}" "${line}"
+         printf "%s%s%s" "${prefix}" "${indent}" "${line}"
       ;;
    esac
 }

@@ -122,7 +122,7 @@ sourcetree::plugin::load()
 
    . "${filename}" || fail "failed to load plugin \"${filename}\""
 
-   log_debug "Sourcetree plugin \"${name}\" loaded"
+   log_verbose "Sourcetree plugin ${C_MAGENTA}${C_BOLD}${name}${C_VERBOSE} loaded"
 
    return 0
 }
@@ -159,15 +159,15 @@ sourcetree::plugin::r_all_plugin_filenames()
    sourcetree::plugin::r_searchpath
    paths="${RVAL}"
 
-   local path
+   local filepath
    local result
    local files
 
-   .foreachpath path in ${paths}
+   .foreachpath filepath in ${paths}
    .do
-      files="`dir_list_files "${path}" "*.sh" 2> /dev/null`"
+      files="`dir_list_files "${filepath}" "*.sh" 2> /dev/null`"
 
-      log_debug "$path: ${files}"
+      log_debug "${filepath}: ${files}"
 
       r_add_line "${result}" "${files}"
       result="${RVAL}"

@@ -271,7 +271,7 @@ ${C_RESET_BOLD}   https://stedolan.github.io/jq"
    #
    if [ "${output}" = '-' ]
    then
-      rexekutor printf "%s\n" "${config}"
+      printf "%s\n" "${config}"
    else
       mkdir_parent_if_missing "${output}"
       redirect_exekutor "${output}" printf "%s\n" "${config}"
