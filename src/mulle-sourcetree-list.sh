@@ -475,11 +475,8 @@ sourcetree::list::warn_if_sync_outstanding()
    local memo 
    local rval 
 
-   if [ -z "${MULLE_SOURCETREE_DBSTATUS_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-dbstatus.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dbstatus.sh" || exit 1
-   fi      
+   # shellcheck source=mulle-sourcetree-dbstatus.sh
+   include "sourcetree::dbstatus"
 
    memo="${MULLE_FLAG_LOG_TERSE}"
    MULLE_FLAG_LOG_TERSE='YES'
@@ -860,6 +857,7 @@ sourcetree::list::main()
       r_basename "${OPTION_CONFIG_FILE}"
       SOURCETREE_CONFIG_NAME="${RVAL}"
       SOURCETREE_FALLBACK_CONFIG_DIR=
+      SOURCETREE_CONFIG_DIR="."
 
       r_dirname "${OPTION_CONFIG_FILE}"
       r_physicalpath "${RVAL}"
@@ -870,7 +868,7 @@ sourcetree::list::main()
       FLAG_SOURCETREE_MODE="flat"
    fi
 
-   [ -z "${SOURCETREE_CONFIG_DIR}" ]   && fail "SOURCETREE_CONFIG_DIR is empty"
+   [ -z "${SOURCETREE_CONFIG_DIR}" ]  && fail "SOURCETREE_CONFIG_DIR is empty"
    [ -z "${SOURCETREE_CONFIG_NAME}" ] && fail "SOURCETREE_CONFIG_NAME is empty"
 
    if [ "${FLAG_SOURCETREE_MODE}" = "share" ]

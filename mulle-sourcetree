@@ -209,6 +209,10 @@ sourcetree::main()
             sourcetree::usage "${MULLE_TRACE}"
          ;;
 
+         -lxx|--trace-database)
+            MULLE_FLAG_DB_LOG_EXEKUTOR='YES'
+         ;;
+
          --echo-args)
             shift
             printf "%s\n" "$@"
@@ -234,10 +238,6 @@ sourcetree::main()
             shift
 
             cd "$1" || exit
-         ;;
-
-         -ls|--list-settings)
-            MULLE_FLAG_LOG_SETTINGS='YES'
          ;;
 
          --git-terminal-prompt)

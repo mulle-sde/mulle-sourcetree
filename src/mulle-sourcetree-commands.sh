@@ -131,11 +131,11 @@ Usage:
 Examples:
    Copy marks from "b" of config in project "x" to "a" of the current project:
 
-   ${MULLE_EXECUTABLE_NAME} copy marks a b marks ~/x/.mulle/etc/sourcetree/config
+      ${MULLE_EXECUTABLE_NAME} copy marks a b marks ~/x/.mulle/etc/sourcetree/config
 
    Copy all fields of node "EOAccess" of same config into "EOControl":
 
-   ${MULLE_EXECUTABLE_NAME} copy ALL EOControl . EOAccess
+      ${MULLE_EXECUTABLE_NAME} copy ALL EOControl . EOAccess
 
    (This command only affects the local sourcetree.)
 
@@ -152,10 +152,11 @@ sourcetree::commands::rcopy_usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} rcopy [options] <directory> <specifier>
+   ${MULLE_EXECUTABLE_NAME} rcopy [options] <directory> <specifier> [qualifier]
 
    Copy a node from another sourcetree. This is a simplification of the
    copy command, which can do the same thing and more.
+   Use specifier "*" to copy all nodes.
 
 Example:
    ${MULLE_EXECUTABLE_NAME} rcopy ../other-project libz
@@ -163,8 +164,9 @@ Example:
    (This command only affects the local sourcetree.)
 
 Options:
+   --update     : update nodes, if already present
+
 EOF
-   sourcetree::commands::print_common_options "   " >&2
    echo >&2
    exit 1
 }
@@ -1029,21 +1031,19 @@ sourcetree::commands::duplicate()
 }
 
 
-#
-# unused currently
-#
 sourcetree::commands::rcopy()
 {
    log_entry "sourcetree::commands::rcopy" "$@"
 
    local directory="$1"
    local input="$2"
+   local qualifier="${3:-}"
 
    local othernodelines
 
    if ! is_absolutepath "${directory}"
    then
-      r_filepath_concat "${MULLE_USER_PWD}" "${directory}"
+      r_filepath_concat "${SOURCETREE_USER_PWD}" "${directory}"
       r_simplified_path "${RVAL}"
       directory="${RVAL}"
    fi
@@ -1057,13 +1057,18 @@ sourcetree::commands::rcopy()
       return 1
    fi
 
-   local nodeline
-
-   if ! sourcetree::nodeline::r_find "${othernodelines}" "${input}" "YES"
+   if [ -z "${othernodelines}" ]
    then
-      fail "Node \"${input}\" not found"
+      log_info "No nodes found in \"${directory}\" at all"
+      return 0
    fi
-   nodeline="${RVAL}"
+
+   local nodelines
+
+   nodelines="`sourcetree::cfg::read "${SOURCETREE_START}" `"
+
+   local nodeline
+   local othernodeline
 
    local _address
    local _branch
@@ -1075,12 +1080,78 @@ sourcetree::commands::rcopy()
    local _url
    local _userinfo
    local _uuid
+   local changes_count 
+   local additions_count
 
-   sourcetree::nodeline::parse "${nodeline}"
+   changes_count=0
+   additions_count=0
 
-   _uuid=""
+   .foreachline othernodeline in ${othernodelines}
+   .do 
+      sourcetree::nodeline::r_get_address "${othernodeline}"
+      address="${RVAL}"
 
-   sourcetree::commands::_append_new_node
+      case "${address}" in
+         ${input})
+            log_debug "Found \"${address}\""
+         ;;
+
+         *)
+            .continue
+         ;;
+      esac      
+
+
+      # parse new values into above vars
+      sourcetree::nodeline::parse "${othernodeline}"
+
+      if ! sourcetree::marks::filter_with_qualifier "${_marks}" "${qualifier}"
+      then
+         .continue
+      fi
+
+      if ! sourcetree::nodeline::r_find "${nodelines}" "${address}" "YES"
+      then
+         _uuid="" 
+
+         sourcetree::commands::_append_new_node
+
+         additions_count=$(( additions_count + 1 ))
+      else
+         if [ "${OPTION_UPDATE}" = 'NO' ]
+         then
+            log_warning "Duplicate of \"${address}\" avoided"
+         else
+            # keep our old UUID, but kick the rest
+            nodeline="${RVAL}"
+            sourcetree::nodeline::r_get_uuid "${nodeline}"
+            _uuid="${RVAL}" 
+
+            sourcetree::node::r_to_nodeline 
+            othernodeline="${RVAL}"
+
+            if [ "${othernodeline}" != "${nodeline}" ]
+            then                                  
+               sourcetree::commands::change_nodeline_uuid "${nodeline}" \
+                                                          "${othernodeline}" \
+                                                          "${_uuid}"
+               changes_count=$(( changes_count + 1 ))
+            fi
+         fi
+      fi
+   .done
+
+   #
+   # return 2, if there were changes
+   #        0, if the sourcetree remains unchanged
+   #
+   log_info "Added ${additions_count} nodes, changed ${changes_count} nodes"
+   if [ ${additions_count} -eq 0 -a ${changes_count} -eq 0 ]
+   then
+      return 2
+   fi
+
+   return 0
 }
 
 
@@ -2191,8 +2262,7 @@ sourcetree::commands::info()
 {
    log_entry "sourcetree::commands::info" "$@"
 
-   [ -z "${MULLE_SOURCETREE_LIST_SH}" ] && \
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-list.sh"
+   include "sourcetree::list"
 
    sourcetree::list::_sourcetree_banner "$@"
 }
@@ -2204,14 +2274,15 @@ sourcetree::commands::common()
 
    # must be empty initially for set
 
-   local OPTION_URL
-   local OPTION_DSTFILE
-   local OPTION_CLEAR
    local OPTION_BRANCH
-   local OPTION_TAG
-   local OPTION_NODETYPE
-   local OPTION_MARKS
+   local OPTION_CLEAR
+   local OPTION_DSTFILE
    local OPTION_FETCHOPTIONS
+   local OPTION_MARKS
+   local OPTION_NODETYPE
+   local OPTION_TAG
+   local OPTION_UPDATE='NO'
+   local OPTION_URL
    local OPTION_USERINFO
 
    local OPTION_EXTENDED_MARK="DEFAULT"
@@ -2339,6 +2410,14 @@ sourcetree::commands::common()
             OPTION_URL="$1"
          ;;
 
+         --update)
+            OPTION_UPDATE='YES'
+         ;;
+
+         --no-update)
+            OPTION_UPDATE='NO'
+         ;;
+
          -U|--userinfo)
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
@@ -2388,6 +2467,7 @@ sourcetree::commands::common()
    [ -z "${SOURCETREE_CONFIG_NAME}" ] && fail "SOURCETREE_CONFIG_NAME is empty"
 
    local directory
+   local qualifier
 
    case "${COMMAND}" in
       add|duplicate)
@@ -2400,7 +2480,7 @@ sourcetree::commands::common()
          sourcetree::commands::${COMMAND} "${argument}"
       ;;
 
-      rcopy|mark|unmark)
+      mark|unmark)
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          input="$1"
          [ -z "${input}" ] && log_error "empty argument" && ${USAGE}
@@ -2411,6 +2491,24 @@ sourcetree::commands::common()
          [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree::commands::${COMMAND} "${input}" "${argument}"
+      ;;
+
+      rcopy)
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         input="$1"
+         [ -z "${input}" ] && log_error "empty argument" && ${USAGE}
+         shift
+         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
+         argument="$1"
+         shift
+         if [ $# -ne 0 ]
+         then
+            qualifier="$1"
+            shift
+         fi
+         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+
+         sourcetree::commands::rcopy "${input}" "${argument}" "${qualifier}"
       ;;
 
       get)

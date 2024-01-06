@@ -30,7 +30,7 @@ _setup_demo_repo_a()
 {
    local reporoot="$1"
 
-   exekutor git init
+   exekutor git init --initial-branch=master
 
    exekutor git checkout -b release
 

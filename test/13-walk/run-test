@@ -38,7 +38,7 @@ _setup_demo_repo_a()
 {
    local reporoot="$1"
 
-   exekutor git init
+   exekutor git init --initial-branch=master
 
    redirect_exekutor VERSION echo "1.0.0"
    run_mulle_sourcetree add --nodetype git "file://${reporoot}/b"
@@ -54,7 +54,7 @@ _setup_demo_repo_b()
 {
    local reporoot="$1"
 
-   exekutor git init
+   exekutor git init --initial-branch=master
 
    redirect_exekutor VERSION echo "1.1.0"
    run_mulle_sourcetree -s add --nodetype git "file://${reporoot}/c"
@@ -67,7 +67,7 @@ _setup_demo_repo_c()
 {
    local reporoot="$1"
 
-   exekutor git init
+   exekutor git init --initial-branch=master
 
    redirect_exekutor VERSION echo "1.0.0"
    exekutor git add VERSION

@@ -32,6 +32,45 @@
 MULLE_SOURCETREE_WALK_SH='included'
 
 
+if [ "${MULLE_FLAG_WALK_LOG_EXEKUTOR}" = 'YES' ]
+then
+   log_walk_debug()
+   {
+      log_debug "$@"
+   }
+
+   log_walk_fluff()
+   {
+      log_fluff "$@"
+   }
+
+   log_walk_setting()
+   {
+      log_setting "$@"
+   }
+
+   log_walk_warning()
+   {
+      log_warning "$@"
+   }
+else
+   alias log_walk_debug=': #'
+   alias log_walk_fluff=': #'
+   alias log_walk_setting=': #'
+   alias log_walk_warning=': #'
+fi
+
+if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" = 'YES' -o "${MULLE_FLAG_WALK_LOG_EXEKUTOR}" = 'YES' ]
+then
+   walk_exekutor()
+   {
+      exekutor "$@"
+   }
+else
+   alias walk_exekutor=''
+fi
+
+
 
 sourcetree::walk::usage()
 {
@@ -220,7 +259,7 @@ sourcetree::walk::_callback_permissions()
       *,warn-noexist,*|*,callback-warn-noexist,*)
          if [ ! -e "${filename}" ]
          then
-            log_warning "Repository expected in \"${filename}\" is not yet fetched"
+            log_walk_warning "Repository expected in \"${filename}\" is not yet fetched"
             return 0
          fi
       ;;
@@ -228,7 +267,7 @@ sourcetree::walk::_callback_permissions()
       *,skip-noexist,*|*,callback-skip-noexist,*)
          if [ ! -e "${filename}" ]
          then
-            log_fluff "Repository expected in \"${filename}\" is not yet fetched, skipped"
+            log_walk_fluff "Repository expected in \"${filename}\" is not yet fetched, skipped"
             return 1
          fi
       ;;
@@ -245,7 +284,7 @@ sourcetree::walk::_callback_permissions()
       *,warn-symlink,*|*,callback-warn-symlink,*)
          if [ -L "${filename}" ]
          then
-            log_warning "\"${filename}\" is a symlink."
+            log_walk_warning "\"${filename}\" is a symlink."
             return 0
          fi
       ;;
@@ -253,13 +292,13 @@ sourcetree::walk::_callback_permissions()
       *,skip-symlink,*|*,callback-skip-symlink,*)
          if [ -L "${filename}" ]
          then
-            log_warning "\"${filename}\" is a symlink, skipped."
+            log_walk_warning "\"${filename}\" is a symlink, skipped."
             return 1
          fi
       ;;
    esac
 
-   log_debug "sourcetree::walk::_callback_permissions \"${filename}\" returns with 0"
+   log_walk_debug "sourcetree::walk::_callback_permissions \"${filename}\" returns with 0"
    return 0
 }
 
@@ -285,7 +324,7 @@ sourcetree::walk::_descend_permissions()
       *,warn-noexist,*|*,descend-warn-noexist,*)
          if [ ! -e "${filename}" ]
          then
-            log_warning "Repository expected in \"${filename}\" is not yet fetched"
+            log_walk_warning "Repository expected in \"${filename}\" is not yet fetched"
             return 0
          fi
       ;;
@@ -293,7 +332,7 @@ sourcetree::walk::_descend_permissions()
       *,skip-noexist,*|*,descend-skip-noexist,*)
          if [ ! -e "${filename}" ]
          then
-            log_fluff "Repository expected in \"${filename}\" is not yet fetched, skipped"
+            log_walk_fluff "Repository expected in \"${filename}\" is not yet fetched, skipped"
             return 1
          fi
       ;;
@@ -310,7 +349,7 @@ sourcetree::walk::_descend_permissions()
       *,warn-symlink,*|*,descend-warn-symlink,*)
          if [ -L "${filename}" ]
          then
-            log_warning "\"${filename}\" is a symlink."
+            log_walk_warning "\"${filename}\" is a symlink."
          fi
       ;;
 
@@ -318,13 +357,13 @@ sourcetree::walk::_descend_permissions()
       *,skip-symlink,*|*,descend-skip-symlink,*)
          if [ -L "${filename}" ]
          then
-            log_fluff "\"${filename}\" is a symlink, skipped."
+            log_walk_fluff "\"${filename}\" is a symlink, skipped."
             return 1
          fi
       ;;
    esac
 
-   log_debug "\"${filename}\" will be descended into."
+   log_walk_debug "\"${filename}\" will be descended into."
    return 0
 }
 
@@ -371,13 +410,13 @@ sourcetree::walk::__docd_preamble()
    local directory="$1"
 
    _old="${PWD}"
-   exekutor cd "${directory}"
+   walk_exekutor cd "${directory}"
 }
 
 
 sourcetree::walk::__docd_postamble()
 {
-   exekutor cd "${_old}"
+   walk_exekutor cd "${_old}"
 }
 
 
@@ -418,7 +457,7 @@ sourcetree::walk::_visit_callback()
    then
       if ! sourcetree::walk::_callback_filter "${_marks}" "${callbackqualifier}"
       then
-         log_fluff "Node \"${_address}\" marks \"${_marks}\" don't jive with qualifier \"${callbackqualifier//$'\n'/ }\""
+         log_walk_fluff "Node \"${_address}\" marks \"${_marks}\" don't jive with qualifier \"${callbackqualifier//$'\n'/ }\""
          return 121  # the 1 indicates that the filter was the reason (can be reused by descend maybe)
       fi
    fi
@@ -428,7 +467,7 @@ sourcetree::walk::_visit_callback()
       if ! sourcetree::walk::_callback_nodetypes "${_nodetype}" \
                                                  "${filternodetypes}"
       then
-         log_fluff "Node \"${_address}\": \"${_nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
+         log_walk_fluff "Node \"${_address}\": \"${_nodetype}\" doesn't jive with nodetypes \"${filternodetypes}\""
          return 0
       fi
    fi
@@ -464,7 +503,7 @@ doesn't jive with permissions \"${filterpermissions}\""
       .do
          case "${_address}" in
             ${ignore})
-               log_fluff "Node ${_address} ignored by filename ignore list"
+               log_walk_fluff "Node ${_address} ignored by filename ignore list"
                return 0
             ;;
          esac
@@ -489,9 +528,9 @@ doesn't jive with permissions \"${filterpermissions}\""
                                           "$@"
                rval=$?
             sourcetree::walk::__docd_postamble
-            log_debug "(docd) callback returned $rval"
+            log_walk_debug "(docd) callback returned $rval"
          else
-            log_fluff "\"${_filename}\" not there, so no callback"
+            log_walk_fluff "\"${_filename}\" not there, so no callback"
          fi
       ;;
 
@@ -502,7 +541,7 @@ doesn't jive with permissions \"${filterpermissions}\""
                                     "${callback}" \
                                     "$@"
          rval=$?
-         log_debug "callback returned $rval"
+         log_walk_debug "callback returned $rval"
       ;;
    esac
 
@@ -581,7 +620,7 @@ doesn't jive with permissions \"${filterpermissions}\""
       .do
          case "${_address}" in
             ${ignore})
-               log_fluff "Node ${_address} not descended by filename ignore/leaf list"
+               log_walk_fluff "Node ${_address} not descended by filename ignore/leaf list"
                return 0
             ;;
          esac
@@ -610,7 +649,7 @@ to WILL_DESCEND_CALLBACK"
    local rval
    local symbol
 
-   log_fluff "Descend into \"${next_datasource}\""
+   log_walk_fluff "Descend into \"${next_datasource}\""
 
    sourcetree::walk::r_symbol_for_address "${_address}"
    symbol="${RVAL}"
@@ -635,7 +674,7 @@ to WILL_DESCEND_CALLBACK"
    then
       "${DID_DESCEND_CALLBACK}" "$@"
       rval=$?
-      log_debug "DID_DESCEND_CALLBACK of \"${virtual}/${_destination}\" returns $rval"
+      log_walk_debug "DID_DESCEND_CALLBACK of \"${virtual}/${_destination}\" returns $rval"
    fi
    return $rval
 }
@@ -767,7 +806,7 @@ sourcetree::walk::r_has_visited()
 
    if find_line "${VISITED}" "${lineid}"
    then
-      log_debug "A node with lineid \"${lineid}\" has already been visited"
+      log_walk_debug "A node with lineid \"${lineid}\" has already been visited"
       return 0
    fi
 
@@ -865,13 +904,13 @@ sourcetree::walk::_visit_node()
 
    case ",${mode}," in
       *,flat,*|*,in-flat,*|*,post-flat,*|*,breadth-flat,*)
-         log_debug "No descend in flat mode variant"
+         log_walk_debug "No descend in flat mode variant"
          sourcetree::walk::_visit_callback "$@"
          rval=$?
       ;;
 
       *,in-order,*)
-         log_debug "In-order descend into ${next_datasource}"
+         log_walk_debug "In-order descend into ${next_datasource}"
 
          # this is on the second pass, the callback will have been called already
          sourcetree::walk::_visit_descend "$@"
@@ -879,7 +918,7 @@ sourcetree::walk::_visit_node()
       ;;
 
       *,post-order,*)
-         log_debug "Post-order descend into ${next_datasource}"
+         log_walk_debug "Post-order descend into ${next_datasource}"
 
          # this is on the first pass, the callback will be called later
          sourcetree::walk::_visit_descend "$@"
@@ -906,7 +945,7 @@ sourcetree::walk::_visit_node()
 
          if [ $rval -eq 0 ]
          then
-            log_debug "Pre-order descend into ${next_datasource}"
+            log_walk_debug "Pre-order descend into ${next_datasource}"
             sourcetree::walk::_visit_descend "$@"
             rval=$?
          fi
@@ -916,7 +955,7 @@ sourcetree::walk::_visit_node()
       # on the first ruin breadth-order will appear as flat, so no callback
       # here
       *,breadth-order,*)
-         log_debug "Breadth-first descend into ${next_datasource}"
+         log_walk_debug "Breadth-first descend into ${next_datasource}"
          sourcetree::walk::_visit_descend "$@"
          rval=$?
       ;;
@@ -1023,7 +1062,7 @@ sourcetree::walk::_share_node()
             ;;
          esac
       else
-         log_debug "Visit \"${next_datasource}\" as \"${_filename}\" doesn't exist yet"
+         log_walk_debug "Visit \"${next_datasource}\" as \"${_filename}\" doesn't exist yet"
       fi
    fi
 
@@ -1128,7 +1167,7 @@ sourcetree::walk::walk_nodeline()
             # node marked as no-bequeath   : ignore
             if sourcetree::marks::disable "${_marks}" "bequeath"
             then
-               log_debug "Do not act on non-toplevel \"${virtual}/${_destination}\" with no-bequeath mark"
+               log_walk_debug "Do not act on non-toplevel \"${virtual}/${_destination}\" with no-bequeath mark"
                return 0
             fi
          fi
@@ -1237,23 +1276,23 @@ sourcetree::walk::_print_info()
 
    case ",${mode}," in
       *,flat,*)
-         log_debug "Flat ${direction} walk \"${datasource:-.}\""
+         log_walk_debug "Flat ${direction} walk \"${datasource:-.}\""
       ;;
 
       *,in-order,*)
-         log_debug "Recursive in-order ${direction} walk \"${datasource:-.}\""
+         log_walk_debug "Recursive in-order ${direction} walk \"${datasource:-.}\""
       ;;
 
       *,pre-order,*)
-         log_debug "Recursive pre-order ${direction} walk \"${datasource:-.}\""
+         log_walk_debug "Recursive pre-order ${direction} walk \"${datasource:-.}\""
       ;;
 
       *,post-order,*)
-         log_debug "Recursive post-order ${direction} walk \"${datasource:-.}\""
+         log_walk_debug "Recursive post-order ${direction} walk \"${datasource:-.}\""
       ;;
 
       *,breadth-order,*)
-         log_debug "Recursive breadth-first ${direction} walk \"${datasource:-.}\""
+         log_walk_debug "Recursive breadth-first ${direction} walk \"${datasource:-.}\""
       ;;
 
       *)
@@ -1415,7 +1454,7 @@ sourcetree::walk::dedupe()
    # on zsh find_line is faster than a case with all walked in one line 
    if find_line "${WALKED}" "${datasource}"
    then
-      log_debug "Datasource \"${datasource#"${MULLE_USER_PWD}/"}\" has already been walked"
+      log_walk_debug "Datasource \"${datasource#"${MULLE_USER_PWD}/"}\" has already been walked"
       return 0
    fi
 
@@ -1488,16 +1527,16 @@ sourcetree::walk::r_configfile()
    r_shell_indirect_expand "${var}"
    value="${RVAL}"
 
-   log_debug "expanded value ${var} to \"${value}\""
+   log_walk_debug "expanded value ${var} to \"${value}\""
 
    SOURCETREE_CONFIG_NAME="${value:-${SOURCETREE_CONFIG_NAME}}"
-   log_setting "${var} : ${value}"
+   log_walk_setting "${var} : ${value}"
 
 #   var="MULLE_SOURCETREE_CONFIG_SCOPES_${symbol}"
 #   r_shell_indirect_expand "${var}"
 #   value="${RVAL}"
 #   SOURCETREE_CONFIG_SCOPES="${value:-${SOURCETREE_CONFIG_SCOPES}}"
-#   log_setting "${var} : ${value}"
+#   log_walk_setting "${var} : ${value}"
 
    sourcetree::cfg::r_configfile_for_read "${config}"
 }
@@ -1546,16 +1585,16 @@ sourcetree::walk::cfg_read()
    r_shell_indirect_expand "${var}"
    value="${RVAL}"
 
-   log_debug "expanded value ${var} to \"${value}\""
+   log_walk_debug "expanded value ${var} to \"${value}\""
 
    SOURCETREE_CONFIG_NAME="${value:-${SOURCETREE_CONFIG_NAME}}"
-   log_setting "${var} : ${value}"
+   log_walk_setting "${var} : ${value}"
 
 #   var="MULLE_SOURCETREE_CONFIG_SCOPES_${symbol}"
 #   r_shell_indirect_expand "${var}"
 #   value="${RVAL}"
 #   SOURCETREE_CONFIG_SCOPES="${value:-${SOURCETREE_CONFIG_SCOPES}}"
-#   log_setting "${var} : ${value}"
+#   log_walk_setting "${var} : ${value}"
 
    sourcetree::cfg::read "${config}"
 }
@@ -1601,17 +1640,17 @@ sourcetree::walk::_walk_config_uuids()
 
    if ! nodelines="`sourcetree::walk::cfg_read "${symbol}" "${datasource}" `"
    then
-      log_debug "Config \"${datasource#"${MULLE_USER_PWD}/"}\" does not exist"
+      log_walk_debug "Config \"${datasource#"${MULLE_USER_PWD}/"}\" does not exist"
       return 0
    fi
 
    if [ -z "${nodelines}" ]
    then
-      log_debug "Config \"${datasource#"${MULLE_USER_PWD}/"}\" has no nodes"
+      log_walk_debug "Config \"${datasource#"${MULLE_USER_PWD}/"}\" has no nodes"
       return 0
    fi
 
-   log_debug "Walking config \"${datasource#"${MULLE_USER_PWD}/"}\" nodes"
+   log_walk_debug "Walking config \"${datasource#"${MULLE_USER_PWD}/"}\" nodes"
    sourcetree::walk::_walk_nodelines "${nodelines}" "$@"
 }
 
@@ -1698,11 +1737,11 @@ yet, can not proceed"
    nodelines="`sourcetree::db::fetch_all_nodelines "${datasource}" `"  || exit 1
    if [ -z "${nodelines}" ]
    then
-      log_fluff "Database \"${datasource}\" has no nodes"
+      log_walk_fluff "Database \"${datasource}\" has no nodes"
       return 0
    fi
 
-   log_fluff "Walking database \"${datasource}\" nodes"
+   log_walk_fluff "Walking database \"${datasource}\" nodes"
    sourcetree::walk::_walk_nodelines "${nodelines}" "$@"
 }
 
@@ -1840,7 +1879,7 @@ sourcetree::walk::do()
       return 0
    fi
 
-   log_debug "sourcetree::walk::do rval=$rval"
+   log_walk_debug "sourcetree::walk::do rval=$rval"
    return $rval
 }
 

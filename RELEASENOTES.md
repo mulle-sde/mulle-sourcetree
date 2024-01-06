@@ -1,3 +1,11 @@
+### 1.3.1
+
+* new -lxx command to enable database tracing, otherwise sourcetree is much more quiet now
+* **BREAKING CHANGE** filenames like "foo-bar" now produces ``FOO__BAR`` to distinguish from FooBar which produces ``FOO_BAR``
+* mulle-sourcetree-json gained --qualifier --nodetype --marks options to restrict output
+* fix fetch no-fetch marks
+* improved marks editing
+
 ## 1.3.0
 
 * support no-clobber mark for embedded/almagametes nodes

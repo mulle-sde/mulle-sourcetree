@@ -151,7 +151,7 @@ sourcetree::eval_add::main()
             sourcetree::eval_add::usage
          ;;
 
-         --filename)
+         --filename|--config-name)
             [ $# -eq 1 ] \
                && sourcetree::eval_add::usage "Missing argument to \"$1\""
             shift
@@ -180,7 +180,7 @@ sourcetree::eval_add::main()
    [ "$#" -gt 1  ] && shift && sourcetree::eval_add::usage "Superflous input \"$*\""
 
    sourcetree::eval_add::commands "$1" \
-                                "${OPTION_FILENAME:-<input>}"
+                                  "${OPTION_FILENAME:-<input>}"
 }
 
 

@@ -338,11 +338,8 @@ sourcetree::fix::main()
 
    [ "$#" -eq 0 ] || sourcetree::fix::usage
 
-   if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
-   then
-      # shellcheck source=mulle-sourcetree-walk.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
-   fi
+   # shellcheck source=mulle-sourcetree-walk.sh
+   include "sourcetree::walk"
 
    if ! sourcetree::cfg::is_config_present "${SOURCETREE_START}"
    then

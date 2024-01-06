@@ -113,11 +113,8 @@ sourcetree::reset::main()
 
    if [ "${SOURCETREE_MODE}" != "flat" ]
    then
-      if [ -z "${MULLE_SOURCETREE_WALK_SH}" ]
-      then
-         # shellcheck source=mulle-sourcetree-nodeline.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
-      fi
+      # shellcheck source=mulle-sourcetree-walk.sh
+      include "sourcetree::walk"
 
       sourcetree::walk::walk_internal "${SOURCETREE_MODE},pre-order,skip-symlink,walkdb,no-dbcheck,no-trace" \
             sourcetree::reset::walk

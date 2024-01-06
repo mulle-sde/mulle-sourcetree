@@ -164,8 +164,10 @@ sourcetree::cfg::__common_configfile()
       _fallback_configfile="${RVAL}"
    fi
 
-   log_setting "_configfile          : ${_configfile}"
-   log_setting "_fallback_configfile : ${_fallback_configfile}"
+   log_setting "SOURCETREE_CONFIG_DIR  : ${SOURCETREE_CONFIG_DIR}"
+   log_setting "SOURCETREE_CONFIG_NAME : ${SOURCETREE_CONFIG_NAME}"
+   log_setting "_configfile            : ${_configfile}"
+   log_setting "_fallback_configfile   : ${_fallback_configfile}"
 }
 
 
@@ -680,7 +682,7 @@ sourcetree::cfg::remove_nodeline_by_uuid()
    sourcetree::cfg::finish_for_write "${config}" "${write_configfile}"
 }
 
-
+# lowlevel, you can change uuids with this function
 sourcetree::cfg::change_nodeline()
 {
    log_entry "sourcetree::cfg::change_nodeline" "$@"

@@ -172,6 +172,11 @@ sourcetree::environment::default()
    local defer="$5"
    local mode="$6"
 
+   # MULLE_USER_PWD can be somewhere else, but for relative paths we 
+   # must assume the current PWD is the onw
+   
+   SOURCETREE_USER_PWD="${PWD}"
+
    sourcetree::environment::basic "" \
                                   "${option_configdir}" \
                                   "${option_confignames}" \

@@ -23,7 +23,7 @@ expect()
 
 _setup_demo_repo_a()
 {
-   exekutor git init
+   exekutor git init --initial-branch=master
 
    exekutor git checkout -b release
 

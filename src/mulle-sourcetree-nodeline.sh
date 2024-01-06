@@ -226,17 +226,18 @@ sourcetree::nodeline::parse()
       _marks="${hacked}"
    fi
 
-   # early escape here
-
-   log_setting "ADDRESS      : \"${_address}\""
-   log_setting "NODETYPE     : \"${_nodetype}\""
-   log_setting "MARKS        : \"${_marks}\""
-   log_setting "UUID         : \"${_uuid}\""
-   log_setting "URL          : \"${_url}\""
-   log_setting "BRANCH       : \"${_branch}\""
-   log_setting "TAG          : \"${_tag}\""
-   log_setting "FETCHOPTIONS : \"${_fetchoptions}\""
-   log_setting "USERINFO     : \"${_raw_userinfo}\""
+   if [ "${MULLE_SOURCETREE_TRACE_PARSED_NODELINE}" = 'YES' ]
+   then
+      log_trace "ADDRESS      : \"${_address}\""
+      log_trace "NODETYPE     : \"${_nodetype}\""
+      log_trace "MARKS        : \"${_marks}\""
+      log_trace "UUID         : \"${_uuid}\""
+      log_trace "URL          : \"${_url}\""
+      log_trace "BRANCH       : \"${_branch}\""
+      log_trace "TAG          : \"${_tag}\""
+      log_trace "FETCHOPTIONS : \"${_fetchoptions}\""
+      log_trace "USERINFO     : \"${_raw_userinfo}\""
+   fi
 
    return 0
 }
@@ -405,6 +406,8 @@ sourcetree::nodeline::r_find_by_index()
    esac
 
    r_line_at_index "${nodelines}" "${index}"
+
+   [ ! -z "${RVAL}" ]
 }
 
 

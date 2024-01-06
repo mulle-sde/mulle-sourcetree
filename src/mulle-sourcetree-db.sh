@@ -33,6 +33,126 @@ MULLE_SOURCETREE_DB_SH='included'
 
 
 #
+# Executor calls for DB handling are usually boring, we only want to see them
+# if MULLE_FLAG_DB_LOG_EXEKUTOR='YES'. On the other hand if -n is specified
+# for dry-run, we need to use the exekutors
+#
+if [ "${MULLE_FLAG_LOG_EXEKUTOR}" = 'YES' -o \
+     "${MULLE_FLAG_DB_LOG_EXEKUTOR}" = 'YES' -o \
+     "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" = 'YES' ]
+then
+   function db_wrapped_call()
+   {
+      local old_log
+      local old_fluff
+      local rc
+
+      old_log="${MULLE_FLAG_LOG_EXEKUTOR}"
+      old_fluff="${MULLE_FLAG_LOG_FLUFF}"
+      MULLE_FLAG_LOG_EXEKUTOR="${MULLE_FLAG_DB_LOG_EXEKUTOR}"
+      MULLE_FLAG_LOG_FLUFF="${MULLE_FLAG_DB_LOG_EXEKUTOR}"
+
+      "$@"
+      rc=$?
+
+      MULLE_FLAG_LOG_FLUFF="${old_fluff}"
+      MULLE_FLAG_LOG_EXEKUTOR="${old_log}"
+      return $rc
+   }
+
+   function db_exekutor()
+   {
+      db_wrapped_call 'exekutor' "$@"
+   }
+
+   function db_rexekutor()
+   {
+      db_wrapped_call 'rexekutor' "$@"
+   }
+
+   function db_redirect_append_exekutor()
+   {
+      db_wrapped_call 'redirect_append_exekutor' "$@"
+   }
+
+   function db_redirect_exekutor()
+   {
+      db_wrapped_call 'redirect_exekutor' "$@"
+   }
+
+
+   function db_mkdir_if_missing()
+   {
+      db_wrapped_call 'mkdir_if_missing' "$@"
+   }
+
+
+   function db_remove_file_if_present()
+   {
+      db_wrapped_call 'remove_file_if_present' "$@"
+   }
+
+   function db_rmdir_safer()
+   {
+      db_wrapped_call 'rmdir_safer' "$@"
+   }
+else
+   alias db_exekutor=''
+   alias db_rexekutor=''
+
+   # need these for functionality
+   redirect_append()
+   {
+      local output="$1"; shift
+
+      "$@" >> "${output}"
+   }
+
+   redirect()
+   {
+      local output="$1"; shift
+
+      "$@" > "${output}"
+   }
+
+   alias db_redirect_append_exekutor='redirect_append'
+   alias db_redirect_exekutor='redirect'
+   alias db_mkdir_if_missing='mkdir_if_missing'
+   alias db_remove_file_if_present='remove_file_if_present'
+   alias db_rmdir_safer='rmdir_safer'
+fi
+
+
+if [ "${MULLE_FLAG_DB_LOG_EXEKUTOR}" = 'YES' ]
+then
+   log_db_debug()
+   {
+      log_debug "$@"
+   }
+
+   log_db_fluff()
+   {
+      log_fluff "$@"
+   }
+
+   log_db_setting()
+   {
+      log_setting "$@"
+   }
+
+   log_db_warning()
+   {
+      log_warning "$@"
+   }
+else
+   alias log_db_debug=": #"
+   alias log_db_fluff=": #"
+   alias log_db_setting=": #"
+   alias log_db_warning=": #"
+fi
+
+
+#
 #
 #
 sourcetree::db::_nodeline()
@@ -43,13 +163,13 @@ sourcetree::db::_nodeline()
 
 sourcetree::db::_owner()
 {
-   sed -n '2p'
+   sed -n '2p;2q'
 }
 
 
 sourcetree::db::_filename()
 {
-   sed -n '3p'
+   sed -n '3p;3q'
 }
 
 
@@ -225,11 +345,11 @@ sourcetree::db::__common_dbfilepath()
    _dbfilepath="${databasedir}/${uuid}"
    if [ ! -f "${_dbfilepath}" ]
    then
-      log_debug "No address found for ${uuid} in ${databasedir}"
+      log_db_debug "No address found for ${uuid} in ${databasedir}"
       _dbfilepath=
       return 1
    fi
-   log_debug "Found \"${_dbfilepath}\""
+   log_db_debug "Found \"${_dbfilepath}\""
    return 0
 }
 
@@ -280,7 +400,7 @@ sourcetree::db::memorize()
    local content
    local dbfilepath
 
-   mkdir_if_missing "${_databasedir}"
+   db_mkdir_if_missing "${_databasedir}"
    dbfilepath="${_databasedir}/${uuid}"
 
    content="${index};${nodeline}
@@ -289,9 +409,9 @@ ${filename}
 ${index}
 ${evaledurl}"
 
-   log_debug "Remembering uuid \"${uuid}\" ($_databasedir)"
+   log_db_debug "Remembering uuid \"${uuid}\" ($_databasedir)"
 
-   redirect_exekutor "${dbfilepath}" printf "%s\n" "${content}"
+   db_redirect_exekutor "${dbfilepath}" printf "%s\n" "${content}"
 }
 
 
@@ -330,8 +450,8 @@ sourcetree::db::forget()
 
    if sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
    then
-      log_debug "Forgetting about uuid \"${_uuid}\" ($_databasedir)"
-      remove_file_if_present "${_dbfilepath}"
+      log_db_debug "Forgetting about uuid \"${_uuid}\" ($_databasedir)"
+      db_remove_file_if_present "${_dbfilepath}"
    fi
 }
 
@@ -383,14 +503,14 @@ sourcetree::db::bury()
     if [ -L "${filename}" ]
     then
 #      log_verbose "Removing old symlink \"${filename}\""
-#      exekutor rm -f "${filename}" >&2
-      log_fluff "\"${filename}\" is a symlink so skipped"
+#      db_exekutor rm -f "${filename}" >&2
+      log_db_fluff "\"${filename}\" is a symlink so skipped"
       return
    fi
 
    if [ ! -e "${filename}" ]
    then
-      log_fluff "\"${filename}\" vanished or never existed ($_databasedir)"
+      log_db_fluff "\"${filename}\" vanished or never existed ($_databasedir)"
       return
    fi
 
@@ -398,9 +518,9 @@ sourcetree::db::bury()
    then
       if [ -d "${filename}" ]
       then
-         rmdir_safer "${filename}"
+         db_rmdir_safer "${filename}"
       else
-         remove_file_if_present "${filename}"
+         db_remove_file_if_present "${filename}"
       fi
       return 0
    fi
@@ -444,9 +564,9 @@ ${C_RESET_BOLD} rm -rf .mulle/var ${KITCHEN_DIR:-kitchen} ${MULLE_SOURCETREE_STA
       esac
    fi
    
-   log_debug "project_dir: ${project_dir}"
-   log_debug "filename:    ${filename}"
-   log_debug "relative:    ${RVAL}"
+   log_db_debug "project_dir: ${project_dir}"
+   log_db_debug "filename:    ${filename}"
+   log_db_debug "relative:    ${RVAL}"
 
    if [ -e "${gravepath}" ]
    then
@@ -457,10 +577,10 @@ ${C_RESET_BOLD} rm -rf .mulle/var ${KITCHEN_DIR:-kitchen} ${MULLE_SOURCETREE_STA
       otheruuid="${RVAL}"
       othergravepath="${graveyard}/${otheruuid}"
 
-      log_fluff "Moving old grave with same uuid \"${gravepath}\" to \"${othergravepath}\""
-      exekutor mv "${gravepath}" "${othergravepath}"
+      log_db_fluff "Moving old grave with same uuid \"${gravepath}\" to \"${othergravepath}\""
+      db_exekutor mv "${gravepath}" "${othergravepath}"
    else
-      mkdir_if_missing "${graveyard}"
+      db_mkdir_if_missing "${graveyard}"
    fi
 
    #
@@ -474,22 +594,22 @@ ${C_RESET_BOLD} rm -rf .mulle/var ${KITCHEN_DIR:-kitchen} ${MULLE_SOURCETREE_STA
       _log_info "Burying charred \
 ${C_MAGENTA}${C_BOLD}${filename#"${MULLE_USER_PWD}/"}${C_INFO} in grave \
 \"${gravepath#"${MULLE_VIRTUAL_ROOT}/"}\""
-      exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}.tmp" >&2 \
+      db_exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}.tmp" >&2 \
       || fail "Could not place \"${filename}\" into temporary grave \"${gravepath}.tmp\""
       (
-         rexekutor cd "${gravepath}.tmp" &&
-         exekutor "${TAR}" cfz "${gravepath}" . &&
-         cd .. &&
-         rmdir_safer "${gravepath}.tmp"
+         db_rexekutor cd "${gravepath}.tmp" &&
+         db_exekutor "${TAR}" cfz "${gravepath}" . &&
+         db_rexekutor cd .. &&
+         db_rmdir_safer "${gravepath}.tmp"
       ) &
    else
       _log_info "Burying \
 ${C_MAGENTA}${C_BOLD}${filename#"${MULLE_USER_PWD}/"}${C_INFO} in grave \
 \"${gravepath#"${MULLE_VIRTUAL_ROOT}/"}\""
-      exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}" >&2 \
+      db_exekutor mv ${OPTION_COPYMOVEFLAGS} "${filename}" "${gravepath}" >&2 \
       || fail "Could not place \"${filename}\" into grave \"${gravepath}\""
       (
-         exekutor find "${gravepath}" -type f -exec chmod a-w {} \;
+         db_exekutor find "${gravepath}" -type f -exec chmod a-w {} \;
       ) &
    fi
 }
@@ -524,11 +644,11 @@ sourcetree::db::__parse_dbentry()
    _index="${_nodeline%%;*}"
    _nodeline="${_nodeline#*;}"
 
-   log_setting "nodeline  : ${_nodeline}"
-   log_setting "owner     : ${_owner}"
-   log_setting "filename  : ${_filename}"
-   log_setting "index     : ${_index}"
-   log_setting "evaledurl : ${_evaledurl}"
+   log_db_setting "nodeline  : ${_nodeline}"
+   log_db_setting "owner     : ${_owner}"
+   log_db_setting "filename  : ${_filename}"
+   log_db_setting "index     : ${_index}"
+   log_db_setting "evaledurl : ${_evaledurl}"
 }
 
 
@@ -698,7 +818,7 @@ sourcetree::db::fetch_uuid_for_address()
 
    r_escaped_grep_pattern "${address}"
    pattern="${RVAL}"
-   rexekutor grep -E "^[^;]*;${pattern};" "${_databasedir}"/* | cut -s '-d;' -f 5
+   db_rexekutor grep -E "^[^;]*;${pattern};" "${_databasedir}"/* | cut -s '-d;' -f 5
 }
 
 
@@ -822,11 +942,11 @@ sourcetree::db::set_memo()
    local filename
 
    filename="${_databasedir}/.db_memo"
-   remove_file_if_present "${filename}"
+   db_remove_file_if_present "${filename}"
 
    local nodelines="$2"
 
-   redirect_exekutor "${filename}" printf "%s\n" "${nodelines}"
+   db_redirect_exekutor "${filename}" printf "%s\n" "${nodelines}"
 
    printf "%s\n" "${filename}"
 }
@@ -859,8 +979,8 @@ sourcetree::db::add_missing()
 
    local nodeline="$3"
 
-   mkdir_if_missing "${_databasedir}/.missing"
-   redirect_exekutor "${_databasedir}/.missing/${_uuid}" printf "%s\n" "${nodeline}"
+   db_mkdir_if_missing "${_databasedir}/.missing"
+   db_redirect_exekutor "${_databasedir}/.missing/${_uuid}" printf "%s\n" "${nodeline}"
 }
 
 #
@@ -876,7 +996,7 @@ sourcetree::db::_get_dbtype()
    # for -e tests
    if ! head -1 "${databasedir}/.db_type" 2> /dev/null
    then
-      log_fluff "\"${databasedir}/.db_type\" is missing"
+      log_db_fluff "\"${databasedir}/.db_type\" is missing"
       :
    fi
 }
@@ -909,8 +1029,8 @@ sourcetree::db::set_dbtype()
 
    [ -z "${dbtype}" ] && _internal_fail "type is missing"
 
-   mkdir_if_missing "${_databasedir}"
-   redirect_exekutor "${_databasedir}/.db_type"  printf "%s\n" "${dbtype}"
+   db_mkdir_if_missing "${_databasedir}"
+   db_redirect_exekutor "${_databasedir}/.db_type"  printf "%s\n" "${dbtype}"
 }
 
 
@@ -923,7 +1043,7 @@ sourcetree::db::clear_dbtype()
 
    sourcetree::db::__common_databasedir "$1"
 
-   remove_file_if_present "${_databasedir}/.db_type"
+   db_remove_file_if_present "${_databasedir}/.db_type"
 }
 
 
@@ -958,10 +1078,10 @@ sourcetree::db::dir_exists()
 
    if [ -d "${_databasedir}" ]
    then
-      log_debug "\"${_databasedir}\" exists"
+      log_db_debug "\"${_databasedir}\" exists"
       return 0
    else
-      log_debug "\"${_databasedir}\" not found"
+      log_db_debug "\"${_databasedir}\" not found"
       return 1
    fi
 }
@@ -1036,7 +1156,7 @@ sourcetree::db::is_ready()
 
    if ! text="`cat "${dbdonefile}" 2> /dev/null `"
    then
-      log_debug "\"${dbdonefile}\" not found (${_databasedir})"
+      log_db_debug "\"${dbdonefile}\" not found (${_databasedir})"
       return 1
    fi
 
@@ -1053,15 +1173,15 @@ sourcetree::db::is_ready()
 
    if [ "${text}" != "${expect}" ]
    then
-      log_debug "\"${_database}\" was made in a different environment. Needs reset"
-      log_debug "DBdonefile          : \"${dbdonefile}\""
-      log_debug "Current environment :\n${expect}"
-      log_debug "Old environment     :\n${text}"
+      log_db_debug "\"${_database}\" was made in a different environment. Needs reset"
+      log_db_debug "DBdonefile          : \"${dbdonefile}\""
+      log_db_debug "Current environment :\n${expect}"
+      log_db_debug "Old environment     :\n${text}"
 
       return 2
    fi
 
-   log_debug "database is ready"
+   log_db_debug "database is ready"
    return 0
 }
 
@@ -1079,8 +1199,8 @@ sourcetree::db::set_ready()
 
    shift
 
-   mkdir_if_missing "${_databasedir}"
-   redirect_exekutor "${_databasedir}/.db_done" sourcetree::db::print_db_done "$@"
+   db_mkdir_if_missing "${_databasedir}"
+   db_redirect_exekutor "${_databasedir}/.db_done" sourcetree::db::print_db_done "$@"
 }
 
 
@@ -1094,7 +1214,7 @@ sourcetree::db::clear_ready()
 
    sourcetree::db::__common_databasedir "$1"
 
-   remove_file_if_present "${_databasedir}/.db_done"
+   db_remove_file_if_present "${_databasedir}/.db_done"
 }
 
 
@@ -1128,11 +1248,11 @@ sourcetree::db::is_updating()
 
    if [ -f "${_databasedir}/.db_update" ]
    then
-      log_debug "\"${_databasedir}/.db_done\" exists"
+      log_db_debug "\"${_databasedir}/.db_done\" exists"
       return 0
    fi
 
-   log_debug "\"${_databasedir}/.db_update\" not found"
+   log_db_debug "\"${_databasedir}/.db_update\" not found"
    return 1
 }
 
@@ -1161,8 +1281,8 @@ sourcetree::db::set_update()
 
    shift
 
-   mkdir_if_missing "${_databasedir}"
-   redirect_exekutor "${_databasedir}/.db_update" sourcetree::db::print_db_update "$*"
+   db_mkdir_if_missing "${_databasedir}"
+   db_redirect_exekutor "${_databasedir}/.db_update" sourcetree::db::print_db_update "$*"
 }
 
 
@@ -1175,7 +1295,7 @@ sourcetree::db::clear_update()
 
    sourcetree::db::__common_databasedir "$1"
 
-   remove_file_if_present "${_databasedir}/.db_update"
+   db_remove_file_if_present "${_databasedir}/.db_update"
 
    :
 }
@@ -1196,8 +1316,8 @@ sourcetree::db::set_shareddir()
 
    # empty is OK
 
-   mkdir_if_missing "${_databasedir}"
-   redirect_exekutor "${_databasedir}/.db_stashdir"  printf "%s\n" "${shareddir}"
+   db_mkdir_if_missing "${_databasedir}"
+   db_redirect_exekutor "${_databasedir}/.db_stashdir"  printf "%s\n" "${shareddir}"
 }
 
 
@@ -1212,7 +1332,7 @@ sourcetree::db::clear_shareddir()
 
    sourcetree::db::__common_databasedir "$1"
 
-   remove_file_if_present "${_databasedir}/.db_stashdir"
+   db_remove_file_if_present "${_databasedir}/.db_stashdir"
 }
 
 
@@ -1231,7 +1351,7 @@ sourcetree::db::get_shareddir()
    then
       return 1
    fi
-   rexekutor cat "${_databasedir}/.db_stashdir"
+   db_rexekutor cat "${_databasedir}/.db_stashdir"
 }
 
 
@@ -1360,7 +1480,7 @@ sourcetree::db::reset()
    include "path"
    include "file"
 
-   rmdir_safer "${_databasedir}"
+   db_rmdir_safer "${_databasedir}"
 }
 
 
@@ -1420,9 +1540,9 @@ sourcetree::db::set_uuid_alive()
       return 1
    fi
 
-   log_fluff "Marking \"${_uuid}\" as alive"
+   log_db_fluff "Marking \"${_uuid}\" as alive"
 
-   remove_file_if_present "${_zombiefile}" \
+   db_remove_file_if_present "${_zombiefile}" \
    || fail "failed to delete zombie ${_zombiefile}"
 
    return 0
@@ -1457,12 +1577,12 @@ sourcetree::db::zombify_nodes()
 
    local owner="$2"
 
-   log_fluff "Marking nodes as zombies for now (${_databasedir})"
+   log_db_fluff "Marking nodes as zombies for now (${_databasedir})"
 
    local _zombiedir
 
    sourcetree::db::__zombiedir "${_databasedir}"
-   rmdir_safer "${_zombiedir}"
+   db_rmdir_safer "${_zombiedir}"
 
    local filename
    local set
@@ -1478,11 +1598,11 @@ sourcetree::db::zombify_nodes()
 
       if [ -z "${set}" ]
       then
-         mkdir_if_missing "${_zombiedir}"
+         db_mkdir_if_missing "${_zombiedir}"
          set='YES'
       fi
 
-      exekutor cp ${OPTION_COPYMOVEFLAGS} "${filename}" "${_zombiedir}/" \
+      db_exekutor cp ${OPTION_COPYMOVEFLAGS} "${filename}" "${_zombiedir}/" \
       || exit 1
    done
    shell_disable_nullglob
@@ -1498,19 +1618,19 @@ sourcetree::db::zombify_nodelines()
 
    sourcetree::db::__common_databasedir "$1"
 
-   log_fluff "Marking nodelines as zombies for now (${_databasedir})"
+   log_db_fluff "Marking nodelines as zombies for now (${_databasedir})"
 
    local _zombiedir
 
    sourcetree::db::__zombiedir "${_databasedir}"
-   rmdir_safer "${_zombiedir}"
+   db_rmdir_safer "${_zombiedir}"
 
    if [ -z "${nodelines}" ]
    then
       return
    fi
 
-   mkdir_if_missing "${_zombiedir}"
+   db_mkdir_if_missing "${_zombiedir}"
 
    local _branch
    local _address
@@ -1533,7 +1653,7 @@ sourcetree::db::zombify_nodelines()
 
          if sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
          then
-            exekutor cp ${OPTION_COPYMOVEFLAGS} "${_dbfilepath}" "${_zombiedir}/"
+            db_exekutor cp ${OPTION_COPYMOVEFLAGS} "${_dbfilepath}" "${_zombiedir}/"
          fi
       fi
    .done
@@ -1551,7 +1671,7 @@ sourcetree::db::do_bury_zombiefile()
 
    if ! entry="`cat "${zombiefile}"`"
    then
-      log_warning "Zombie ${zombiefile#"${MULLE_USER_PWD}/"} vanished"
+      log_db_warning "Zombie ${zombiefile#"${MULLE_USER_PWD}/"} vanished"
       return
    fi
 
@@ -1566,7 +1686,7 @@ sourcetree::db::do_bury_zombiefile()
                                      "${_nodeline}" \
                                      "${_owner}" \
                                      "${_filename}" || return 1
-   remove_file_if_present "${zombiefile}"
+   db_remove_file_if_present "${zombiefile}"
 
    :
 }
@@ -1597,7 +1717,7 @@ sourcetree::db::bury_zombie()
    then
       sourcetree::db::do_bury_zombiefile "${_database}" "${_zombiefile}"
    else
-      log_fluff "There is no zombie for \"${uuid}\""
+      log_db_fluff "There is no zombie for \"${uuid}\""
    fi
 }
 
@@ -1628,14 +1748,14 @@ sourcetree::db::safe_bury_dbentry()
 
    case "${_marks}" in
       *no-delete|*no-delete,*)
-         log_fluff "${_url} is marked as no-delete so not burying"
+         log_db_fluff "${_url} is marked as no-delete so not burying"
          return
       ;;
    esac
 
    if sourcetree::db::is_filename_inuse "${database}" "${filename}"
    then
-      log_fluff "Another node is using \"${filename}\" now"
+      log_db_fluff "Another node is using \"${filename}\" now"
       return
    fi
 
@@ -1660,7 +1780,7 @@ sourcetree::db::bury_zombies()
 
    if dir_has_files "${_zombiedir}" f
    then
-      log_fluff "Moving zombies into graveyard"
+      log_db_fluff "Moving zombies into graveyard"
 
       for zombiefile in `dir_list_files "${_zombiedir}"`
       do
@@ -1668,7 +1788,7 @@ sourcetree::db::bury_zombies()
       done
    fi
 
-   rmdir_safer "${_zombiedir}"
+   db_rmdir_safer "${_zombiedir}"
 
    wait # wait for parallel processes to complete
 
@@ -1693,7 +1813,7 @@ sourcetree::db::bury_flat_zombies()
 
    if dir_has_files "${_zombiedir}" f
    then
-      log_fluff "Moving flat zombies into graveyard"
+      log_db_fluff "Moving flat zombies into graveyard"
 
       for zombiefile in `dir_list_files "${_zombiedir}"`
       do
@@ -1831,7 +1951,7 @@ sourcetree::db::r_share_filename()
    #
    if [ "${evalednodetype}" = "local" ]
    then
-      log_debug "Use local minion node \"${address}\" as share"
+      log_db_debug "Use local minion node \"${address}\" as share"
       filename="${address}"
    else
       local name
@@ -1843,7 +1963,7 @@ sourcetree::db::r_share_filename()
       r_filepath_concat "${MULLE_SOURCETREE_STASH_DIR}" "${name}"
       filename="${RVAL}"
 
-      log_debug "Set filename to share directory \"${filename}\" for \"${address}\""
+      log_db_debug "Set filename to share directory \"${filename}\" for \"${address}\""
    fi
 
 
@@ -1864,10 +1984,10 @@ sourcetree::db::r_share_filename()
       then
          # So its already there, is this good ?
 
-         log_debug "address   : ${address}"
-         log_debug "evaledurl : ${evaledurl}"
-         log_debug "uuid      : ${uuid}"
-         log_debug "otheruuid : ${otheruuid}"
+         log_db_debug "address   : ${address}"
+         log_db_debug "evaledurl : ${evaledurl}"
+         log_db_debug "uuid      : ${uuid}"
+         log_db_debug "otheruuid : ${otheruuid}"
 
          # if it's our uuid, than we need to treat it though (somewhat)
          if [ "${uuid}" = "${otheruuid}" ]
@@ -1878,8 +1998,7 @@ sourcetree::db::r_share_filename()
 
          if [ -e "${filename}" ]
          then
-            _log_fluff "The URL \"${evaledurl}\" is already used in root and \
-exists. So skip \"${address}\" for database \"${database}\"."
+            log_db_fluff "The URL \"${evaledurl}\" is already used in root and exists. So skip \"${address}\" for database \"${database}\"."
             return 3
          fi
       fi
@@ -1899,7 +2018,7 @@ exists. So skip \"${address}\" for database \"${database}\"."
 #             # we don't know if we got here because of a db actually being
 #             # read or just from a config, in which case this could be ok
 #             check="`db_fetch_uuid_for_evaledurl "${database}" "${evaledurl}"`"
-#             log_debug "checkuuid : ${check}"
+#             log_db_debug "checkuuid : ${check}"
 #             if [ ! -z "${check}" ]
 #             then
 #                if [ "${check}" != "${uuid}" ]

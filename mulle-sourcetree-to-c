@@ -337,26 +337,29 @@ _emit_c_include()
    if [ "${OPTION_IMPORT}" = 'YES' ]
    then
       include="import"
-      tinclude="import: "
+      tinclude="import      :"
 
       case ",${marks}," in
          *,no-import,*)
             include="include"
-            tinclude="include:"
+            tinclude="include     :"
          ;;
       esac
    fi
 
    cat <<EOF
-// You can tweak the following #$include with these commands.
-// (Use ${uuid} instead of ${address} if there are duplicate entries)
-//    remove #${tinclude}: \`mulle-sde dependency mark ${address} no-header\`
-//    rename:              \`mulle-sde dependency|library set ${address} include whatever.h\`
-//    reorder:             \`mulle-sde dependency move ${address} <up|down>\`
-//    toggle #${tinclude}    \`mulle-sde dependency mark ${address} [no-]import\`
-//    toggle public:       \`mulle-sde dependency mark ${address} [no-]public\`
-//    toggle optional:     \`mulle-sde dependency mark ${address} [no-]require\`
-//    remove for platform: \`mulle-sde dependency mark ${address} no-platform-<uname>\`
+// To remove the following dependency (headers and library) completely:
+//   \`mulle-sde dependency remove ${address}\`
+// (Use ${uuid} instead of ${address}, if there are duplicate entries)
+//
+// You can tweak the following #$include with these commands:
+//    remove #${tinclude} \`mulle-sde dependency mark ${address} no-header\`
+//    rename              : \`mulle-sde dependency|library set ${address} include whatever.h\`
+//    reorder             : \`mulle-sde dependency move ${address} <up|down>\`
+//    toggle #${tinclude} \`mulle-sde dependency mark ${address} [no-]import\`
+//    toggle public       : \`mulle-sde dependency mark ${address} [no-]public\`
+//    toggle optional     : \`mulle-sde dependency mark ${address} [no-]require\`
+//    remove for platform : \`mulle-sde dependency mark ${address} no-platform-<uname>\`
 //        (use \`mulle-sourcetree-to-c --unames\` to list known values)
 EOF
    if [ ! -z "${marks}" ]
@@ -389,9 +392,7 @@ EOF
       *,no-require,*|*,no-require-os-${MULLE_UNAME},*)
          local name
 
-         r_tweaked_de_camel_case "${address}"
-         r_identifier "${RVAL}"
-         r_uppercase "${RVAL}"
+         r_smart_file_upcase_identifier "${address}"
          name="${RVAL}"
 
          cat <<EOF
@@ -1036,8 +1037,7 @@ main()
 
    if [ -z "${PROJECT_DOWNCASE_IDENTIFIER}" ]
    then
-      r_tweaked_de_camel_case "${PROJECT_IDENTIFIER}"
-      r_lowercase "${RVAL}"
+      r_smart_file_downcase_identifier "${PROJECT_IDENTIFIER}"
       PROJECT_DOWNCASE_IDENTIFIER="${RVAL}"
    fi
 

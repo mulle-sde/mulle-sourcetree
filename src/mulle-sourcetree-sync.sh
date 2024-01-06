@@ -32,6 +32,10 @@
 MULLE_SOURCETREE_SYNC_SH='included'
 
 
+# need this immediately for log_walk_fluff
+include "sourcetree::walk"
+
+
 sourcetree::sync::usage()
 {
     cat <<EOF >&2
@@ -153,7 +157,7 @@ sourcetree::sync::check_descend_nodeline()
 
    if sourcetree::marks::disable "${marks}" "descend"
    then
-      log_fluff "Node \"${filename}\" is marked no-descend"
+      log_walk_fluff "Node \"${filename}\" is marked no-descend"
       return 1
    fi
 
@@ -168,7 +172,7 @@ sourcetree::sync::check_descend_nodeline()
       # properly, we also don't really want to write our .mulle-sourcetree
       # database into it.
       #
-      log_fluff "\"${filename}\" is a symlink, so don't descend"
+      log_walk_fluff "\"${filename}\" is a symlink, so don't descend"
       return 4
    fi
 
@@ -176,14 +180,13 @@ sourcetree::sync::check_descend_nodeline()
    then
       if [ -e "${filename}" ]
       then
-         _log_fluff "Will not recursively update \"${filename}\" as it's not \
-a directory"
+         log_walk_fluff "Will not recursively update \"${filename}\" as it's not a directory"
          return 1
       fi
 
       if sourcetree::marks::enable "${marks}" "share"
       then
-         log_fluff "Destination \"${filename}\" does not exist."
+         log_walk_fluff "Destination \"${filename}\" does not exist."
       else
          log_verbose "Destination \"${filename}\" does not exist, possibly unexpectedly."
       fi
@@ -234,13 +237,13 @@ sourcetree::sync::_descend_db_nodeline()
    # remove duplicate marker from _filename
    _filename="${_filename%#*}"
 
-   log_setting "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
-   log_setting "config             : ${config}"
-   log_setting "database           : ${database}"
-   log_setting "filename           : ${_filename}"
-   log_setting "newconfig          : ${_config}"
-   log_setting "newdatabase        : ${_database}"
-   log_setting "symbol             : ${_symbol}"
+   log_walk_setting "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
+   log_walk_setting "config             : ${config}"
+   log_walk_setting "database           : ${database}"
+   log_walk_setting "filename           : ${_filename}"
+   log_walk_setting "newconfig          : ${_config}"
+   log_walk_setting "newdatabase        : ${_database}"
+   log_walk_setting "symbol             : ${_symbol}"
 
    local _style
    local rval
@@ -291,13 +294,13 @@ sourcetree::sync::descend_config_nodeline()
 
    sourcetree::sync::__get_config_descendinfo "${config}" "${_address}"
 
-   log_setting "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
-   log_setting "config             : ${config}"
-   log_setting "database           : ${database}"
-   log_setting "filename           : ${_filename}"
-   log_setting "newconfig          : ${_config}"
-   log_setting "newdatabase        : ${_database}"
-   log_setting "symbol             : ${_symbol}"
+   log_walk_setting "MULLE_VIRTUAL_ROOT : ${MULLE_VIRTUAL_ROOT}"
+   log_walk_setting "config             : ${config}"
+   log_walk_setting "database           : ${database}"
+   log_walk_setting "filename           : ${_filename}"
+   log_walk_setting "newconfig          : ${_config}"
+   log_walk_setting "newdatabase        : ${_database}"
+   log_walk_setting "symbol             : ${_symbol}"
 
    if ! sourcetree::sync::check_descend_nodeline "${_filename}"
    then
@@ -413,7 +416,7 @@ nodelines \"${nodelines}\" from config \"${config:-ROOT}\" (${PWD#"${MULLE_USER_
       then
          if find_line "${VISITED}" "${nodeline}"
          then
-            log_fluff "\${nodeline}\" was already visited"
+            log_walk_fluff "\${nodeline}\" was already visited"
             .continue
          fi
          r_add_line "${VISITED}" "${nodeline}"
@@ -533,7 +536,7 @@ sourcetree::sync::_sync_only_share()
                                                    "${index}" || return 1
    .done
 
-   log_fluff "Doing a \"${style}\" update for \"${config}\"."
+   log_debug "Doing a \"${style}\" update for \"${config}\"."
 
    sourcetree::sync::descend_config_nodelines "only_share" \
                                               "${config}" \
@@ -671,7 +674,7 @@ sourcetree::sync::_sync_share()
    # no-share, if yes, then we will need to manage a database. Else it will
    # all be kept in root, so we don't bother/pollute.
    #
-   log_fluff "Doing a \"${style}\" update for \"${config}\"."
+   log_debug "Doing a \"${style}\" update for \"${config}\"."
 
    if [ "${need_db}" = 'YES' ]
    then
@@ -849,7 +852,7 @@ sourcetree::sync::_sync_recurse()
       fi
    fi
 
-   log_fluff "Doing a \"${style}\" update for \"${config}\"."
+   log_debug "Doing a \"${style}\" update for \"${config}\"."
 
    sourcetree::db::set_dbtype "${database}" "${style}"
    sourcetree::db::set_update "${database}" "${configfile}"
@@ -950,7 +953,7 @@ sourcetree::sync::_sync_flat()
       fi
    fi
 
-   log_fluff "Doing a \"${style}\" update for \"${config}\"."
+   log_debug "Doing a \"${style}\" update for \"${config}\"."
 
    sourcetree::db::set_dbtype "${database}" "${style}"
    sourcetree::db::set_update "${database}" "${configfile}"
@@ -1062,9 +1065,6 @@ sourcetree::sync::start()
    sourcetree::db::ensure_compatible_dbtype "${SOURCETREE_START}" "${style}"
 
    local rval
-
-
-   include "sourcetree::walk"
 
    sourcetree::sync::sync_${style} \
                           "${SOURCETREE_START}" \

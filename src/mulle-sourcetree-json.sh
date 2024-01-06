@@ -217,6 +217,9 @@ sourcetree::json::main()
 {
    local OPTION_SHAREDIR
    local OPTION_EXPAND
+   local OPTION_MARKS
+   local OPTION_NODETYPES
+   local OPTION_MARKS_QUALIFIER
 
    #
    # simple option handling
@@ -242,6 +245,31 @@ sourcetree::json::main()
             OPTION_EXPAND='NO'
          ;;
 
+         --marks)
+            [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
+            shift
+
+            # allow to concatenate multiple flags
+            r_comma_concat "${OPTION_MARKS}" "$1"
+            OPTION_MARKS="${RVAL}"
+         ;;
+
+         --nodetype|--nodetypes)
+            [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
+            shift
+
+            r_comma_concat "${OPTION_NODETYPES}" "$1"
+            OPTION_NODETYPES="${RVAL}"
+         ;;
+
+         --qualifier)
+            [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
+            shift
+
+            # allow to concatenate multiple flags
+            OPTION_MARKS_QUALIFIER="$1"
+         ;;
+
          --version)
             printf "%s\n" "${MULLE_EXECUTABLE_VERSION}"
             exit 0
@@ -264,7 +292,29 @@ sourcetree::json::main()
    include "sourcetree::node"
    include "sourcetree::walk"
 
-   local text
+   local options
+
+   if [ ! -z "${OPTION_MARKS_QUALIFIER}" ]
+   then
+      r_escaped_singlequotes "${OPTION_MARKS_QUALIFIER}"
+      r_concat "${options}" "--qualifier '${RVAL}'"
+      options="${RVAL}"
+   fi
+
+   if [ ! -z "${OPTION_NODETYPES}" ]
+   then
+      r_escaped_singlequotes "${OPTION_NODETYPES}"
+      r_concat "${options}" "--nodetypes '${RVAL}'"
+      options="${RVAL}"
+   fi
+
+   if [ ! -z "${OPTION_MARKS}" ]
+   then
+      r_escaped_singlequotes "${OPTION_MARKS}"
+      r_concat "${options}" "--marks '${RVAL}'"
+      options="${RVAL}"
+   fi
+
    local callback
 
    callback="sourcetree::json::callback"
@@ -273,11 +323,14 @@ sourcetree::json::main()
       callback="sourcetree::json::expandedcallback"
    fi
 
-   text="`rexekutor sourcetree::walk::main \
-                               --lenient \
-                               --no-eval \
-                               --flat \
-                               "${callback}" `"
+   local text
+
+   text="`eval_rexekutor sourcetree::walk::main \
+                                        --lenient \
+                                        --no-eval \
+                                        --flat \
+                                        "${options}" \
+                                        "'${callback}'" `"
    if [ ! -z "${text}" ]
    then
       cat <<EOF

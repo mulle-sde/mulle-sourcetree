@@ -337,6 +337,8 @@ sourcetree::clean::main()
       ;;
    esac
 
+   local rval
+
    if [ "${OPTION_CLEAN_FS}" != 'NO' ]
    then
       if ! sourcetree::cfg::is_config_present "${SOURCETREE_START}"
@@ -344,15 +346,10 @@ sourcetree::clean::main()
          log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\")"
       fi
 
-      local rval
-
-      rval=0
       if sourcetree::db::exists "${SOURCETREE_START}"
       then
-
          # shellcheck source=mulle-sourcetree-walk.sh
-         [ -z "${MULLE_SOURCETREE_WALK_SH}" ] && \
-            . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh" || exit 1
+         include "sourcetree::walk"
 
          local mode
 
@@ -364,6 +361,7 @@ sourcetree::clean::main()
          fi
 
          sourcetree::clean::do "${mode}"
+         rval=$?
       else
          log_verbose "Already clean"
       fi
@@ -385,5 +383,7 @@ sourcetree::clean::main()
    then
       rmdir_safer "${SOURCETREE_CONFIG_DIR}" # hmm!
    fi
+
+   return $rval
 }
 

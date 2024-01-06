@@ -1198,9 +1198,7 @@ emit_cmake_dependency()
 
    identifiername="${defaultname#*:}"
 
-   r_tweaked_de_camel_case "${identifiername}"
-   r_identifier "${RVAL}"
-   r_uppercase "${RVAL}"
+   r_smart_file_upcase_identifier "${identifiername}"
    identifier="${RVAL}"
 
    [ -z "${identifier}" ] && \

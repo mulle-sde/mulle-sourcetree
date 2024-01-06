@@ -706,7 +706,7 @@ chickening out"
          ACTIONS="remove"
       fi
 
-      if ! sourcetree::marks::disable "${newmarks}" "fetch"
+      if sourcetree::marks::disable "${newmarks}" "fetch"
       then
          RVAL="${ACTIONS}"
          return
@@ -1253,7 +1253,7 @@ sourcetree::action::_r_do_actions_with_nodeline()
 
    if sourcetree::marks::disable "${_marks}" "fs"
    then
-      log_fluff "\"${_address}\" is marked as no-fs, so nothing to update"
+      log_debug "\"${_address}\" is marked as no-fs, so nothing to update"
       RVAL="${_uuid}"
       return 2
    fi
@@ -1360,7 +1360,7 @@ sourcetree::action::_r_do_actions_with_nodeline()
    r_simplified_absolutepath "${filename}"
    filename="${RVAL}"
 
-   log_fluff "Filename for node \"${_address}\" is \"${filename}\""
+   log_debug "Filename for node \"${_address}\" is \"${filename}\""
 
    # save in "shared database"
    if [ "${squat}" = 'YES' ]
@@ -1590,7 +1590,7 @@ sourcetree::action::do_actions_with_nodeline()
    then
       if sourcetree::db::set_uuid_alive "/" "${uuid}"
       then
-         log_fluff "${uuid} is alive as no zombie is present"
+         log_debug "${uuid} is alive as no zombie is present"
       fi
    fi
 }
