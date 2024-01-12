@@ -1173,7 +1173,7 @@ sourcetree::db::is_ready()
 
    if [ "${text}" != "${expect}" ]
    then
-      log_db_debug "\"${_database}\" was made in a different environment. Needs reset"
+      log_verbose "\"${_database}\" was made in a different environment. Needs reset"
       log_db_debug "DBdonefile          : \"${dbdonefile}\""
       log_db_debug "Current environment :\n${expect}"
       log_db_debug "Old environment     :\n${text}"

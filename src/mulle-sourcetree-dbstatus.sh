@@ -45,7 +45,7 @@ Usage:
 Returns:
     0 : yes
     1 : no sourcetree
-    2 : no
+    2 : no (not up to date)
 EOF
   exit 1
 }
