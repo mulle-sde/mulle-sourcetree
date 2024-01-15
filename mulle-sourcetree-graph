@@ -125,6 +125,7 @@ EOF
                                   ${MULLE_SOURCETREE_FLAGS} \
                                   walk \
                                   ${dedupe} \
+                                  --nodetypes no-local,no-comment,ALL \
                                   --eval-node \
                                   --max-walk-level ${level} \
                                   ${options} \
@@ -139,6 +140,7 @@ EOF
                                   ${MULLE_SOURCETREE_FLAGS} \
                                   walk \
                                   --qualifier 'MATCHES fs' \
+                                  --nodetypes no-local,no-comment,ALL \
                                   ${dedupe} \
                                   ${options} \
                                   ${ignorelist} \

@@ -181,7 +181,7 @@ EOF
    cat <<EOF >&2
 
 Options:
-   -n <value>       : node types to walk (default: ALL)
+   -n <value>       : node types (default: ALL), exclude: no-<value>,ALL
    -p <value>       : specify permissions (missing)
    -m <value>       : marks to match (e.g. build)
    -q <value>       : qualifier for marks to match (e.g. MATCHES build)

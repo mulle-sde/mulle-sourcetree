@@ -1,3 +1,7 @@
+### 1.3.2
+
+* exclude local and comment nodetypes from mulle-sourcetree-graph
+
 ### 1.3.1
 
 * new -lxx command to enable database tracing, otherwise sourcetree is much more quiet now
