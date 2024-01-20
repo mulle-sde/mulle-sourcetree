@@ -43,7 +43,7 @@ _setup_demo_repo_a()
    redirect_exekutor VERSION echo "1.0.0"
    run_mulle_sourcetree add --address b \
                             --nodetype git \
-                            --marks Embedded \
+                            --marks Amalgamated \
                             "file://${reporoot}/b"
    exekutor git add VERSION .mulle
    exekutor git commit -m "a: initial version"
@@ -61,19 +61,6 @@ _setup_demo_repo_b()
 }
 
 
-_setup_demo_repo_c()
-{
-   local reporoot="$1"
-
-   exekutor git init --initial-branch=master
-
-   redirect_exekutor VERSION echo "1.0.0"
-   run_mulle_sourcetree add --nodetype git "file://${reporoot}/b"
-   exekutor git add VERSION .mulle
-   exekutor git commit -m "c: initial version"
-}
-
-
 setup_demo_repos()
 {
    (
@@ -82,8 +69,6 @@ setup_demo_repos()
       exekutor cd "$1/a" && _setup_demo_repo_a "$1"
       mkdir_if_missing "$1/b" &&
       exekutor cd "$1/b" && _setup_demo_repo_b "$1"
-      mkdir_if_missing "$1/c" &&
-      exekutor cd "$1/c" && _setup_demo_repo_c "$1"
       set +e
    ) || exit 1
 }
@@ -111,11 +96,6 @@ setup_project()
    then
       dump_n_fail "add a failed unexpectedly"
    fi
-
-   if ! run_mulle_sourcetree -s add --nodetype git "file://${repos}/c"
-   then
-      dump_n_fail "add c failed unexpectedly"
-   fi
 }
 
 
@@ -128,65 +108,27 @@ run_test_1()
 
    [ -d "shared/a" ]   || dump_n_fail "#1.1 shared/a   should exist"
    [ -d "shared/a/b" ] || dump_n_fail "#1.1 shared/a/b should exist"
-   [ -d "shared/c" ]   || dump_n_fail "#1.1 shared/c   should exist"
-   [ -d "shared/c/b" ] && dump_n_fail "#1.1 shared/c/b should not exist"
+   [ -d "shared/b" ]   && dump_n_fail "#1.1 shared/b   should not exist"
 
    dump
 
-   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
+   if ! run_mulle_sourcetree add --nodetype git "file://${repos}/b"
    then
-      _internal_fail "clean failed unexpectedly"
+      dump_n_fail "add a failed unexpectedly"
    fi
 
-   [ -d "shared/a" ]   && dump_n_fail "#1.1 shared/a   should not exist"
-   [ -d "shared/a/b" ] && dump_n_fail "#1.1 shared/a/b should not exist"
-   [ -d "shared/c" ]   && dump_n_fail "#1.1 shared/c   should not exist"
-   [ -d "shared/c/b" ] && dump_n_fail "#1.1 shared/c/b should not exist"
-
-   return 0
-}
-
-
-run_test_2()
-{
-   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update
+   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree --share update --serial
    then
       dump_n_fail "# update failed unexpectedly"
    fi
 
-   [ -d "shared/a" ]   || dump_n_fail "#2.1 shared/a   should exist"
-   [ -d "shared/a/b" ] || dump_n_fail "#2.1 shared/a/b should exist"
-   [ -d "shared/b" ]   && dump_n_fail "#2.1 shared/b   should not exist"
-   [ -d "shared/c" ]   || dump_n_fail "#2.1 shared/c   should exist"
-   [ -d "shared/c/b" ] && dump_n_fail "#2.1 shared/c/b should not exist"
+   [ -d "shared/a" ]   || dump_n_fail "#1.1 shared/a   should exist"
+   [ -d "shared/a/b" ] || dump_n_fail "#1.1 shared/a/b should exist"
+   [ -d "shared/b" ]   && dump_n_fail "#1.1 shared/b   should not exist"
 
-   dump
-
-   if ! MULLE_SOURCETREE_STASH_DIRNAME="shared" run_mulle_sourcetree clean
-   then
-      _internal_fail "clean failed unexpectedly"
-   fi
-
-   [ -d "shared/a" ]   && dump_n_fail "#2.1 shared/a   should not exist"
-   [ -d "shared/a/b" ] && dump_n_fail "#2.1 shared/a/b should not exist"
-   [ -d "shared/c" ]   && dump_n_fail "#2.1 shared/c   should not exist"
-   [ -d "shared/c/b" ] && dump_n_fail "#2.1 shared/c/b should not exist"
-
-   return 0
+   :
 }
 
-
-#
-#
-
-change_demo_repo_a_set_b_to_share()
-{
-   (
-      exekutor cd "$1/a" &&
-      run_mulle_sourcetree mark -e "b" "Amalgamated" &&
-      exekutor git commit -m "a: share version" .mulle
-   )
-}
 
 
 
@@ -213,28 +155,20 @@ main()
 
 #
 # a -> b (embedded)
-# c -> b
-# therefore a b c in shared and also b in a
 #
 # ..
 # ├── project
 # │   └── shared
-# │       ├── a
-# │       │   ├── b
-# │       │   │   └── VERSION
-# │       │   └── VERSION
-# │       ├── b
-# │       │   └── VERSION
-# │       └── c
+# │       └── a
+# │           ├── b
+# │           │   └── VERSION
 # │           └── VERSION
 # └── repositories
 #     ├── a
 #     │   └── VERSION
-#     ├── b
-#     │   └── VERSION
-#     └── c
+#     └── b
 #         └── VERSION
-
+#
    (
       rmdir_safer "${project}" &&
       mkdir_if_missing "${project}" &&
@@ -243,18 +177,6 @@ main()
       run_test_1
    ) || exit 1
    log_verbose "----- #1 PASSED -----"
-
-
-   change_demo_repo_a_set_b_to_share "${repos}" || dump_n_fail "could not set b to share for a"
-
-   (
-      rmdir_safer "${project}" &&
-      mkdir_if_missing "${project}" &&
-      cd "${project}" &&
-      setup_project "${repos}" &&
-      run_test_2
-   ) || exit 1
-   log_verbose "----- #2 PASSED -----"
 
    log_info "----- ALL PASSED -----"
 

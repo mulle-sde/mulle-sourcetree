@@ -14,5 +14,5 @@ ${MULLE_SDE_TAP}mulle-semver'
 #
 # bsdmainutils are for "column"
 #
-DEBIAN_DEPENDENCIES="mulle-bashfunctions (>= 5.0.0), mulle-fetch, mulle-domain, mulle-semver"
+DEBIAN_DEPENDENCIES="mulle-bashfunctions (>= 6.0.0), mulle-fetch, mulle-domain, mulle-semver"
 DEBIAN_RECOMMENDATIONS="bsdmainutils"

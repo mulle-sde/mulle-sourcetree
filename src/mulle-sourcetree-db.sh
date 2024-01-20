@@ -403,6 +403,8 @@ sourcetree::db::memorize()
    db_mkdir_if_missing "${_databasedir}"
    dbfilepath="${_databasedir}/${uuid}"
 
+   # MEMO: why is index twice in here ? probably wanted to lose it from
+   #       first line ?
    content="${index};${nodeline}
 ${owner}
 ${filename}
@@ -767,7 +769,7 @@ sourcetree::db::fetch_all_uuids()
 
    sourcetree::db::__common_databasedir "$1"
 
-   ( cd "${_databasedir}" ; ls -1 ) 2> /dev/null
+   ( cd "${_databasedir}" && ls -1 ????????-????-????-????-???????????? ) 2> /dev/null
 }
 
 
@@ -783,10 +785,14 @@ sourcetree::db::fetch_all_nodelines()
    # nodelines have a prefixed sort index, that we use for the proper
    # order but then strip it off
    (
-      local i
+
+      cd "${_databasedir}" 2> /dev/null || exit 0
 
       shell_enable_nullglob
-      for i in "${_databasedir}"/*
+
+      local i
+
+      for i in ????????-????-????-????-????????????
       do
          head -1 "${i}" || _internal_fail "malformed file $i"
       done
@@ -818,7 +824,10 @@ sourcetree::db::fetch_uuid_for_address()
 
    r_escaped_grep_pattern "${address}"
    pattern="${RVAL}"
-   db_rexekutor grep -E "^[^;]*;${pattern};" "${_databasedir}"/* | cut -s '-d;' -f 5
+
+
+   db_rexekutor grep -E "^[^;]*;${pattern};" "${_databasedir}"/????????-????-????-????-???????????? \
+   | cut -s '-d;' -f 5
 }
 
 
@@ -845,7 +854,7 @@ sourcetree::db::r_fetch_uuid_for_evaledurl()
    local candidate
 
    IFS=$'\n'
-   for candidate in `( grep -F -l -x -s -e "${searchurl}" "${_databasedir}"/* )`
+   for candidate in `( grep -F -l -x -s -e "${searchurl}" "${_databasedir}"/????????-????-????-????-???????????? )`
    do
       IFS="${DEFAULT_IFS}"
 
@@ -919,10 +928,44 @@ sourcetree::db::fetch_all_filenames()
 
       local i
 
-      for i in "${_databasedir}"/*
+      cd "${_databasedir}" 2> /dev/null || exit 1
+      for i in ????????-????-????-????-????????????
       do
          sourcetree::db::_filename < "${i}"
       done
+   )
+}
+
+
+sourcetree::db::fetch_nodeline_for_filename()
+{
+   log_entry "sourcetree::db::fetch_nodeline_for_filename" "$@"
+
+   local _database
+   local _databasedir
+
+   sourcetree::db::__common_databasedir "$1"
+
+   local i
+   local searchfilename="$2"
+   local squatfilename
+
+   # prevent grep from reading stdin in a nullglob situation by using
+   # /dev/null as an additional argument, but actually we do it differently
+   # now, we keep glob as is and just squelch any complaints from grep
+   # about missing files with -s
+   (
+      cd "${_databasedir}" 2> /dev/null || exit 1
+      for i in `grep -F -s -x -l -e "${searchfilename}" ????????-????-????-????-????????????`
+      do
+         squatfilename="`sourcetree::db::_filename < "${i}"`"
+         if [ "${searchfilename}" = "${squatfilename}" ]
+         then
+            sourcetree::db::_nodeline < "${i}"
+            exit $?
+         fi
+      done
+      exit 1
    )
 }
 
@@ -1942,7 +1985,7 @@ sourcetree::db::r_share_filename()
    local uuid="$5"
    local database="$6"
 
-   [ -z "${evaledurl}" ] && _internal_fail "URL \"${evaledurl}\" is empty"
+   [ -z "${address}" ] && _internal_fail "address \"${address}\" is empty"
 
    #
    # Use the "${MULLE_SOURCETREE_STASH_DIR}" for shared nodes, except when
@@ -1976,6 +2019,8 @@ sourcetree::db::r_share_filename()
       #
       local otheruuid
       local check
+
+      [ -z "${evaledurl}" ] && _internal_fail "URL \"${evaledurl}\" is empty"
 
       sourcetree::db::r_fetch_uuid_for_evaledurl "/" "${evaledurl}"
       otheruuid="${RVAL}"

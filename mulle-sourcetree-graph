@@ -39,7 +39,7 @@ usage()
 {
    cat <<EOF >&2
 Usage:
-   mulle-sourcetree-graph [direction [level [dedupe]]]
+   mulle-sourcetree-graph [options] [direction [level [dedupe]]]
 
    Create a pretty SVG picture of your projects dependencies as they
    are stored in the mulle-sourcetree. The sourcetree must have been synced
@@ -60,6 +60,9 @@ Usage:
    You can override GRAPH_DIRECTION, GRAPH_MAX_LEVEL, GRAPH_DEDUPE with
    arguments on the commandline, which will override any environment and
    per-project settings.
+
+Options:
+   --[png|svg|dot] : output format
 
 Environment:
    GRAPH_DEDUPE    : set to NO to show all edges. (${GRAPH_DEDUPE})

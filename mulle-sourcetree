@@ -194,6 +194,17 @@ sourcetree::main()
    #
    while [ $# -ne 0 ]
    do
+      case "$1" in
+         -lxx|--trace-database)
+            MULLE_FLAG_DB_LOG_EXEKUTOR='YES'
+         ;;
+
+         -lxw|--trace-walk)
+            MULLE_FLAG_WALK_LOG_EXEKUTOR='YES'
+         ;;
+         # intentionaly fall through to options
+      esac
+
       if options_technical_flags "$1"
       then
          shift
@@ -211,6 +222,10 @@ sourcetree::main()
 
          -lxx|--trace-database)
             MULLE_FLAG_DB_LOG_EXEKUTOR='YES'
+         ;;
+
+         -lxw|--trace-walk)
+            MULLE_FLAG_WALK_LOG_EXEKUTOR='YES'
          ;;
 
          --echo-args)
@@ -337,7 +352,7 @@ sourcetree::main()
    esac
 
    # shellcheck source=mulle-sourcetree-environment.sh
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-environment.sh" || exit 1
+   include "sourcetree::environment"
 
    local SOURCETREE_START
    local SOURCETREE_CONFIG_NAME
@@ -357,7 +372,7 @@ sourcetree::main()
    if [ "${cmd}" = "dbstatus" ]
    then
       # shellcheck source=src/mulle-sourcetree-clean.sh
-      . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dbstatus.sh"
+      include "sourcetree::dbstatus"
 
       sourcetree::dbstatus::main "$@"
       return $?
@@ -397,23 +412,25 @@ sourcetree::main()
    log_setting "SOURCETREE_FIX_FILENAME        : ${SOURCETREE_FIX_FILENAME}"
    log_setting "SOURCETREE_MODE                : ${SOURCETREE_MODE}"
    log_setting "SOURCETREE_START               : ${SOURCETREE_START}"
+   log_setting "MULLE_FLAG_DB_LOG_EXEKUTOR     : ${MULLE_FLAG_DB_LOG_EXEKUTOR}"
+   log_setting "MULLE_FLAG_WALK_LOG_EXEKUTOR   : ${MULLE_FLAG_WALK_LOG_EXEKUTOR}"
 
    case "${cmd}" in
       add|copy|get|duplicate|info|knownmarks|mark|move|rcopy|rename|rename-marks|remove|set|unmark)
          # shellcheck source=src/mulle-sourcetree-commands.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-commands.sh"
+         include "sourcetree::commands"
 
          sourcetree::commands::${cmd//-/_}_main "$@"
       ;;
 
       craftorder|clean|fix|json|list|reset|reuuid|rewrite|wrap|status|walk)
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-${cmd}.sh"
+         include "sourcetree::${cmd}"
 
          sourcetree::${cmd}::main "$@"
       ;;
 
       supermark)
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-${cmd}s.sh"
+         include "sourcetree::${cmd}s"
 
          sourcetree::${cmd}s::main "$@"
       ;;
@@ -466,34 +483,36 @@ wrap"
       ;;
 
       config)
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-config.sh"
+         # shellcheck source=src/mulle-sourcetree-config.sh
+         include "sourcetree::config"
 
          sourcetree::config::main "$@"
       ;;
 
       desecrate)
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-clean.sh"
+         # shellcheck source=src/mulle-sourcetree-clean.sh
+         include "sourcetree::clean"
 
          sourcetree::clean::main --all-graveyards "$@"
       ;;
 
       dotdump)
          # shellcheck source=src/mulle-sourcetree-dotdump.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-dotdump.sh"
+         include "sourcetree::dotdump"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
 
          sourcetree::dotdump::main "$@"
       ;;
 
       eval-add)
          # shellcheck source=src/mulle-sourcetree-eval-add.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-eval-add.sh"
+         include "sourcetree::eval-add"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
 
          sourcetree::eval_add::main "$@"
       ;;
 
       filter)
-         # shellcheck source=src/mulle-sourcetree-fix.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-filter.sh"
+         # shellcheck source=src/mulle-sourcetree-filter.sh
+         include "sourcetree::filter"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
 
          sourcetree::filter::main "$@"
       ;;
@@ -503,8 +522,8 @@ wrap"
       ;;
 
       plugin|plugins)
-         # shellcheck source=src/mulle-sourcetree-fix.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-plugin.sh"
+         # shellcheck source=src/mulle-sourcetree-plugin.sh
+         include "sourcetree::plugin"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
 
          sourcetree::plugin::main "$@"
       ;;
@@ -531,7 +550,8 @@ wrap"
       ;;
 
       star-search)
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"
+         # shellcheck source=src/mulle-sourcetree-walk.sh
+         include "sourcetree::walk"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
 
          if [ -z "$1" -o "$#" -ne 1 -o "$1" = "-h" -o "$1" = "--help" -o "$1" = "help" ]
          then
@@ -567,14 +587,14 @@ echo \"\${NODE_MARKS} \${NODE_TAG} \${NODE_BRANCH} \${NODE_URL} (\${WALK_DATASOU
 
       sync|update)
          # shellcheck source=src/mulle-sourcetree-sync.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-sync.sh"
+         include "sourcetree::sync"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
 
          sourcetree::sync::main "$@"
       ;;
 
       test)
          # shellcheck source=src/mulle-sourcetree-test.sh
-         . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-test.sh"
+         include "sourcetree::test"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
 
          sourcetree::test::main "$@"
       ;;

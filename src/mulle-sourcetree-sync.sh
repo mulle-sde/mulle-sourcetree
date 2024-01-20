@@ -172,7 +172,7 @@ sourcetree::sync::check_descend_nodeline()
       # properly, we also don't really want to write our .mulle-sourcetree
       # database into it.
       #
-      log_walk_fluff "\"${filename}\" is a symlink, so don't descend"
+      log_verbose "\"${filename}\" is a symlink"
       return 4
    fi
 
@@ -529,6 +529,8 @@ sourcetree::sync::_sync_only_share()
          VISITED="${RVAL}"
       fi
 
+      log_debug "Perform actions for \"${nodeline}\" on an \"only_share\" update for \"${config}\""
+
       sourcetree::action::do_actions_with_nodeline "${nodeline}" \
                                                    "only_share" \
                                                    "${config}" \
@@ -536,7 +538,7 @@ sourcetree::sync::_sync_only_share()
                                                    "${index}" || return 1
    .done
 
-   log_debug "Doing a \"${style}\" update for \"${config}\"."
+   log_debug "Doing a \"only_share\" update for \"${config}\"."
 
    sourcetree::sync::descend_config_nodelines "only_share" \
                                               "${config}" \

@@ -2624,9 +2624,15 @@ sourcetree::commands::add_main()
 {
    log_entry "sourcetree::commands::add_main" "$@"
 
+   local rc
+
    USAGE="sourcetree::commands::add_usage"
    COMMAND="add"
    sourcetree::commands::common "$@"
+   rc=$?
+   log_debug "sourcetree::commands::add_main done ($rc)"
+
+   return $rc
 }
 
 

@@ -468,6 +468,33 @@ sourcetree::action::update_safe_clobber()
 }
 
 
+sourcetree::action::is_squatted_filename()
+{
+   log_entry "sourcetree::action::is_squatted_filename" "$@"
+
+   local newfilename="$1"
+
+   local othernodeline
+
+   if ! othernodeline="`sourcetree::db::fetch_nodeline_for_filename "/" "${newfilename}"`"
+   then
+      return 1
+   fi
+
+   local _nodetype
+   local _address
+   local _marks
+
+   sourcetree::nodeline::__get_address_nodetype_marks "${othernodeline}"
+   if ! sourcetree::marks::disable "${_marks}" "share-shirk"
+   then
+      return 1
+   fi
+   log_fluff "Node \"${newfilename}\" is squatted by ${_address}"
+   return 0
+}
+
+
 ##
 ## this produces actions, does not care about _marks
 ##
@@ -538,7 +565,7 @@ broken symlink \"${newfilename}\". Clobbering it"
    #
    if [ -z "${previousnodeline}" ]
    then
-      log_debug "This is a new node"
+      log_debug "\"${_address}\" would be a new node"
 
       if [ "${newexists}" = 'YES' ]
       then
@@ -556,7 +583,7 @@ broken symlink \"${newfilename}\". Clobbering it"
          #    against
          if sourcetree::marks::disable "${newmarks}" "clobber"
          then
-            _log_fluff "Node is new but \"${newfilename#"${MULLE_USER_PWD}/"}\" exists. \
+            _log_fluff "Node \"${_address}\" is new but \"${newfilename#"${MULLE_USER_PWD}/"}\" exists. \
 As node is marked \"no-clobber\" just remember it."
             ACTIONS="remember"
             RVAL="${ACTIONS}"
@@ -567,12 +594,12 @@ As node is marked \"no-clobber\" just remember it."
          then
             case "${newnodetype}" in
                local)
-                  _log_fluff "Local node is present at \"${newfilename#"${MULLE_USER_PWD}/"}\". \
+                  _log_fluff "Local node \"${_address}\ is present at \"${newfilename#"${MULLE_USER_PWD}/"}\". \
 Very well just remember it."
                ;;
 
                *)
-                  _log_fluff "Node is new but \"${newfilename#"${MULLE_USER_PWD}/"}\" exists. \
+                  _log_fluff "Node \"${_address}\" is new but \"${newfilename#"${MULLE_USER_PWD}/"}\" exists. \
 As node is marked \"no-delete\" just remember it."
                ;;
             esac
@@ -589,14 +616,14 @@ As node is marked \"no-delete\" just remember it."
             oldnodeline="`rexekutor grep -E -v '^#' "${newfilename}/${SOURCETREE_FIX_FILENAME}"`"
             if [ "${oldnodeline}" = "${nodeline}" ]
             then
-               log_fluff "Fix info was written by identical config, so it looks ok"
+               log_fluff "Fix info for \"${newfilename}\" was written by identical config, so it looks ok"
                ACTIONS="remember"
                RVAL="${ACTIONS}"
                return
             fi
          fi
 
-         log_fluff "Node is new, but \"${newfilename#"${MULLE_USER_PWD}/"}\" exists. Clobber it."
+         log_fluff "Node \"${_address}\" is new, but \"${newfilename#"${MULLE_USER_PWD}/"}\" exists. Clobber it."
          sourcetree::action::update_safe_clobber "${newfilename}" "${database}"
          ACTIONS="remember"
       else
@@ -604,6 +631,19 @@ As node is marked \"no-delete\" just remember it."
          then
             fail "Node \"${newfilename#"${MULLE_USER_PWD}/"}\" has no URL and \
 it doesn't exist (${PWD#"${MULLE_USER_PWD}/"})"
+         fi
+
+         # could be that its an amalgamation, check that and if yes just ignore
+         # An amalgamation writes two db entries, one for its embedding and
+         # one squats out space, lets get that and check for no-share-shirk
+         #
+         if sourcetree::action::is_squatted_filename "${newfilename}"
+         then
+            _log_warning "Node \"${_address}\" is new but \"${newfilename#"${MULLE_USER_PWD}/"}\" has been \
+squatted by an amalgamation. You should probably remove this node from your sourcetree."
+            ACTIONS="skip"
+            RVAL="${ACTIONS}"
+            return
          fi
 
          local pretty_config
@@ -872,6 +912,8 @@ sourcetree::action::__update_perform_item()
 {
    log_entry "sourcetree::action::__update_perform_item"
 
+   local item="$1"
+
    [ -z "${_filename}" ] && _internal_fail "filename is empty"
 
    case "${item}" in
@@ -1016,6 +1058,10 @@ which must be upgraded to be usable."
                                                      "${_database}"
       ;;
 
+      skip)
+         return 4
+      ;;
+
       *)
          _internal_fail "Unknown action item \"${item}\""
       ;;
@@ -1100,8 +1146,7 @@ sourcetree::action::__update_perform_actions()
       shell_enable_glob
 
       # if this returns 4 its fine (like a non-required dependency)
-
-      sourcetree::action::__update_perform_item # this will exit on fail
+      sourcetree::action::__update_perform_item "${item}" # this will exit on fail
       rval=$?
 
       log_debug "sourcetree::action::__update_perform_item return $rval"
@@ -1168,6 +1213,13 @@ ${nodeline}"
 }
 
 
+#
+# The node must be globally defined by
+#
+# _address
+# _nodetype
+# ...
+#
 sourcetree::action::_memorize_node_in_db()
 {
    log_entry "sourcetree::action::_memorize_node_in_db" "$@"
@@ -1221,7 +1273,7 @@ in \"${database}\"..."
 }
 
 
-# returns 0 1 or 2
+# returns 0 1 2 3
 sourcetree::action::_r_do_actions_with_nodeline()
 {
    log_entry "sourcetree::action::_r_do_actions_with_nodeline" "$@"
@@ -1280,10 +1332,66 @@ sourcetree::action::_r_do_actions_with_nodeline()
       ;;
    esac
 
-   local enables_share
-   local squat
+   #
+   # MULLE_SOURCETREE_SQUAT_ENABLED, this is Amalgamated. Amalgamations still
+   #                                 need to be fetched if not present, this
+   #                                 is how the amalgamation works, but then
+   #                                 it has to prevent other share nodes from
+   #                                 fetching
+   #
+   # with this enabled (default) repositories that are shadowed by amalgamated
+   # ones (no-share-shirk), will not be fetched. This _can_ be bad, if the
+   # sourcetree information of the amalgamated repository has some stuff, that
+   # is interesting. But this mostly indicates a bug in the amalgamation.
+   # Conceivably, if this ever becomes a concern you can disable squatting
+   # with this, or we need to copy the sourcetree config into the amalgamated
+   # repositories as well. I don't think that will happen though.
+   #
+   # if the amalgamation is in top level, then we would write twice the same
+   # UUID, which would be bad. The add routine should check that an
+   # amalgamation and a normal node occupy the same space (maybe)
+   #
+   if [ "${MULLE_SOURCETREE_SQUAT_ENABLED}" != 'NO' -a "${database}" != '/' ]
+   then
+      if sourcetree::marks::disable "${_marks}" "share-shirk"
+      then
+         local compare
 
-   squat='NO'
+         compare="${_address}"
+         if sourcetree::marks::enable "${_marks}" "basename"
+         then
+            r_basename "${compare}"
+            compare="${RVAL}"
+         fi
+         compare="${compare%[@#]*}" # not sure what this was for
+
+         # figure out name in "share" to squat
+         sourcetree::db::r_share_filename "${compare}" \
+                                          "" \
+                                          "${_evalednodetype}" \
+                                          "${_marks}" \
+                                          "${_uuid}" \
+                                          "/"
+         filename="${RVAL}"
+
+         log_fluff "Squatting share space \"${filename}\" as \"${compare}\" since no-share-shirk is set"
+
+         _address="${compare}"
+         sourcetree::action::_memorize_node_in_db "/" \
+                                                  "${config}" \
+                                                  "${filename}" \
+                                                  "${index}" \
+                                                  "NO"
+         # need to still fetch it
+         if [ "${style}" = 'only_share' ]
+         then
+            return
+         fi
+      fi
+   fi
+
+   local enables_share
+
    enables_share='NO'
    if sourcetree::marks::enable "${_marks}" "share"
    then
@@ -1300,12 +1408,6 @@ sourcetree::action::_r_do_actions_with_nodeline()
       style="share"
    fi
 
-   if [ "${style}" = 'share' ] && sourcetree::marks::disable "${_marks}" "share-shirk"
-   then
-      log_verbose "Squatting share space for \"${_address}\" as no-share-shirk is set"
-      squat='YES'
-   fi
-
    #
    # the address is what is relative to the current config (configfile)
    # the filename is an absolute path
@@ -1314,7 +1416,7 @@ sourcetree::action::_r_do_actions_with_nodeline()
 
    if [ ! -z "${_evaledurl}" -a "${style}" = "share" -a "${enables_share}" = 'YES' ]
    then
-      sourcetree::db::r_share_filename "${_address%#*}" \
+      sourcetree::db::r_share_filename "${_address%[@#]*}" \
                                        "${_evaledurl}" \
                                        "${_evalednodetype}" \
                                        "${_marks}" \
@@ -1350,8 +1452,6 @@ sourcetree::action::_r_do_actions_with_nodeline()
                                                "${_address%#*}" \
                                                "${style}"
       filename="${RVAL}"
-
-      # embedded can now squat in root database instead
    fi
 
    [ -z "${database}" ] && _internal_fail "A share-only update gone wrong"
@@ -1361,12 +1461,6 @@ sourcetree::action::_r_do_actions_with_nodeline()
    filename="${RVAL}"
 
    log_debug "Filename for node \"${_address}\" is \"${filename}\""
-
-   # save in "shared database"
-   if [ "${squat}" = 'YES' ]
-   then
-      database="/"
-   fi
 
    if sourcetree::marks::disable "${_marks}" "update"
    then
@@ -1383,6 +1477,7 @@ but it is not required"
 
          fail "\"${_address}\" is missing, marked as no-update, but its required"
       fi
+
 
       log_fluff "\"${_address}\" is marked as no-update and exists"
 
@@ -1406,6 +1501,7 @@ but it is not required"
    # to ours. (since it's coming from a different config)
    # Search for absolute path, as that is what gets stored into the DB
    #
+
    local otheruuid
    local compare
 
@@ -1421,7 +1517,7 @@ but it is not required"
 
    if [ ! -z "${otheruuid}" ]
    then
-      log_debug "uuid \"${otheruuid}\" found for \"${_address}\" (compared: \"${compare}\")"
+      log_walk_fluff "UUID \"${otheruuid}\" found for \"${_address}\" (compared: \"${compare}\")"
 
       if sourcetree::db::is_uuid_alive "${database}" "${otheruuid}"
       then
@@ -1435,12 +1531,12 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
             RVAL=
             return 3
          fi
-         log_debug "Filename \"${filename}\" belongs to this node"
+         log_walk_fluff "Filename \"${filename}\" belongs to this node"
       else
-         log_debug "Prepare zombie \"${filename}\" for resurrection"
+         log_walk_fluff "Prepare zombie \"${filename}\" for resurrection"
       fi
    else
-      log_debug "Filename \"${filename}\" is not yet in \"${database}\""
+      log_walk_fluff "Filename \"${filename}\" is not yet in \"${database}\""
    fi
 
    #
@@ -1482,7 +1578,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    #
    if [ "${filename}" = "${previousfilename}" -a -L "${filename}" ]
    then
-      log_debug "Skip update of \"${filename}\" since it's a symlink."
+      log_walk_fluff "Skip update of \"${filename}\" since it's a symlink."
 
       sourcetree::action::_memorize_node_in_db "${database}" \
                                                "${config}" \

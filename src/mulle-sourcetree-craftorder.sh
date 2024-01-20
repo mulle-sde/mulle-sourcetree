@@ -132,7 +132,7 @@ sourcetree::craftorder::__augment_line()
       fi
    fi
 
-   log_fluff "Augmented ${filename} with marks from ${_datasource#"${MULLE_USER_PWD}/"}${_address}"
+   log_fluff "Augmented ${filename} with marks \"${marks}\" from ${_datasource#"${MULLE_USER_PWD}/"}${_address}"
 
    if [ "${OUTPUT_RAW_USERINFO}" = 'YES' ]
    then
@@ -165,6 +165,89 @@ sourcetree::craftorder::__collect_line()
    printf "%s\n" "${filename}"
 
    return 0
+}
+
+
+sourcetree::craftorder::r_augment_marks()
+{
+   log_entry "sourcetree::craftorder::r_augment_marks" "$@"
+
+   local craftorder_collection="$1"
+   local augmented_collection="$2"
+
+   local filename
+   local lines
+   local duplicates
+   local line
+
+   .foreachline filename in ${craftorder_collection}
+   .do
+      if find_line "${duplicates}" "${filename}"
+      then
+         .continue
+      fi
+      r_add_line "${duplicates}" "${filename}"
+      duplicates="${RVAL}"
+
+      r_escaped_grep_pattern "${filename}"
+      line="`grep -E -e "^${RVAL};" <<< "${augmented_collection}"`"
+
+      r_add_line "${lines}" "${line}"
+      lines="${RVAL}"
+   .done
+
+   RVAL="${lines}"
+}
+
+
+sourcetree::craftorder::r_remove_amalgamated()
+{
+   log_entry "sourcetree::craftorder::r_remove_amalgamated" "$@"
+
+   local lines="$1"
+
+   local line
+   local filename
+   local marks
+   local result
+   local shadows
+
+   .foreachline line in ${lines}
+   .do
+      filename="${line%;*}"
+      marks="${line##*;}"
+
+      log_debug "filename : ${filename}"
+      log_debug "marks    : ${marks}"
+      log_debug "name     : ${name}"
+
+      r_basename "${filename##*\}}"  # remove ${MULLE_SOURCETREE_STASH_DIR} prefix, get name
+      name="${RVAL}"
+
+      # is its an augmented line
+      if sourcetree::marks::disable "${marks}" "share-shirk"
+      then
+         # don't add it to results, also make sure that "proper" repo which
+         # would exist in ${MULLE_SOURCETREE_STASH_DIR}, if it wasn't shadowed
+         # by the amalgamation, isn't returned
+         log_debug "${filename} is an amalgamation"
+
+         r_add_line "${shadows}" "${name}"
+         shadows="${RVAL}"
+         .continue
+      fi
+
+      if find_line "${shadows}" "${name}"
+      then
+         log_fluff "${filename} was shadowed by an amalgamation"
+         .continue
+      fi
+
+      r_add_line "${result}" "${line}"
+      result="${RVAL}"
+   .done
+
+   RVAL="${result}"
 }
 
 
@@ -308,7 +391,11 @@ sourcetree::craftorder::main()
 
    local qualifier
 
-   qualifier="MATCHES build"
+   qualifier="MATCHES build OR MATCHES no-share-shirk"
+   if [ "${OUTPUT_MARKS}" = 'NO' ]
+   then
+      qualifier="MATCHES build"
+   fi
 
    local _craftorder_collection
    local rval
@@ -342,6 +429,8 @@ sourcetree::craftorder::main()
 
    log_fluff "Collected \"${_craftorder_collection}\""
 
+   # remainder is used by sourcetree::walk::do, it should ge inherited into
+   # the subshell
    local _remainder_collection
    local _augmented_collection
 
@@ -360,26 +449,18 @@ sourcetree::craftorder::main()
       ;;
    esac
 
-   local filename
-   local collection
+
    local lines
-   local duplicates 
 
-   .foreachline filename in ${_craftorder_collection}
-   .do
-      if find_line "${duplicates}" "${filename}"
-      then
-         .continue
-      fi
-      r_add_line "${duplicates}" "${filename}"
-      duplicates="${RVAL}"
+   sourcetree::craftorder::r_augment_marks "${_craftorder_collection}" \
+                                           "${_augmented_collection}"
+   lines="${RVAL}"
+   log_fluff "After augmenting lines with marks: ${C_RESET}\"${lines}\""
 
-      r_escaped_grep_pattern "${filename}"
-      line="`grep -E -e "^${RVAL};" <<< "${_augmented_collection}"`"
+   sourcetree::craftorder::r_remove_amalgamated "${lines}"
+   lines="${RVAL}"
 
-      r_add_line "${lines}" "${line}"
-      lines="${RVAL}"
-   .done
+   log_fluff "After removing amalgamations: ${C_RESET}\"${lines}\""
 
    sourcetree::craftorder::output "${lines}"
 }
