@@ -1,3 +1,8 @@
+### 1.3.3
+
+* fix amalagamted repositories being refetched
+* fix amalgamation properly squatting the space for following share node
+
 ### 1.3.2
 
 * exclude local and comment nodetypes from mulle-sourcetree-graph

@@ -1333,6 +1333,17 @@ sourcetree::action::_r_do_actions_with_nodeline()
    esac
 
    #
+   # ugliness that needs to be killed sometime
+   #
+   local enables_share
+
+   enables_share='NO'
+   if sourcetree::marks::enable "${_marks}" "share"
+   then
+      enables_share='YES'
+   fi
+
+   #
    # MULLE_SOURCETREE_SQUAT_ENABLED, this is Amalgamated. Amalgamations still
    #                                 need to be fetched if not present, this
    #                                 is how the amalgamation works, but then
@@ -1365,6 +1376,8 @@ sourcetree::action::_r_do_actions_with_nodeline()
          fi
          compare="${compare%[@#]*}" # not sure what this was for
 
+         local squatfilename
+
          # figure out name in "share" to squat
          sourcetree::db::r_share_filename "${compare}" \
                                           "" \
@@ -1372,31 +1385,30 @@ sourcetree::action::_r_do_actions_with_nodeline()
                                           "${_marks}" \
                                           "${_uuid}" \
                                           "/"
-         filename="${RVAL}"
+         squatfilename="${RVAL}"
 
-         log_fluff "Squatting share space \"${filename}\" as \"${compare}\" since no-share-shirk is set"
+         log_fluff "Squatting share space \"${squatfilename}\" as \"${compare}\" since no-share-shirk is set"
 
-         _address="${compare}"
-         sourcetree::action::_memorize_node_in_db "/" \
-                                                  "${config}" \
-                                                  "${filename}" \
-                                                  "${index}" \
-                                                  "NO"
+         # avoid "really" clobbering
+         (
+            _address="${compare}"
+            sourcetree::action::_memorize_node_in_db "/" \
+                                                     "${config}" \
+                                                     "${squatfilename}" \
+                                                     "${index}" \
+                                                     "NO"
+         ) || fail "Failed to write into database"
+
          # need to still fetch it
          if [ "${style}" = 'only_share' ]
          then
             return
          fi
+
+         enables_share='NO'  # we are not really a share node
       fi
    fi
 
-   local enables_share
-
-   enables_share='NO'
-   if sourcetree::marks::enable "${_marks}" "share"
-   then
-      enables_share='YES'
-   fi
 
    if [ "${style}" = 'only_share' ]
    then

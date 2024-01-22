@@ -1992,13 +1992,14 @@ sourcetree::db::r_share_filename()
    # marked "local". We do not check the whole tree for another local node
    # though.
    #
+   local filename
+
    if [ "${evalednodetype}" = "local" ]
    then
       log_db_debug "Use local minion node \"${address}\" as share"
       filename="${address}"
    else
       local name
-      local filename
 
       r_basename "${address}"
       name="${RVAL}"
@@ -2051,67 +2052,6 @@ sourcetree::db::r_share_filename()
 
    RVAL="${filename}"
    return 0
-#      # uuid same as in root ?
-#      if [ "${otheruuid}" = "${uuid}" ]
-#      then
-#         # We are saving into root as this is known to be share. Or don't we ?
-#         # We just skip this
-#         return 3
-#
-#          if [ "${database}" != "/" ]
-#          then
-#             # we don't know if we got here because of a db actually being
-#             # read or just from a config, in which case this could be ok
-#             check="`db_fetch_uuid_for_evaledurl "${database}" "${evaledurl}"`"
-#             log_db_debug "checkuuid : ${check}"
-#             if [ ! -z "${check}" ]
-#             then
-#                if [ "${check}" != "${uuid}" ]
-#                then
-#                   _internal_fail "Database corrupted. mulle-sde clean tidy everything."
-#                fi
-#
-#                r_basename "${database}"
-#                _log_error "\
-# Shared node \"${address}\" is not in the root database but in database (${database}).
-# ${C_INFO}This can sometimes happen, if you added a dependency, that depends on
-# a dependency that a previous dependency also depends on. This can trip up the
-# database order, so try ${C_RESET_BOLD}mulle-sde clean tidy${C_INFO} first.
-# Another problem could be a duplicated node that references the same stash
-# directory.
-#
-# This could also mean, that \"${address}\" is simultaneously marked as 'share'
-# and 'no-share' by two projects. And then it could also mean that
-# \"${address}\" is used by two projects, but they reuse the same UUIDs in their
-# mulle-sourcetree configurations.
-#
-# Check your uuids and marks with:
-#
-#    ${C_RESET_BOLD}mulle-sourcetree list -r --format \"%_;%a;%v={WALK_DATASOURCE};%m\\\\n\" \\
-#       --output-no-indent --output-no-header --no-dedupe | sort -u${C_INFO}
-#
-# If you see a project using a 'no-share' marked  \"${address}\" and another
-# without the mark, mark the second one 'no-share' (if possible).
-#
-# If you see duplicate UUIDs try this remedial action in the problematic
-# project:${C_RESET_BOLD}
-#    cd \"${MULLE_SOURCETREE_STASH_DIR}/${RVAL}\"
-#    mulle-sourcetree -N reuuid
-#    mulle-sourcetree -N reset"
-#                return 1
-#             fi
-#          fi
-#     else
-#         [ "${_database}" = "/" ] &&
-#            _internal_fail "Unexpected root database for \"${address}\". \
-#But uuids differ \"${uuid}\" vs \"${otheruuid}\""
-#        if [ "${_database}" != "/" ]
-#        then
-#           log_fluff "The URL \"${evaledurl}\" is already used in root. So skip it."
-#           return 3
-#        fi
-#     fi
-
 }
 
 
