@@ -1,5 +1,6 @@
 ### 1.3.4
 
+* optimized some lowlevel routines, added a direly needed test
 * reduce verbosity or -v and -vv
 
 ### 1.3.3

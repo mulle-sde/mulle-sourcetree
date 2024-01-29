@@ -97,6 +97,7 @@ run_test1()
    then
       _internal_fail "fix worked unexpectedly"
    fi
+   log_info "Failed as expected"
    log_verbose "----- #2 PASSED -----"
 
    if ! run_mulle_sourcetree --recurse update  # > /dev/null 2>&1

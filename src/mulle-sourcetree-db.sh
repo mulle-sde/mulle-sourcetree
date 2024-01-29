@@ -760,6 +760,31 @@ sourcetree::db::fetch_evaledurl_for_uuid()
 }
 
 
+#
+# can't do it without an array
+#
+sourcetree::db::r_files()
+{
+   shell_enable_nullglob
+   RVAL=(????????-????-????-????-????????????)
+   shell_disable_nullglob
+
+   [ "${#RVAL[@]}" -ne 0 ]
+}
+
+
+sourcetree::db::grep()
+{
+   # the idea here is, that even if the file doesn't exist we don't get
+   # annoyances from shell or grep
+
+   if sourcetree::db::r_files
+   then
+      grep -s "$@" "${RVAL[@]}"
+   fi
+}
+
+
 sourcetree::db::fetch_all_uuids()
 {
    log_entry "sourcetree::db::fetch_all_uuids" "$@"
@@ -769,7 +794,10 @@ sourcetree::db::fetch_all_uuids()
 
    sourcetree::db::__common_databasedir "$1"
 
+   # if glob doesn't match, ls will error with no stdout, which is fine for
+   # us return 0 and ignore stderr
    ( cd "${_databasedir}" && ls -1 ????????-????-????-????-???????????? ) 2> /dev/null
+   return 0
 }
 
 
@@ -788,14 +816,13 @@ sourcetree::db::fetch_all_nodelines()
 
       cd "${_databasedir}" 2> /dev/null || exit 0
 
-      shell_enable_nullglob
-
-      local i
-
-      for i in ????????-????-????-????-????????????
-      do
-         head -1 "${i}" || _internal_fail "malformed file $i"
-      done
+      if sourcetree::db::r_files
+      then
+         for i in "${RVAL[@]}"
+         do
+            head -1 "${i}" || _internal_fail "malformed file $i"
+         done
+      fi
    ) \
    | sort -d -t';' -k 1,1 \
    | sed -e 's/^[^;]*\;//'
@@ -815,19 +842,21 @@ sourcetree::db::fetch_uuid_for_address()
 
    [ -z "${address}" ] && _internal_fail "address is empty"
 
-   if ! dir_has_files "${_databasedir}" f
-   then
-      return 1
-   fi
+   local old_dir="${PWD}"
+   local rc
 
-   local pattern
+   cd "${_databasedir}" 2> /dev/null || return 1
+   {
+      local pattern
 
-   r_escaped_grep_pattern "${address}"
-   pattern="${RVAL}"
+      r_escaped_grep_pattern "${address}"
+      pattern="${RVAL}"
 
-
-   db_rexekutor grep -E "^[^;]*;${pattern};" "${_databasedir}"/????????-????-????-????-???????????? \
-   | cut -s '-d;' -f 5
+      sourcetree::db::grep -E "^[^;]*;${pattern};" | cut -s '-d;' -f 5
+      rc=$?
+   }
+   cd "${old_dir}"
+   return $rc
 }
 
 
@@ -844,31 +873,31 @@ sourcetree::db::r_fetch_uuid_for_evaledurl()
 
    [ -z "${searchurl}" ] && _internal_fail "url is empty"
 
-   if ! dir_has_files "${_databasedir}" f
-   then
-      RVAL=
-      return 1
-   fi
-
-   local evaledurl
-   local candidate
-
-   IFS=$'\n'
-   for candidate in `( grep -F -l -x -s -e "${searchurl}" "${_databasedir}"/????????-????-????-????-???????????? )`
-   do
-      IFS="${DEFAULT_IFS}"
-
-      evaledurl="`sourcetree::db::_evaledurl < "${candidate}" `"
-      if [ "${searchurl}" = "${evaledurl}" ]
-      then
-         r_basename "${candidate}"
-         return 0
-      fi
-   done
-   IFS="${DEFAULT_IFS}"
+   local old_dir="${PWD}"
 
    RVAL=
-   return 1
+   # not using subshell here
+   cd "${_databasedir}" || return 1
+   {
+      local evaledurl
+      local candidate
+      local candidates
+
+      candidates="`sourcetree::db::grep -F -l -x -e "${searchurl}"`"
+
+      .foreachline candidate in ${candidates}
+      .do
+         evaledurl="`sourcetree::db::_evaledurl < "${candidate}" `"
+         if [ "${searchurl}" = "${evaledurl}" ]
+         then
+            RVAL="${candidate}"
+            .break
+         fi
+      .done
+   }
+   cd "${old_dir}"
+
+   [ ! -z "${RVAL}" ]
 }
 
 # unused
@@ -924,17 +953,20 @@ sourcetree::db::fetch_all_filenames()
    sourcetree::db::__common_databasedir "$1"
 
    (
-      shell_enable_nullglob
+      cd "${_databasedir}" 2> /dev/null || return 0
 
       local i
 
-      cd "${_databasedir}" 2> /dev/null || exit 1
-      for i in ????????-????-????-????-????????????
-      do
-         sourcetree::db::_filename < "${i}"
-      done
+      if sourcetree::db::r_files
+      then
+         for i in "${RVAL[@]}"
+         do
+            sourcetree::db::_filename < "${i}"
+         done
+      fi
    )
 }
+
 
 
 sourcetree::db::fetch_nodeline_for_filename()
@@ -946,27 +978,32 @@ sourcetree::db::fetch_nodeline_for_filename()
 
    sourcetree::db::__common_databasedir "$1"
 
-   local i
    local searchfilename="$2"
-   local squatfilename
 
    # prevent grep from reading stdin in a nullglob situation by using
    # /dev/null as an additional argument, but actually we do it differently
    # now, we keep glob as is and just squelch any complaints from grep
    # about missing files with -s
-   (
-      cd "${_databasedir}" 2> /dev/null || exit 1
-      for i in `grep -F -s -x -l -e "${searchfilename}" ????????-????-????-????-????????????`
+   local rc=1
+   local old_dir="${PWD}"
+
+   cd "${_databasedir}" 2> /dev/null || return 1
+   {
+      local i
+      local squatfilename
+
+      for i in `sourcetree::db::grep -F -x -l -e "${searchfilename}"`
       do
          squatfilename="`sourcetree::db::_filename < "${i}"`"
          if [ "${searchfilename}" = "${squatfilename}" ]
          then
             sourcetree::db::_nodeline < "${i}"
-            exit $?
+            rc=0
          fi
       done
-      exit 1
-   )
+   }
+   cd "${old_dir}"
+   return $rc
 }
 
 

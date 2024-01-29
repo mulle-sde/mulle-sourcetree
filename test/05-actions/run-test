@@ -74,22 +74,25 @@ update_actions_for_nodelines()
    previousfilename="${RVAL}"
 
    # just _address as filename ?
-   sourcetree::action::r_update_actions_for_node "${style}" \
-                                                 "${nodeline}" \
-                                                 "${filename}" \
-                                                 "${previousnodeline}" \
-                                                 "${previousfilename}" \
-                                                 "/" \
-                                                 "/" \
-                                                 \
-                                                 "${_address}" \
-                                                 "${_nodetype}" \
-                                                 "${_marks}" \
-                                                 "${_uuid}" \
-                                                 "${_url}" \
-                                                 "${_branch}" \
-                                                 "${_tag}"
-   echo "${RVAL}"
+   if ! sourcetree::action::r_update_actions_for_node "${style}" \
+                                                      "${nodeline}" \
+                                                      "${filename}" \
+                                                      "${previousnodeline}" \
+                                                      "${previousfilename}" \
+                                                      "/" \
+                                                      "/" \
+                                                      \
+                                                      "${_address}" \
+                                                      "${_nodetype}" \
+                                                      "${_marks}" \
+                                                      "${_uuid}" \
+                                                      "${_url}" \
+                                                      "${_branch}" \
+                                                      "${_tag}"
+   then
+      return 1
+   fi
+   printf "%s\n" "${RVAL}"
 }
 
 
@@ -109,6 +112,7 @@ run_git_tests()
    # into empty is simple
    new="paul/jones;git;;${uuid};https://github.com/mulle-nat/mulle-c11.git;release"
    actions="`update_actions_for_nodelines "normal" "" "${new}"`" || fail "failed unexpectedly"
+
    expect_actions "${actions}" "fetch"
    log_verbose "----- #1 PASSED -----"
 
@@ -231,9 +235,10 @@ main()
 
    _options_mini_main "$@" && set -x
 
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
-   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-action.sh"   || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-environment.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"        || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh"    || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-action.sh"      || exit 1
 
    local directory
 
@@ -244,6 +249,8 @@ main()
 
    r_physicalpath "${directory}"
    MULLE_VIRTUAL_ROOT="${RVAL}"
+
+   sourcetree::environment::_set_sourcetree_global "${MULLE_VIRTUAL_ROOT}"
 
    (
       cd "${directory}" &&

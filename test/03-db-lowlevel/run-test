@@ -1,0 +1,152 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+expect()
+{
+   local output="$1"
+   local expected="$2"
+
+   if [ "${output}" != "${expected}" ]
+   then
+      _internal_fail "Did expect \"${expected}\" but got \"${output}\""
+   fi
+}
+
+
+main()
+{
+   MULLE_SOURCETREE_FLAGS="$@"  # unused
+
+   _options_mini_main "$@" && set -x
+
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"      || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh"  || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"        || exit 1
+
+   set -e
+
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
+   cd "${directory}"
+
+   r_physicalpath "${directory}"
+   MULLE_VIRTUAL_ROOT="${RVAL}"
+
+   SOURCETREE_DB_FILENAME="db"
+   SOURCETREE_DB_FILENAME_RELATIVE=".."
+
+
+
+   local index=0
+   local i
+   local uuid
+   local uuids
+   local nodeline
+   local nodelines
+   local filename
+   local filenames
+
+   while [ $index -lt 3 ]
+   do
+      i=$(( index + 1 ))
+
+      uuid="00000000-0000-0000-0000-00000000000${i}"
+      r_add_line "${uuids}" "${uuid}"
+      uuids="${RVAL}"
+
+      nodeline="nodeline-${i};;;${uuid}"
+      r_add_line "${nodelines}" "${nodeline}"
+      nodelines="${RVAL}"
+
+      filename="/filename-${i}"
+      r_add_line "${filenames}" "${filename}"
+      filenames="${RVAL}"
+
+      # just store some cruft in db
+      # local db="$1"
+      # local uuid="$2"
+      # local nodeline="$3"
+      # local owner="$4"
+      # local filename="$5"
+      # local evaledurl="$6"
+      # local index="$7"
+      #
+      sourcetree::db::memorize "/" \
+                               "${uuid}" \
+                               "${nodeline}" \
+                               "" \
+                               "${filename}" \
+                               "url-${i}" \
+                               ${index}
+      index="$i"
+   done
+
+   local url
+   local result
+
+   index=0
+   while [ $index -lt 3 ]
+   do
+      i=$(( index + 1 ))
+
+      uuid="00000000-0000-0000-0000-00000000000${i}"
+
+      nodeline="`sourcetree::db::fetch_nodeline_for_uuid "/" "${uuid}"`"
+      expect "${nodeline}" "nodeline-${i};;;${uuid}"
+
+      filename="`sourcetree::db::fetch_filename_for_uuid "/" "${uuid}"`"
+      expect "${filename}" "/filename-${i}"
+
+      url="`sourcetree::db::fetch_evaledurl_for_uuid "/" "${uuid}"`"
+      expect "${url}" "url-${i}"
+
+      result="`sourcetree::db::fetch_uuid_for_address "/" "nodeline-${i}"`"
+      expect "${result}" "${uuid}"
+
+      sourcetree::db::r_fetch_uuid_for_evaledurl "/" "url-${i}"
+      expect "${RVAL}" "${uuid}"
+
+      index="$i"
+   done
+   log_verbose "----- #1 PASSED -----"
+
+   result="`sourcetree::db::fetch_all_uuids "/"`"
+   expect "${result}" "${uuids}"
+
+   log_verbose "----- #2 PASSED -----"
+
+   result="`sourcetree::db::fetch_all_nodelines "/"`"
+   expect "${result}" "${nodelines}"
+
+   log_verbose "----- #3 PASSED -----"
+
+   result="`sourcetree::db::fetch_all_filenames "/"`"
+   expect "${result}" "${filenames}"
+
+   log_verbose "----- #4 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+   cd ..
+   rmdir_safer "${directory}"
+}
+
+
+init()
+{
+   MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
+   MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
+}
+
+
+init "$@"
+main "$@"
+

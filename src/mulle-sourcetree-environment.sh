@@ -239,7 +239,8 @@ Use -e if this is desired."
    #
    # our db is specific to a host
    #
-   [ -z "${MULLE_SOURCETREE_PROJECT_DIR}" ] && _internal_fail "MULLE_SOURCETREE_PROJECT_DIR is empty"
+   [ -z "${MULLE_HOSTNAME}" ] && _internal_fail "MULLE_HOSTNAME is empty"
+   [ -z "${MULLE_USERNAME}" ] && _internal_fail "MULLE_USERNAME is empty"
 
    # for testing let it be overrideable
    if [ -z "${SOURCETREE_DB_FILENAME}" ]
