@@ -41,7 +41,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_CMAKE_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="1.3.3"
+MULLE_EXECUTABLE_VERSION="1.3.4"
 
 
 usage()
@@ -70,8 +70,8 @@ Usage:
      require-link             : the library must exist
 
 Flags:
-      --serial                : serial operation
-      --stdout                : emit to stdout (implies --serial)
+   --serial                   : serial operation
+   --stdout                   : emit to stdout (implies --serial)
 
 Environment:
    MULLE_SOURCETREE_CONFIG_NAME                : the config to use (config)
@@ -706,9 +706,24 @@ _emit_cmake_find_library()
                ;;
             esac
          ;;
+
+         # Prefer default linking... On Linux, you can't link libm.a statically
+         # with glibc.so. Also making a preference here would probably work
+         # badly with gcc -static / -dynamic. So it was a bad idea.
+         # *)
+         #    case "${preference}" in
+         #       'any'|'static')
+         #          preference='static'
+         #       ;;
+         #    esac
+         # ;;
       esac
 
       case "${preference}" in
+         'any')
+            # do no preference (see above comment)
+         ;;
+
          'static')
             r_add_line "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
             libraries="${RVAL}"

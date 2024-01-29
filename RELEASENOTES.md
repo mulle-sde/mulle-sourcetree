@@ -1,3 +1,7 @@
+### 1.3.4
+
+* reduce verbosity or -v and -vv
+
 ### 1.3.3
 
 * fix amalagamted repositories being refetched

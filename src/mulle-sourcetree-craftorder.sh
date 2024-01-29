@@ -132,7 +132,7 @@ sourcetree::craftorder::__augment_line()
       fi
    fi
 
-   log_fluff "Augmented ${filename} with marks \"${marks}\" from ${_datasource#"${MULLE_USER_PWD}/"}${_address}"
+   log_debug "Augmented ${filename} with marks \"${marks}\" from ${_datasource#"${MULLE_USER_PWD}/"}${_address}"
 
    if [ "${OUTPUT_RAW_USERINFO}" = 'YES' ]
    then

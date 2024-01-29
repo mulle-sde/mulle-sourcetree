@@ -1521,10 +1521,18 @@ sourcetree::commands::move()
    local other_index
 
    text="${direction}"
-
    case "${direction}" in
       to|before|after)
-         case ${arg} in
+         case "${arg}" in
+            'top')
+               index=0
+            ;;
+
+            'bottom')
+               r_count_lines "${nodelines}"
+               index="${RVAL}"
+            ;;
+
             *[!0-9]*)
                sourcetree::commands::r_get_index "${nodelines}" "${arg}"
                index="${RVAL}"

@@ -188,7 +188,8 @@ sourcetree::sync::check_descend_nodeline()
       then
          log_walk_fluff "Destination \"${filename}\" does not exist."
       else
-         log_verbose "Destination \"${filename}\" does not exist, possibly unexpectedly."
+         # not so unusal now, when we amalgamate
+         log_walk_fluff "Destination \"${filename}\" does not exist, possibly unexpectedly."
       fi
 
       return 1
