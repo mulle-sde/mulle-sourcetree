@@ -360,6 +360,12 @@ sourcetree::fix::main()
       mode="${RVAL}"
    fi
 
+   case "${MULLE_UNAME}" in
+      mingw*)
+         fail "sourcetree fix is not supported on mingw"
+      ;;
+   esac
+
    log_info "Run sourcetree fix"
    sourcetree::fix::do "${mode}"
 }

@@ -1,3 +1,7 @@
+### 1.3.5
+
+* revert back to zsh as the default shell (needs newest mulle-bashfunctions 6.2.3 for that though), which was lost in the transition to /usr/bin/env mulle-bash
+
 ### 1.3.4
 
 * optimized some lowlevel routines, added a direly needed test

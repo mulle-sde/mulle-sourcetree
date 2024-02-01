@@ -410,7 +410,7 @@ Usage:
    of the tree.
 
 Example:
-      ${MULLE_EXECUTABLE_NAME} move 'zlib' below 'expat'
+      ${MULLE_EXECUTABLE_NAME} move 'zlib' after 'expat'
 
 EOF
   exit 1
@@ -1522,7 +1522,7 @@ sourcetree::commands::move()
 
    text="${direction}"
    case "${direction}" in
-      to|before|after)
+      to|before|after|above|below)
          case "${arg}" in
             'top')
                index=0
@@ -1547,7 +1547,7 @@ sourcetree::commands::move()
             ;;
          esac
 
-         if [ "${direction}" = 'before' ]
+         if [ "${direction}" = 'before' -o "${direction}" = "above" ]
          then
             sourcetree::commands::r_get_index "${nodelines}" "${input}"
             other_index="${RVAL}"

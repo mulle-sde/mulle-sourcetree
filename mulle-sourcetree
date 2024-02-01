@@ -1,4 +1,4 @@
-#! /usr/bin/env mulle-bash
+#! /bin/sh
 # shellcheck shell=bash
 #
 #   Copyright (c) 2015-2017 Nat! - Mulle kybernetiK
@@ -33,7 +33,75 @@
 [ "${TRACE:-}" = 'YES' -o "${MULLE_SOURCETREE_TRACE:-}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="1.3.4"
+# zsh is our preference
+MULLE_BASH_EXE_SHELL='zsh'
+MULLE_EXECUTABLE_VERSION='1.3.5'
+MULLE_EXECUTABLE_BASHFUNCTIONS='6.2'
+
+##
+## MEMO: need the old way here because of MULLE_BASH_EXE_SHELL
+##
+
+##########################################################################
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+###########################################################################
+# #
+# # PRELUDE - Standard startup code for loading mulle-bashfunctions
+# #
+###
+
+#
+# Figure out MULLE_BASHFUNCTIONS_LIBEXEC_DIR on this machine if needed.
+#
+if ! [ ${MULLE_BASHFUNCTIONS_LIBEXEC_DIR+x} ]
+then
+   if ! executable="`command -v "mulle-bashfunctions" `"
+   then
+      echo "mulle-bashfunctions not found in PATH ($PATH)" >&2
+      exit 1
+   fi
+
+   if ! MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`"${executable}" libexec-dir `"
+   then
+      echo "mulle-bashfunctions ($executable) failed unexpectedly ?" >&2
+      exit 1
+   fi
+   unset executable
+
+   export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+fi
+
+#
+# The booter reruns the executable either with bash or zsh, whatever the
+# system provides. On the second run --no-auto-shell will be set first.
+#
+if [ "${1:-}" != --no-auto-shell ]
+then
+   . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+else
+   shift    # get rid of --no-auto-shell
+fi
+
+
+#
+# Include mulle-bashfunctions.sh         : default functions
+#         mulle-bashfunctions-none.sh    : almost no functions
+#         mulle-bashfunctions-minimal.sh : few functions for basic scripts
+#         mulle-bashfunctions-all.sh     : everything, even obscure functions
+#
+# Do this first to get aliases
+#
+MULLE_EXECUTABLE="${BASH_SOURCE[0]:-${(%):-%x}}"
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+
+###
+# # Now we are in bash or zsh with mulle-bashfunctions loaded
+# #
+###########################################################################
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+###########################################################################
+
+
 
 #
 # Determine location of own libexec directory. Which is `src` in development
@@ -583,6 +651,15 @@ echo \"\${NODE_MARKS} \${NODE_TAG} \${NODE_BRANCH} \${NODE_URL} (\${WALK_DATASOU
 
       uname)
          printf "%s\n" "${MULLE_UNAME}"
+      ;;
+
+      shell)
+         if [ -z "${ZSH_VERSION+x}" ]
+         then
+            printf "%s\n" "bash ${BASH_VERSION}"
+         else
+            printf "%s\n" "zsh ${ZSH_VERSION}"
+         fi
       ;;
 
       sync|update)

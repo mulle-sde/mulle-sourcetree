@@ -1185,6 +1185,14 @@ sourcetree::action::write_fix_info()
 
    local output
 
+
+   case "${MULLE_UNAME}" in
+      mingw*)
+         log_fluff "sourcetree fix is not supported on mingw"
+         return
+      ;;
+   esac
+
    if [ -L "${filename}" ]
    then
       log_fluff "Not putting fix info into a symlink (${filename})"
@@ -1362,12 +1370,12 @@ sourcetree::action::_r_do_actions_with_nodeline()
    # UUID, which would be bad. The add routine should check that an
    # amalgamation and a normal node occupy the same space (maybe)
    #
+   local compare
+
    if [ "${MULLE_SOURCETREE_SQUAT_ENABLED}" != 'NO' -a "${database}" != '/' ]
    then
       if sourcetree::marks::disable "${_marks}" "share-shirk"
       then
-         local compare
-
          compare="${_address}"
          if sourcetree::marks::enable "${_marks}" "basename"
          then
@@ -1515,7 +1523,6 @@ but it is not required"
    #
 
    local otheruuid
-   local compare
 
    compare="${_address}"
    if sourcetree::marks::enable "${_marks}" "basename"
