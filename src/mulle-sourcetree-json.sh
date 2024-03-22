@@ -115,10 +115,17 @@ sourcetree::json::userinfo()
       then
          r_escaped_doublequotes "${value}"
          value="${RVAL}"
-         printf "${delimiter}                          \"%s\": \"%s\"%s"  "${key}" "${value}"
+         printf "${delimiter}                         \"%s\": \"%s\"%s"  "${key}" "${value}"
          delimiter=","$'\n'
       fi
    .done
+
+   if [ "${delimiter}" = $'\n' ]
+   then
+      printf "},\n"
+      return
+   fi
+
 
    printf "\n                      },\n"
 }

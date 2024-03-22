@@ -1054,12 +1054,13 @@ sourcetree::commands::rcopy()
                                         -d "${directory}" \
                                         list --output-node`"
    then
+      log_warning "Listing of \"${directory#${MULLE_USER_PWD}/}\" failed"
       return 1
    fi
 
    if [ -z "${othernodelines}" ]
    then
-      log_info "No nodes found in \"${directory}\" at all"
+      log_info "No nodes found in \"${directory#${MULLE_USER_PWD}}\" at all"
       return 0
    fi
 
@@ -1085,7 +1086,9 @@ sourcetree::commands::rcopy()
 
    changes_count=0
    additions_count=0
+   found_count=0
 
+   log_info "------"
    .foreachline othernodeline in ${othernodelines}
    .do 
       sourcetree::nodeline::r_get_address "${othernodeline}"
@@ -1093,10 +1096,12 @@ sourcetree::commands::rcopy()
 
       case "${address}" in
          ${input})
-            log_debug "Found \"${address}\""
+            log_fluff "Found \"${address}\""
+            found_count=$(( found_count + 1 ))
          ;;
 
          *)
+            log_debug "Skipping \"${address}\""
             .continue
          ;;
       esac      
@@ -1145,7 +1150,7 @@ sourcetree::commands::rcopy()
    # return 2, if there were changes
    #        0, if the sourcetree remains unchanged
    #
-   log_info "Added ${additions_count} nodes, changed ${changes_count} nodes"
+   log_info "Found ${found_count} nodes, added ${additions_count} nodes, changed ${changes_count} nodes"
    if [ ${additions_count} -eq 0 -a ${changes_count} -eq 0 ]
    then
       return 2

@@ -432,8 +432,9 @@ ${C_RESET}   address address-filename address-url filename nodeline
 sourcetree::list::r_remove_escaped_linefeed()
 {
    RVAL="${1%\\n}"
-   [ "${a}" != "${RVAL}" ]
+   [ "$1" != "${RVAL}" ]
 }
+
 
 # format char
 sourcetree::list::r_append_format_char_if_needed()
@@ -449,7 +450,7 @@ sourcetree::list::r_append_format_char_if_needed()
 
    if sourcetree::list::r_remove_escaped_linefeed "$1"
    then
-      RVAL="${RVAL};$2\n"
+      RVAL="${RVAL};$2"
    else
       RVAL="$1;$2"
    fi
@@ -513,11 +514,15 @@ sourcetree::list::main()
    local OPTION_MARKS
    local OPTION_MARKS_QUALIFIER
    local OPTION_FORMAT='DEFAULT'
+   local OPTION_FORMAT_PREFIX=
+   local OPTION_FORMAT_APPEND_LF='YES'
    local OPTION_FORCE_FORMAT
    local OPTION_DEDUPE_MODE='hacked-marks-nodeline-no-uuid'
    local OPTION_VERBATIM='NO'
    local OPTION_CONFIG_FILE='DEFAULT'
    local OPTION_NO_OUTPUT_MARKS
+
+   local defaultformat="%a"
 
    while [ $# -ne 0 ]
    do
@@ -583,7 +588,13 @@ sourcetree::list::main()
             [ $# -eq 1 ] && sourcetree::list::usage "Missing argument to \"$1\""
             shift
 
-            OPTION_FORMAT="$1"
+            if ! sourcetree::list::r_remove_escaped_linefeed "$1"
+            then
+               OPTION_FORMAT_APPEND_LF='NO'
+            else
+               OPTION_FORMAT_APPEND_LF='YES'
+            fi
+            OPTION_FORMAT="${RVAL}"
          ;;
 
          --force-format)
@@ -629,69 +640,40 @@ sourcetree::list::main()
          #
          #
          -_|--output-uuid)
-            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
-            then
-               OPTION_FORMAT='%_;%a\n' #prepend
-            else
-               sourcetree::list::r_prepend_format_char_if_needed "${OPTION_FORMAT}" '%_'
-               OPTION_FORMAT="${RVAL}"
-            fi
+            sourcetree::list::r_prepend_format_char_if_needed "${OPTION_FORMAT}" '%_'
+            OPTION_FORMAT="${RVAL}"
             OPTION_OUTPUT_UUID='YES' # needed for -ll
          ;;
 
          -g|--output-git)
-            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
-            then
-               OPTION_FORMAT='%a;%t!;%b!\n'
-            else
-               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%t!'
-               sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%b!'
-               OPTION_FORMAT="${RVAL}"
-            fi
+            sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%t!'
+            sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%b!'
+            OPTION_FORMAT="${RVAL}"
          ;;
 
          -G)
-            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
-            then
-               OPTION_FORMAT='%a;%t;%b\n'
-            else
-               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%t'
-               sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%b'
-               OPTION_FORMAT="${RVAL}"
-            fi
+            sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%t'
+            sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%b'
+            OPTION_FORMAT="${RVAL}"
          ;;
 
          -i|--output-index)
-            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
-            then
-               # <title>,<dashes>,<key>
-               OPTION_FORMAT='%v={NODE_INDEX,#,-};%a\n'
-            else
-               sourcetree::list::r_prepend_format_char_if_needed "${OPTION_FORMAT}" \
-                                                                 '%v={NODE_INDEX,#,-}'
-               OPTION_FORMAT="${RVAL}"
-            fi
+            OPTION_FORMAT_PREFIX="%v={NODE_INDEX,#,-};"
+         ;;
+
+         --no-output-index|--output-no-index)
+            OPTION_FORMAT_PREFIX=
          ;;
 
          -l|--output-more)
-            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
-            then
-               OPTION_FORMAT='%a;%n;%s\n'
-            else
-               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%n'
-               sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%s'
-               OPTION_FORMAT="${RVAL}"
-            fi
+            sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%n'
+            sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%s'
+            OPTION_FORMAT="${RVAL}"
          ;;
 
          -m|--output-marks)
-            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
-            then
-               OPTION_FORMAT='%a;%m\n'
-            else
-               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%m'
-               OPTION_FORMAT="${RVAL}"
-            fi
+            sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%m'
+            OPTION_FORMAT="${RVAL}"
             OPTION_NO_OUTPUT_MARKS=NO
          ;;
 
@@ -699,7 +681,7 @@ sourcetree::list::main()
             FLAG_SOURCETREE_MODE="share"
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
-               OPTION_FORMAT='%a;%t;%b\n'
+               OPTION_FORMAT='%a;%t;%b'
             fi
             sourcetree::list::r_prepend_format_char_if_needed "${OPTION_FORMAT}" \
                                                               '%v={WALK_DEPENDENCY}'
@@ -710,41 +692,26 @@ sourcetree::list::main()
             FLAG_SOURCETREE_MODE="share"
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
-               OPTION_FORMAT='%a;%t;%b\n'
+               OPTION_FORMAT='%a;%t;%b'
             fi
          ;;
 
          -s|--output-smartmarks)
-            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
-            then
-               OPTION_FORMAT='%a;%s\n'
-            else
-               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%s'
-               OPTION_FORMAT="${RVAL}"
-            fi
+            sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%s'
+            OPTION_FORMAT="${RVAL}"
             OPTION_NO_OUTPUT_MARKS=NO
          ;;
 
          -u|--output-url)
-            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
-            then
-               OPTION_FORMAT='%a;%u!;%f\n'
-            else
-               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%u!'
-               sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%f'
-               OPTION_FORMAT="${RVAL}"
-            fi
+            sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%u!'
+            sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%f'
+            OPTION_FORMAT="${RVAL}"
          ;;
 
          -U)
-            if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
-            then
-               OPTION_FORMAT="%a;%u;%f\\n"
-            else
-               sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%u'
-               sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%f'
-               OPTION_FORMAT="${RVAL}"
-            fi
+            sourcetree::list::r_append_format_char_if_needed "${OPTION_FORMAT}" '%u'
+            sourcetree::list::r_append_format_char_if_needed "${RVAL}" '%f'
+            OPTION_FORMAT="${RVAL}"
          ;;
 
          --output-node)
@@ -917,9 +884,14 @@ sourcetree::list::main()
    then
       OPTION_FORMAT=
    else
-      if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
+      case "${OPTION_FORMAT}" in
+         *DEFAULT*)
+            OPTION_FORMAT="${OPTION_FORMAT/DEFAULT/${defaultformat}}"
+         ;;
+      esac
+      if [ "${OPTION_FORMAT_APPEND_LF}" = 'YES' ]
       then
-         OPTION_FORMAT='%a\n'
+         OPTION_FORMAT="${OPTION_FORMAT}\n"
       fi
    fi
 
@@ -927,7 +899,7 @@ sourcetree::list::main()
    sourcetree::list::do "${mode}" \
                         "${OPTION_NODETYPES}" \
                         "${OPTION_MARKS_QUALIFIER}" \
-                        "${OPTION_FORCE_FORMAT:-${OPTION_FORMAT}}" \
+                        "${OPTION_FORCE_FORMAT:-${OPTION_FORMAT_PREFIX}${OPTION_FORMAT}}" \
                         "${OPTION_OUTPUT_CMDLINE}"
 }
 

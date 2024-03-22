@@ -206,13 +206,14 @@ EOF
 
    (
       cat <<EOF
-   -N        : bypass search for enclosing source tree
-   --flat    : flat operation
-   --recurse : recursive operation
-   --share   : share operation (default)
+   -N                   : bypass search for enclosing source tree
+   --flat               : flat operation
+   --recurse            : recursive operation
+   --config-name <name> : change default config name (${MULLE_SOURCETREE_CONFIG_NAME:-config})
+   --share              : share operation (default)
 EOF
 
-      options_technical_flags_usage "     : "
+      options_technical_flags_usage "                : "
    ) | LC_ALL=C sort
 
    cat <<EOF
@@ -237,8 +238,8 @@ EOF
    cat <<EOF
 
 Environment:
-   MULLE_SOURCETREE_CONFIG_NAME          : config name to search (config)
-   MULLE_SOURCETREE_CONFIG_NAME_<name>   : config to use for dependency (config)
+   MULLE_SOURCETREE_CONFIG_NAME          : config name to search (${MULLE_SOURCETREE_CONFIG_NAME:-config})
+   MULLE_SOURCETREE_CONFIG_NAME_<name>   : config to use for dependency (${MULLE_SOURCETREE_CONFIG_NAME:-config})
    MULLE_SOURCETREE_STASH_DIR            : place to store dependencies (stash)
    MULLE_SOURCETREE_SYMLINK              : allow symlinks to be used
    MULLE_SOURCETREE_FETCH_<name>         : if NO, inhibits dependency fetch
@@ -309,7 +310,7 @@ sourcetree::main()
             FLAG_CONFIG_DIR="$1"
          ;;
 
-         --config-name|--config-names)
+         --config-name|--config-names|--config)
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 

@@ -490,10 +490,10 @@ emit_c_header()
 
    # since the order of the headers is important and needs to be in treeorder
    # we use mulle-sourcetree directly
-   local headers
 
    # if mulle-sourcetree fails with 127 its ok
    local rval 
+   local headers
 
    headers="`exekutor mulle-sourcetree list \
                                        --format "%_;%a;%m;%i={include,,-------}\\n" \
