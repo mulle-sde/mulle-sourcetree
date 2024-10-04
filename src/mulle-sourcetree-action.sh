@@ -640,7 +640,8 @@ it doesn't exist (${PWD#"${MULLE_USER_PWD}/"})"
          if sourcetree::action::is_squatted_filename "${newfilename}"
          then
             _log_warning "Node \"${_address}\" is new but \"${newfilename#"${MULLE_USER_PWD}/"}\" has been \
-squatted by an amalgamation. You should probably remove this node from your sourcetree."
+squatted by an amalgamation. You should probably remove this node from your sourcetree.
+Hint: Move mulle-testallocator to the bottom and/or run ${C_RESET_BOLD}mulle-sde clean -g"
             ACTIONS="skip"
             RVAL="${ACTIONS}"
             return

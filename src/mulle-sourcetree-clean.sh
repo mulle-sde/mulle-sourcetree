@@ -135,6 +135,14 @@ sourcetree::clean::bury()
    sourcetree::db::bury "${SOURCETREE_START}" "${uuid}" "${filename}"
 }
 
+
+sourcetree::clean::remove_file_if_present()
+{
+   # ignore return value, if not present
+   remove_file_if_present "$@"
+   return 0
+}
+
 # TODO: in a share configuration, we can probably simplify and just
 #       walk flat for embedded dependecies and then wipe the share
 #       directory wholesale
@@ -224,7 +232,7 @@ sourcetree::clean::do()
          ;;
 
          L*)
-            __parallel_execute remove_file_if_present "${filename}"
+            __parallel_execute sourcetree::clean::remove_file_if_present "${filename}"
          ;;
       esac
    .done

@@ -816,7 +816,7 @@ sourcetree::list::main()
 
    [ -z "${DEFAULT_IFS}" ] && _internal_fail "IFS fail"
 
-   [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && sourcetree::list::usage
+   [ $# -ne 0 ] && log_error "superfluous arguments \"$*\" to \"${COMMAND}\"" && sourcetree::list::usage
 
    if [ "${OPTION_CONFIG_FILE}" != 'DEFAULT' ]
    then

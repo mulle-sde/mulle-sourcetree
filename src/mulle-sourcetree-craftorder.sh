@@ -209,8 +209,34 @@ sourcetree::craftorder::r_remove_amalgamated()
    local line
    local filename
    local marks
-   local result
    local shadows
+
+   #
+   # collect shadows (used to collect shadows and filter in one loop,
+   # maybe thats still correct). I "fixed" this because of some weird
+   # problems with the craftinfo order
+   #
+   .foreachline line in ${lines}
+   .do
+      marks="${line##*;}"
+
+      # is its an augmented line
+      if sourcetree::marks::disable "${marks}" "share-shirk"
+      then
+         filename="${line%;*}"
+         r_basename "${filename##*\}}"  # remove ${MULLE_SOURCETREE_STASH_DIR} prefix, get name
+         name="${RVAL}"
+         # don't add it to results, also make sure that "proper" repo which
+         # would exist in ${MULLE_SOURCETREE_STASH_DIR}, if it wasn't shadowed
+         # by the amalgamation, isn't returned
+         log_debug "${filename} is an amalgamation"
+
+         r_add_line "${shadows}" "${name}"
+         shadows="${RVAL}"
+      fi
+   .done
+
+   local result
 
    .foreachline line in ${lines}
    .do
@@ -224,23 +250,13 @@ sourcetree::craftorder::r_remove_amalgamated()
       r_basename "${filename##*\}}"  # remove ${MULLE_SOURCETREE_STASH_DIR} prefix, get name
       name="${RVAL}"
 
-      # is its an augmented line
-      if sourcetree::marks::disable "${marks}" "share-shirk"
+      if sourcetree::marks::enable "${marks}" "share-shirk"
       then
-         # don't add it to results, also make sure that "proper" repo which
-         # would exist in ${MULLE_SOURCETREE_STASH_DIR}, if it wasn't shadowed
-         # by the amalgamation, isn't returned
-         log_debug "${filename} is an amalgamation"
-
-         r_add_line "${shadows}" "${name}"
-         shadows="${RVAL}"
-         .continue
-      fi
-
-      if find_line "${shadows}" "${name}"
-      then
-         log_fluff "${filename} was shadowed by an amalgamation"
-         .continue
+         if find_line "${shadows}" "${name}"
+         then
+            log_debug "${filename} was shadowed by an amalgamation"
+            .continue
+         fi
       fi
 
       r_add_line "${result}" "${line}"
@@ -427,9 +443,10 @@ sourcetree::craftorder::main()
       return 0
    fi
 
-   log_fluff "Collected \"${_craftorder_collection}\""
+   log_fluff "Collected:"$'\n'"${C_RESET}${_craftorder_collection}"
+   log_fluff "Collected: End"
 
-   # remainder is used by sourcetree::walk::do, it should ge inherited into
+   # remainder is used by sourcetree::walk::do, it should get inherited into
    # the subshell
    local _remainder_collection
    local _augmented_collection
@@ -455,12 +472,15 @@ sourcetree::craftorder::main()
    sourcetree::craftorder::r_augment_marks "${_craftorder_collection}" \
                                            "${_augmented_collection}"
    lines="${RVAL}"
-   log_fluff "After augmenting lines with marks: ${C_RESET}\"${lines}\""
+   log_fluff "After augmenting lines with marks:"$'\n'"${C_RESET}${lines}"
+   log_fluff "After augmenting lines with marks: End"
 
    sourcetree::craftorder::r_remove_amalgamated "${lines}"
    lines="${RVAL}"
 
-   log_fluff "After removing amalgamations: ${C_RESET}\"${lines}\""
+   log_fluff "After removing amalgamations:"$'\n'"${C_RESET}${lines}"
+
+   log_fluff "After removing amalgamations: End"
 
    sourcetree::craftorder::output "${lines}"
 }

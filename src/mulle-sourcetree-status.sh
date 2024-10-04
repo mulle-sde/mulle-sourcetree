@@ -656,7 +656,7 @@ sourcetree::status::main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree::status::usage "superflous arguments \"$*\""
+   [ "$#" -eq 0 ] || sourcetree::status::usage "superfluous arguments \"$*\""
 
    if ! sourcetree::cfg::is_config_present "${SOURCETREE_START}"
    then

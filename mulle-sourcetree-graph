@@ -88,8 +88,9 @@ dot_dump()
    local libraries="$4"
    local ignorelist="$5"
    local options="$6"
+   local nodetypes="$7"
 
-   shift 6
+   shift 7
 
    cat <<EOF
 digraph sourcetree
@@ -120,40 +121,29 @@ EOF
          dedupe=""
       fi
 
+      local exclude_libraries 
+
+      exclude_libraries="MATCHES fs"
       if [ "${libraries}" = 'YES' ]
       then
-         WALK_PARENT="${WALK_PARENT}" \
-            rexekutor mulle-sourcetree \
-                                  ${MULLE_TECHNICAL_FLAGS} \
-                                  ${MULLE_SOURCETREE_FLAGS} \
-                                  walk \
-                                  ${dedupe} \
-                                  --nodetypes no-local,no-comment,ALL \
-                                  --eval-node \
-                                  --max-walk-level ${level} \
-                                  ${options} \
-                                  ${ignorelist} \
-                                  "$@" \
-                                  'echo "\"${WALK_PARENT}\" -> \"${NODE_NAME}\"
-\"${NODE_NAME}\" [ href=\"`mulle-domain '"${MULLE_TECHNICAL_FLAGS}"' homepage-url \"${NODE_EVALED_URL:-https://unknown.com}\"`\" ]"'
-      else
-         WALK_PARENT="${WALK_PARENT}" \
-            rexekutor mulle-sourcetree \
-                                  ${MULLE_TECHNICAL_FLAGS} \
-                                  ${MULLE_SOURCETREE_FLAGS} \
-                                  walk \
-                                  --qualifier 'MATCHES fs' \
-                                  --nodetypes no-local,no-comment,ALL \
-                                  ${dedupe} \
-                                  ${options} \
-                                  ${ignorelist} \
-                                  --eval-node \
-                                  --max-walk-level ${level} \
-                                  "$@" \
-                                  'eval  ; echo "\"${WALK_PARENT}\" -> \"${NODE_NAME}\"
-\"${NODE_NAME}\" [ href=\"`mulle-domain '"${MULLE_TECHNICAL_FLAGS}"' homepage-url \"${NODE_EVALED_URL:-https://unknown.com}\"`\" ]"'
+         exclude_libraries='YES'    # this is a qualifier
       fi
 
+      WALK_PARENT="${WALK_PARENT}" \
+         rexekutor mulle-sourcetree \
+                               ${MULLE_TECHNICAL_FLAGS} \
+                               ${MULLE_SOURCETREE_FLAGS} \
+                               walk \
+                               --eval-node \
+                               --max-walk-level "${level}" \
+                               --nodetypes "${nodetypes}" \
+                               --qualifier "${exclude_libraries}" \
+                               ${dedupe} \
+                               ${options} \
+                               ${ignorelist} \
+                               "$@" \
+                               'echo "\"${WALK_PARENT_NAME}\" -> \"${NODE_NAME}\"
+\"${NODE_NAME}\" [ href=\"`mulle-domain '"${MULLE_TECHNICAL_FLAGS}"' homepage-url \"${NODE_EVALED_URL:-https://unknown.com}\"`\" ]"'
    ) \
    | sort \
    | sort -u \
@@ -254,6 +244,7 @@ main()
    log_setting "GRAPH_LIBRARIES : ${GRAPH_LIBRARIES}"
    log_setting "GRAPH_MAX_LEVEL : ${GRAPH_MAX_LEVEL}"
    log_setting "GRAPH_OPTIONS   : ${GRAPH_OPTIONS}"
+   log_setting "GRAPH_NODETYPES : ${GRAPH_NODETYPES}"
 
    local direction
    local level
@@ -295,8 +286,24 @@ main()
       options=""
    fi
 
-   dot_dump "${direction}" "${level}" "${dedupe}" \
-            "${libraries}" "${ignorelist}" "${options}"  \
+   local nodetypes
+
+   nodetypes="${GRAPH_NODETYPES:-no-local}"
+   if [ "${GRAPH_NODETYPES}" = 'local' ]
+   then
+      nodetypes=
+   fi
+
+   r_comma_concat "${nodetypes}" "no-comment,ALL"
+   nodetypes=${RVAL}
+
+   dot_dump "${direction}" \
+            "${level}" \
+            "${dedupe}" \
+            "${libraries}" \
+            "${ignorelist}" \
+            "${options}"  \
+            "${nodetypes}" \
    | cat_output "${OPTION_FORMAT}"
 }
 

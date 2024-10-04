@@ -70,6 +70,7 @@ sourcetree::marks::_r_add()
    fi
 }
 
+
 #
 # node marking
 #
@@ -169,7 +170,6 @@ sourcetree::marks::r_remove()
 }
 
 
-
 #
 # check for existence of a no-key or an only-key
 # case is a bit faster than IFS=, parsing but not much
@@ -263,7 +263,6 @@ sourcetree::marks::version_match()
 
    return 2  # no match found
 }
-
 
 
 #
@@ -439,7 +438,6 @@ sourcetree::marks::intersect()
 }
 
 
-
 #
 # remove marks that cancel each other out
 #
@@ -601,6 +599,16 @@ sourcetree::marks::do_filter_sexpr()
 
          [ ! -z "${value}" ]
          return $?
+      ;;
+
+      YES*)
+         _s="${_s:3}"
+         return 0
+      ;;
+
+      NO*)
+         _s="${_s:2}"
+         return 1
       ;;
 
       MATCHES*)
@@ -805,7 +813,7 @@ sourcetree::marks::framework_consistency_check()
 
 #   if sourcetree::marks::enable "${marks}" cmake-add
 #   then
-#      log_info "Framework \"${address}\" implicitly defines cmake-add, which generates superflous cmake code. (Use no-cmake-add)"
+#      log_info "Framework \"${address}\" implicitly defines cmake-add, which generates superfluous cmake code. (Use no-cmake-add)"
 #   fi
 }
 
@@ -820,17 +828,17 @@ sourcetree::marks::no_cmake_inherit_consistency_check()
 
    if sourcetree::marks::disable "${marks}" cmake-searchpath
    then
-      log_warning "\"${address}\": mark (no-cmake-searchpath) is made superflous by no-cmake-inherit"
+      log_warning "\"${address}\": mark (no-cmake-searchpath) is made superfluous by no-cmake-inherit"
    fi
 
    if sourcetree::marks::disable "${marks}" cmake-dependency
    then
-      log_warning "\"${address}\": mark (no-cmake-dependency) is made superflous by no-cmake-inherit"
+      log_warning "\"${address}\": mark (no-cmake-dependency) is made superfluous by no-cmake-inherit"
    fi
 
    if sourcetree::marks::disable "${marks}" cmake-loader
    then
-      log_warning "\"${address}\": mark (no-cmake-loader) is made superflous by no-cmake-inherit"
+      log_warning "\"${address}\": mark (no-cmake-loader) is made superfluous by no-cmake-inherit"
    fi
 }
 

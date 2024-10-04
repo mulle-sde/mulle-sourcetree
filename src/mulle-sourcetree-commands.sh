@@ -2488,7 +2488,7 @@ sourcetree::commands::common()
          argument="$1"
          [ -z "${argument}" ] && log_error "empty argument" && ${USAGE}
          shift
-         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+         [ $# -ne 0 ] && log_error "superfluous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree::commands::${COMMAND} "${argument}"
       ;;
@@ -2501,7 +2501,7 @@ sourcetree::commands::common()
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          argument="$1"
          shift
-         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+         [ $# -ne 0 ] && log_error "superfluous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree::commands::${COMMAND} "${input}" "${argument}"
       ;;
@@ -2519,7 +2519,7 @@ sourcetree::commands::common()
             qualifier="$1"
             shift
          fi
-         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+         [ $# -ne 0 ] && log_error "superfluous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree::commands::rcopy "${input}" "${argument}" "${qualifier}"
       ;;
@@ -2541,7 +2541,7 @@ sourcetree::commands::common()
       ;;
 
       info)
-         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+         [ $# -ne 0 ] && log_error "superfluous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree::commands::info
       ;;
@@ -2558,7 +2558,7 @@ sourcetree::commands::common()
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          argument="$1"
          shift
-         [ $# -gt 1 ] && shift && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+         [ $# -gt 1 ] && shift && log_error "superfluous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree::commands::${COMMAND} "${input}" "${argument}" "$@"
       ;;
@@ -2571,7 +2571,7 @@ sourcetree::commands::common()
          newmark="$1"
          [ -z "${newmark}" ] && log_error "empty newmark argument" && ${USAGE}
          shift
-         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+         [ $# -ne 0 ] && log_error "superfluous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree::commands::rename_marks "${oldmark}" "${newmark}"
       ;;
@@ -2585,7 +2585,7 @@ sourcetree::commands::common()
          newaddress="$1"
          [ -z "${newaddress}" ] && log_error "empty newaddress argument" && ${USAGE}
          shift
-         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+         [ $# -ne 0 ] && log_error "superfluous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree::commands::set "${input}" address "${newaddress}"
       ;;
@@ -2624,7 +2624,7 @@ sourcetree::commands::common()
             fi
          fi
 
-         [ $# -ne 0 ] && log_error "superflous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
+         [ $# -ne 0 ] && log_error "superfluous arguments \"$*\" to \"${COMMAND}\"" && ${USAGE}
 
          sourcetree::commands::copy "${field}" "${input}" "${config}" "${from}"
       ;;

@@ -787,7 +787,7 @@ _emit_cmake_find_library()
          failcomment="\
 # Disable with: \`mulle-sourcetree mark ${address} no-require-link\`"
 
-         failstatus="FATAL_ERROR"
+         failstatus="SEND_ERROR"
          failstring="${key} was not found"
       ;;
    esac
@@ -1054,7 +1054,7 @@ _emit_cmake_header_only()
       *)
          failcomment="\
 # Disable with: \`mulle-sourcetree mark ${address} no-require\`"
-         failstatus="FATAL_ERROR"
+         failstatus="SEND_ERROR"
          failstring="${key} was not found"
       ;;
    esac

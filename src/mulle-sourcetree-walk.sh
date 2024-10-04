@@ -109,7 +109,8 @@ EOF
       WALK_INDEX           : current node index of all nodes walked
       WALK_LEVEL           : recursion depth of current node
       WALK_MODE            : current internal mode used for walking
-      WALK_PARENT          : the name of the dependency owning the config
+      WALK_PARENT          : the dependency address owning the config
+      WALK_PARENT_NAME     : name of the dependency (like NODE_NAME)
       WALK_VIRTUAL         : ???
       WALK_VIRTUAL_ADDRESS : ???
 
@@ -645,6 +646,8 @@ to WILL_DESCEND_CALLBACK"
    WALK_INDENT="${WALK_INDENT} "
    WALK_LEVEL=$((WALK_LEVEL + 1))
    WALK_PARENT="${_address}"
+   r_basename "${WALK_PARENT}"
+   WALK_PARENT_NAME="${RVAL}"
 
    local rval
    local symbol
@@ -669,6 +672,8 @@ to WILL_DESCEND_CALLBACK"
    WALK_LEVEL=$((WALK_LEVEL - 1))
    WALK_INDENT="${WALK_INDENT%?}"
    WALK_PARENT="${old_walk_parent}"
+   r_basename "${WALK_PARENT}"
+   WALK_PARENT_NAME="${RVAL}"
 
    if [ $rval -eq 0 -a ! -z "${DID_DESCEND_CALLBACK}" ]
    then
@@ -1665,6 +1670,10 @@ sourcetree::walk::walk_config_uuids()
    local WALK_LEVEL=0
    local WALK_INDEX=-1
    local WALK_PARENT="${WALK_PARENT:-.}"
+   local WALK_PARENT_NAME
+
+   r_basename "${WALK_PARENT}"
+   WALK_PARENT_NAME="${RVAL}"
 
    [ -z "${SOURCETREE_START}" ] && _internal_fail "SOURCETREE_START is undefined"
 
