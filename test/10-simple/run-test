@@ -60,35 +60,35 @@ setup_demo_repos()
 
 test_bad_paths()
 {
-   if run_mulle_sourcetree --no-errors add --nodetype git --url "${repos}/a" "/tmp/foo"
+   if run_mulle_sourcetree --mulle-no-errors add --nodetype git --url "${repos}/a" "/tmp/foo"
    then
       _internal_fail "a: failed to complain about absolute path"
    fi
    [ -e ".mulle/etc/sourcetree/config" ] && _internal_fail "a: .mulle/etc/sourcetree/config should not exist"
    [ -e ".mulle/var/sourcetree/db" ]     && _internal_fail "a: .mulle/var/sourcetree/db should not exist"
 
-   if run_mulle_sourcetree --no-errors  add --nodetype git --url "${repos}/a" "../foo"
+   if run_mulle_sourcetree --mulle-no-errors  add --nodetype git --url "${repos}/a" "../foo"
    then
       _internal_fail "b: failed to complain about escape path"
    fi
    [ -e ".mulle/etc/sourcetree/config" ] && _internal_fail "b: .mulle/etc/sourcetree/config should not exist"
    [ -e ".mulle/var/sourcetree/db" ]     && _internal_fail "b: .mulle/var/sourcetree/db should not exist"
 
-   if run_mulle_sourcetree --no-errors  add --nodetype git --url "${repos}/a" "a/../.."
+   if run_mulle_sourcetree --mulle-no-errors  add --nodetype git --url "${repos}/a" "a/../.."
    then
       _internal_fail "c: failed to complain about escape path"
    fi
    [ -e ".mulle/etc/sourcetree/config" ] && _internal_fail "c: .mulle/etc/sourcetree/config should not exist"
    [ -e ".mulle/var/sourcetree/db" ]     && _internal_fail "c: .mulle/var/sourcetree/db should not exist"
 
-   if run_mulle_sourcetree --no-errors  add --nodetype git --url "${repos}/a" "~foo"
+   if run_mulle_sourcetree --mulle-no-errors  add --nodetype git --url "${repos}/a" "~foo"
    then
       _internal_fail "d: failed to complain about absolute path"
    fi
    [ -e ".mulle/etc/sourcetree/config" ] && _internal_fail "d: .mulle/etc/sourcetree/config should not exist"
    [ -e ".mulle/var/sourcetree/db" ]     && _internal_fail "d: .mulle/var/sourcetree/db should not exist"
 
-   if run_mulle_sourcetree --no-errors add --nodetype git --url "${repos}/a" "~/foo"
+   if run_mulle_sourcetree --mulle-no-errors add --nodetype git --url "${repos}/a" "~/foo"
    then
       _internal_fail "e: failed to complain about absolute path"
    fi
@@ -109,7 +109,7 @@ test_simple_add_remove()
    [ -e ".mulle/var/sourcetree/db" ]     && _internal_fail "a: .mulle/var/sourcetree/db should not exist ($PWD)"
 
    # same _url should not work
-   if run_mulle_sourcetree --no-errors add --nodetype git --url "${repos}/a" "foo"
+   if run_mulle_sourcetree --mulle-no-errors add --nodetype git --url "${repos}/a" "foo"
    then
       _internal_fail "b: succeeded unexpectedly"
    fi

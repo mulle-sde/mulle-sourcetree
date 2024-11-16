@@ -444,11 +444,29 @@ sourcetree::commands::get_usage()
 
    cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} get <address> [key]
+   ${MULLE_EXECUTABLE_NAME} get <address> [key|all]
 
-   Prints the node values for a node with the given key.
+   Prints the node values for a node with the given key. By default key is
+   'address'. If you use the special key 'all', then you will get an
+   evalutable output, like so:
+      _address='curl'
+      _branch='\${CURL_BRANCH}'
+      _fetchoptions=''
+      _marks='no-all-load,no-import'
+      _nodetype='\${CURL_NODETYPE:-tar}'
+      _raw_userinfo='base64:YWxpYXNlcz1SZWxlYXNlOmN1cmwsRGVidWc6Y3VybC1kCg=='
+      _tag='\${CURL_TAG:-8.5.0}'
+      _url='\${CURL_URL:-https://curl.haxx.se/download/curl-\${MULLE_TAG}.tar.gz}'
+      _userinfo='aliases=Release:curl,Debug:curl-d'
+      _uuid='78cfb19c-00ec-4df6-9c13-00a6aa134000'
+      _evaledurl='https://curl.haxx.se/download/curl-8.5.0.tar.gz'
+      _evalednodetype='tar'
+      _evaledbranch=''
+      _evaledtag='8.5.0'
+      _evaledfetchoptions=''
 
 Keys:
+   all          : special output (see above)
    address      : the address of the node
    branch       : the (git) branch of the node
    fetchoptions : options passed to mulle-fetcg
@@ -1414,15 +1432,23 @@ sourcetree::commands::get()
 {
    log_entry "sourcetree::commands::get" "$@"
 
-   local input="$1"
+   [ $# -eq 0 ] && sourcetree::commands::get_usage "missing argument"
 
-   shift 1
+   local input
+
+   input="$1"
+   shift
+
+   [ -z "${input}" ] && sourcetree::commands::get_usage "empty argument"
 
    local nodeline
 
    if ! sourcetree::commands::r_get_nodeline_by_input "${input}"
    then
-      log_warning "Node \"${input}\" does not exist"
+      if [ "${OPTION_IF_PRESENT}" = 'NO' ]
+      then
+         log_warning "Node \"${input}\" does not exist"
+      fi
       return 1
    fi
    nodeline="${RVAL}"
@@ -1440,27 +1466,80 @@ sourcetree::commands::get()
 
    sourcetree::nodeline::parse "${nodeline}"  # !!
 
+   if [ ! -z "${OPTION_NODETYPE}" ]
+   then
+      if [ "${_nodetype}" != "${OPTION_NODETYPE}" ]
+      then
+         if [ "${OPTION_IF_PRESENT}" = 'NO' ]
+         then
+            log_warning "Node \"${input}\" nodetype \"${_nodetype}\" does not match \"${OPTION_NODETYPE}\""
+         fi
+         return 1
+      fi
+   fi
+
+   if [ ! -z "${OPTION_MARKS}" ]
+   then
+      if ! sourcetree::marks::compatible_with_marks "${_marks}" "${OPTION_MARKS}"
+      then
+         if [ "${OPTION_IF_PRESENT}" = 'NO' ]
+         then
+            log_warning "Node \"${input}\" marks \"${_marks}\" are not compatible to \"${OPTION_MARKS}\""
+         fi
+         return 1
+      fi
+   fi
+
    if [ "$#" -eq 0 ]
    then
       printf "%s\n" "${_address}"
       return
    fi
 
+   local _evaledurl
+   local _evalednodetype
+   local _evaledbranch
+   local _evaledtag
+   local _evaledfetchoptions
+
+   sourcetree::node::__evaluate_values
+
+   local field
+
    while [ "$#" -ne 0 ]
    do
       case "$1" in
-         branch|address|fetchoptions|marks|nodetype|tag|url|uuid)
-            eval echo \$"_${1}"
+         branch|address|fetchoptions|marks|nodetype|raw_userinfo|tag|url|uuid)
+            r_shell_indirect_expand "_$1"
+            printf "%s\n" "${RVAL}"
          ;;
 
-         raw_userinfo)
-            printf "%s\n" "${_raw_userinfo}"
+         evaledurl|evalednodetype|evaledbranch|evaledtag|evaledfetchoptions)
+            r_shell_indirect_expand "_$1"
+            printf "%s\n" "${RVAL}"
          ;;
 
          userinfo)
             sourcetree::node::r_decode_raw_userinfo "${_raw_userinfo}"
             _userinfo="${RVAL}"
             printf "%s\n" "${_userinfo}"
+         ;;
+
+         all)
+            sourcetree::node::r_decode_raw_userinfo "${_raw_userinfo}"
+            _userinfo="${RVAL}"
+
+
+            for field in '_address' '_branch' '_fetchoptions' '_marks'          \
+                         '_nodetype' '_raw_userinfo' '_tag' '_url' '_userinfo'  \
+                         '_uuid' '_evaledurl' '_evalednodetype' '_evaledbranch' \
+                         '_evaledtag' '_evaledfetchoptions'
+            do
+               r_shell_indirect_expand "${field}"
+               r_escaped_singlequotes "${RVAL}"
+               escaped_value="${RVAL}"
+               printf "${field}='${escaped_value}'\n"
+            done
          ;;
 
          *)
@@ -2525,11 +2604,7 @@ sourcetree::commands::common()
       ;;
 
       get)
-         [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
-         input="$1"
-         [ -z "${input}" ] && log_error "empty argument" && ${USAGE}
-         shift
-         sourcetree::commands::get "${input}" "$@"
+         sourcetree::commands::get "$@"
       ;;
 
       set|remove)

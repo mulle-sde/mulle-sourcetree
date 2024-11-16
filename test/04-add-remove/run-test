@@ -38,17 +38,17 @@ test_run()
       _internal_fail "add failed unexpectedly"
    fi
 
-   if run_mulle_sourcetree --no-errors -s -N add --marks "no-delete,no-update,no-share" "a"
+   if run_mulle_sourcetree --mulle-no-errors -s -N add --marks "no-delete,no-update,no-share" "a"
    then
       _internal_fail "duplicate add succeeded unexpectedly"
    fi
 
-   if run_mulle_sourcetree --no-errors -s -N add --marks "no-delete,no-update,no-share" "."
+   if run_mulle_sourcetree --mulle-no-errors -s -N add --marks "no-delete,no-update,no-share" "."
    then
       _internal_fail "add \".\" succeeded unexpectedly"
    fi
 
-   if run_mulle_sourcetree --no-errors -s -N add --marks "no-delete,no-update,no-share" -s local "/"
+   if run_mulle_sourcetree --mulle-no-errors -s -N add --marks "no-delete,no-update,no-share" -s local "/"
    then
       _internal_fail "/ add succeeded unexpectedly"
    fi
@@ -68,12 +68,12 @@ test_run()
       _internal_fail "remove \"a\" failed unexpectedly"
    fi
 
-   if run_mulle_sourcetree --no-errors -s -N remove "a"
+   if run_mulle_sourcetree --mulle-no-errors -s -N remove "a"
    then
       _internal_fail "superflous remove \"a\" succeeded unexpectedly"
    fi
 
-   if run_mulle_sourcetree --no-errors -s -N remove "."
+   if run_mulle_sourcetree --mulle-no-errors -s -N remove "."
    then
       _internal_fail "remove \".\" succeeded unexpectedly"
    fi

@@ -395,7 +395,7 @@ sourcetree::marks::compatible_with_marks()
             key="${key:5}"
          ;;
 
-        version-*)
+         version-*)
             .continue
          ;;
       esac

@@ -191,7 +191,7 @@ Options:
    --breadth-first  : walk tree breadth first (first all top levels)
    --cd             : change directory to node's working directory
    --comments       : also walk comment nodes
-   --in-order       : walk tree depth first  (Root, Left, Right
+   --in-order       : walk tree depth first  (Left, Root, Right)
    --lenient        : allow shell command to error
    --no-dedupe      : walk all nodes in the tree (very slow)
    --pre-order      : walk tree in pre-order  (Root, Left, Right)

@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.0)
 
-project( mulle-sourcetree NONE)
+project( mulle-sourcetree VERSION 1.4.0 LANGUAGES NONE)
 
 #
 # Primarily used for packaging on Linux
@@ -16,7 +16,7 @@ project( mulle-sourcetree NONE)
 #
 
 execute_process( COMMAND ./mulle-sourcetree version
-                 WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+                 WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
                  OUTPUT_VARIABLE MULLE_SOURCETREE_VERSION
                  OUTPUT_STRIP_TRAILING_WHITESPACE)
 message( STATUS "MULLE_SOURCETREE_VERSION is ${MULLE_SOURCETREE_VERSION} according to mulle-sourcetree")
@@ -60,4 +60,3 @@ DESTINATION "libexec/mulle-sourcetree")
 # must be after CPACK_PACKAGE_VERSION
 include( CMakePackage.cmake)
 include( CPack)
-

@@ -438,6 +438,7 @@ sourcetree::nodeline::r_find_by_address_url_uuid()
 
    if [ ! -z "${address}" ]
    then
+      # this is just a fuzzy mis-use of addresss
       if sourcetree::nodeline::r_find_by_index "${nodelines}" \
                                                "${address}"
       then

@@ -35,7 +35,7 @@
 
 # zsh is our preference
 MULLE_BASH_EXE_SHELL='zsh'
-MULLE_EXECUTABLE_VERSION='1.3.5'
+MULLE_EXECUTABLE_VERSION='1.4.0'
 MULLE_EXECUTABLE_BASHFUNCTIONS='6.2'
 
 ##
@@ -240,7 +240,7 @@ EOF
 Environment:
    MULLE_SOURCETREE_CONFIG_NAME          : config name to search (${MULLE_SOURCETREE_CONFIG_NAME:-config})
    MULLE_SOURCETREE_CONFIG_NAME_<name>   : config to use for dependency (${MULLE_SOURCETREE_CONFIG_NAME:-config})
-   MULLE_SOURCETREE_STASH_DIR            : place to store dependencies (stash)
+   MULLE_SOURCETREE_STASH_DIR            : place to store dependencies (${MULLE_SOURCETREE_STASH_DIR:-stash})
    MULLE_SOURCETREE_SYMLINK              : allow symlinks to be used
    MULLE_SOURCETREE_FETCH_<name>         : if NO, inhibits dependency fetch
 EOF

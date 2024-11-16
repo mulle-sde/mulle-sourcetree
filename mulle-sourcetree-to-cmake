@@ -41,7 +41,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_CMAKE_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="1.3.5"
+MULLE_EXECUTABLE_VERSION="1.4.0"
 
 
 usage()
@@ -804,8 +804,17 @@ _emit_cmake_find_library()
 # TODO: maybenot use CMAKE_LIBRARY_PATH and CMAKE_FRAMEWORK_PATH then ?
 
       cat  <<EOF
+${indent}if( COLLECT_${containername}_AS_NAMES)
+${indent}   list( APPEND ${containername} "${names%%,*}")
+${indent}else()
+EOF
+      indent="${indent}   "
+
+      cat  <<EOF
 ${indent}if( NOT ${key})
 EOF
+
+
    # if ir's just the default emit a simple line
    if [ "${types}" = "Release" ]
    then
@@ -938,6 +947,15 @@ ${indent}   else()
 ${indent}      ${failcomment}
 ${indent}      message( ${failstatus} "${failstring}")
 ${indent}   endif()
+EOF
+
+   indent="${indent%   }"
+
+   cat <<EOF
+${indent}   endif()
+EOF
+
+  cat <<EOF
 ${indent}endif()
 EOF
 }
@@ -1260,18 +1278,13 @@ EOF
                 "${header}" \
                 "${indent}"
 
-   if [ ! -z "${ifstatement1}" ]
+   if [ ! -z "${ifstatement1}" -a  ! -z "${ifstatement2}" ]
    then
       echo "   endif()"
-      if [ ! -z "${ifstatement2}" ]
-      then
-         echo "endif()"
-      fi
-   else
-      if [ ! -z "${ifstatement2}" ]
-      then
-         echo "endif()"
-      fi
+   fi
+   if [ ! -z "${ifstatement1}" -o  ! -z "${ifstatement2}" ]
+   then
+      echo "endif()"
    fi
 
    echo

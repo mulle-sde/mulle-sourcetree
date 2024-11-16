@@ -1,3 +1,34 @@
+## 1.4.0
+
+feat: improve node handling and cmake generation
+
+* Enhance node property handling
+  - Add 'all' output format to `get` command for complete node info
+  - Support node property compatibility checks in get command
+  - Fix node address fuzzy matching and index handling
+
+* Improve cmake generation
+  - Add `COLLECT_AS_NAMES` support for library collection
+  - Use `SHOW_ERROR` instead of `FATAL_ERROR` for better error handling
+  - Fix nested if/endif structure in cmake output
+
+* Documentation improvements
+  - Fix walk mode description (Left, Root, Right for in-order)
+  - Add detailed examples for get command output
+  - Document environment variables with defaults
+
+* Other improvements
+  - Update project version handling in CMake
+  - Fix backwards compatibility for os-platform marks
+  - Use correct source directory references in CMake
+
+* new walk variable ``WALK_PARENT_NAME`` available
+* emitted cmake dependency/library now does not use `FATAL_ERROR` but just `SHOW_ERROR,` which is slightly better in circumstances, where the cmake script still has to do something (likely in order to fix the error, or show something)
+
+
+* revert back to zsh as the default shell (needs newest mulle-bashfunctions 6.2.3 for that though), which was lost in the transition to /usr/bin/env mulle-bash
+
+
 ### 1.3.5
 
 * revert back to zsh as the default shell (needs newest mulle-bashfunctions 6.2.3 for that though), which was lost in the transition to /usr/bin/env mulle-bash
