@@ -98,7 +98,7 @@ sourcetree::clean::walk()
    if sourcetree::marks::disable "${marks}" "delete"
    then
       log_fluff "\"${filename}\" is protected from delete"
-      echo "P ${filename}"
+      printf "P %s\n" "${filename}"
    fi
 
    if [ -e "${filename}" ]
@@ -106,15 +106,15 @@ sourcetree::clean::walk()
       if [ -L "${filename}" ]
       then
          log_fluff "Symlink \"${filename}\" marked for delete."
-         echo "L ${filename}"
+         printf "L %s\n" "${filename}"
       else
          if [ -d "${filename}" ]
          then
             log_fluff "Directory \"${filename}\" marked for delete."
-            echo "D ${filename}"
+            printf "D %s\n" "${filename}"
          else
             log_fluff "File \"${filename}\" marked for delete."
-            echo "F ${filename}"
+            printf "F %s\n" "${filename}"
          fi
       fi
    else

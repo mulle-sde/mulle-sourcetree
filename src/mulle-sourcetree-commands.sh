@@ -2607,7 +2607,8 @@ sourcetree::commands::common()
          sourcetree::commands::get "$@"
       ;;
 
-      set|remove)
+      set|remove|rm)
+         COMMAND="${COMMAND/#rm/remove}"
          [ $# -eq 0 ] && log_error "missing argument to \"${COMMAND}\"" && ${USAGE}
          input="$1"
          [ -z "${input}" ] && log_error "empty argument" && ${USAGE}

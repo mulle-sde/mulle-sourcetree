@@ -63,7 +63,7 @@ sourcetree::filter::main()
 {
    log_entry "sourcetree::filter::main" "$@"
 
-   while :
+   while [ $# -ne 0 ]
    do
       case "$1" in
          -h*|--help|help)

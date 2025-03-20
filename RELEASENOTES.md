@@ -1,3 +1,8 @@
+## 1.5.0
+
+* allow rm as alias for remove
+
+
 ## 1.4.0
 
 feat: improve node handling and cmake generation

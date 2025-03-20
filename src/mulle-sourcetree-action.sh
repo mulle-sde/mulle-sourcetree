@@ -1150,7 +1150,7 @@ sourcetree::action::__update_perform_actions()
       sourcetree::action::__update_perform_item "${item}" # this will exit on fail
       rval=$?
 
-      log_debug "sourcetree::action::__update_perform_item return $rval"
+      log_debug "sourcetree::action::__update_perform_item returned $rval"
 
       case $rval in
          0)
