@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required( VERSION 3.15)
 
 project( mulle-sourcetree VERSION 1.5.0 LANGUAGES NONE)
 
