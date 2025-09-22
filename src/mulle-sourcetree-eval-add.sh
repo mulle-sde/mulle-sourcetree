@@ -177,7 +177,7 @@ sourcetree::eval_add::main()
    done
 
    [ "$#" -eq 0  ] && sourcetree::eval_add::usage "Missing command line text"
-   [ "$#" -gt 1  ] && shift && sourcetree::eval_add::usage "Superflous input \"$*\""
+   [ "$#" -gt 1  ] && shift && sourcetree::eval_add::usage "Superfluous input \"$*\""
 
    sourcetree::eval_add::commands "$1" \
                                   "${OPTION_FILENAME:-<input>}"

@@ -292,7 +292,7 @@ sourcetree::diff::main()
    local other="$1"
    shift
 
-   [ $# -gt 1 ] && shift && sourcetree::diff::usage "Superflous arguments $*"
+   [ $# -gt 1 ] && shift && sourcetree::diff::usage "Superfluous arguments $*"
 
 
    local config

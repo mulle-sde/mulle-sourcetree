@@ -380,7 +380,7 @@ sourcetree::craftorder::main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree::craftorder::usage "Superflous arguments \"$*\""
+   [ "$#" -eq 0 ] || sourcetree::craftorder::usage "Superfluous arguments \"$*\""
 
    #
    # First we walk post-order to get the filenames in the proper order

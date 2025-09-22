@@ -149,7 +149,7 @@ necessary marks \"no-delete,no-update,no-share,require\""
          _url=
       ;;
 
-      "symlink")
+      'symlink')
          mode="unsafe"
       ;;
    esac

@@ -65,56 +65,64 @@ sourcetree::action::r_fetch_eval_options()
 
    local options
    local option_symlink="${OPTION_FETCH_SYMLINK}"
+   local option_writeprotect
 
-   if sourcetree::marks::disable "${marks}" "symlink" || \
-      sourcetree::marks::disable "${marks}" "symlink-${MULLE_UNAME}"
+   if [ "${option_symlink}" = 'COPY' ]
    then
-      r_concat "${options}" "--no-symlink"
-      options="${RVAL}"
-      option_symlink='NO'
-   else
-      case "${MULLE_UNAME}" in
-         'windows'|'mingw'|'msys')
-            # cl.exe/cmake.exe don't like embedded symlinks,so turn off
-            if sourcetree::action::is_embedded "${marks}"
-            then
-               option_symlink='NO'
-            fi
-         ;;
-      esac
-
-      # this implictily sets --symlink
-      case "${option_symlink}" in
-         'NO')
-            r_concat "${options}" "--no-symlink"
-            options="${RVAL}"
-         ;;
-
-         'YES')
-            r_concat "${options}" "--symlink-returns-4"
-            options="${RVAL}"
-            option_symlink='YES'
-         ;;
-
-         "DEFAULT")
-            option_symlink='NO'
-            if [ "${MULLE_SOURCETREE_SYMLINK}" = 'YES' ]
-            then
-               r_concat "${options}" "--symlink-returns-4"
-               options="${RVAL}"
-               option_symlink='YES'
-            fi
-         ;;
-      esac
-
-      if [ "${option_symlink}" = 'YES' -a "${OPTION_FETCH_ABSOLUTE_SYMLINK}" = 'YES' ]
+      if sourcetree::marks::disable "${marks}" 'symlink' || \
+         sourcetree::marks::disable "${marks}" "symlink-${MULLE_UNAME}"
       then
-         r_concat "${options}" "--absolute-symlink"
-         options="${RVAL}"
+         option_symlink='NO'
+      else
+         case "${MULLE_UNAME}" in
+            'windows'|'mingw'|'msys')
+               # cl.exe/cmake.exe don't like embedded symlinks,so turn off
+               if sourcetree::action::is_embedded "${marks}"
+               then
+                  option_symlink='NO'
+               fi
+            ;;
+         esac
       fi
    fi
-   
-   if [ "${option_symlink}" = 'NO' ]
+
+   case "${option_symlink}" in
+      'DEFAULT')
+         option_symlink="${MULLE_SOURCETREE_SYMLINK:-NO}"
+      ;;
+   esac
+
+   # this implictily sets --symlink
+   case "${option_symlink}" in
+      'NO')
+         r_concat "${options}" "--no-symlink"
+         options="${RVAL}"
+      ;;
+
+      'YES')
+         r_concat "${options}" "--symlink-returns-4"
+         options="${RVAL}"
+         option_symlink='YES'
+      ;;
+
+      'COPY')
+         r_concat "${options}" "--copy"
+         options="${RVAL}"
+         option_symlink='NO'
+      ;;
+
+      *)
+         fail "Unknown MULLE_SOURCETREE_SYMLINK value \"${option_symlink}\" check mulle-sde env"
+      ;;
+   esac
+
+   if [ "${option_symlink}" = 'YES' -a "${OPTION_FETCH_ABSOLUTE_SYMLINK}" = 'YES' ]
+   then
+      r_concat "${options}" "--absolute-symlink"
+      options="${RVAL}"
+   fi
+
+   if [ "${option_symlink}" = 'NO' -o "${option_writeprotect}" = 'YES' ]
    then
       if sourcetree::marks::disable "${marks}" "readwrite"
       then
@@ -736,7 +744,7 @@ chickening out"
    # Source change is big (except if old is symlink). If the nodetype changed
    # there should also be a change in URL..
    #
-   if [ "${_nodetype}" != "${newnodetype}" -a "${_nodetype}" != "symlink" ]
+   if [ "${_nodetype}" != "${newnodetype}" -a "${_nodetype}" != 'symlink' ]
    then
       _log_verbose "Nodetype has changed from \"${_nodetype}\" to \
 \"${newnodetype}\", need to fetch"
@@ -987,7 +995,7 @@ sourcetree::action::__update_perform_item()
 
             4)
                # if we used a symlink, we want to memorize that (why ?)
-               _nodetype="symlink"
+               _nodetype='symlink'
 
                # we don't really want to update that
                _contentschanged='NO'

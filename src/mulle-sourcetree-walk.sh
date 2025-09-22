@@ -2175,7 +2175,7 @@ sourcetree::walk::main()
 
    [ $# -gt 1 ] && \
       shift && \
-      sourcetree::walk::usage "Superflous arguments \"$*\". Pass callback \
+      sourcetree::walk::usage "Superfluous arguments \"$*\". Pass callback \
 as one string and use quotes."
 
    local mode

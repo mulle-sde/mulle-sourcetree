@@ -271,7 +271,7 @@ sourcetree::config::list_main()
       shift
    done
 
-   [ $# -ne 0 ] && sourcetree::config::list_usage "Superflous arguments $*"
+   [ $# -ne 0 ] && sourcetree::config::list_usage "Superfluous arguments $*"
 
    local filename
    local found
@@ -368,7 +368,7 @@ sourcetree::config::status_main()
       shift
    done
 
-   [ $# -ne 0 ] && sourcetree::config::status_usage "Superflous arguments $*"
+   [ $# -ne 0 ] && sourcetree::config::status_usage "Superfluous arguments $*"
 
    local filename
 
@@ -435,7 +435,7 @@ sourcetree::config::copy_main()
    done
 
    [ $# -eq 0 ] && sourcetree::config::copy_usage "Missing destination argument"
-   [ $# -gt 1 ] && shift && sourcetree::config::copy_usage "Superflous arguments $*"
+   [ $# -gt 1 ] && shift && sourcetree::config::copy_usage "Superfluous arguments $*"
 
    local destination="$1"
 
@@ -526,7 +526,7 @@ sourcetree::config::remove_main()
       shift
    done
 
-   [ $# -gt 1 ] && shift && sourcetree::config::remove_usage "Superflous argument $*"
+   [ $# -gt 1 ] && shift && sourcetree::config::remove_usage "Superfluous argument $*"
 
    local names
 

@@ -526,7 +526,7 @@ sourcetree::commands::r_typeguess_node()
          ;;
 
          ../*)
-            nodetype="symlink"
+            nodetype='symlink'
          ;;
 
          *)
@@ -916,10 +916,16 @@ sourcetree::commands::add()
    local _marks="${OPTION_MARKS}"
    local _tag="${OPTION_TAG}"
    local _userinfo="${OPTION_USERINFO}"
+   local _raw_userinfo="${OPTION_RAW_USERINFO}"
    local _uuid
-   local _raw_userinfo
 
    include "sourcetree::supermarks"
+
+   if [ ! -z "${_userinfo}" ]
+   then
+      sourcetree::node::r_encode_userinfo "${_userinfo}"
+      _raw_userinfo="${RVAL}"
+   fi
 
    # turn macros into marks
    sourcetree::supermarks::r_decompose "${_marks}"
@@ -2510,9 +2516,20 @@ sourcetree::commands::common()
             OPTION_UPDATE='NO'
          ;;
 
+         --raw-userinfo)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            [ ! -z "${OPTION_USERINFO}" ] && fail "--userinfo option already set"
+
+            OPTION_RAW_USERINFO="$1"
+         ;;
+
          -U|--userinfo)
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
+
+            [ ! -z "${OPTION_RAW_USERINFO}" ] && fail "--raw-userinfo option already set"
 
             OPTION_USERINFO="$1"
          ;;

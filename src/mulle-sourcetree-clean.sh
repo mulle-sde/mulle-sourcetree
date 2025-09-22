@@ -309,7 +309,7 @@ sourcetree::clean::main()
       shift
    done
 
-   [ "$#" -eq 0 ] || sourcetree::clean::usage "Superflous arguments $*"
+   [ "$#" -eq 0 ] || sourcetree::clean::usage "Superfluous arguments $*"
 
 
    include "path"

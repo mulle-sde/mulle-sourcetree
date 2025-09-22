@@ -222,7 +222,7 @@ main()
    local nodetype="`run_mulle_sourcetree -N get c nodetype`"
    local url="`run_mulle_sourcetree -N get c url`"
 
-   if [ "${nodetype}" != "symlink" ] || [ "${address}" != "c" ] || [ "${url}" != "/a.com/a" ]
+   if [ "${nodetype}" != 'symlink' ] || [ "${address}" != "c" ] || [ "${url}" != "/a.com/a" ]
    then
       _internal_fail "#5 did not work (${address};${nodetype};${url})"
    fi

@@ -1164,6 +1164,10 @@ sourcetree::sync::main()
             OPTION_PARALLEL='NO'
          ;;
 
+         --copy|--symlink-copy)
+            OPTION_FETCH_SYMLINK='COPY'
+         ;;
+
          --symlink|--symlinks)
             OPTION_FETCH_SYMLINK='YES'
          ;;

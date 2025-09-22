@@ -326,7 +326,7 @@ sourcetree::status::r_emit()
       fs="file"
       if [ -L "${filename}" ]
       then
-         fs="symlink"
+         fs='symlink'
          RVAL="${output_address};ok;${fs};-;-" #;${filename}"
          return 0
       else

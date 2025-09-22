@@ -600,7 +600,7 @@ sourcetree::supermarks::main()
          sourcetree::supermarks::list_main "$@"
       ;;
 
-      ''|*)
+      *)
          sourcetree::supermarks::usage "Unknown command $cmd"
       ;;
    esac

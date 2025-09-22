@@ -79,12 +79,13 @@ sourcetree::json::usage()
 
     cat <<EOF >&2
 Usage:
-   ${MULLE_USAGE_NAME} json [--expand]
+   ${MULLE_USAGE_NAME} json [--expand|--raw]
 
       cat <<EOF >&2
 
    Show sourcetree config file as JSON. This will dump the current config
    flat. If you specify --expand, the variables will be expanded.
+   If you specify --raw, the userinfo will be remain as base64.
 
 EOF
    exit 1
@@ -167,7 +168,12 @@ sourcetree::json::callback()
    fi
    if [ ! -z "${_raw_userinfo}" ]
    then
-      sourcetree::json::userinfo "${_raw_userinfo}"
+      if [ "${OPTION_RAW}" = 'YES' ]
+      then
+         printf "      \"raw_userinfo\": \"${_raw_userinfo}\",\n"
+      else
+         sourcetree::json::userinfo "${_raw_userinfo}"
+      fi
    fi
 
    printf "      \"uuid\":         \"${_uuid}\"\n"
@@ -212,7 +218,12 @@ sourcetree::json::expandedcallback()
    fi
    if [ ! -z "${_raw_userinfo}" ]
    then
-      sourcetree::json::userinfo "${_raw_userinfo}"
+      if [ "${OPTION_RAW}" = 'YES' ]
+      then
+         printf "      \"raw_userinfo\": \"${_raw_userinfo}\",\n"
+      else
+         sourcetree::json::userinfo "${_raw_userinfo}"
+      fi
    fi
 
    printf "      \"uuid\":         \"${_uuid}\"\n"
@@ -223,10 +234,11 @@ sourcetree::json::expandedcallback()
 sourcetree::json::main()
 {
    local OPTION_SHAREDIR
-   local OPTION_EXPAND
+   local OPTION_EXPAND='NO'
    local OPTION_MARKS
    local OPTION_NODETYPES
    local OPTION_MARKS_QUALIFIER
+   local OPTION_RAW='NO'
 
    #
    # simple option handling
@@ -250,6 +262,10 @@ sourcetree::json::main()
 
          --no-expand)
             OPTION_EXPAND='NO'
+         ;;
+
+         --raw)
+            OPTION_RAW='YES'
          ;;
 
          --marks)

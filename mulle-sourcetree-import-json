@@ -221,7 +221,7 @@ ${C_RESET_BOLD}   https://stedolan.github.io/jq"
       output="${RVAL}"
    fi
 
-   [ $# -gt 1 ] && shift && usage "Superflous arguments $*"
+   [ $# -gt 1 ] && shift && usage "Superfluous arguments $*"
 
    #
    #
