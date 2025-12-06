@@ -32,6 +32,9 @@
 MULLE_SOURCETREE_CRAFTORDER_SH='included'
 
 
+include "sourcetree::walk"
+include "version"
+
 sourcetree::craftorder::usage()
 {
    [ $# -ne 0 ] && log_error "$1"
@@ -102,7 +105,8 @@ sourcetree::craftorder::r_create_filename()
 #
 sourcetree::craftorder::__augment_line()
 {
-   log_entry "sourcetree::craftorder::__augment_line" "$@"
+   # kind of a walk thing and very tedious
+   log_walk_entry "sourcetree::craftorder::__augment_line" "$@"
 
    local filename
 
@@ -129,10 +133,13 @@ sourcetree::craftorder::__augment_line()
       if "${OPTION_CALLBACK}" "${_datasource}" "${_address}" "${_nodetype}" "${marks}" "${filename}"
       then
          marks="${RVAL}"
+         if [ "${marks}" != "${_marks}" ]
+         then
+            log_debug "Augmented ${filename} with marks \"${marks}\" from ${_datasource#"${MULLE_USER_PWD}/"}${_address}"
+         fi
       fi
    fi
 
-   log_debug "Augmented ${filename} with marks \"${marks}\" from ${_datasource#"${MULLE_USER_PWD}/"}${_address}"
 
    if [ "${OUTPUT_RAW_USERINFO}" = 'YES' ]
    then
@@ -155,7 +162,7 @@ sourcetree::craftorder::__augment_line()
 #
 sourcetree::craftorder::__collect_line()
 {
-   log_entry "sourcetree::craftorder::__collect_line" "$@"
+#   log_entry "sourcetree::craftorder::__collect_line" "$@"
 
    local filename
 
@@ -485,16 +492,5 @@ sourcetree::craftorder::main()
    sourcetree::craftorder::output "${lines}"
 }
 
-
-sourcetree::craftorder::initialize()
-{
-   log_entry "sourcetree::craftorder::initialize"
-
-   include "sourcetree::walk"
-   include "version"
-}
-
-
-sourcetree::craftorder::initialize
 
 :

@@ -247,7 +247,7 @@ sourcetree::clean::main()
 {
    log_entry "sourcetree::clean::main" "$@"
 
-   local OPTION_WALK_DB="DEFAULT"
+   local OPTION_WALK_DB='DEFAULT'
    local OPTION_IS_UPTODATE='NO'
    local OPTION_CLEAN_SHARE_DIR='DEFAULT'
    local OPTION_CLEAN_GRAVEYARD='DEFAULT'

@@ -30,3 +30,4 @@ CPackSourceConfig.cmake
 Makefile
 cmake_install.cmake
 .mulle/etc/project/publisher-info.sh
+.mulle/etc/make

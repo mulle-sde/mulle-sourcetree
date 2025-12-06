@@ -568,7 +568,7 @@ sourcetree::commands::_nameguess_node()
    local nodetype="$2"
    local url="$3"
 
-   if [ "${nodetype}" = "comment" ]
+   if [ "${nodetype}" = 'comment' ]
    then
       _address="${input}"
       _nodetype="${nodetype}"
@@ -1084,7 +1084,7 @@ sourcetree::commands::rcopy()
 
    if [ -z "${othernodelines}" ]
    then
-      log_info "No nodes found in \"${directory#${MULLE_USER_PWD}}\" at all"
+      log_info "No nodes found in \"${directory#${MULLE_USER_PWD}/}\" at all"
       return 0
    fi
 
@@ -1752,11 +1752,13 @@ no-cmake-platform-mingw
 no-cmake-platform-darwin
 no-cmake-platform-freebsd
 no-cmake-platform-linux
+no-cmake-platform-webassembly
 no-cmake-platform-windows
 no-platform-mingw
 no-platform-darwin
 no-platform-freebsd
 no-platform-linux
+no-platform-webassembly
 no-platform-windows
 no-public
 no-readwrite
@@ -1772,6 +1774,7 @@ no-symlink-mingw
 no-symlink-darwin
 no-symlink-freebsd
 no-symlink-linux
+no-symlink-webassembly
 no-symlink-windows
 no-public
 no-update
@@ -1780,11 +1783,13 @@ only-framework
 only-cmake-platform-darwin
 only-cmake-platform-freebsd
 only-cmake-platform-linux
+only-cmake-platform-webassembly
 only-cmake-platform-windows
 only-cmake-platform-mingw
 only-platform-darwin
 only-platform-freebsd
 only-platform-linux
+only-platform-webassembly
 only-platform-windows
 only-platform-mingw
 "
@@ -2383,7 +2388,7 @@ sourcetree::commands::common()
    local OPTION_URL
    local OPTION_USERINFO
 
-   local OPTION_EXTENDED_MARK="DEFAULT"
+   local OPTION_EXTENDED_MARK='DEFAULT'
    local OPTION_IF_MISSING='NO'
    local OPTION_IF_PRESENT='NO'
    local OPTION_FUZZY='YES'

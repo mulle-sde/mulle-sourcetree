@@ -79,7 +79,7 @@ sourcetree::reset::main()
 {
    log_entry "sourcetree::reset::main" "$@"
 
-   local OPTION_REMOVE_GRAVEYARD="DEFAULT"
+   local OPTION_REMOVE_GRAVEYARD='DEFAULT'
 
    while [ $# -ne 0 ]
    do

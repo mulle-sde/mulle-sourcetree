@@ -342,38 +342,106 @@ sourcetree::marks::match()
 }
 
 
-sourcetree::marks::enable()
+sourcetree::marks::r_enable()
 {
    local marks="$1"
    local key="$2"
 
    case "${key}" in
       'only-'*|'no-'*)
-         _internal_fail "key must not start with only or no"
+         _internal_fail "key \"${key}\" must not start with only or no"
       ;;
    esac
 
+   local mark 
+
+   mark="only-${key}"
    # if key is enabled with only- like only-platform-linux it's cool
-   if sourcetree::marks::_contain "${marks}" "only-${key}"
+   if sourcetree::marks::_contain "${marks}" "${mark}"
    then
+      RVAL="${mark}"
       return 0
    fi
 
    # a no key disables
+   mark="no-${key}"
    if sourcetree::marks::_contain "${marks}" "no-${key}"
    then
+      RVAL="${mark}"
       return 1
    fi
 
    # for platform-linux cut off last -linux and see if only-platform-* matches
    # anything if yes we disable, that's very rare though
-   ! sourcetree::marks::match "${marks}" "only-${key%-*}-*"
+   local rc 
+   
+   mark="only-${key%-*}-*"
+   ! sourcetree::marks::match "${marks}" "${mark}"
+   rc=$?
+
+   RVAL="${mark}"
+
+   return $rc
+}
+
+sourcetree::marks::enable()
+{
+   sourcetree::marks::r_enable "$@"
+}
+
+
+sourcetree::marks::r_disable()
+{
+   ! sourcetree::marks::r_enable "$@"
 }
 
 
 sourcetree::marks::disable()
 {
-   ! sourcetree::marks::enable "$@"
+   ! sourcetree::marks::r_enable "$@"
+}
+
+
+sourcetree::marks::r_enable_multi_marks()
+{
+   log_entry "sourcetree::marks::r_enable_multi_marks"
+
+   local marks="$1"
+   shift 
+
+   local mark 
+
+   for mark in "$@"
+   do
+      if sourcetree::marks::r_enable "${marks}" "${mark}"
+      then
+         return 0
+      fi
+   done
+
+   RVAL=
+   return 1
+}
+
+sourcetree::marks::r_disable_multi_marks()
+{
+   log_entry "sourcetree::marks::r_disable_multi_marks"
+
+   local marks="$1"
+   shift 
+
+   local mark 
+
+   for mark in "$@"
+   do
+      if sourcetree::marks::r_disable "${marks}" "${mark}"
+      then
+         return 0
+      fi
+   done
+
+   RVAL=
+   return 1
 }
 
 

@@ -731,11 +731,11 @@ sourcetree::dotdump::main()
    local OPTION_MARKS="ANY"
    local OPTION_PERMISSIONS="" # empty!
    local OPTION_NODETYPES=""
-   local OPTION_WALK_DB="DEFAULT"
+   local OPTION_WALK_DB='DEFAULT'
    local OPTION_OUTPUT_HTML='NO'
    local OPTION_OUTPUT_EVAL='NO'
    local OPTION_OUTPUT_STATE='NO'
-   local OPTION_LR="DEFAULT"
+   local OPTION_LR='DEFAULT'
 
    while [ $# -ne 0 ]
    do

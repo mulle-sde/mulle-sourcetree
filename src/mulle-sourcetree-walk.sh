@@ -34,6 +34,11 @@ MULLE_SOURCETREE_WALK_SH='included'
 
 if [ "${MULLE_FLAG_WALK_LOG_EXEKUTOR}" = 'YES' ]
 then
+   log_walk_entry()
+   {
+      log_entry "$@"
+   }
+
    log_walk_debug()
    {
       log_debug "$@"
@@ -54,6 +59,7 @@ then
       log_warning "$@"
    }
 else
+   alias log_walk_entry=': #'
    alias log_walk_debug=': #'
    alias log_walk_fluff=': #'
    alias log_walk_setting=': #'
@@ -240,7 +246,7 @@ EOF
 #
 sourcetree::walk::_callback_permissions()
 {
-   log_entry "sourcetree::walk::_callback_permissions" "$@"
+   log_walk_entry "sourcetree::walk::_callback_permissions" "$@"
 
    local filename="$1"
    local marks="$2"
@@ -306,7 +312,7 @@ sourcetree::walk::_callback_permissions()
 
 sourcetree::walk::_descend_permissions()
 {
-   log_entry "sourcetree::walk::_descend_permissions" "$@"
+   log_walk_entry "sourcetree::walk::_descend_permissions" "$@"
 
    local filename="$1"
    local marks="$2"
@@ -371,7 +377,7 @@ sourcetree::walk::_descend_permissions()
 
 sourcetree::walk::_callback_nodetypes()
 {
-   log_entry "sourcetree::walk::_callback_nodetypes" "$@"
+   log_walk_entry "sourcetree::walk::_callback_nodetypes" "$@"
 
    local nodetype="$1"; shift
 
@@ -386,7 +392,7 @@ sourcetree::walk::_callback_nodetypes()
 
 sourcetree::walk::_callback_filter()
 {
-   # log_entry "sourcetree::walk::_callback_filter" "$@"
+   # log_walk_entry "sourcetree::walk::_callback_filter" "$@"
 
    sourcetree::marks::filter_with_qualifier "$@"
 }
@@ -394,7 +400,7 @@ sourcetree::walk::_callback_filter()
 
 sourcetree::walk::_descend_filter()
 {
-   # log_entry "sourcetree::walk::_descend_filter" "$@"
+   # log_walk_entry "sourcetree::walk::_descend_filter" "$@"
 
    sourcetree::marks::filter_with_qualifier "$@"
 }
@@ -439,7 +445,7 @@ sourcetree::walk::__docd_postamble()
 #
 sourcetree::walk::_visit_callback()
 {
-   # log_entry "sourcetree::walk::_visit_callback" "$@"
+   # log_walk_entry "sourcetree::walk::_visit_callback" "$@"
 
    local datasource="$1"
    local virtual="$2"
@@ -566,7 +572,7 @@ doesn't jive with permissions \"${filterpermissions}\""
 #
 sourcetree::walk::_visit_descend()
 {
-   # log_entry "sourcetree::walk::_visit_descend" "$@"
+   # log_walk_entry "sourcetree::walk::_visit_descend" "$@"
 
    local datasource="$1"
    local virtual="$2"
@@ -693,7 +699,7 @@ to WILL_DESCEND_CALLBACK"
 #
 sourcetree::walk::r_get_dedupe_lineid_from_node()
 {
-   # log_entry "sourcetree::walk::r_get_dedupe_lineid_from_node" "$@"
+   # log_walk_entry "sourcetree::walk::r_get_dedupe_lineid_from_node" "$@"
 
    local mode="$1"
 
@@ -861,7 +867,7 @@ sourcetree::walk::remove_from_visited()
 #
 sourcetree::walk::_visit_node()
 {
-   log_entry "sourcetree::walk::_visit_node" "$@"
+   log_walk_entry "sourcetree::walk::_visit_node" "$@"
 
    local datasource="$1"
    local virtual="$2"
@@ -980,7 +986,7 @@ sourcetree::walk::_visit_node()
 
 sourcetree::walk::_share_node()
 {
-   log_entry "sourcetree::walk::_share_node" "$@"
+   log_walk_entry "sourcetree::walk::_share_node" "$@"
 
    local datasource="$1"
    local virtual="$2"
@@ -1096,7 +1102,7 @@ sourcetree::walk::_share_node()
 #
 sourcetree::walk::walk_nodeline()
 {
-#   log_entry "sourcetree::walk::walk_nodeline" "$@"
+#   log_walk_entry "sourcetree::walk::walk_nodeline" "$@"
 
    local nodeline="$1"; shift
    local mode="$7"
@@ -1264,7 +1270,7 @@ sourcetree::walk::walk_nodeline()
 
 sourcetree::walk::_print_info()
 {
-#   log_entry "sourcetree::walk::_print_info" "$@"
+#   log_walk_entry "sourcetree::walk::_print_info" "$@"
 
    local datasource="$1"
    local nodelines="$2"
@@ -1323,7 +1329,7 @@ sourcetree::walk::_print_info()
 #
 sourcetree::walk::_walk_nodelines()
 {
-   log_entry "sourcetree::walk::_walk_nodelines" "$@"
+   log_walk_entry "sourcetree::walk::_walk_nodelines" "$@"
 
    local nodelines="$1"; shift
 
@@ -1481,7 +1487,7 @@ sourcetree::walk::remove_from_deduped()
 
 sourcetree::walk::r_symbol_for_address()
 {
-   # log_entry "sourcetree::walk::r_symbol_for_address" "$@"
+   # log_walk_entry "sourcetree::walk::r_symbol_for_address" "$@"
 
    local address="$1"
 
@@ -1496,7 +1502,7 @@ sourcetree::walk::r_symbol_for_address()
 
 sourcetree::walk::r_configfile()
 {
-   log_entry "sourcetree::walk::r_configfile" "$@"
+   log_walk_entry "sourcetree::walk::r_configfile" "$@"
 
    local symbol="$1"
    local config="$2"
@@ -1554,7 +1560,7 @@ sourcetree::walk::r_configfile()
 #
 sourcetree::walk::cfg_read()
 {
-   log_entry "sourcetree::walk::cfg_read" "$@"
+   log_walk_entry "sourcetree::walk::cfg_read" "$@"
 
    local symbol="$1"
    local config="$2"
@@ -1626,7 +1632,7 @@ sourcetree::walk::cfg_read()
 #
 sourcetree::walk::_walk_config_uuids()
 {
-   log_entry "sourcetree::walk::_walk_config_uuids" "$@"
+   log_walk_entry "sourcetree::walk::_walk_config_uuids" "$@"
 
    local symbol="$1" ; shift
 
@@ -1662,7 +1668,7 @@ sourcetree::walk::_walk_config_uuids()
 
 sourcetree::walk::walk_config_uuids()
 {
-   log_entry "sourcetree::walk::walk_config_uuids" "$@"
+   log_walk_entry "sourcetree::walk::walk_config_uuids" "$@"
 
    local VISITED
    local WALKED
@@ -1714,7 +1720,7 @@ sourcetree::walk::walk_config_uuids()
 #
 sourcetree::walk::_walk_db_uuids()
 {
-   log_entry "sourcetree::walk::_walk_db_uuids" "$@"
+   log_walk_entry "sourcetree::walk::_walk_db_uuids" "$@"
 
    local symbol="$1" ; shift
 
@@ -1757,7 +1763,7 @@ yet, can not proceed"
 
 sourcetree::walk::walk_db_uuids()
 {
-   log_entry "sourcetree::walk::walk_db_uuids" "$@"
+   log_walk_entry "sourcetree::walk::walk_db_uuids" "$@"
 
    # this is a subshell, so that the callback max call "exit"
    # to preempt walking
@@ -1786,7 +1792,7 @@ sourcetree::walk::walk_db_uuids()
 
 sourcetree::walk::_visit_root_callback()
 {
-   log_entry "sourcetree::walk::_visit_root_callback" "$@"
+   log_walk_entry "sourcetree::walk::_visit_root_callback" "$@"
 
    local _address="."
    local _branch
@@ -1812,7 +1818,7 @@ sourcetree::walk::_visit_root_callback()
 
 sourcetree::walk::do()
 {
-   log_entry "sourcetree::walk::do" "$@"
+   log_walk_entry "sourcetree::walk::do" "$@"
 
    local mode="$5"
    local callback="$6"
@@ -1895,7 +1901,7 @@ sourcetree::walk::do()
 
 sourcetree::walk::walk_internal()
 {
-   log_entry "sourcetree::walk::walk_internal" "$@"
+   log_walk_entry "sourcetree::walk::walk_internal" "$@"
 
    sourcetree::walk::do "" "" "" "" "$@"
 }
@@ -1903,7 +1909,7 @@ sourcetree::walk::walk_internal()
 
 sourcetree::walk::main()
 {
-   log_entry "sourcetree::walk::main" "$@"
+   log_walk_entry "sourcetree::walk::main" "$@"
 
    local MULLE_ROOT_DIR
 
@@ -2336,7 +2342,7 @@ ${C_RESET}   filename linkorder nodeline nodeline-no-uuid none url url-filename"
 
 sourcetree::walk::initialize()
 {
-   log_entry "sourcetree::walk::initialize"
+   log_walk_entry "sourcetree::walk::initialize"
 
    include "sourcetree::db"
    include "sourcetree::nodeline"

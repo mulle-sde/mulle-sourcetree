@@ -239,7 +239,6 @@ sourcetree::action::has_system_include()
 }
 
 
-
 sourcetree::action::_do_fetch_operation()
 {
    log_entry "sourcetree::action::_do_fetch_operation" "$@"
@@ -913,6 +912,54 @@ fetch"
 }
 
 
+
+sourcetree::action::r_is_fetchable()
+{
+   log_entry "sourcetree::action::r_is_fetchable"
+
+   local marks="$1"
+   local address="$2"
+
+   if sourcetree::marks::r_disable "${marks}" 'fetch' 
+   then
+      return 1
+   fi
+
+   if sourcetree::marks::r_disable_multi_marks "${marks}" \
+                                               "platform-${MULLE_UNAME}" \
+                                               "fetch-platform-${MULLE_UNAME}"   
+   then 
+      local blocking_mark 
+
+      blocking_mark="${RVAL}"
+
+      local platform
+
+      .foreachpath platform in ${MULLE_SOURCETREE_PLATFORMS}
+      .do
+         # clumsy         
+         if sourcetree::marks::contain "${_marks}" "only-platform-${platform}"
+         then 
+            log_fluff "MULLE_SOURCETREE_PLATFORMS="${platform}" and mark \"only-platform-${platform}\" enables fetch of \"${address}\""
+            return 0
+         fi            
+         # clumsy         
+         if sourcetree::marks::contain "${_marks}" "only-fetch-platform-${platform}"
+         then 
+            log_fluff "MULLE_SOURCETREE_PLATFORMS="${platform}" and mark \"only-fetch-platform-${platform}\" enables fetch of \"${address}\""
+            return 0
+         fi            
+      .done
+
+      log_debug "Fetch of \"${address}\" blocked by \"${blocking_mark}\""
+      RVAL="${blocking_mark}"
+      return 1       
+   fi
+
+   return 0
+}
+
+
 #
 # uses variables from enclosing function
 # just here for readability and to pipe stdout into stderr
@@ -927,11 +974,9 @@ sourcetree::action::__update_perform_item()
 
    case "${item}" in
       "checkout"|"upgrade"|"set-url")
-         if sourcetree::marks::disable "${_marks}" "fetch" ||
-            sourcetree::marks::disable "${_marks}" "platform-${MULLE_UNAME}" ||
-            sourcetree::marks::disable "${_marks}" "fetch-platform-${MULLE_UNAME}"
-         then
-            log_verbose "${C_MAGENTA}${C_BOLD}${_filename}${C_INFO} is set to no-fetch."
+         if ! sourcetree::action::r_is_fetchable "${_marks}" "${_address}"
+         then                                         
+            log_verbose "${C_MAGENTA}${C_BOLD}${_filename}${C_INFO} is set to no-fetch by \"${RVAL}\"."
 
             sourcetree::db::add_missing "${_database}" \
                                         "${_uuid}" \
@@ -965,11 +1010,9 @@ sourcetree::action::__update_perform_item()
       ;;
 
       "fetch")
-         if sourcetree::marks::disable "${_marks}" "fetch" ||
-            sourcetree::marks::disable "${_marks}" "platform-${MULLE_UNAME}" ||
-            sourcetree::marks::disable "${_marks}" "fetch-platform-${MULLE_UNAME}"
+         if ! sourcetree::action::r_is_fetchable "${_marks}" "${_address}"
          then
-            log_verbose "${C_MAGENTA}${C_BOLD}${_filename}${C_INFO} is set to no-fetch."
+            log_verbose "${C_MAGENTA}${C_BOLD}${_filename}${C_INFO} is set to no-fetch by \"${RVAL}\"."
 
             sourcetree::db::add_missing "${_database}" \
                                         "${_uuid}" \
@@ -1018,10 +1061,11 @@ sourcetree::action::__update_perform_item()
                   fi
                fi
 
-               if sourcetree::marks::disable "${_marks}" "require" ||
-                  sourcetree::marks::disable "${_marks}" "require-os-${MULLE_UNAME}"
+               if sourcetree::marks::r_disable_multi_marks "${_marks}" \
+                                                "require" \
+                                                "require-os-${MULLE_UNAME}" 
                then
-                  log_info "${C_MAGENTA}${C_BOLD}${_filename}${C_INFO} is not required."
+                  log_info "${C_MAGENTA}${C_BOLD}${_filename}${C_INFO} is not required by \"${RVAL}\"."
 
                   sourcetree::db::add_missing "${_database}" \
                                               "${_uuid}" \

@@ -573,7 +573,7 @@ sourcetree::list::main()
             r_comma_concat "${OPTION_NODETYPES}" "$1"
             OPTION_NODETYPES="${RVAL}"
 
-            [ "${OPTION_OUTPUT_INDENT}" = "DEFAULT" ] && OPTION_OUTPUT_INDENT='NO'
+            [ "${OPTION_OUTPUT_INDENT}" = 'DEFAULT' ] && OPTION_OUTPUT_INDENT='NO'
          ;;
 
          --qualifier)
@@ -844,12 +844,12 @@ sourcetree::list::main()
    fi
 
    # if mode is not flat, we use output-banner by default
-   if [ "${OPTION_OUTPUT_BANNER}" = "DEFAULT" ]
+   if [ "${OPTION_OUTPUT_BANNER}" = 'DEFAULT' ]
    then
       OPTION_OUTPUT_BANNER='NO'
    fi
 
-   if [ "${OPTION_OUTPUT_INDENT}" = "DEFAULT" ]
+   if [ "${OPTION_OUTPUT_INDENT}" = 'DEFAULT' ]
    then
       if [ "${FLAG_SOURCETREE_MODE}" = 'share' ]
       then
@@ -868,7 +868,7 @@ sourcetree::list::main()
    sourcetree::list::r_augment_mode_with_output_options "${FLAG_SOURCETREE_MODE:-flat}"
    mode="${RVAL}"
 
-   r_comma_concat "${mode}" "comment"
+   r_comma_concat "${mode}" 'comment'
    mode="${RVAL}"
 
    if [ "${OPTION_VERBATIM}" = 'YES' ]

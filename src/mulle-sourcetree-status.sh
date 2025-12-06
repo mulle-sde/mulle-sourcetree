@@ -31,6 +31,10 @@
 #
 MULLE_SOURCETREE_STATUS_SH='included'
 
+# need this immediately for log_walk_fluff
+
+include "sourcetree::walk"
+
 
 sourcetree::status::usage()
 {
@@ -76,7 +80,7 @@ EOF
 #
 sourcetree::status::is_uptodate()
 {
-   log_entry "sourcetree::status::is_uptodate" "$@"
+   log_walk_entry "sourcetree::status::is_uptodate" "$@"
 
    local datasource="$1"
 
@@ -112,7 +116,7 @@ sourcetree::status::is_uptodate()
 #
 sourcetree::status::is_db_compatible()
 {
-   log_entry "sourcetree::status::is_db_compatible" "$@"
+   log_walk_entry "sourcetree::status::is_db_compatible" "$@"
 
    local database="$1"
    local mode="$2"
@@ -170,7 +174,7 @@ sourcetree::status::is_db_compatible()
 #
 sourcetree::status::r_emit()
 {
-   log_entry "sourcetree::status::r_emit" "$@"
+   log_walk_entry "sourcetree::status::r_emit" "$@"
 
    local address="$1"
    local directory="$2"
@@ -419,7 +423,7 @@ ${configexists};${dbexists}" #;${filename}"
 
 sourcetree::status::walk()
 {
-   log_entry "sourcetree::status::walk" "$@"
+   log_walk_entry "sourcetree::status::walk" "$@"
 
    local rval
 
@@ -472,7 +476,7 @@ sourcetree::status::walk()
 
 sourcetree::status::do()
 {
-   log_entry "sourcetree::status::do" "$@"
+   log_walk_entry "sourcetree::status::do" "$@"
 
    local mode="$1"
 
@@ -557,15 +561,15 @@ sourcetree::status::do()
 
 sourcetree::status::main()
 {
-   log_entry "sourcetree::status::main" "$@"
+   log_walk_entry "sourcetree::status::main" "$@"
 
    local OPTION_MARKS="ANY"
    local OPTION_PERMISSIONS=""
    local OPTION_NODETYPES=""
-   local OPTION_WALK_DB="DEFAULT"
+   local OPTION_WALK_DB='DEFAULT'
    local OPTION_DEEP='DEFAULT'
    local OPTION_IS_UPTODATE='NO'
-   local OPTION_OUTPUT_HEADER="DEFAULT"
+   local OPTION_OUTPUT_HEADER='DEFAULT'
    local OPTION_OUTPUT_FORMAT="FMT"
    local OPTION_OUTPUT_FILENAME='DEFAULT'
    local WALK_DEDUPE_MODE='filename'
@@ -732,16 +736,5 @@ sourcetree::status::main()
    esac
 
 }
-
-
-sourcetree::status::initialize()
-{
-   log_entry "sourcetree::status::initialize"
-
-   include "sourcetree::walk"
-}
-
-
-sourcetree::status::initialize
 
 :

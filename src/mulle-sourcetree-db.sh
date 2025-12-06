@@ -125,6 +125,11 @@ fi
 
 if [ "${MULLE_FLAG_DB_LOG_EXEKUTOR}" = 'YES' ]
 then
+   log_db_entry()
+   {
+      log_entry "$@"
+   }
+
    log_db_debug()
    {
       log_debug "$@"
@@ -145,6 +150,7 @@ then
       log_warning "$@"
    }
 else
+   alias log_db_entry=": #"
    alias log_db_debug=": #"
    alias log_db_fluff=": #"
    alias log_db_setting=": #"
@@ -356,7 +362,7 @@ sourcetree::db::__common_dbfilepath()
 
 sourcetree::db::memorize()
 {
-   log_entry "sourcetree::db::memorize" "$@"
+   log_db_entry "sourcetree::db::memorize" "$@"
 
    local _database
    local _databasedir
@@ -419,7 +425,7 @@ ${evaledurl}"
 
 sourcetree::db::recall()
 {
-   log_entry "sourcetree::db::recall" "$@"
+   log_db_entry "sourcetree::db::recall" "$@"
 
    local _database
    local _databasedir
@@ -440,7 +446,7 @@ sourcetree::db::recall()
 
 sourcetree::db::forget()
 {
-   log_entry "sourcetree::db::forget" "$@"
+   log_db_entry "sourcetree::db::forget" "$@"
 
    local _database
    local _databasedir
@@ -468,7 +474,7 @@ sourcetree::db::forget()
 #
 sourcetree::db::bury()
 {
-   log_entry "sourcetree::db::bury" "$@"
+   log_db_entry "sourcetree::db::bury" "$@"
 
    local _database
    local _databasedir
@@ -626,7 +632,7 @@ ${C_MAGENTA}${C_BOLD}${filename#"${MULLE_USER_PWD}/"}${C_INFO} in grave \
 #
 sourcetree::db::__parse_dbentry()
 {
-   log_entry "sourcetree::db::__parse_dbentry" "$@"
+   log_db_entry "sourcetree::db::__parse_dbentry" "$@"
 
    local dbentry="$1"
 
@@ -656,7 +662,7 @@ sourcetree::db::__parse_dbentry()
 
 # __db_recall_dbentry()
 # {
-#    log_entry "__db_recall_dbentry" "$@"
+#    log_db_entry "__db_recall_dbentry" "$@"
 #
 #    local _database="$1"
 #    local uuid="$2"
@@ -679,7 +685,7 @@ sourcetree::db::get__rootdir()
 
 sourcetree::db::fetch_nodeline_for_uuid()
 {
-   log_entry "sourcetree::db::fetch_nodeline_for_uuid" "$@"
+   log_db_entry "sourcetree::db::fetch_nodeline_for_uuid" "$@"
 
    local _database
    local _databasedir
@@ -700,7 +706,7 @@ sourcetree::db::fetch_nodeline_for_uuid()
 
 #db_fetch_owner_for_uuid()
 #{
-#   log_entry "db_fetch_owner_for_uuid" "$@"
+#   log_db_entry "db_fetch_owner_for_uuid" "$@"
 #
 #   local _database
 #   local _databasedir
@@ -720,7 +726,7 @@ sourcetree::db::fetch_nodeline_for_uuid()
 
 sourcetree::db::fetch_filename_for_uuid()
 {
-   log_entry "sourcetree::db::fetch_filename_for_uuid" "$@"
+   log_db_entry "sourcetree::db::fetch_filename_for_uuid" "$@"
 
    local _database
    local _databasedir
@@ -741,7 +747,7 @@ sourcetree::db::fetch_filename_for_uuid()
 
 sourcetree::db::fetch_evaledurl_for_uuid()
 {
-   log_entry "sourcetree::db::fetch_evaledurl_for_uuid" "$@"
+   log_db_entry "sourcetree::db::fetch_evaledurl_for_uuid" "$@"
 
    local _database
    local _databasedir
@@ -787,7 +793,7 @@ sourcetree::db::grep()
 
 sourcetree::db::fetch_all_uuids()
 {
-   log_entry "sourcetree::db::fetch_all_uuids" "$@"
+   log_db_entry "sourcetree::db::fetch_all_uuids" "$@"
 
    local _database
    local _databasedir
@@ -803,7 +809,7 @@ sourcetree::db::fetch_all_uuids()
 
 sourcetree::db::fetch_all_nodelines()
 {
-   log_entry "sourcetree::db::fetch_all_nodelines" "$@"
+   log_db_entry "sourcetree::db::fetch_all_nodelines" "$@"
 
    local _database
    local _databasedir
@@ -831,7 +837,7 @@ sourcetree::db::fetch_all_nodelines()
 
 sourcetree::db::fetch_uuid_for_address()
 {
-   log_entry "sourcetree::db::fetch_uuid_for_address" "$@"
+   log_db_entry "sourcetree::db::fetch_uuid_for_address" "$@"
 
    local _database
    local _databasedir
@@ -862,7 +868,7 @@ sourcetree::db::fetch_uuid_for_address()
 
 sourcetree::db::r_fetch_uuid_for_evaledurl()
 {
-   log_entry "sourcetree::db::r_fetch_uuid_for_evaledurl" "$@"
+   log_db_entry "sourcetree::db::r_fetch_uuid_for_evaledurl" "$@"
 
    local _database
    local _databasedir
@@ -903,7 +909,7 @@ sourcetree::db::r_fetch_uuid_for_evaledurl()
 # unused
 # db_fetch_uuid_for_filename()
 # {
-#    log_entry "db_fetch_uuid_for_filename" "$@"
+#    log_db_entry "db_fetch_uuid_for_filename" "$@"
 #
 #    local _database
 #    local _databasedir
@@ -945,7 +951,7 @@ sourcetree::db::r_fetch_uuid_for_evaledurl()
 
 sourcetree::db::fetch_all_filenames()
 {
-   log_entry "sourcetree::db::fetch_all_filenames" "$@"
+   log_db_entry "sourcetree::db::fetch_all_filenames" "$@"
 
    local _database
    local _databasedir
@@ -971,7 +977,7 @@ sourcetree::db::fetch_all_filenames()
 
 sourcetree::db::fetch_nodeline_for_filename()
 {
-   log_entry "sourcetree::db::fetch_nodeline_for_filename" "$@"
+   log_db_entry "sourcetree::db::fetch_nodeline_for_filename" "$@"
 
    local _database
    local _databasedir
@@ -1012,7 +1018,7 @@ sourcetree::db::fetch_nodeline_for_filename()
 #
 sourcetree::db::set_memo()
 {
-   log_entry "sourcetree::db::set_memo" "$@"
+   log_db_entry "sourcetree::db::set_memo" "$@"
 
    local _database
    local _databasedir
@@ -1034,7 +1040,7 @@ sourcetree::db::set_memo()
 
 sourcetree::db::add_memo()
 {
-   log_entry "sourcetree::db::add_memo" "$@"
+   log_db_entry "sourcetree::db::add_memo" "$@"
 
    local _database
    local _databasedir
@@ -1049,7 +1055,7 @@ sourcetree::db::add_memo()
 
 sourcetree::db::add_missing()
 {
-   log_entry "sourcetree::db::add_missing" "$@"
+   log_db_entry "sourcetree::db::add_missing" "$@"
 
    local _database
    local _databasedir
@@ -1069,7 +1075,7 @@ sourcetree::db::add_missing()
 
 sourcetree::db::_get_dbtype()
 {
-   log_entry "sourcetree::db::_get_dbtype" "$@"
+   log_db_entry "sourcetree::db::_get_dbtype" "$@"
 
    local databasedir="$1"
 
@@ -1084,7 +1090,7 @@ sourcetree::db::_get_dbtype()
 
 sourcetree::db::get_dbtype()
 {
-   log_entry "sourcetree::db::get_dbtype" "$@"
+   log_db_entry "sourcetree::db::get_dbtype" "$@"
 
    local _database
    local _databasedir
@@ -1098,7 +1104,7 @@ sourcetree::db::get_dbtype()
 
 sourcetree::db::set_dbtype()
 {
-   log_entry "sourcetree::db::set_dbtype" "$@"
+   log_db_entry "sourcetree::db::set_dbtype" "$@"
 
    local _database
    local _databasedir
@@ -1116,7 +1122,7 @@ sourcetree::db::set_dbtype()
 
 sourcetree::db::clear_dbtype()
 {
-   log_entry "sourcetree::db::clear_dbtype" "$@"
+   log_db_entry "sourcetree::db::clear_dbtype" "$@"
 
    local _database
    local _databasedir
@@ -1129,7 +1135,7 @@ sourcetree::db::clear_dbtype()
 
 sourcetree::db::is_recurse()
 {
-   log_entry "sourcetree::db::is_recurse" "$@"
+   log_db_entry "sourcetree::db::is_recurse" "$@"
 
    case "`sourcetree::db::get_dbtype "$@"`" in
       share|recurse)
@@ -1149,7 +1155,7 @@ sourcetree::db::is_recurse()
 #
 sourcetree::db::dir_exists()
 {
-   log_entry "sourcetree::db::dir_exists" "$@"
+   log_db_entry "sourcetree::db::dir_exists" "$@"
 
    local _database
    local _databasedir
@@ -1194,7 +1200,7 @@ sourcetree::db::print_db_done()
 
 sourcetree::db::environment()
 {
-   log_entry "sourcetree::db::is_ready" "$@"
+   log_db_entry "sourcetree::db::is_ready" "$@"
 
    local _database
    local _databasedir
@@ -1207,7 +1213,7 @@ sourcetree::db::environment()
 
 sourcetree::db::exists()
 {
-   log_entry "sourcetree::db::exists" "$@"
+   log_db_entry "sourcetree::db::exists" "$@"
 
    local _database
    local _databasedir
@@ -1220,7 +1226,7 @@ sourcetree::db::exists()
 
 sourcetree::db::is_ready()
 {
-   log_entry "sourcetree::db::is_ready" "$@"
+   log_db_entry "sourcetree::db::is_ready" "$@"
 
    local _database
    local _databasedir
@@ -1270,7 +1276,7 @@ sourcetree::db::is_ready()
 # caller may add some lines to the __deb_environment
 sourcetree::db::set_ready()
 {
-   log_entry "sourcetree::db::set_ready" "$@"
+   log_db_entry "sourcetree::db::set_ready" "$@"
 
    local _database
    local _databasedir
@@ -1287,7 +1293,7 @@ sourcetree::db::set_ready()
 # never
 sourcetree::db::clear_ready()
 {
-   log_entry "sourcetree::db::clear_ready" "$@"
+   log_db_entry "sourcetree::db::clear_ready" "$@"
 
    local _database
    local _databasedir
@@ -1300,7 +1306,7 @@ sourcetree::db::clear_ready()
 
 sourcetree::db::get_timestamp()
 {
-   log_entry "sourcetree::db::get_timestamp" "$@"
+   log_db_entry "sourcetree::db::get_timestamp" "$@"
 
    local _database
    local _databasedir
@@ -1319,7 +1325,7 @@ sourcetree::db::get_timestamp()
 #
 sourcetree::db::is_updating()
 {
-   log_entry "sourcetree::db::is_updating" "$@"
+   log_db_entry "sourcetree::db::is_updating" "$@"
 
    local _database
    local _databasedir
@@ -1352,7 +1358,7 @@ sourcetree::db::print_db_update()
 
 sourcetree::db::set_update()
 {
-   log_entry "sourcetree::db::set_update" "$@"
+   log_db_entry "sourcetree::db::set_update" "$@"
 
    local _database
    local _databasedir
@@ -1368,7 +1374,7 @@ sourcetree::db::set_update()
 
 sourcetree::db::clear_update()
 {
-   log_entry "sourcetree::db::clear_update" "$@"
+   log_db_entry "sourcetree::db::clear_update" "$@"
 
    local _database
    local _databasedir
@@ -1383,7 +1389,7 @@ sourcetree::db::clear_update()
 
 sourcetree::db::set_shareddir()
 {
-   log_entry "sourcetree::db::set_shareddir" "$@"
+   log_db_entry "sourcetree::db::set_shareddir" "$@"
 
    [ $# -eq 2 ] || _internal_fail "api error"
 
@@ -1403,7 +1409,7 @@ sourcetree::db::set_shareddir()
 
 sourcetree::db::clear_shareddir()
 {
-   log_entry "sourcetree::db::clear_shareddir" "$@"
+   log_db_entry "sourcetree::db::clear_shareddir" "$@"
 
    [ $# -eq 1 ] || _internal_fail "api error"
 
@@ -1418,7 +1424,7 @@ sourcetree::db::clear_shareddir()
 
 sourcetree::db::get_shareddir()
 {
-   log_entry "sourcetree::db::get_shareddir" "$@"
+   log_db_entry "sourcetree::db::get_shareddir" "$@"
 
    [ $# -eq 1 ] || _internal_fail "api error"
 
@@ -1440,7 +1446,7 @@ sourcetree::db::get_shareddir()
 #
 sourcetree::db::ensure_consistency()
 {
-   log_entry "sourcetree::db::ensure_consistency" "$@"
+   log_db_entry "sourcetree::db::ensure_consistency" "$@"
 
    local database="$1"
 
@@ -1467,7 +1473,7 @@ Well, do ya, punk?"
 #
 sourcetree::db::ensure_compatible_dbtype()
 {
-   log_entry "sourcetree::db::ensure_compatible_dbtype" "$@"
+   log_db_entry "sourcetree::db::ensure_compatible_dbtype" "$@"
 
    local database="$1"
    local dbtype="$2"
@@ -1504,7 +1510,7 @@ If you want to change that to \"${dbtype}\" do:
 
 sourcetree::db::has_graveyard()
 {
-   log_entry "sourcetree::db::has_graveyard" "$@"
+   log_db_entry "sourcetree::db::has_graveyard" "$@"
 
    local _database
    local _databasedir
@@ -1517,7 +1523,7 @@ sourcetree::db::has_graveyard()
 
 sourcetree::db::graveyard_dir()
 {
-   log_entry "sourcetree::db::has_graveyard" "$@"
+   log_db_entry "sourcetree::db::has_graveyard" "$@"
 
    local _database
    local _databasedir
@@ -1530,7 +1536,7 @@ sourcetree::db::graveyard_dir()
 
 sourcetree::db::is_graveyard()
 {
-   log_entry "sourcetree::db::is_graveyard" "$@"
+   log_db_entry "sourcetree::db::is_graveyard" "$@"
 
    local database="$1"
 
@@ -1545,7 +1551,7 @@ sourcetree::db::is_graveyard()
 
 sourcetree::db::reset()
 {
-   log_entry "sourcetree::db::reset" "$@"
+   log_db_entry "sourcetree::db::reset" "$@"
 
    local _database
    local _databasedir
@@ -1586,7 +1592,7 @@ sourcetree::db::__zombiefile()
 
 sourcetree::db::is_uuid_alive()
 {
-   log_entry "sourcetree::db::is_uuid_alive" "$@"
+   log_db_entry "sourcetree::db::is_uuid_alive" "$@"
 
    local _database
    local _databasedir
@@ -1604,7 +1610,7 @@ sourcetree::db::is_uuid_alive()
 
 sourcetree::db::set_uuid_alive()
 {
-   log_entry "sourcetree::db::set_uuid_alive" "$@"
+   log_db_entry "sourcetree::db::set_uuid_alive" "$@"
 
    local _database
    local _databasedir
@@ -1631,7 +1637,7 @@ sourcetree::db::set_uuid_alive()
 
 sourcetree::db::is_filename_inuse()
 {
-   log_entry "sourcetree::db::is_filename_inuse" "$@"
+   log_db_entry "sourcetree::db::is_filename_inuse" "$@"
 
    local database="$1"
    local filename="$2"
@@ -1648,7 +1654,7 @@ sourcetree::db::is_filename_inuse()
 #
 sourcetree::db::zombify_nodes()
 {
-   log_entry "sourcetree::db::zombify_nodes" "$@"
+   log_db_entry "sourcetree::db::zombify_nodes" "$@"
 
    local _database
    local _databasedir
@@ -1691,7 +1697,7 @@ sourcetree::db::zombify_nodes()
 
 sourcetree::db::zombify_nodelines()
 {
-   log_entry "sourcetree::db::zombify_nodelines" "$@"
+   log_db_entry "sourcetree::db::zombify_nodelines" "$@"
 
    local _database
    local _databasedir
@@ -1742,7 +1748,7 @@ sourcetree::db::zombify_nodelines()
 
 sourcetree::db::do_bury_zombiefile()
 {
-   log_entry "sourcetree::db::do_bury_zombiefile" "$@"
+   log_db_entry "sourcetree::db::do_bury_zombiefile" "$@"
 
    local database="$1"
    local zombiefile="$2"
@@ -1778,7 +1784,7 @@ sourcetree::db::do_bury_zombiefile()
 #
 sourcetree::db::bury_zombie()
 {
-   log_entry "sourcetree::db::bury_zombie" "$@"
+   log_db_entry "sourcetree::db::bury_zombie" "$@"
 
    local _database
    local _databasedir
@@ -1804,7 +1810,7 @@ sourcetree::db::bury_zombie()
 
 sourcetree::db::safe_bury_dbentry()
 {
-   log_entry "sourcetree::db::safe_bury_dbentry" "$@"
+   log_db_entry "sourcetree::db::safe_bury_dbentry" "$@"
 
    local database="$1"
    local nodeline="$2"
@@ -1845,7 +1851,7 @@ sourcetree::db::safe_bury_dbentry()
 
 sourcetree::db::bury_zombies()
 {
-   log_entry "sourcetree::db::bury_zombies" "$@"
+   log_db_entry "sourcetree::db::bury_zombies" "$@"
 
    local _database
    local _databasedir
@@ -1878,7 +1884,7 @@ sourcetree::db::bury_zombies()
 
 sourcetree::db::bury_flat_zombies()
 {
-   log_entry "sourcetree::db::bury_flat_zombies" "$@"
+   log_db_entry "sourcetree::db::bury_flat_zombies" "$@"
 
    local _database
    local _databasedir
@@ -1910,7 +1916,7 @@ sourcetree::db::bury_flat_zombies()
 
 sourcetree::db::bury_zombie_nodelines()
 {
-   log_entry "sourcetree::db::bury_zombie_nodelines" "$@"
+   log_db_entry "sourcetree::db::bury_zombie_nodelines" "$@"
 
    local _database
    local _databasedir
@@ -1956,7 +1962,7 @@ sourcetree::db::bury_zombie_nodelines()
 
 sourcetree::db::state_description()
 {
-   log_entry "sourcetree::db::state_description" "$@"
+   log_db_entry "sourcetree::db::state_description" "$@"
 
    local database="${1:-/}"
 
@@ -2013,7 +2019,7 @@ sourcetree::db::state_description()
 #
 sourcetree::db::r_share_filename()
 {
-   log_entry "sourcetree::db::r_share_filename" "$@"
+   log_db_entry "sourcetree::db::r_share_filename" "$@"
 
    local address="$1"
    local evaledurl="$2"

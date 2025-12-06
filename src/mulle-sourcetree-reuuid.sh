@@ -97,7 +97,7 @@ sourcetree::reuuid::main()
 {
    log_entry "sourcetree::reuuid::main" "$@"
 
-   local OPTION_REMOVE_GRAVEYARD="DEFAULT"
+   local OPTION_REMOVE_GRAVEYARD='DEFAULT'
 
    while [ $# -ne 0 ]
    do
@@ -124,7 +124,7 @@ sourcetree::reuuid::main()
    log_info "Create new UUIDs for sourcetree"
    sourcetree::reuuid::do "/" || exit 1
 
-   log_info "${C_VERBOSE}Don't forget to \`reset\` affected databases"
+   log_info "${C_VERBOSE}Don't forget to \`reset\` affected databases."$'\n'"${C_RESET_BOLD}   mulle-sde clean all"
 }
 
 
@@ -132,7 +132,7 @@ sourcetree::reuuid::main()
 {
    log_entry "sourcetree::reuuid::main" "$@"
 
-   local OPTION_REMOVE_GRAVEYARD="DEFAULT"
+   local OPTION_REMOVE_GRAVEYARD='DEFAULT'
 
    while [ $# -ne 0 ]
    do

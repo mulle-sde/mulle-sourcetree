@@ -74,7 +74,7 @@ sourcetree::dbstatus::main()
 
    if [ ! -e "${configfile}" ]
    then
-      log_info "No sourcetree here"
+      log_warning "No sourcetree here"
       return 1
    fi
 
@@ -82,16 +82,16 @@ sourcetree::dbstatus::main()
    then
       if [ -e "${dbdonefile}" ]
       then
-         log_info "Needs sync as sourcetree has edits"
+         log_warning "Needs sync as sourcetree has edits"
       else
-         log_info "Needs sync as database is not complete"
+         log_warning "Needs sync as database is not complete"
       fi
       return 2
    fi
 
    if ! sourcetree::db::is_ready "${SOURCETREE_START}"
    then
-      log_info "Needs sync as database is not ready"
+      log_warning "Needs sync as database is not ready"
       return 2
    fi
 
@@ -101,6 +101,8 @@ sourcetree::dbstatus::main()
       then
          local dependencies
          local grep_cmdline
+         local only_filtered 
+         local line 
 
          # only complain if there are dependencies in configfile
          # how does mulle-sourcetree know about this though ?
@@ -108,8 +110,29 @@ sourcetree::dbstatus::main()
          dependencies="`sourcetree::cfg::_read "${configfile}" | grep -E -v "${grep_cmdline}" `"
          if [ ! -z "${dependencies}" ]
          then
-            log_info "No stash here"
-            return 2
+            .foreachline line in ${dependencies}
+            .do
+               case "${line}" in 
+                  *[,:]only-platform-${MULLE_UNAME}[,:]*|*[,:]only-fetch-platform-${MULLE_UNAME}[,:]*)
+                     r_add_line "${only_filtered}" "${line}"
+                     only_filtered="${RVAL}"
+                  ;;
+
+                  *[,:]only-platform-*[,:]*)
+                  ;;
+
+                  *)
+                     r_add_line "${only_filtered}" "${line}"
+                     only_filtered="${RVAL}"
+                  ;;
+               esac
+            .done
+
+            if [ ! -z "${only_filtered}" ]
+            then
+               log_warning "No stash found at ${C_RESET_BOLD}${MULLE_SOURCETREE_STASH_DIR#${MULLE_USER_PWD}/}${C_WARNING} but expected one"
+               return 2
+            fi
          fi
       fi
    fi

@@ -495,12 +495,16 @@ emit_c_header()
    local rval 
    local headers
 
-   headers="`exekutor mulle-sourcetree list \
-                                       --format "%_;%a;%m;%i={include,,-------}\\n" \
-                                       --marks "${filter_marks}" \
-                                       --no-bequeath \
-                                       --output-format raw \
-                                       --no-output-header`"
+   headers="`exekutor "${MULLE_SOURCETREE}" \
+                           --virtual-root \
+                           --config-file "${FLAG_CONFIG_FILE}" \
+                           ${MULLE_TECHNICAL_FLAGS} \
+                        list \
+                           --format "%_;%a;%m;%i={include,,-------}\\n" \
+                           --marks "${filter_marks}" \
+                           --no-bequeath \
+                           --output-format raw \
+                           --no-output-header`"
    rval=$?
 
    if [ $rval -ne 0 -a $rval -ne 127 ]
@@ -936,6 +940,8 @@ main()
 
    local OPTION_IMPORT="DEFAULT"
 
+   local FLAG_CONFIG_FILE='-'
+
    while [ $# -ne 0 ]
    do
       if options_technical_flags "$1"
@@ -955,6 +961,20 @@ main()
 
          --no-import)
             OPTION_IMPORT='NO'
+         ;;
+
+         --config-dir)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            FLAG_CONFIG_DIR="$1"
+         ;;
+
+         --config-file)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            FLAG_CONFIG_FILE="$1"
          ;;
 
          -p|--project-name)
@@ -1017,11 +1037,11 @@ main()
 
    options_setup_trace "${MULLE_TRACE}" && set -x
 
-   if [ -z "${MULLE_CASE_SH}" ]
-   then
-      # shellcheck source=mulle-case.sh
-      . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-case.sh" || return 1
-   fi
+   include "case"
+
+   MULLE_SOURCETREE="${MULLE_SOURCETREE:-`command -v mulle-sourcetree`}"
+   [ -z "${MULLE_SOURCETREE}" ] && fail "mulle-sourcetree not in PATH"
+
 
    if [ -z "${PROJECT_NAME}" ]
    then

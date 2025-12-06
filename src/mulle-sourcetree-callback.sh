@@ -38,7 +38,7 @@ MULLE_SOURCETREE_CALLBACK_SH='included'
 #
 sourcetree::callback::call()
 {
-   log_entry "sourcetree::callback::call" "$@"
+   log_walk_entry "sourcetree::callback::call" "$@"
 
    local datasource="$1"; shift
    local virtual="$1"; shift
@@ -151,7 +151,7 @@ sourcetree::callback::call()
    # WALK_VIRTUAL     : either ${MULLE_SOURECTREE_SHARE_DIR} or ${MULLE_VIRTUAL_ROOT}
    #
    #
-   log_debug "Calling callback: NODE_ADDRESS=${_address} NODE_FILENAME=${_filename} ${callback} "
+   log_walk_debug "Calling callback: NODE_ADDRESS=${_address} NODE_FILENAME=${_filename} ${callback} "
 
    local dependency
 

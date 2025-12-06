@@ -83,7 +83,7 @@ EOF
 #
 sourcetree::sync::__get_db_descendinfo()
 {
-   log_entry "sourcetree::sync::__get_db_descendinfo" "$@"
+   log_walk_entry "sourcetree::sync::__get_db_descendinfo" "$@"
 
    local database="$1"
    local address="$2"
@@ -108,7 +108,7 @@ sourcetree::sync::__get_db_descendinfo()
 #
 sourcetree::sync::__get_config_descendinfo()
 {
-   log_entry "sourcetree::sync::__get_config_descendinfo" "$@"
+   log_walk_entry "sourcetree::sync::__get_config_descendinfo" "$@"
 
    local config="$1"
    local address="$2"
@@ -150,7 +150,7 @@ sourcetree::sync::__get_config_descendinfo()
 # input: parsed nodeline + filename
 sourcetree::sync::check_descend_nodeline()
 {
-   log_entry "sourcetree::sync::check_descend_nodeline" "$@"
+   log_walk_entry "sourcetree::sync::check_descend_nodeline" "$@"
 
    local filename="$1"
    local marks="$2"
@@ -202,7 +202,7 @@ sourcetree::sync::check_descend_nodeline()
 
 sourcetree::sync::_descend_db_nodeline()
 {
-   log_entry "sourcetree::sync::_descend_db_nodeline" "$@"
+   log_walk_entry "sourcetree::sync::_descend_db_nodeline" "$@"
 
    [ "$#" -ne 4 ] && _internal_fail "api error"
 
@@ -262,7 +262,7 @@ sourcetree::sync::_descend_db_nodeline()
 
 sourcetree::sync::descend_config_nodeline()
 {
-   log_entry "sourcetree::sync::descend_config_nodeline" "$@"
+   log_walk_entry "sourcetree::sync::descend_config_nodeline" "$@"
 
    [ "$#" -ne 4 ] && _internal_fail "api error"
 
@@ -318,7 +318,7 @@ sourcetree::sync::descend_config_nodeline()
 #
 sourcetree::sync::descend_db_nodelines()
 {
-   log_entry "sourcetree::sync::descend_db_nodelines" "$@"
+   log_walk_entry "sourcetree::sync::descend_db_nodelines" "$@"
 
    local style="$1"; shift
 
@@ -382,7 +382,7 @@ it is empty (${PWD#"${MULLE_USER_PWD}/"})"
 #
 sourcetree::sync::descend_config_nodelines()
 {
-   log_entry "sourcetree::sync::descend_config_nodelines" "$@"
+   log_walk_entry "sourcetree::sync::descend_config_nodelines" "$@"
 
    local style="$1"; shift
 
@@ -457,7 +457,7 @@ sourcetree::sync::_style_for_only_share()
 
 sourcetree::sync::nodeline_sync_only_share()
 {
-   log_entry "sourcetree::sync::nodeline_sync_only_share" "$@"
+   log_walk_entry "sourcetree::sync::nodeline_sync_only_share" "$@"
 
    local nodeline="$1"
    local config="$2"
@@ -476,7 +476,7 @@ sourcetree::sync::nodeline_sync_only_share()
 
 sourcetree::sync::_sync_only_share()
 {
-   log_entry "sourcetree::sync::_sync_only_share" "$@"
+   log_walk_entry "sourcetree::sync::_sync_only_share" "$@"
 
    local config="$1"
    local database="$2"
@@ -550,7 +550,7 @@ sourcetree::sync::_sync_only_share()
 
 sourcetree::sync::sync_only_share()
 {
-   log_entry "sourcetree::sync::sync_only_share" "$@"
+   log_walk_entry "sourcetree::sync::sync_only_share" "$@"
 
    local config="$1"
    local database="$2"
@@ -613,7 +613,7 @@ sourcetree::sync::_style_for_share()
 #
 sourcetree::sync::_sync_share()
 {
-   log_entry "sourcetree::sync::_sync_share" "$@"
+   log_walk_entry "sourcetree::sync::_sync_share" "$@"
 
    local config="$1"
    local database="$2"
@@ -770,7 +770,7 @@ sourcetree::sync::_sync_share()
 
 sourcetree::sync::sync_share()
 {
-   log_entry "sourcetree::sync::sync_share" "$@"
+   log_walk_entry "sourcetree::sync::sync_share" "$@"
 
    local config="$1"
    local database="$2"
@@ -825,7 +825,7 @@ sourcetree::sync::_style_for_recurse()
 #
 sourcetree::sync::_sync_recurse()
 {
-   log_entry "sourcetree::sync::_sync_recurse" "$@"
+   log_walk_entry "sourcetree::sync::_sync_recurse" "$@"
 
    local config="$1"
    local database="$2"
@@ -904,7 +904,7 @@ sourcetree::sync::_sync_recurse()
 
 sourcetree::sync::sync_recurse()
 {
-   log_entry "sourcetree::sync::sync_recurse" "$@"
+   log_walk_entry "sourcetree::sync::sync_recurse" "$@"
 
   local config="$1"
   local database="$2"
@@ -924,7 +924,7 @@ sourcetree::sync::sync_recurse()
 #
 sourcetree::sync::_sync_flat()
 {
-   log_entry "sourcetree::sync::_sync_flat" "$@"
+   log_walk_entry "sourcetree::sync::_sync_flat" "$@"
 
    local config="$1"
    local database="$2"
@@ -989,7 +989,7 @@ sourcetree::sync::_sync_flat()
 
 sourcetree::sync::sync_flat()
 {
-   log_entry "sourcetree::sync::sync_flat" "$@"
+   log_walk_entry "sourcetree::sync::sync_flat" "$@"
 
    local config="$1"
    local database="$2"
@@ -1002,7 +1002,7 @@ sourcetree::sync::sync_flat()
 
 sourcetree::sync::write_cachedir_tag()
 {
-   log_entry "sourcetree::sync::write_cachedir_tag" "$@"
+   log_walk_entry "sourcetree::sync::write_cachedir_tag" "$@"
 
    local stashdir="$1"
 
@@ -1045,7 +1045,7 @@ You can suppress the generation of this file with:
 #
 sourcetree::sync::start()
 {
-   log_entry "sourcetree::sync::start" "$@" "(${PWD#"${MULLE_USER_PWD}/"})"
+   log_walk_entry "sourcetree::sync::start" "$@" "(${PWD#"${MULLE_USER_PWD}/"})"
 
    local style
    local startpoint
@@ -1107,18 +1107,18 @@ edits have been made to the configuration.
 
 sourcetree::sync::main()
 {
-   log_entry "sourcetree::sync::main" "$@"
+   log_walk_entry "sourcetree::sync::main" "$@"
 
-   local OPTION_FIX="DEFAULT"
+   local OPTION_FIX='DEFAULT'
    local OPTION_OVERRIDE_BRANCH
 
    local OPTION_FETCH_SEARCH_PATH
    local OPTION_FETCH_CACHE_DIR
    local OPTION_FETCH_MIRROR_DIR
 
-   local OPTION_FETCH_REFRESH="DEFAULT"
-   local OPTION_FETCH_SYMLINK="DEFAULT"
-   local OPTION_FETCH_ABSOLUTE_SYMLINK="DEFAULT"
+   local OPTION_FETCH_REFRESH='DEFAULT'
+   local OPTION_FETCH_SYMLINK='DEFAULT'
+   local OPTION_FETCH_ABSOLUTE_SYMLINK='DEFAULT'
    local OPTION_LENIENT='YES'
    local OPTION_QUICK='NO'
    local OPTION_PARALLEL='YES'
@@ -1262,7 +1262,7 @@ sourcetree::sync::main()
 
 sourcetree::sync::initialize()
 {
-   log_entry "sourcetree::sync::initialize" "$@"
+   log_walk_entry "sourcetree::sync::initialize" "$@"
 
    include "string"
    include "sourcetree::action"

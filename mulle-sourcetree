@@ -130,6 +130,7 @@ sourcetree::print_commands()
    SHOWN_COMMANDS="\
    add            : add a node to the sourcetree
    clean          : remove files added by a sync
+   editor         : run the sourcetree editor (needs node.js)
    json           : show current sourcetree as JSON
    list           : list nodes in the current sourcetree
    mark           : add or remove a mark from a node in the sourcetree
@@ -257,6 +258,8 @@ sourcetree::main()
    local FLAG_CONFIG_DIR=""
    local FLAG_SHARE_DIR=""
    local FLAG_CONFIG_NAME=""
+   local MULLE_FLAG_DB_LOG_EXEKUTOR
+   local MULLE_FLAG_WALK_LOG_EXEKUTOR
 
    #
    # simple option handling
@@ -271,7 +274,7 @@ sourcetree::main()
          -lxw|--trace-walk)
             MULLE_FLAG_WALK_LOG_EXEKUTOR='YES'
          ;;
-         # intentionaly fall through to options
+         # intentionaly fall through to options to collect MULLE_TECHNICAL_FLAGS ?
       esac
 
       if options_technical_flags "$1"
@@ -287,14 +290,6 @@ sourcetree::main()
 
          -h*|--help|help)
             sourcetree::usage "${MULLE_TRACE}"
-         ;;
-
-         -lxx|--trace-database)
-            MULLE_FLAG_DB_LOG_EXEKUTOR='YES'
-         ;;
-
-         -lxw|--trace-walk)
-            MULLE_FLAG_WALK_LOG_EXEKUTOR='YES'
          ;;
 
          --echo-args)
@@ -317,11 +312,28 @@ sourcetree::main()
             FLAG_CONFIG_NAME="$1"
          ;;
 
+         --config-file)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            # makes it easier for mulle-sourcetree-to-cmake
+            if [ "$1" != '-' ]
+            then
+               r_dirname "$1"
+               cd "${RVAL}" || exit 1
+
+               FLAG_CONFIG_DIR='.'
+               r_basename "$1"
+               FLAG_CONFIG_NAME="${RVAL}"
+            fi
+         ;;
+
+
          -d|--directory)
             [ $# -eq 1 ] && fail "Missing argument to \"$1\""
             shift
 
-            cd "$1" || exit
+            cd "$1" || exit 1
          ;;
 
          --git-terminal-prompt)
@@ -409,6 +421,7 @@ sourcetree::main()
    done
 
    options_setup_trace "${MULLE_TRACE}" && set -x
+
 
    cmd="${1}"
    [ $# -eq 0 ] || shift
@@ -567,21 +580,25 @@ wrap"
 
       dotdump)
          # shellcheck source=src/mulle-sourcetree-dotdump.sh
-         include "sourcetree::dotdump"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
+         include "sourcetree::dotdump"
 
          sourcetree::dotdump::main "$@"
       ;;
 
+      'editor')
+         exekutor npx mulle-sde/mulle-sourcetree-editor
+      ;;
+
       eval-add)
          # shellcheck source=src/mulle-sourcetree-eval-add.sh
-         include "sourcetree::eval-add"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
+         include "sourcetree::eval-add"
 
          sourcetree::eval_add::main "$@"
       ;;
 
       filter)
          # shellcheck source=src/mulle-sourcetree-filter.sh
-         include "sourcetree::filter"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
+         include "sourcetree::filter"
 
          sourcetree::filter::main "$@"
       ;;
@@ -592,7 +609,7 @@ wrap"
 
       plugin|plugins)
          # shellcheck source=src/mulle-sourcetree-plugin.sh
-         include "sourcetree::plugin"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
+         include "sourcetree::plugin"
 
          sourcetree::plugin::main "$@"
       ;;
@@ -620,7 +637,7 @@ wrap"
 
       star-search)
          # shellcheck source=src/mulle-sourcetree-walk.sh
-         include "sourcetree::walk"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
+         include "sourcetree::walk"
 
          if [ -z "$1" -o "$#" -ne 1 -o "$1" = "-h" -o "$1" = "--help" -o "$1" = "help" ]
          then
@@ -665,14 +682,14 @@ echo \"\${NODE_MARKS} \${NODE_TAG} \${NODE_BRANCH} \${NODE_URL} (\${WALK_DATASOU
 
       sync|update)
          # shellcheck source=src/mulle-sourcetree-sync.sh
-         include "sourcetree::sync"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
+         include "sourcetree::sync"
 
          sourcetree::sync::main "$@"
       ;;
 
       test)
          # shellcheck source=src/mulle-sourcetree-test.sh
-         include "sourcetree::test"         # shellcheck source=src/mulle-sourcetree-dotdump.sh
+         include "sourcetree::test"
 
          sourcetree::test::main "$@"
       ;;

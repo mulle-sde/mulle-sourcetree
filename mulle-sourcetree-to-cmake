@@ -114,6 +114,14 @@ r_uname_to_cmake()
          systemname="NetBSD"
       ;;
 
+      'wasi')
+         systemname="WASI"
+      ;;
+
+      'wasm'|'webassembly')
+         systemname="Emscripten"
+      ;;
+
       'mingw'|'msys')
          systemname="Windows"
       ;;
@@ -788,7 +796,7 @@ _emit_cmake_find_library()
 # Disable with: \`mulle-sourcetree mark ${address} no-require-link\`"
 
          failstatus="SEND_ERROR"
-         failstring="${key} was not found"
+         failstring="${key} was not found in ${libraries}"
       ;;
    esac
 
@@ -982,11 +990,23 @@ _emit_cmake_dependency()
 
    local findoptions
    local findoptionskey
+
+   # NO_CMAKE_FIND_ROOT_PATH     Disables prefixing search paths with
+   #                             CMAKE_FIND_ROOT_PATH (i.e. disables the
+   #                             sysroot redirection). Only has effect
+   #                             when CMAKE_SYSTEM_NAME ≠ host
+   # NO_CMAKE_SYSTEM_PATH        Disables default system prefixes (/usr,
+   #                             /usr/local, etc.) and CMAKE_SYSTEM_PREFIX_PATH.
+   #                             No effect on CMAKE_FIND_ROOT_PATH
+   # NO_SYSTEM_ENVIRONMENT_PATH  Disables environment variables like $INCLUDE,
+   #                             $C_INCLUDE_PATH, etc. No effect on
+   #                             CMAKE_FIND_ROOT_PATH
+   #
    #
    # w/o NO_SYSTEM_ENVIRONMENT_PATH, cmake picks up libraries from
    # /usr/local/lib
    #
-   findoptions="NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH"
+   findoptions="NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH"
    findoptionskey="DEPENDENCY_IGNORE_SYSTEM_LIBARIES"
 
    case ",${marks}," in
@@ -1003,6 +1023,63 @@ _emit_cmake_dependency()
 #${indent}   )"
 
    _emit_cmake_find_library "static" "${findoptions}" "${findoptionskey}" "$@"
+}
+
+
+
+_emit_find_file_names()
+{
+   local files="$1"
+   local indent="$2"
+
+   local file
+
+   .foreachline file in ${files}
+   .do
+      printf "%s%s\n" "${indent}" "${file}"
+   .done
+}
+
+
+_emit_find_file_command()
+{
+   local key="$1"
+   local files="$2"
+   local findoptions="$3"
+   local indent="$4"
+
+   printf "%s%s\n" "${indent}" "find_file( ${key} NAMES"
+   _emit_find_file_names "${files}" "${indent}   "
+   if [ ! -z "${findoptions}" ]
+   then
+      printf "%s%s\n" "${indent}   " "${findoptions}"
+   fi
+   printf "%s%s\n" "${indent}" ")"
+}
+
+
+# TODO: unify with library finder which seems to be the exact same code
+#       minus find_file
+_emit_find_file()
+{
+   local key="$1"
+   local files="$2"
+   local findoptions="$3"
+   local findoptionskey="$4"
+   local indent="$5"
+
+   if [ ! -z "${findoptions}" ]
+   then
+      # prefer finding a "local" file regardless of name
+      _emit_find_file_command "${key}" "${files}" "${findoptions}" "${indent}"
+
+      # fallback to system file
+      printf "%s%s\n" "${indent}" "if( NOT ${key} AND NOT ${findoptionskey})"
+      _emit_find_file_command "${key}" "${files}" "" "${indent}   "
+      printf "%s%s\n" "${indent}" "endif()"
+   else
+      _emit_find_file_command "${key}" "${files}" "" "${indent}"
+   fi
 }
 
 
@@ -1073,7 +1150,17 @@ _emit_cmake_header_only()
          failcomment="\
 # Disable with: \`mulle-sourcetree mark ${address} no-require\`"
          failstatus="SEND_ERROR"
-         failstring="${key} was not found"
+         failstring="${key} was not found in ${headers}"
+      ;;
+   esac
+
+   findoptions="NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH"
+   findoptionskey="DEPENDENCY_IGNORE_SYSTEM_HEADERS"
+
+   case ",${marks}," in
+      *,no-cmake-suppress-system-path,*)
+         findoptions=""
+         findoptionskey=""
       ;;
    esac
 
@@ -1084,7 +1171,11 @@ _emit_cmake_header_only()
    #
    cat <<EOF
 ${indent}if( NOT ${key})
-${indent}   find_file( ${key} NAMES ${headers})
+EOF
+
+   _emit_find_file "${key}" "${headers}" "${findoptions}" "${findoptionskey}" "${indent}   "
+
+   cat <<EOF
 ${indent}   message( STATUS "${key} is \${${key}}")
 
 EOF
@@ -1352,6 +1443,7 @@ MATCHES header AND \
 
    header="`rexekutor "${MULLE_SOURCETREE}" \
                            --virtual-root \
+                           --config-file "${FLAG_CONFIG_FILE}" \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                               --no-bequeath \
@@ -1372,6 +1464,7 @@ NOT MATCHES only-framework"
 
    dependency="`rexekutor "${MULLE_SOURCETREE}" \
                               --virtual-root \
+                              --config-file "${FLAG_CONFIG_FILE}" \
                               ${MULLE_TECHNICAL_FLAGS} \
                            list \
                               --no-bequeath \
@@ -1393,6 +1486,7 @@ MATCHES only-framework"
 
    dependency="`rexekutor "${MULLE_SOURCETREE}" \
                               --virtual-root \
+                              --config-file "${FLAG_CONFIG_FILE}" \
                               ${MULLE_TECHNICAL_FLAGS} \
                            list \
                               --no-bequeath \
@@ -1428,6 +1522,7 @@ MATCHES no-fs AND \
 
    header="`exekutor "${MULLE_SOURCETREE}" \
                            --virtual-root \
+                           --config-file "${FLAG_CONFIG_FILE}" \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                            --no-bequeath \
@@ -1449,6 +1544,7 @@ NOT MATCHES only-framework"
 
    library="`exekutor "${MULLE_SOURCETREE}" \
                            --virtual-root \
+                           --config-file "${FLAG_CONFIG_FILE}" \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                            --no-bequeath \
@@ -1470,6 +1566,7 @@ MATCHES only-framework"
 
    library="`exekutor "${MULLE_SOURCETREE}" \
                            --virtual-root \
+                           --config-file "${FLAG_CONFIG_FILE}" \
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                            --no-bequeath \
@@ -1659,6 +1756,8 @@ main()
    local OPTION_PARALLEL='YES'
    local OPTION_CMAKE_SEARCHPATH_ENABLED="${MULLE_SOURCETREE_CMAKE_SEARCHPATH_ENABLED:-NO}"
 
+   local FLAG_CONFIG_FILE='-'
+
    while [ $# -ne 0 ]
    do
       if options_technical_flags "$1"
@@ -1677,6 +1776,13 @@ main()
             shift
 
             PROJECT_NAME="$1"
+         ;;
+
+         --config-file)
+            [ $# -eq 1 ] && fail "Missing argument to \"$1\""
+            shift
+
+            FLAG_CONFIG_FILE="$1"
          ;;
 
          --serial|--no-parallel)
@@ -1723,9 +1829,6 @@ main()
    done
 
    include "case"
-
-   MULLE_SDE="${MULLE_SDE:-`command -v mulle-sde`}"
-   [ -z "${MULLE_SDE}" ] && fail "mulle-sde not in PATH"
 
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-`command -v mulle-sourcetree`}"
    [ -z "${MULLE_SOURCETREE}" ] && fail "mulle-sourcetree not in PATH"
