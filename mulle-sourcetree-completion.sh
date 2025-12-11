@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
 # Bash completion script for mulle-sourcetree
-# Generated for mulle-sourcetree version 1.5.0
+# Generated for mulle-sourcetree version 1.5.1
 
 _mulle_sourcetree_complete() {
     local cur prev words cword
     _get_comp_words_by_ref -n : cur prev words cword
 
-    local commands="add clean json list mark move set status sync clean fix json list reset reuuid rewrite wrap status walk supermark config desecrate dotdump duplicate filter knownmarks plugin rcopy rename rename-marks remove info libexec-dir mode pwd etc-dir project-dir var-dir share-dir star-search tool-env touch uname shell test version"
+    local commands="add clean config craftorder dbstatus desecrate dotdump duplicate editor etc-dir eval-add filter fix get info json knownmarks libexec-dir list mark mode move plugin project-dir pwd rcopy remove rename rename-marks reset reuuid rewrite set share-dir shell sourcetree-dir star-search status supermark sync test touch uname unmark var-dir version walk wrap"
 
-    local global_options="-f --force -h --help --config-dir --config-name -d --directory --git-terminal-prompt -R --defer-root -T --defer-this -P --defer-parent -N --no-defer --virtual-root --mode -r --recurse --flat --share --share-dir --use-fallback --version --zprof"
+    local global_options="-f --force -h --help --config-dir --config-name --config-file -d --directory --git-terminal-prompt -R --defer-root -T --defer-this -P --defer-parent -N --no-defer --virtual-root --mode -r --recurse --flat --share --share-dir --use-fallback --version --zprof"
 
     # If we're at the first word after the command, suggest commands
     if [[ $cword -eq 1 ]]; then
@@ -26,47 +26,14 @@ _mulle_sourcetree_complete() {
         clean)
             _mulle_sourcetree_clean_complete
             ;;
-        json)
-            _mulle_sourcetree_json_complete
-            ;;
-        list)
-            _mulle_sourcetree_list_complete
-            ;;
-        mark)
-            _mulle_sourcetree_mark_complete
-            ;;
-        move)
-            _mulle_sourcetree_move_complete
-            ;;
-        set)
-            _mulle_sourcetree_set_complete
-            ;;
-        status)
-            _mulle_sourcetree_status_complete
-            ;;
-        sync)
-            _mulle_sourcetree_sync_complete
-            ;;
-        reset)
-            _mulle_sourcetree_reset_complete
-            ;;
-        reuuid)
-            _mulle_sourcetree_reuuid_complete
-            ;;
-        rewrite)
-            _mulle_sourcetree_rewrite_complete
-            ;;
-        wrap)
-            _mulle_sourcetree_wrap_complete
-            ;;
-        walk)
-            _mulle_sourcetree_walk_complete
-            ;;
-        supermark)
-            _mulle_sourcetree_supermark_complete
-            ;;
         config)
             _mulle_sourcetree_config_complete
+            ;;
+        craftorder)
+            _mulle_sourcetree_craftorder_complete
+            ;;
+        dbstatus)
+            _mulle_sourcetree_dbstatus_complete
             ;;
         desecrate)
             _mulle_sourcetree_desecrate_complete
@@ -77,39 +44,7 @@ _mulle_sourcetree_complete() {
         duplicate)
             _mulle_sourcetree_duplicate_complete
             ;;
-        filter)
-            _mulle_sourcetree_filter_complete
-            ;;
-        knownmarks)
-            _mulle_sourcetree_knownmarks_complete
-            ;;
-        plugin)
-            _mulle_sourcetree_plugin_complete
-            ;;
-        rcopy)
-            _mulle_sourcetree_rcopy_complete
-            ;;
-        rename)
-            _mulle_sourcetree_rename_complete
-            ;;
-        rename-marks)
-            _mulle_sourcetree_rename_marks_complete
-            ;;
-        remove)
-            _mulle_sourcetree_remove_complete
-            ;;
-        info)
-            _mulle_sourcetree_info_complete
-            ;;
-        libexec-dir)
-            # No arguments
-            COMPREPLY=()
-            ;;
-        mode)
-            # No arguments
-            COMPREPLY=()
-            ;;
-        pwd)
+        editor)
             # No arguments
             COMPREPLY=()
             ;;
@@ -117,24 +52,103 @@ _mulle_sourcetree_complete() {
             # No arguments
             COMPREPLY=()
             ;;
+        eval-add)
+            _mulle_sourcetree_eval_add_complete
+            ;;
+        filter)
+            _mulle_sourcetree_filter_complete
+            ;;
+        fix)
+            _mulle_sourcetree_fix_complete
+            ;;
+        get)
+            _mulle_sourcetree_get_complete
+            ;;
+        info)
+            _mulle_sourcetree_info_complete
+            ;;
+        json)
+            _mulle_sourcetree_json_complete
+            ;;
+        knownmarks)
+            _mulle_sourcetree_knownmarks_complete
+            ;;
+        libexec-dir)
+            # No arguments
+            COMPREPLY=()
+            ;;
+        list)
+            _mulle_sourcetree_list_complete
+            ;;
+        mark)
+            _mulle_sourcetree_mark_complete
+            ;;
+        mode)
+            # No arguments
+            COMPREPLY=()
+            ;;
+        move)
+            _mulle_sourcetree_move_complete
+            ;;
+        plugin)
+            _mulle_sourcetree_plugin_complete
+            ;;
         project-dir)
             # No arguments
             COMPREPLY=()
             ;;
-        var-dir)
+        pwd)
             # No arguments
             COMPREPLY=()
             ;;
+        rcopy)
+            _mulle_sourcetree_rcopy_complete
+            ;;
+        remove)
+            _mulle_sourcetree_remove_complete
+            ;;
+        rename)
+            _mulle_sourcetree_rename_complete
+            ;;
+        rename-marks)
+            _mulle_sourcetree_rename_marks_complete
+            ;;
+        reset)
+            _mulle_sourcetree_reset_complete
+            ;;
+        reuuid)
+            _mulle_sourcetree_reuuid_complete
+            ;;
+        rewrite)
+            _mulle_sourcetree_rewrite_complete
+            ;;
+        set)
+            _mulle_sourcetree_set_complete
+            ;;
         share-dir)
+            _mulle_sourcetree_sourcetree_dir_complete
+            ;;
+        shell)
             # No arguments
             COMPREPLY=()
+            ;;
+        sourcetree-dir)
+            _mulle_sourcetree_sourcetree_dir_complete
             ;;
         star-search)
             _mulle_sourcetree_star_search_complete
             ;;
-        tool-env)
-            # No arguments
-            COMPREPLY=()
+        status)
+            _mulle_sourcetree_status_complete
+            ;;
+        supermark)
+            _mulle_sourcetree_supermark_complete
+            ;;
+        sync)
+            _mulle_sourcetree_sync_complete
+            ;;
+        test)
+            _mulle_sourcetree_test_complete
             ;;
         touch)
             # No arguments
@@ -144,16 +158,22 @@ _mulle_sourcetree_complete() {
             # No arguments
             COMPREPLY=()
             ;;
-        shell)
+        unmark)
+            _mulle_sourcetree_unmark_complete
+            ;;
+        var-dir)
             # No arguments
             COMPREPLY=()
-            ;;
-        test)
-            _mulle_sourcetree_test_complete
             ;;
         version)
             # No arguments
             COMPREPLY=()
+            ;;
+        walk)
+            _mulle_sourcetree_walk_complete
+            ;;
+        wrap)
+            _mulle_sourcetree_wrap_complete
             ;;
         *)
             # Fallback to global options
@@ -163,23 +183,23 @@ _mulle_sourcetree_complete() {
 }
 
 _mulle_sourcetree_add_complete() {
-    local add_options="-h --help --branch --address --fetchoptions --marks --tag --nodetype --url --userinfo --if-missing -a --address -b --branch -f --fetchoptions -m --marks -n --nodetype -t --tag -u --url -U --userinfo --extended-mark --no-extended-mark --fuzzy --no-fuzzy --regex --no-regex --update --no-update --raw-userinfo"
+    local add_options="-h --help --address --branch --fetchoptions --marks --tag --nodetype --url --userinfo --if-missing"
 
-    if [[ "$prev" == --branch || "$prev" == -b ]]; then
+    if [[ "$prev" == --branch ]]; then
         COMPREPLY=()
-    elif [[ "$prev" == --address || "$prev" == -a ]]; then
+    elif [[ "$prev" == --address ]]; then
         COMPREPLY=()
-    elif [[ "$prev" == --fetchoptions || "$prev" == -f ]]; then
+    elif [[ "$prev" == --fetchoptions ]]; then
         COMPREPLY=()
-    elif [[ "$prev" == --marks || "$prev" == -m ]]; then
+    elif [[ "$prev" == --marks ]]; then
         COMPREPLY=()
-    elif [[ "$prev" == --tag || "$prev" == -t ]]; then
+    elif [[ "$prev" == --tag ]]; then
         COMPREPLY=()
-    elif [[ "$prev" == --nodetype || "$prev" == -n || "$prev" == --scm || "$prev" == -s ]]; then
+    elif [[ "$prev" == --nodetype ]]; then
         COMPREPLY=($(compgen -W "git tar zip local none symlink comment" -- "$cur"))
-    elif [[ "$prev" == --url || "$prev" == -u ]]; then
+    elif [[ "$prev" == --url ]]; then
         COMPREPLY=($(compgen -W "https://" -- "$cur"))
-    elif [[ "$prev" == --userinfo || "$prev" == -U || "$prev" == --raw-userinfo ]]; then
+    elif [[ "$prev" == --userinfo ]]; then
         COMPREPLY=()
     elif [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "$add_options" -- "$cur"))
@@ -190,7 +210,7 @@ _mulle_sourcetree_add_complete() {
 }
 
 _mulle_sourcetree_clean_complete() {
-    local clean_options="-h --help"
+    local clean_options="-h --help --all-graveyards --fs --graveyard --no-fs --no-graveyard --no-share --share"
     if [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "$clean_options" -- "$cur"))
     else
@@ -208,7 +228,7 @@ _mulle_sourcetree_json_complete() {
 }
 
 _mulle_sourcetree_list_complete() {
-    local list_options="-h --help --output-index --output-uuid --output-node --output-address --output-url --output-marks --output-nodetype --output-branch --output-tag --output-fetchoptions --output-userinfo --output-evaledurl --output-evalednodetype --output-evaledbranch --output-evaledtag --output-evaledfetchoptions"
+    local list_options="-h --help -l -ll -g -m -s -r -u --bequeath --no-bequeath --config-file --dedupe-mode --format --force-format --marks --no-dedupe --nodetype --output-banner --output-eval --output-format --output-full --output-no-column --output-no-header --output-no-indent --output-no-marks --output-no-separator --output-uuid --qualifier --verbatim"
     if [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "$list_options" -- "$cur"))
     else
@@ -238,22 +258,22 @@ _mulle_sourcetree_move_complete() {
 }
 
 _mulle_sourcetree_set_complete() {
-    local set_options="-h --help --branch --address --fetchoptions --marks --tag --nodetype --url --userinfo --raw-userinfo -a --address -b --branch -f --fetchoptions -m --marks -n --nodetype -t --tag -u --url -U --userinfo"
-    if [[ "$prev" == --branch || "$prev" == -b ]]; then
+    local set_options="-h --help --branch --address --fetchoptions --marks --tag --nodetype --url --userinfo"
+    if [[ "$prev" == --branch ]]; then
         COMPREPLY=()
-    elif [[ "$prev" == --address || "$prev" == -a ]]; then
+    elif [[ "$prev" == --address ]]; then
         COMPREPLY=()
-    elif [[ "$prev" == --fetchoptions || "$prev" == -f ]]; then
+    elif [[ "$prev" == --fetchoptions ]]; then
         COMPREPLY=()
-    elif [[ "$prev" == --marks || "$prev" == -m ]]; then
+    elif [[ "$prev" == --marks ]]; then
         COMPREPLY=()
-    elif [[ "$prev" == --tag || "$prev" == -t ]]; then
+    elif [[ "$prev" == --tag ]]; then
         COMPREPLY=()
-    elif [[ "$prev" == --nodetype || "$prev" == -n ]]; then
+    elif [[ "$prev" == --nodetype ]]; then
         COMPREPLY=($(compgen -W "git tar zip local none symlink comment" -- "$cur"))
-    elif [[ "$prev" == --url || "$prev" == -u ]]; then
+    elif [[ "$prev" == --url ]]; then
         COMPREPLY=($(compgen -W "https://" -- "$cur"))
-    elif [[ "$prev" == --userinfo || "$prev" == -U || "$prev" == --raw-userinfo ]]; then
+    elif [[ "$prev" == --userinfo ]]; then
         COMPREPLY=()
     elif [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "$set_options" -- "$cur"))
@@ -264,8 +284,12 @@ _mulle_sourcetree_set_complete() {
 }
 
 _mulle_sourcetree_status_complete() {
-    local status_options="-h --help"
-    if [[ "$cur" == -* ]]; then
+    local status_options="-h --help --all --shallow --deep --is-uptodate --output-filename -n -p -m"
+    if [[ "$prev" == -n ]]; then
+        COMPREPLY=($(compgen -W "git tar zip local symlink comment ALL" -- "$cur"))
+    elif [[ "$prev" == -p || "$prev" == -m ]]; then
+        COMPREPLY=()
+    elif [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "$status_options" -- "$cur"))
     else
         COMPREPLY=()
@@ -273,8 +297,12 @@ _mulle_sourcetree_status_complete() {
 }
 
 _mulle_sourcetree_sync_complete() {
-    local sync_options="-h --help"
-    if [[ "$cur" == -* ]]; then
+    local sync_options="-h --help -r --serial --parallel --quick-check --no-fix --override-branch --cache-dir --refresh --no-refresh"
+    if [[ "$prev" == --override-branch ]]; then
+        COMPREPLY=()
+    elif [[ "$prev" == --cache-dir ]]; then
+        COMPREPLY=($(compgen -d -- "$cur"))
+    elif [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "$sync_options" -- "$cur"))
     else
         COMPREPLY=()
@@ -282,7 +310,7 @@ _mulle_sourcetree_sync_complete() {
 }
 
 _mulle_sourcetree_reset_complete() {
-    local reset_options="-h --help"
+    local reset_options="-h --help -g"
     if [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "$reset_options" -- "$cur"))
     else
@@ -318,8 +346,14 @@ _mulle_sourcetree_wrap_complete() {
 }
 
 _mulle_sourcetree_walk_complete() {
-    local walk_options="-h --help --dedupe-mode --lenient --callback --output-format --output-no-header --output-eval --output-no-uuid --output-no-marks --output-no-address --output-no-url --output-no-nodetype --output-no-branch --output-no-tag --output-no-fetchoptions --output-no-userinfo --output-no-evaledurl --output-no-evalednodetype --output-no-evaledbranch --output-no-evaledtag --output-no-evaledfetchoptions"
-    if [[ "$cur" == -* ]]; then
+    local walk_options="-h --help -n -p -m -q --backwards --bequeath --breadth-first --cd --comments --in-order --lenient --no-dedupe --pre-order --post-order --walk-db"
+    if [[ "$prev" == -n ]]; then
+        COMPREPLY=($(compgen -W "git tar zip local symlink comment ALL" -- "$cur"))
+    elif [[ "$prev" == -p ]]; then
+        COMPREPLY=($(compgen -W "missing" -- "$cur"))
+    elif [[ "$prev" == -m || "$prev" == -q ]]; then
+        COMPREPLY=()
+    elif [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "$walk_options" -- "$cur"))
     else
         COMPREPLY=()
@@ -354,8 +388,12 @@ _mulle_sourcetree_desecrate_complete() {
 }
 
 _mulle_sourcetree_dotdump_complete() {
-    local dotdump_options="-h --help"
-    if [[ "$cur" == -* ]]; then
+    local dotdump_options="-h --help -n -p -m --lr --td --walk-config --walk-db --output-html"
+    if [[ "$prev" == -n ]]; then
+        COMPREPLY=($(compgen -W "git tar zip local symlink comment ALL" -- "$cur"))
+    elif [[ "$prev" == -p || "$prev" == -m ]]; then
+        COMPREPLY=()
+    elif [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "$dotdump_options" -- "$cur"))
     else
         COMPREPLY=()
@@ -363,13 +401,110 @@ _mulle_sourcetree_dotdump_complete() {
 }
 
 _mulle_sourcetree_duplicate_complete() {
-    _mulle_sourcetree_add_complete
+    local duplicate_options="-h --help --address --branch --fetchoptions --marks --nodetype --tag --url --userinfo"
+    if [[ "$prev" == --branch ]]; then
+        COMPREPLY=()
+    elif [[ "$prev" == --address ]]; then
+        COMPREPLY=()
+    elif [[ "$prev" == --fetchoptions ]]; then
+        COMPREPLY=()
+    elif [[ "$prev" == --marks ]]; then
+        COMPREPLY=()
+    elif [[ "$prev" == --tag ]]; then
+        COMPREPLY=()
+    elif [[ "$prev" == --nodetype ]]; then
+        COMPREPLY=($(compgen -W "git tar zip local none symlink comment" -- "$cur"))
+    elif [[ "$prev" == --url ]]; then
+        COMPREPLY=($(compgen -W "https://" -- "$cur"))
+    elif [[ "$prev" == --userinfo ]]; then
+        COMPREPLY=()
+    elif [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "$duplicate_options" -- "$cur"))
+    else
+        COMPREPLY=()
+    fi
 }
 
 _mulle_sourcetree_filter_complete() {
     local filter_options="-h --help"
     if [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "$filter_options" -- "$cur"))
+    else
+        COMPREPLY=()
+    fi
+}
+
+_mulle_sourcetree_rename_marks_complete() {
+    local rename_marks_options="-h --help --regex --extended-mark"
+    if [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "$rename_marks_options" -- "$cur"))
+    else
+        COMPREPLY=()
+    fi
+}
+
+_mulle_sourcetree_craftorder_complete() {
+    local craftorder_options="-h --help --callback --output-eval --output-no-marks --print-qualifier"
+    if [[ "$prev" == --callback ]]; then
+        COMPREPLY=()
+    elif [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "$craftorder_options" -- "$cur"))
+    else
+        COMPREPLY=()
+    fi
+}
+
+_mulle_sourcetree_dbstatus_complete() {
+    local dbstatus_options="-h --help"
+    if [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "$dbstatus_options" -- "$cur"))
+    else
+        COMPREPLY=()
+    fi
+}
+
+_mulle_sourcetree_eval_add_complete() {
+    local eval_add_options="-h --help"
+    if [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "$eval_add_options" -- "$cur"))
+    else
+        COMPREPLY=()
+    fi
+}
+
+_mulle_sourcetree_fix_complete() {
+    local fix_options="-h --help"
+    if [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "$fix_options" -- "$cur"))
+    else
+        COMPREPLY=()
+    fi
+}
+
+_mulle_sourcetree_get_complete() {
+    local get_options="-h --help"
+    if [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "$get_options" -- "$cur"))
+    else
+        COMPREPLY=()
+    fi
+}
+
+_mulle_sourcetree_unmark_complete() {
+    local unmark_options="-h --help --regex --extended-mark"
+    if [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "$unmark_options" -- "$cur"))
+    else
+        COMPREPLY=()
+    fi
+}
+
+_mulle_sourcetree_sourcetree_dir_complete() {
+    local sourcetree_dir_options="-h --help --config-name --flat --recurse --share -N -n -s -v"
+    if [[ "$prev" == --config-name ]]; then
+        COMPREPLY=()
+    elif [[ "$cur" == -* ]]; then
+        COMPREPLY=($(compgen -W "$sourcetree_dir_options" -- "$cur"))
     else
         COMPREPLY=()
     fi
@@ -408,15 +543,6 @@ _mulle_sourcetree_rename_complete() {
     local rename_options="-h --help"
     if [[ "$cur" == -* ]]; then
         COMPREPLY=($(compgen -W "$rename_options" -- "$cur"))
-    else
-        COMPREPLY=()
-    fi
-}
-
-_mulle_sourcetree_rename_marks_complete() {
-    local rename_marks_options="-h --help --regex --extended-mark"
-    if [[ "$cur" == -* ]]; then
-        COMPREPLY=($(compgen -W "$rename_marks_options" -- "$cur"))
     else
         COMPREPLY=()
     fi
