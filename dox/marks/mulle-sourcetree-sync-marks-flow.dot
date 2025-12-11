@@ -1,0 +1,194 @@
+digraph sourcetree_sync_marks {
+   rankdir=TB;
+   compound=true;
+   node [shape=box, style=rounded, fontname="Arial"];
+   edge [fontname="Arial", fontsize=10];
+   
+   // Define colors for different types of nodes
+   start [label="mulle-sourcetree sync\n(per node)", shape=ellipse, style=filled, fillcolor="#e1f5ff"];
+   
+   // Main decision points
+   check_fs [label="Has mark\nno-fs?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_fs [label="Skip node\n(nothing to update)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_comment [label="nodetype ==\ncomment?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_comment [label="Skip node\n(comment)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_update [label="Has mark\nno-update?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   check_exists_update [label="Node\nexists?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   check_required_update [label="Has mark\nno-require OR\nno-require-os-*?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   fail_required [label="FAIL:\nNode missing,\nno-update but\nrequired", shape=box, style=filled, fillcolor="#ef5350"];
+   skip_not_required [label="Skip node\n(not required)", shape=box, style=filled, fillcolor="#ffccbc"];
+   remember_existing [label="Remember node\n(no-update\nbut exists)", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   // New node logic
+   new_node [label="Is this a\nnew node?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   check_exists_new [label="Node\nexists?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   
+   check_clobber [label="Has mark\nno-clobber?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   remember_noclobber [label="Remember node\n(no-clobber)", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   check_delete_new [label="Has mark\nno-delete?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   remember_nodelete [label="Remember node\n(no-delete)", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   check_share_shirk [label="Other node has\nno-share-shirk\nfor this filename?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_squatted [label="Skip node\n(squatted by\namalgamation)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   // Fetch decision
+   check_fetchable [label="Check if\nfetchable", shape=box, style=filled, fillcolor="#b3e5fc"];
+   
+   subgraph cluster_fetchable {
+      label="r_is_fetchable()";
+      style=dashed;
+      color="#0277bd";
+      
+      check_fetch_mark [label="Has mark\nno-fetch?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+      block_fetch_mark [label="Block fetch\n(no-fetch)", shape=box, style=filled, fillcolor="#ffccbc"];
+      
+      check_platform [label="Has mark\nno-platform-* OR\nno-fetch-platform-*?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+      check_only_platform [label="Has mark\nonly-platform-* OR\nonly-fetch-platform-*\nmatching current?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+      block_platform [label="Block fetch\n(platform)", shape=box, style=filled, fillcolor="#ffccbc"];
+      
+      allow_fetch [label="Allow fetch", shape=box, style=filled, fillcolor="#c8e6c9"];
+   }
+   
+   fetch_blocked [label="Fetch blocked,\nadd to missing DB", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   // Perform fetch
+   perform_fetch [label="Call mulle-fetch\nwith options", shape=box, style=filled, fillcolor="#64b5f6"];
+   
+   subgraph cluster_fetch_options {
+      label="Fetch Options (from marks)";
+      style=dashed;
+      color="#1976d2";
+      
+      opt_symlink [label="no-symlink?\n→ --no-symlink or\n--symlink or --copy", shape=note, style=filled, fillcolor="#e3f2fd"];
+      opt_readwrite [label="no-readwrite?\n→ --write-protect", shape=note, style=filled, fillcolor="#e3f2fd"];
+      opt_symlink -> opt_readwrite [style=invis];
+   }
+   
+   fetch_success [label="Fetch\nsucceeded?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   
+   check_require_fetch [label="Has mark\nno-require OR\nno-require-os-*?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   fail_fetch [label="FAIL:\nFetch failed,\nnode required", shape=box, style=filled, fillcolor="#ef5350"];
+   skip_fetch_fail [label="Add to missing DB\n(not required)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   remember_fetched [label="Remember node\nin database", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   // Update/change node logic
+   update_node [label="Node needs\nupdate/change", shape=box, style=filled, fillcolor="#b3e5fc"];
+   
+   check_delete_update [label="Has mark\nno-delete?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   fail_delete [label="FAIL:\nCan't move/remove\nnode (no-delete)", shape=box, style=filled, fillcolor="#ef5350"];
+   
+   perform_update [label="Perform update:\ncheckout/upgrade/\nset-url/move", shape=box, style=filled, fillcolor="#64b5f6"];
+   
+   // Descend logic
+   check_descend [label="Has mark\nno-descend?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_descend [label="Don't recurse\ninto sourcetree", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_bequeath [label="Walk level > 0\nAND has mark\nno-bequeath?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_bequeath [label="Don't inherit to\nparent project", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   recurse [label="Recurse into\nnode's sourcetree", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   done [label="Done", shape=ellipse, style=filled, fillcolor="#c8e6c9"];
+   
+   // Main flow
+   start -> check_fs;
+   check_fs -> skip_fs [label="yes"];
+   check_fs -> check_comment [label="no"];
+   
+   check_comment -> skip_comment [label="yes"];
+   check_comment -> check_update [label="no"];
+   
+   check_update -> check_exists_update [label="yes"];
+   check_exists_update -> remember_existing [label="yes"];
+   check_exists_update -> check_required_update [label="no"];
+   check_required_update -> skip_not_required [label="yes"];
+   check_required_update -> fail_required [label="no"];
+   
+   check_update -> new_node [label="no"];
+   
+   new_node -> check_exists_new [label="yes"];
+   new_node -> update_node [label="no"];
+   
+   check_exists_new -> check_clobber [label="yes"];
+   check_exists_new -> check_share_shirk [label="no"];
+   
+   check_clobber -> remember_noclobber [label="yes"];
+   check_clobber -> check_delete_new [label="no"];
+   
+   check_delete_new -> remember_nodelete [label="yes"];
+   check_delete_new -> check_fetchable [label="no\n(clobber existing)"];
+   
+   check_share_shirk -> skip_squatted [label="yes"];
+   check_share_shirk -> check_fetchable [label="no"];
+   
+   // Fetchable subgraph
+   check_fetchable -> check_fetch_mark;
+   check_fetch_mark -> block_fetch_mark [label="yes"];
+   check_fetch_mark -> check_platform [label="no"];
+   
+   check_platform -> check_only_platform [label="yes"];
+   check_only_platform -> allow_fetch [label="yes"];
+   check_only_platform -> block_platform [label="no"];
+   check_platform -> allow_fetch [label="no"];
+   
+   block_fetch_mark -> fetch_blocked;
+   block_platform -> fetch_blocked;
+   
+   allow_fetch -> perform_fetch;
+   fetch_blocked -> done;
+   
+   // Fetch operation
+   perform_fetch -> fetch_success;
+   fetch_success -> check_require_fetch [label="no"];
+   fetch_success -> remember_fetched [label="yes"];
+   
+   check_require_fetch -> skip_fetch_fail [label="yes"];
+   check_require_fetch -> fail_fetch [label="no"];
+   
+   // Update operations
+   update_node -> check_delete_update;
+   check_delete_update -> fail_delete [label="yes"];
+   check_delete_update -> perform_update [label="no"];
+   perform_update -> check_fetchable;
+   
+   // Final steps
+   remember_existing -> check_descend;
+   remember_noclobber -> check_descend;
+   remember_nodelete -> check_descend;
+   remember_fetched -> check_descend;
+   skip_not_required -> done;
+   skip_fetch_fail -> done;
+   skip_fs -> done;
+   skip_comment -> done;
+   skip_squatted -> done;
+   fail_required -> done;
+   fail_fetch -> done;
+   fail_delete -> done;
+   
+   check_descend -> skip_descend [label="yes"];
+   check_descend -> check_bequeath [label="no"];
+   check_bequeath -> skip_bequeath [label="yes"];
+   check_bequeath -> recurse [label="no"];
+   skip_descend -> done;
+   skip_bequeath -> done;
+   recurse -> done;
+   
+   // Legend
+   subgraph cluster_legend {
+      label="Legend";
+      style=filled;
+      fillcolor="#f5f5f5";
+      
+      leg_decision [label="Decision\n(mark check)", shape=diamond, style=filled, fillcolor="#fff9c4"];
+      leg_action [label="Action", shape=box, style=filled, fillcolor="#64b5f6"];
+      leg_skip [label="Skip/Block", shape=box, style=filled, fillcolor="#ffccbc"];
+      leg_success [label="Success/Remember", shape=box, style=filled, fillcolor="#c8e6c9"];
+      leg_fail [label="Failure", shape=box, style=filled, fillcolor="#ef5350"];
+      
+      leg_decision -> leg_action -> leg_skip -> leg_success -> leg_fail [style=invis];
+   }
+}

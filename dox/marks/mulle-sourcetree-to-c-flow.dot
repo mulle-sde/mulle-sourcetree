@@ -1,0 +1,70 @@
+digraph to_c_flow {
+   rankdir=TB;
+   node [shape=box, style=rounded, fontname="Arial"];
+   edge [fontname="Arial", fontsize=10];
+   
+   start [label="mulle-sourcetree-to-c\n(for each node)", shape=ellipse, style=filled, fillcolor="#e1f5ff"];
+   
+   check_header [label="Has mark\nno-header?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_header [label="Skip node\n(no include)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_public [label="Has mark\nno-public?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   private_target [label="Target:\n_include-private.h", shape=note, style=filled, fillcolor="#ffe0b2"];
+   public_target [label="Target:\n_include.h", shape=note, style=filled, fillcolor="#c8e6c9"];
+   
+   check_dependency [label="Has mark\nno-dependency?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   library_style [label="Library style:\n<name.h>", shape=box, style=filled, fillcolor="#c8e6c9"];
+   dependency_style [label="Dependency style:\n<name/name.h>", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   check_require [label="Has mark\nno-require OR\nno-require-os-*?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   use_has_include [label="Wrap with\n#if __has_include\n(optional)", shape=box, style=filled, fillcolor="#c8e6c9"];
+   use_include [label="Direct #include\n(mandatory)", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   check_import [label="Has mark\nno-import?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   use_include_stmt [label="Use #include", shape=box, style=filled, fillcolor="#c8e6c9"];
+   use_import [label="Use #import\n(Objective-C)", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   check_platform [label="Has mark\nno-platform-* or\nno-sdk-*?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   add_guard [label="Wrap with\n#ifndef PLATFORM", shape=box, style=filled, fillcolor="#c8e6c9"];
+   no_guard [label="No platform\nguard", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   emit [label="Emit include\nstatement", shape=box, style=filled, fillcolor="#64b5f6"];
+   done [label="Done", shape=ellipse, style=filled, fillcolor="#c8e6c9"];
+   
+   start -> check_header;
+   check_header -> skip_header [label="yes"];
+   check_header -> check_public [label="no"];
+   
+   check_public -> private_target [label="yes"];
+   check_public -> public_target [label="no"];
+   
+   private_target -> check_dependency;
+   public_target -> check_dependency;
+   
+   check_dependency -> library_style [label="yes"];
+   check_dependency -> dependency_style [label="no"];
+   
+   library_style -> check_require;
+   dependency_style -> check_require;
+   
+   check_require -> use_has_include [label="yes"];
+   check_require -> use_include [label="no"];
+   
+   use_include -> check_import;
+   use_has_include -> check_import;
+   
+   check_import -> use_include_stmt [label="yes"];
+   check_import -> use_import [label="no"];
+   
+   use_include_stmt -> check_platform;
+   use_import -> check_platform;
+   
+   check_platform -> add_guard [label="yes"];
+   check_platform -> no_guard [label="no"];
+   
+   add_guard -> emit;
+   no_guard -> emit;
+   
+   emit -> done;
+   skip_header -> done;
+}

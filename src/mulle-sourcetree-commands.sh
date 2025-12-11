@@ -857,20 +857,31 @@ sourcetree::commands::_append_new_node()
    #
    # now just some sanity checks and save it
    #
+
+   # this just clobbers RVAL (not the _ values)
    if sourcetree::cfg::r_get_nodeline "${SOURCETREE_START}" "${_address}"
    then
       if [ "${OPTION_IF_MISSING}" = 'YES' ]
       then
          return 0
       fi
-      if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
+
+      sourcetree::nodeline::r_get_nodetype
+      # adding a library in addition to a regular node with the same node
+      # is ok
+      if [ "${RVAL}" != 'none' -a "${_nodetype}" = 'none' ]
       then
-         if sourcetree::cfg::is_config_present "${SOURCETREE_START}"
+         log_info "A non-library node ${C_RESET_BOLD}${_address}${C_INFO} already exists. Be sure to add distinguishing platform marks to both."
+      else
+         if [ "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ]
          then
-            fail "A node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} already exists \
+            if sourcetree::cfg::is_config_present "${SOURCETREE_START}"
+            then
+               fail "A node ${C_RESET_BOLD}${_address}${C_ERROR_TEXT} already exists \
 in the sourcetree (${RVAL#"${MULLE_USER_PWD}/"}). Use -f to skip this check."
-         else
-            _internal_fail "Bizarre error"
+            else
+               _internal_fail "Bizarre error"
+            fi
          fi
       fi
    fi

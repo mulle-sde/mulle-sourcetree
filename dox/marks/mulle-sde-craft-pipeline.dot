@@ -1,0 +1,107 @@
+digraph mulle_sde_craft_pipeline {
+   rankdir=LR;
+   compound=true;
+   node [shape=box, style=rounded, fontname="Arial"];
+   edge [fontname="Arial", fontsize=10];
+   
+   // Source
+   sourcetree [label="mulle-sourcetree\nconfig\n(nodes with marks)", shape=folder, style=filled, fillcolor="#e1f5ff"];
+   
+   // Pipeline tools (subgraphs for grouping)
+   subgraph cluster_generators {
+      label="Code Generators";
+      style=dashed;
+      color="#1976d2";
+      
+      to_c [label="mulle-sourcetree-to-c", shape=component, style=filled, fillcolor="#64b5f6"];
+      to_cmake [label="mulle-sourcetree-to-cmake", shape=component, style=filled, fillcolor="#64b5f6"];
+   }
+   
+   subgraph cluster_orderers {
+      label="Dependency Orderers";
+      style=dashed;
+      color="#388e3c";
+      
+      craftorder [label="mulle-sde craftorder", shape=component, style=filled, fillcolor="#81c784"];
+      linkorder [label="mulle-sde linkorder", shape=component, style=filled, fillcolor="#81c784"];
+   }
+   
+   subgraph cluster_builder {
+      label="Build System";
+      style=dashed;
+      color="#f57c00";
+      
+      craft [label="mulle-craft", shape=component, style=filled, fillcolor="#ffb74d"];
+      make [label="mulle-make", shape=component, style=filled, fillcolor="#ffcc80"];
+      dispense [label="mulle-dispense", shape=component, style=filled, fillcolor="#ffe0b2"];
+   }
+   
+   // Outputs
+   headers [label="Generated\nHeaders\n(_include.h)", shape=note, style=filled, fillcolor="#c8e6c9"];
+   cmake_deps [label="Generated\nCMake Files\n(Dependencies.cmake)", shape=note, style=filled, fillcolor="#c8e6c9"];
+   craft_list [label="Build Order\nList", shape=note, style=filled, fillcolor="#c8e6c9"];
+   link_list [label="Link Order\nList", shape=note, style=filled, fillcolor="#c8e6c9"];
+   built_deps [label="Built\nDependencies\n(dependency/)", shape=folder, style=filled, fillcolor="#c8e6c9"];
+   
+   // Mark flow annotations
+   marks_to_c [label="Marks used:\nno-header\nno-import\nno-public\nno-platform-*\nno-sdk-*\nrequire", shape=plaintext, fontsize=9];
+   
+   marks_to_cmake [label="Marks used:\nno-cmake-add\nno-cmake-inherit\nno-all-load\nno-dynamic-link\nno-static-link\nonly-framework\nrequire-link", shape=plaintext, fontsize=9];
+   
+   marks_craftorder [label="Marks used:\nno-build\nno-craft-os-*\nno-craft-platform-*\nno-craft-sdk-*\nno-dependency\nno-require-*", shape=plaintext, fontsize=9];
+   
+   marks_linkorder [label="Marks used:\nno-link\nno-all-load\nno-intermediate-link\nno-cmake-add\nno-actual-link", shape=plaintext, fontsize=9];
+   
+   marks_craft [label="Marks used:\nno-require-*\nno-dynamic-link\nno-static-link\nonly-standalone\nno-inplace\nno-rootheader\nonly-liftheaders\nno-singlephase\nno-memo", shape=plaintext, fontsize=9];
+   
+   // Main flow
+   sourcetree -> to_c [label="nodes"];
+   sourcetree -> to_cmake [label="nodes"];
+   sourcetree -> craftorder [label="nodes"];
+   sourcetree -> linkorder [label="nodes"];
+   
+   to_c -> headers;
+   to_cmake -> cmake_deps;
+   craftorder -> craft_list;
+   linkorder -> link_list;
+   
+   craft_list -> craft [label="for each\ndependency"];
+   craft -> make [label="calls"];
+   make -> dispense [label="install to\ntmp dir"];
+   dispense -> built_deps;
+   
+   // Cross-tool usage
+   headers -> craft [label="consumed\nduring build", style=dashed, color="#666666"];
+   cmake_deps -> craft [label="consumed\nduring build", style=dashed, color="#666666"];
+   link_list -> craft [label="link\ninformation", style=dashed, color="#666666"];
+   
+   // Mark annotations (invisible edges for positioning)
+   to_c -> marks_to_c [style=invis];
+   to_cmake -> marks_to_cmake [style=invis];
+   craftorder -> marks_craftorder [style=invis];
+   linkorder -> marks_linkorder [style=invis];
+   craft -> marks_craft [style=invis];
+   
+   // Position marks near their tools
+   {rank=same; to_c; marks_to_c}
+   {rank=same; to_cmake; marks_to_cmake}
+   {rank=same; craftorder; marks_craftorder}
+   {rank=same; linkorder; marks_linkorder}
+   {rank=same; craft; marks_craft}
+   
+   // Legend
+   subgraph cluster_legend {
+      label="Legend";
+      style=filled;
+      fillcolor="#f5f5f5";
+      
+      leg_source [label="Source\nData", shape=folder, style=filled, fillcolor="#e1f5ff"];
+      leg_tool [label="Tool/\nComponent", shape=component, style=filled, fillcolor="#64b5f6"];
+      leg_output [label="Generated\nArtifact", shape=note, style=filled, fillcolor="#c8e6c9"];
+      leg_solid [label="Data Flow"];
+      leg_dashed [label="Referenced\nDuring Build", style=dashed, color="#666666"];
+      
+      leg_source -> leg_tool -> leg_output [style=invis];
+      leg_solid -> leg_dashed [style=invis];
+   }
+}

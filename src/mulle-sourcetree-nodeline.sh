@@ -38,6 +38,14 @@ sourcetree::nodeline::r_get_address()
 }
 
 
+sourcetree::nodeline::r_get_nodetype()
+{
+   local nodeline="$1"
+
+   RVAL="${nodeline#*;}"
+}
+
+
 sourcetree::nodeline::__get_address_nodetype()
 {
    local nodeline="$1"

@@ -1,0 +1,86 @@
+digraph complete_craft_flow {
+   rankdir=TB;
+   node [shape=box, style=rounded, fontname="Arial"];
+   edge [fontname="Arial", fontsize=10];
+   
+   start [label="mulle-sde craft", shape=ellipse, style=filled, fillcolor="#e1f5ff", fontsize=14];
+   
+   // Parallel generation phase
+   subgraph cluster_parallel {
+      label="Parallel Code Generation";
+      style=dashed;
+      color="#1976d2";
+      
+      to_c [label="mulle-sourcetree-to-c\n(for each node)", shape=component, style=filled, fillcolor="#64b5f6"];
+      to_cmake [label="mulle-sourcetree-to-cmake\n(for each node)", shape=component, style=filled, fillcolor="#64b5f6"];
+      craftorder_gen [label="mulle-sde craftorder\n(topological sort)", shape=component, style=filled, fillcolor="#81c784"];
+      linkorder_gen [label="mulle-sde linkorder\n(reverse topo sort)", shape=component, style=filled, fillcolor="#81c784"];
+   }
+   
+   // Outputs from parallel phase
+   headers [label="_include.h\n_include-private.h", shape=note, style=filled, fillcolor="#c8e6c9"];
+   cmake_files [label="Dependencies.cmake\nDependenciesAndLibraries.cmake", shape=note, style=filled, fillcolor="#c8e6c9"];
+   craftorder_list [label="craftorder\n(build order list)", shape=note, style=filled, fillcolor="#c8e6c9"];
+   linkorder_list [label="linkorder\n(link order list)", shape=note, style=filled, fillcolor="#c8e6c9"];
+   
+   // Sequential build phase
+   build_loop [label="For each dependency\nin craftorder:", shape=box, style=filled, fillcolor="#b3e5fc"];
+   
+   craft [label="mulle-craft\n(check marks,\ndetermine options)", shape=component, style=filled, fillcolor="#ffb74d"];
+   make [label="mulle-make\n(cmake/ninja/xcodebuild)", shape=component, style=filled, fillcolor="#ffcc80"];
+   dispense [label="mulle-dispense\n(install headers/libs)", shape=component, style=filled, fillcolor="#ffe0b2"];
+   
+   dependency_dir [label="dependency/\n(built libraries)", shape=folder, style=filled, fillcolor="#c8e6c9"];
+   
+   next_dep [label="More dependencies?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   
+   // Main project build
+   main_cmake [label="Configure main project\n(include cmake files)", shape=box, style=filled, fillcolor="#b3e5fc"];
+   main_build [label="Build main project\n(link with dependencies)", shape=box, style=filled, fillcolor="#64b5f6"];
+   
+   done [label="Build complete", shape=ellipse, style=filled, fillcolor="#c8e6c9", fontsize=14];
+   
+   // Flow
+   start -> to_c;
+   start -> to_cmake;
+   start -> craftorder_gen;
+   start -> linkorder_gen;
+   
+   to_c -> headers;
+   to_cmake -> cmake_files;
+   craftorder_gen -> craftorder_list;
+   linkorder_gen -> linkorder_list;
+   
+   headers -> build_loop [style=dashed, label="referenced"];
+   cmake_files -> build_loop [style=dashed, label="referenced"];
+   craftorder_list -> build_loop;
+   linkorder_list -> main_cmake [style=dashed, label="referenced"];
+   
+   build_loop -> craft;
+   craft -> make;
+   make -> dispense;
+   dispense -> dependency_dir;
+   
+   dependency_dir -> next_dep;
+   next_dep -> craft [label="yes\n(next in list)"];
+   next_dep -> main_cmake [label="no\n(all built)"];
+   
+   main_cmake -> main_build;
+   main_build -> done;
+   
+   // Legend
+   subgraph cluster_legend {
+      label="Legend";
+      style=filled;
+      fillcolor="#f5f5f5";
+      
+      leg_component [label="Tool/Process", shape=component, style=filled, fillcolor="#64b5f6"];
+      leg_output [label="Generated File", shape=note, style=filled, fillcolor="#c8e6c9"];
+      leg_decision [label="Decision", shape=diamond, style=filled, fillcolor="#fff9c4"];
+      leg_solid [label="Data flow / Execution"];
+      leg_dashed [label="Referenced / Used", style=dashed];
+      
+      leg_component -> leg_output -> leg_decision [style=invis];
+      leg_solid -> leg_dashed [style=invis];
+   }
+}

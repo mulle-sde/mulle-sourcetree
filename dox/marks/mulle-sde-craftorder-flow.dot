@@ -1,0 +1,71 @@
+digraph craftorder_flow {
+   rankdir=TB;
+   node [shape=box, style=rounded, fontname="Arial"];
+   edge [fontname="Arial", fontsize=10];
+   
+   start [label="mulle-sde craftorder\n(for each node)", shape=ellipse, style=filled, fillcolor="#e1f5ff"];
+   
+   check_build [label="Has mark\nno-build?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_build [label="Skip node\n(never build)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_os [label="Has mark\nno-craft-os-<uname>?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_os [label="Skip node\n(wrong host OS)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_platform [label="Has mark\nno-craft-platform-<p>?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_platform [label="Skip node\n(wrong platform)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_sdk [label="Has mark\nno-craft-sdk-<sdk>?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_sdk [label="Skip node\n(wrong SDK)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_release [label="Has mark\nonly-craft-release\nAND config!=Release?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_release [label="Skip node\n(Release only)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_nodep [label="Has mark\nno-dependency\nAND --no-dependency?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_nodep [label="Skip node\n(deps disabled)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_source [label="Source dir\nmissing?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   check_require [label="Has mark\nno-require or\nno-require-*?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_missing [label="Skip node\n(optional, missing)", shape=box, style=filled, fillcolor="#ffccbc"];
+   fail_missing [label="FAIL\n(required, missing)", shape=box, style=filled, fillcolor="#ef5350"];
+   
+   compute_pos [label="Compute position\n(dependencies before)", shape=box, style=filled, fillcolor="#64b5f6"];
+   add [label="Add to\ncraftorder list", shape=box, style=filled, fillcolor="#c8e6c9"];
+   done [label="Done", shape=ellipse, style=filled, fillcolor="#c8e6c9"];
+   
+   start -> check_build;
+   check_build -> skip_build [label="yes"];
+   check_build -> check_os [label="no"];
+   
+   check_os -> skip_os [label="yes"];
+   check_os -> check_platform [label="no"];
+   
+   check_platform -> skip_platform [label="yes"];
+   check_platform -> check_sdk [label="no"];
+   
+   check_sdk -> skip_sdk [label="yes"];
+   check_sdk -> check_release [label="no"];
+   
+   check_release -> skip_release [label="yes"];
+   check_release -> check_nodep [label="no"];
+   
+   check_nodep -> skip_nodep [label="yes"];
+   check_nodep -> check_source [label="no"];
+   
+   check_source -> check_require [label="yes"];
+   check_source -> compute_pos [label="no"];
+   
+   check_require -> skip_missing [label="yes"];
+   check_require -> fail_missing [label="no"];
+   
+   compute_pos -> add;
+   add -> done;
+   
+   skip_build -> done;
+   skip_os -> done;
+   skip_platform -> done;
+   skip_sdk -> done;
+   skip_release -> done;
+   skip_nodep -> done;
+   skip_missing -> done;
+   fail_missing -> done;
+}

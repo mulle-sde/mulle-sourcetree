@@ -1,0 +1,480 @@
+<h1 id="mulle-sde-craft-pipeline-complete-walkthrough">mulle-sde Craft Pipeline: Complete Walkthrough</h1>
+<p>This document explains how dependencies flow through the mulle-sde craft pipeline, with detailed flowcharts for each stage.</p>
+<h2 id="pipeline-overview">Pipeline Overview</h2>
+<p><img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhRE9DVFlQRSBzdmcgUFVCTElDICItLy9XM0MvL0RURCBTVkcgMS4xLy9FTiIKICJodHRwOi8vd3d3LnczLm9yZy9HcmFwaGljcy9TVkcvMS4xL0RURC9zdmcxMS5kdGQiPgo8IS0tIEdlbmVyYXRlZCBieSBncmFwaHZpeiB2ZXJzaW9uIDIuNDMuMCAoMCkKIC0tPgo8IS0tIFRpdGxlOiBtdWxsZV9zZGVfY3JhZnRfcGlwZWxpbmUgUGFnZXM6IDEgLS0+Cjxzdmcgd2lkdGg9IjEyMTJwdCIgaGVpZ2h0PSI4MTNwdCIKIHZpZXdCb3g9IjAuMDAgMC4wMCAxMjEyLjAwIDgxMy4wMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxuczp4bGluaz0iaHR0cDovL3d3dy53My5vcmcvMTk5OS94bGluayI+CjxnIGlkPSJncmFwaDAiIGNsYXNzPSJncmFwaCIgdHJhbnNmb3JtPSJzY2FsZSgxIDEpIHJvdGF0ZSgwKSB0cmFuc2xhdGUoNCA4MDkpIj4KPHRpdGxlPm11bGxlX3NkZV9jcmFmdF9waXBlbGluZTwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9IndoaXRlIiBzdHJva2U9InRyYW5zcGFyZW50IiBwb2ludHM9Ii00LDQgLTQsLTgwOSAxMjA4LC04MDkgMTIwOCw0IC00LDQiLz4KPGcgaWQ9ImNsdXN0MyIgY2xhc3M9ImNsdXN0ZXIiPgo8dGl0bGU+Y2x1c3Rlcl9idWlsZGVyPC90aXRsZT4KPHBvbHlnb24gZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjU3YzAwIiBzdHJva2UtZGFzaGFycmF5PSI1LDIiIHBvaW50cz0iNzg3LC0zNTkgNzg3LC00MzggMTA3MiwtNDM4IDEwNzIsLTM1OSA3ODcsLTM1OSIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI5MjkuNSIgeT0iLTQyMi44IiBmb250LWZhbWlseT0iVGltZXMsc2VyaWYiIGZvbnQtc2l6ZT0iMTQuMDAiPkJ1aWxkIFN5c3RlbTwvdGV4dD4KPC9nPgo8ZyBpZD0iY2x1c3Q5IiBjbGFzcz0iY2x1c3RlciI+Cjx0aXRsZT5jbHVzdGVyX2xlZ2VuZDwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9IiNmNWY1ZjUiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iMTksLTY2NCAxOSwtNzk3IDUzNi41LC03OTcgNTM2LjUsLTY2NCAxOSwtNjY0Ii8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI3Ny43NSIgeT0iLTc4MS44IiBmb250LWZhbWlseT0iVGltZXMsc2VyaWYiIGZvbnQtc2l6ZT0iMTQuMDAiPkxlZ2VuZDwvdGV4dD4KPC9nPgo8IS0tIHNvdXJjZXRyZWUgLS0+CjxnIGlkPSJub2RlMSIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+c291cmNldHJlZTwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9IiNlMWY1ZmYiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iMTMxLC0zNjkuNSAxMjgsLTM3My41IDEwNywtMzczLjUgMTA0LC0zNjkuNSAwLC0zNjkuNSAwLC0zMTYuNSAxMzEsLTMxNi41IDEzMSwtMzY5LjUiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNjUuNSIgeT0iLTM1NC4zIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQuMDAiPm11bGxlJiM0NTtzb3VyY2V0cmVlPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI2NS41IiB5PSItMzM5LjMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNC4wMCI+Y29uZmlnPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI2NS41IiB5PSItMzI0LjMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNC4wMCI+KG5vZGVzIHdpdGggbWFya3MpPC90ZXh0Pgo8L2c+CjwhLS0gdG9fYyAtLT4KPGcgaWQ9Im5vZGUyIiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT50b19jPC90aXRsZT4KPHBvbHlnb24gZmlsbD0iIzY0YjVmNiIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSIzNTYsLTY1NCAyMTEsLTY1NCAyMTEsLTY1MCAyMDcsLTY1MCAyMDcsLTY0NiAyMTEsLTY0NiAyMTEsLTYyNiAyMDcsLTYyNiAyMDcsLTYyMiAyMTEsLTYyMiAyMTEsLTYxOCAzNTYsLTYxOCAzNTYsLTY1NCIvPgo8cG9seWxpbmUgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSIyMTEsLTY1MCAyMTUsLTY1MCAyMTUsLTY0NiAyMTEsLTY0NiAiLz4KPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iMjExLC02MjYgMjE1LC02MjYgMjE1LC02MjIgMjExLC02MjIgIi8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItNjMyLjMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNC4wMCI+bXVsbGUmIzQ1O3NvdXJjZXRyZWUmIzQ1O3RvJiM0NTtjPC90ZXh0Pgo8L2c+CjwhLS0gc291cmNldHJlZSYjNDU7Jmd0O3RvX2MgLS0+CjxnIGlkPSJlZGdlMSIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+c291cmNldHJlZSYjNDU7Jmd0O3RvX2M8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNNzQuMTksLTM2OS44NEM4OS41NSwtNDE5LjI3IDEyOC4zLC01MjUuNTkgMTk0LC01OTEgMjAyLjY4LC01OTkuNjUgMjEzLjM3LC02MDYuOTYgMjI0LjI4LC02MTMuMDIiLz4KPHBvbHlnb24gZmlsbD0iYmxhY2siIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iMjIyLjk3LC02MTYuMjggMjMzLjQ1LC02MTcuODEgMjI2LjIxLC02MTAuMDggMjIyLjk3LC02MTYuMjgiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMTYyLjUiIHk9Ii01NzEiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMC4wMCI+bm9kZXM8L3RleHQ+CjwvZz4KPCEtLSB0b19jbWFrZSAtLT4KPGcgaWQ9Im5vZGUzIiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT50b19jbWFrZTwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9IiM2NGI1ZjYiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iMzczLC00ODYgMTk0LC00ODYgMTk0LC00ODIgMTkwLC00ODIgMTkwLC00NzggMTk0LC00NzggMTk0LC00NTggMTkwLC00NTggMTkwLC00NTQgMTk0LC00NTQgMTk0LC00NTAgMzczLC00NTAgMzczLC00ODYiLz4KPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iMTk0LC00ODIgMTk4LC00ODIgMTk4LC00NzggMTk0LC00NzggIi8+Cjxwb2x5bGluZSBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjE5NCwtNDU4IDE5OCwtNDU4IDE5OCwtNDU0IDE5NCwtNDU0ICIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODMuNSIgeT0iLTQ2NC4zIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQuMDAiPm11bGxlJiM0NTtzb3VyY2V0cmVlJiM0NTt0byYjNDU7Y21ha2U8L3RleHQ+CjwvZz4KPCEtLSBzb3VyY2V0cmVlJiM0NTsmZ3Q7dG9fY21ha2UgLS0+CjxnIGlkPSJlZGdlMiIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+c291cmNldHJlZSYjNDU7Jmd0O3RvX2NtYWtlPC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgZD0iTTEwNi43LC0zNjkuNTNDMTMxLjUzLC0zODUuNTcgMTY0LjIxLC00MDYuMTMgMTk0LC00MjMgMjA3LjQsLTQzMC41OSAyMjIuMjQsLTQzOC4zNyAyMzUuODYsLTQ0NS4yNyIvPgo8cG9seWdvbiBmaWxsPSJibGFjayIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSIyMzQuNTcsLTQ0OC41NCAyNDUuMDgsLTQ0OS45IDIzNy43MSwtNDQyLjI5IDIzNC41NywtNDQ4LjU0Ii8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjE2Mi41IiB5PSItNDEzIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAuMDAiPm5vZGVzPC90ZXh0Pgo8L2c+CjwhLS0gY3JhZnRvcmRlciAtLT4KPGcgaWQ9Im5vZGU0IiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT5jcmFmdG9yZGVyPC90aXRsZT4KPHBvbHlnb24gZmlsbD0iIzgxYzc4NCIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSIzNTIsLTMwOCAyMTUsLTMwOCAyMTUsLTMwNCAyMTEsLTMwNCAyMTEsLTMwMCAyMTUsLTMwMCAyMTUsLTI4MCAyMTEsLTI4MCAyMTEsLTI3NiAyMTUsLTI3NiAyMTUsLTI3MiAzNTIsLTI3MiAzNTIsLTMwOCIvPgo8cG9seWxpbmUgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSIyMTUsLTMwNCAyMTksLTMwNCAyMTksLTMwMCAyMTUsLTMwMCAiLz4KPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iMjE1LC0yODAgMjE5LC0yODAgMjE5LC0yNzYgMjE1LC0yNzYgIi8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItMjg2LjMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNC4wMCI+bXVsbGUmIzQ1O3NkZSBjcmFmdG9yZGVyPC90ZXh0Pgo8L2c+CjwhLS0gc291cmNldHJlZSYjNDU7Jmd0O2NyYWZ0b3JkZXIgLS0+CjxnIGlkPSJlZGdlMyIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+c291cmNldHJlZSYjNDU7Jmd0O2NyYWZ0b3JkZXI8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNMTMxLjAxLC0zMjcuMTdDMTU0LjI5LC0zMjEuNDYgMTgwLjc5LC0zMTQuOTYgMjA1LjA2LC0zMDkiLz4KPHBvbHlnb24gZmlsbD0iYmxhY2siIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iMjA2LjA3LC0zMTIuMzYgMjE0Ljk0LC0zMDYuNTggMjA0LjQsLTMwNS41NiAyMDYuMDcsLTMxMi4zNiIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIxNjIuNSIgeT0iLTMyNCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwLjAwIj5ub2RlczwvdGV4dD4KPC9nPgo8IS0tIGxpbmtvcmRlciAtLT4KPGcgaWQ9Im5vZGU1IiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT5saW5rb3JkZXI8L3RpdGxlPgo8cG9seWdvbiBmaWxsPSIjODFjNzg0IiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjM0OSwtMTQwIDIxOCwtMTQwIDIxOCwtMTM2IDIxNCwtMTM2IDIxNCwtMTMyIDIxOCwtMTMyIDIxOCwtMTEyIDIxNCwtMTEyIDIxNCwtMTA4IDIxOCwtMTA4IDIxOCwtMTA0IDM0OSwtMTA0IDM0OSwtMTQwIi8+Cjxwb2x5bGluZSBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjIxOCwtMTM2IDIyMiwtMTM2IDIyMiwtMTMyIDIxOCwtMTMyICIvPgo8cG9seWxpbmUgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSIyMTgsLTExMiAyMjIsLTExMiAyMjIsLTEwOCAyMTgsLTEwOCAiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjgzLjUiIHk9Ii0xMTguMyIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0LjAwIj5tdWxsZSYjNDU7c2RlIGxpbmtvcmRlcjwvdGV4dD4KPC9nPgo8IS0tIHNvdXJjZXRyZWUmIzQ1OyZndDtsaW5rb3JkZXIgLS0+CjxnIGlkPSJlZGdlNCIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+c291cmNldHJlZSYjNDU7Jmd0O2xpbmtvcmRlcjwvdGl0bGU+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIGQ9Ik03Ni44NSwtMzE2LjQ4Qzk0LjUzLC0yNzQuNjYgMTM0LjQ4LC0xOTMuNTcgMTk0LC0xNDkgMTk4LjQyLC0xNDUuNjkgMjAzLjI1LC0xNDIuNzggMjA4LjMsLTE0MC4yMyIvPgo8cG9seWdvbiBmaWxsPSJibGFjayIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSIyMDkuOTMsLTE0My4zMyAyMTcuNTgsLTEzNiAyMDcuMDMsLTEzNi45NiAyMDkuOTMsLTE0My4zMyIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIxNjIuNSIgeT0iLTE5NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwLjAwIj5ub2RlczwvdGV4dD4KPC9nPgo8IS0tIGhlYWRlcnMgLS0+CjxnIGlkPSJub2RlOSIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+aGVhZGVyczwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9IiNjOGU2YzkiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNTI1LjUsLTYxNi41IDQ0NC41LC02MTYuNSA0NDQuNSwtNTYzLjUgNTMxLjUsLTU2My41IDUzMS41LC02MTAuNSA1MjUuNSwtNjE2LjUiLz4KPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNTI1LjUsLTYxNi41IDUyNS41LC02MTAuNSAiLz4KPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNTMxLjUsLTYxMC41IDUyNS41LC02MTAuNSAiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNDg4IiB5PSItNjAxLjMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNC4wMCI+R2VuZXJhdGVkPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI0ODgiIHk9Ii01ODYuMyIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0LjAwIj5IZWFkZXJzPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI0ODgiIHk9Ii01NzEuMyIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0LjAwIj4oX2luY2x1ZGUuaCk8L3RleHQ+CjwvZz4KPCEtLSB0b19jJiM0NTsmZ3Q7aGVhZGVycyAtLT4KPGcgaWQ9ImVkZ2U1IiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT50b19jJiM0NTsmZ3Q7aGVhZGVyczwvdGl0bGU+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIGQ9Ik0zNTYuMTgsLTYxOS43MkMzODEuOTYsLTYxMy44NiA0MTAuNTUsLTYwNy4zNyA0MzQuNDEsLTYwMS45NSIvPgo8cG9seWdvbiBmaWxsPSJibGFjayIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSI0MzUuMzUsLTYwNS4zMiA0NDQuMzMsLTU5OS42OSA0MzMuOCwtNTk4LjUgNDM1LjM1LC02MDUuMzIiLz4KPC9nPgo8IS0tIG1hcmtzX3RvX2MgLS0+CjxnIGlkPSJub2RlMTQiIGNsYXNzPSJub2RlIj4KPHRpdGxlPm1hcmtzX3RvX2M8L3RpdGxlPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODMuNSIgeT0iLTU3MC44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOS4wMCI+TWFya3MgdXNlZDo8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItNTYwLjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7aGVhZGVyPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODMuNSIgeT0iLTU1MC44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOS4wMCI+bm8mIzQ1O2ltcG9ydDwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjgzLjUiIHk9Ii01NDAuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjkuMDAiPm5vJiM0NTtwdWJsaWM8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItNTMwLjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7cGxhdGZvcm0mIzQ1Oyo8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItNTIwLjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7c2RrJiM0NTsqPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODMuNSIgeT0iLTUxMC44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOS4wMCI+cmVxdWlyZTwvdGV4dD4KPC9nPgo8IS0tIHRvX2MmIzQ1OyZndDttYXJrc190b19jIC0tPgo8IS0tIGNtYWtlX2RlcHMgLS0+CjxnIGlkPSJub2RlMTAiIGNsYXNzPSJub2RlIj4KPHRpdGxlPmNtYWtlX2RlcHM8L3RpdGxlPgo8cG9seWdvbiBmaWxsPSIjYzhlNmM5IiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjU2MCwtNDcyLjUgNDEwLC00NzIuNSA0MTAsLTQxOS41IDU2NiwtNDE5LjUgNTY2LC00NjYuNSA1NjAsLTQ3Mi41Ii8+Cjxwb2x5bGluZSBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjU2MCwtNDcyLjUgNTYwLC00NjYuNSAiLz4KPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNTY2LC00NjYuNSA1NjAsLTQ2Ni41ICIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI0ODgiIHk9Ii00NTcuMyIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0LjAwIj5HZW5lcmF0ZWQ8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjQ4OCIgeT0iLTQ0Mi4zIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQuMDAiPkNNYWtlIEZpbGVzPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI0ODgiIHk9Ii00MjcuMyIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0LjAwIj4oRGVwZW5kZW5jaWVzLmNtYWtlKTwvdGV4dD4KPC9nPgo8IS0tIHRvX2NtYWtlJiM0NTsmZ3Q7Y21ha2VfZGVwcyAtLT4KPGcgaWQ9ImVkZ2U2IiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT50b19jbWFrZSYjNDU7Jmd0O2NtYWtlX2RlcHM8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNMzczLjAyLC00NTguMzhDMzgxLjkyLC00NTcuNDIgMzkwLjk0LC00NTYuNDQgMzk5LjgyLC00NTUuNDciLz4KPHBvbHlnb24gZmlsbD0iYmxhY2siIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNDAwLjIsLTQ1OC45NSA0MDkuNzcsLTQ1NC4zOSAzOTkuNDUsLTQ1MS45OSA0MDAuMiwtNDU4Ljk1Ii8+CjwvZz4KPCEtLSBtYXJrc190b19jbWFrZSAtLT4KPGcgaWQ9Im5vZGUxNSIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+bWFya3NfdG9fY21ha2U8L3RpdGxlPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODMuNSIgeT0iLTQwMi44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOS4wMCI+TWFya3MgdXNlZDo8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItMzkyLjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7Y21ha2UmIzQ1O2FkZDwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjgzLjUiIHk9Ii0zODIuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjkuMDAiPm5vJiM0NTtjbWFrZSYjNDU7aW5oZXJpdDwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjgzLjUiIHk9Ii0zNzIuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjkuMDAiPm5vJiM0NTthbGwmIzQ1O2xvYWQ8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItMzYyLjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7ZHluYW1pYyYjNDU7bGluazwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjgzLjUiIHk9Ii0zNTIuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjkuMDAiPm5vJiM0NTtzdGF0aWMmIzQ1O2xpbms8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItMzQyLjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5vbmx5JiM0NTtmcmFtZXdvcms8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItMzMyLjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5yZXF1aXJlJiM0NTtsaW5rPC90ZXh0Pgo8L2c+CjwhLS0gdG9fY21ha2UmIzQ1OyZndDttYXJrc190b19jbWFrZSAtLT4KPCEtLSBjcmFmdF9saXN0IC0tPgo8ZyBpZD0ibm9kZTExIiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT5jcmFmdF9saXN0PC90aXRsZT4KPHBvbHlnb24gZmlsbD0iI2M4ZTZjOSIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSI1MjUsLTM0NCA0NDUsLTM0NCA0NDUsLTMwNiA1MzEsLTMwNiA1MzEsLTMzOCA1MjUsLTM0NCIvPgo8cG9seWxpbmUgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSI1MjUsLTM0NCA1MjUsLTMzOCAiLz4KPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNTMxLC0zMzggNTI1LC0zMzggIi8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjQ4OCIgeT0iLTMyOC44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQuMDAiPkJ1aWxkIE9yZGVyPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI0ODgiIHk9Ii0zMTMuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0LjAwIj5MaXN0PC90ZXh0Pgo8L2c+CjwhLS0gY3JhZnRvcmRlciYjNDU7Jmd0O2NyYWZ0X2xpc3QgLS0+CjxnIGlkPSJlZGdlNyIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+Y3JhZnRvcmRlciYjNDU7Jmd0O2NyYWZ0X2xpc3Q8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNMzUyLjIxLC0zMDEuN0MzNzkuMDksLTMwNi4zNSA0MDkuNTMsLTMxMS42MSA0MzQuNjcsLTMxNS45NSIvPgo8cG9seWdvbiBmaWxsPSJibGFjayIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSI0MzQuMjgsLTMxOS40NCA0NDQuNzMsLTMxNy42OSA0MzUuNDgsLTMxMi41NCA0MzQuMjgsLTMxOS40NCIvPgo8L2c+CjwhLS0gbWFya3NfY3JhZnRvcmRlciAtLT4KPGcgaWQ9Im5vZGUxNiIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+bWFya3NfY3JhZnRvcmRlcjwvdGl0bGU+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItMjI0LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5NYXJrcyB1c2VkOjwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjgzLjUiIHk9Ii0yMTQuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjkuMDAiPm5vJiM0NTtidWlsZDwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjgzLjUiIHk9Ii0yMDQuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjkuMDAiPm5vJiM0NTtjcmFmdCYjNDU7b3MmIzQ1Oyo8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItMTk0LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7Y3JhZnQmIzQ1O3BsYXRmb3JtJiM0NTsqPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODMuNSIgeT0iLTE4NC44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOS4wMCI+bm8mIzQ1O2NyYWZ0JiM0NTtzZGsmIzQ1Oyo8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItMTc0LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7ZGVwZW5kZW5jeTwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjgzLjUiIHk9Ii0xNjQuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjkuMDAiPm5vJiM0NTtyZXF1aXJlJiM0NTsqPC90ZXh0Pgo8L2c+CjwhLS0gY3JhZnRvcmRlciYjNDU7Jmd0O21hcmtzX2NyYWZ0b3JkZXIgLS0+CjwhLS0gbGlua19saXN0IC0tPgo8ZyBpZD0ibm9kZTEyIiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT5saW5rX2xpc3Q8L3RpdGxlPgo8cG9seWdvbiBmaWxsPSIjYzhlNmM5IiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjUyMiwtMjYwIDQ0OCwtMjYwIDQ0OCwtMjIyIDUyOCwtMjIyIDUyOCwtMjU0IDUyMiwtMjYwIi8+Cjxwb2x5bGluZSBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjUyMiwtMjYwIDUyMiwtMjU0ICIvPgo8cG9seWxpbmUgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSI1MjgsLTI1NCA1MjIsLTI1NCAiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNDg4IiB5PSItMjQ0LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNC4wMCI+TGluayBPcmRlcjwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNDg4IiB5PSItMjI5LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNC4wMCI+TGlzdDwvdGV4dD4KPC9nPgo8IS0tIGxpbmtvcmRlciYjNDU7Jmd0O2xpbmtfbGlzdCAtLT4KPGcgaWQ9ImVkZ2U4IiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT5saW5rb3JkZXImIzQ1OyZndDtsaW5rX2xpc3Q8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNMzQ5LC0xMzguNDhDMzU3LjI4LC0xNDEuNTIgMzY1LjQ4LC0xNDUuMDEgMzczLC0xNDkgNDA2LjE2LC0xNjYuNTkgNDM4Ljk4LC0xOTQuNDggNDYwLjgzLC0yMTQuOTQiLz4KPHBvbHlnb24gZmlsbD0iYmxhY2siIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNDU4LjQyLC0yMTcuNDggNDY4LjA4LC0yMjEuODQgNDYzLjI1LC0yMTIuNDEgNDU4LjQyLC0yMTcuNDgiLz4KPC9nPgo8IS0tIG1hcmtzX2xpbmtvcmRlciAtLT4KPGcgaWQ9Im5vZGUxNyIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+bWFya3NfbGlua29yZGVyPC90aXRsZT4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjgzLjUiIHk9Ii01Ni44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOS4wMCI+TWFya3MgdXNlZDo8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItNDYuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjkuMDAiPm5vJiM0NTtsaW5rPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODMuNSIgeT0iLTM2LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7YWxsJiM0NTtsb2FkPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODMuNSIgeT0iLTI2LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7aW50ZXJtZWRpYXRlJiM0NTtsaW5rPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODMuNSIgeT0iLTE2LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7Y21ha2UmIzQ1O2FkZDwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjgzLjUiIHk9Ii02LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7YWN0dWFsJiM0NTtsaW5rPC90ZXh0Pgo8L2c+CjwhLS0gbGlua29yZGVyJiM0NTsmZ3Q7bWFya3NfbGlua29yZGVyIC0tPgo8IS0tIGNyYWZ0IC0tPgo8ZyBpZD0ibm9kZTYiIGNsYXNzPSJub2RlIj4KPHRpdGxlPmNyYWZ0PC90aXRsZT4KPHBvbHlnb24gZmlsbD0iI2ZmYjc0ZCIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSI3MzYuNSwtNDAzIDY1Ni41LC00MDMgNjU2LjUsLTM5OSA2NTIuNSwtMzk5IDY1Mi41LC0zOTUgNjU2LjUsLTM5NSA2NTYuNSwtMzc1IDY1Mi41LC0zNzUgNjUyLjUsLTM3MSA2NTYuNSwtMzcxIDY1Ni41LC0zNjcgNzM2LjUsLTM2NyA3MzYuNSwtNDAzIi8+Cjxwb2x5bGluZSBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjY1Ni41LC0zOTkgNjYwLjUsLTM5OSA2NjAuNSwtMzk1IDY1Ni41LC0zOTUgIi8+Cjxwb2x5bGluZSBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjY1Ni41LC0zNzUgNjYwLjUsLTM3NSA2NjAuNSwtMzcxIDY1Ni41LC0zNzEgIi8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjY5Ni41IiB5PSItMzgxLjMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNC4wMCI+bXVsbGUmIzQ1O2NyYWZ0PC90ZXh0Pgo8L2c+CjwhLS0gbWFrZSAtLT4KPGcgaWQ9Im5vZGU3IiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT5tYWtlPC90aXRsZT4KPHBvbHlnb24gZmlsbD0iI2ZmY2M4MCIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSI4ODMsLTQwMyA3OTUsLTQwMyA3OTUsLTM5OSA3OTEsLTM5OSA3OTEsLTM5NSA3OTUsLTM5NSA3OTUsLTM3NSA3OTEsLTM3NSA3OTEsLTM3MSA3OTUsLTM3MSA3OTUsLTM2NyA4ODMsLTM2NyA4ODMsLTQwMyIvPgo8cG9seWxpbmUgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSI3OTUsLTM5OSA3OTksLTM5OSA3OTksLTM5NSA3OTUsLTM5NSAiLz4KPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNzk1LC0zNzUgNzk5LC0zNzUgNzk5LC0zNzEgNzk1LC0zNzEgIi8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjgzOSIgeT0iLTM4MS4zIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQuMDAiPm11bGxlJiM0NTttYWtlPC90ZXh0Pgo8L2c+CjwhLS0gY3JhZnQmIzQ1OyZndDttYWtlIC0tPgo8ZyBpZD0iZWRnZTEwIiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT5jcmFmdCYjNDU7Jmd0O21ha2U8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNNzM2LjY0LC0zODVDNzUxLjQ5LC0zODUgNzY4LjY3LC0zODUgNzg0LjYyLC0zODUiLz4KPHBvbHlnb24gZmlsbD0iYmxhY2siIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNzg0Ljg4LC0zODguNSA3OTQuODgsLTM4NSA3ODQuODgsLTM4MS41IDc4NC44OCwtMzg4LjUiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNzY2LjUiIHk9Ii0zODgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMC4wMCI+Y2FsbHM8L3RleHQ+CjwvZz4KPCEtLSBtYXJrc19jcmFmdCAtLT4KPGcgaWQ9Im5vZGUxOCIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+bWFya3NfY3JhZnQ8L3RpdGxlPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI2OTYuNSIgeT0iLTMxOS44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOS4wMCI+TWFya3MgdXNlZDo8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjY5Ni41IiB5PSItMzA5LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7cmVxdWlyZSYjNDU7KjwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNjk2LjUiIHk9Ii0yOTkuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjkuMDAiPm5vJiM0NTtkeW5hbWljJiM0NTtsaW5rPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI2OTYuNSIgeT0iLTI4OS44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOS4wMCI+bm8mIzQ1O3N0YXRpYyYjNDU7bGluazwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNjk2LjUiIHk9Ii0yNzkuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjkuMDAiPm9ubHkmIzQ1O3N0YW5kYWxvbmU8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjY5Ni41IiB5PSItMjY5LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7aW5wbGFjZTwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNjk2LjUiIHk9Ii0yNTkuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjkuMDAiPm5vJiM0NTtyb290aGVhZGVyPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI2OTYuNSIgeT0iLTI0OS44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iOS4wMCI+b25seSYjNDU7bGlmdGhlYWRlcnM8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjY5Ni41IiB5PSItMjM5LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7c2luZ2xlcGhhc2U8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjY5Ni41IiB5PSItMjI5LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI5LjAwIj5ubyYjNDU7bWVtbzwvdGV4dD4KPC9nPgo8IS0tIGNyYWZ0JiM0NTsmZ3Q7bWFya3NfY3JhZnQgLS0+CjwhLS0gZGlzcGVuc2UgLS0+CjxnIGlkPSJub2RlOCIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+ZGlzcGVuc2U8L3RpdGxlPgo8cG9seWdvbiBmaWxsPSIjZmZlMGIyIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjEwNjQsLTQwMyA5NTYsLTQwMyA5NTYsLTM5OSA5NTIsLTM5OSA5NTIsLTM5NSA5NTYsLTM5NSA5NTYsLTM3NSA5NTIsLTM3NSA5NTIsLTM3MSA5NTYsLTM3MSA5NTYsLTM2NyAxMDY0LC0zNjcgMTA2NCwtNDAzIi8+Cjxwb2x5bGluZSBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9Ijk1NiwtMzk5IDk2MCwtMzk5IDk2MCwtMzk1IDk1NiwtMzk1ICIvPgo8cG9seWxpbmUgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSI5NTYsLTM3NSA5NjAsLTM3NSA5NjAsLTM3MSA5NTYsLTM3MSAiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMTAxMCIgeT0iLTM4MS4zIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQuMDAiPm11bGxlJiM0NTtkaXNwZW5zZTwvdGV4dD4KPC9nPgo8IS0tIG1ha2UmIzQ1OyZndDtkaXNwZW5zZSAtLT4KPGcgaWQ9ImVkZ2UxMSIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+bWFrZSYjNDU7Jmd0O2Rpc3BlbnNlPC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgZD0iTTg4My4wOCwtMzg1QzkwMi4wOCwtMzg1IDkyNC43OCwtMzg1IDk0NS42NCwtMzg1Ii8+Cjxwb2x5Z29uIGZpbGw9ImJsYWNrIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9Ijk0NS43MSwtMzg4LjUgOTU1LjcxLC0zODUgOTQ1LjcxLC0zODEuNSA5NDUuNzEsLTM4OC41Ii8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjkxOS41IiB5PSItMzk5IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAuMDAiPmluc3RhbGwgdG88L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjkxOS41IiB5PSItMzg4IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAuMDAiPnRtcCBkaXI8L3RleHQ+CjwvZz4KPCEtLSBidWlsdF9kZXBzIC0tPgo8ZyBpZD0ibm9kZTEzIiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT5idWlsdF9kZXBzPC90aXRsZT4KPHBvbHlnb24gZmlsbD0iI2M4ZTZjOSIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSIxMjA0LC00MTEuNSAxMjAxLC00MTUuNSAxMTgwLC00MTUuNSAxMTc3LC00MTEuNSAxMTAxLC00MTEuNSAxMTAxLC0zNTguNSAxMjA0LC0zNTguNSAxMjA0LC00MTEuNSIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIxMTUyLjUiIHk9Ii0zOTYuMyIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0LjAwIj5CdWlsdDwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMTE1Mi41IiB5PSItMzgxLjMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNC4wMCI+RGVwZW5kZW5jaWVzPC90ZXh0Pgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIxMTUyLjUiIHk9Ii0zNjYuMyIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0LjAwIj4oZGVwZW5kZW5jeS8pPC90ZXh0Pgo8L2c+CjwhLS0gZGlzcGVuc2UmIzQ1OyZndDtidWlsdF9kZXBzIC0tPgo8ZyBpZD0iZWRnZTEyIiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT5kaXNwZW5zZSYjNDU7Jmd0O2J1aWx0X2RlcHM8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNMTA2NC4xMiwtMzg1QzEwNzIuNzIsLTM4NSAxMDgxLjY4LC0zODUgMTA5MC40NiwtMzg1Ii8+Cjxwb2x5Z29uIGZpbGw9ImJsYWNrIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjEwOTAuNjMsLTM4OC41IDExMDAuNjMsLTM4NSAxMDkwLjYzLC0zODEuNSAxMDkwLjYzLC0zODguNSIvPgo8L2c+CjwhLS0gaGVhZGVycyYjNDU7Jmd0O2NyYWZ0IC0tPgo8ZyBpZD0iZWRnZTEzIiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT5oZWFkZXJzJiM0NTsmZ3Q7Y3JhZnQ8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9IiM2NjY2NjYiIHN0cm9rZS1kYXNoYXJyYXk9IjUsMiIgZD0iTTUxNiwtNTYzLjJDNTU2LjA3LC01MjMuNDIgNjMwLjc3LC00NDkuMjYgNjY5Ljk4LC00MTAuMzQiLz4KPHBvbHlnb24gZmlsbD0iIzY2NjY2NiIgc3Ryb2tlPSIjNjY2NjY2IiBwb2ludHM9IjY3Mi42OSwtNDEyLjU3IDY3Ny4zMiwtNDAzLjA0IDY2Ny43NiwtNDA3LjYgNjcyLjY5LC00MTIuNTciLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNjEwLjUiIHk9Ii01MDciIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMC4wMCI+Y29uc3VtZWQ8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjYxMC41IiB5PSItNDk2IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAuMDAiPmR1cmluZyBidWlsZDwvdGV4dD4KPC9nPgo8IS0tIGNtYWtlX2RlcHMmIzQ1OyZndDtjcmFmdCAtLT4KPGcgaWQ9ImVkZ2UxNCIgY2xhc3M9ImVkZ2UiPgo8dGl0bGU+Y21ha2VfZGVwcyYjNDU7Jmd0O2NyYWZ0PC90aXRsZT4KPHBhdGggZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNjY2NjY2IiBzdHJva2UtZGFzaGFycmF5PSI1LDIiIGQ9Ik01NjYuMTksLTQyMy4yQzU5My4xNywtNDE1LjIzIDYyMi43LC00MDYuNTEgNjQ2LjcxLC0zOTkuNDEiLz4KPHBvbHlnb24gZmlsbD0iIzY2NjY2NiIgc3Ryb2tlPSIjNjY2NjY2IiBwb2ludHM9IjY0Ny43MSwtNDAyLjc3IDY1Ni4zLC0zOTYuNTggNjQ1LjcyLC0zOTYuMDUgNjQ3LjcxLC00MDIuNzciLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNjEwLjUiIHk9Ii00MzEiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMC4wMCI+Y29uc3VtZWQ8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjYxMC41IiB5PSItNDIwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTAuMDAiPmR1cmluZyBidWlsZDwvdGV4dD4KPC9nPgo8IS0tIGNyYWZ0X2xpc3QmIzQ1OyZndDtjcmFmdCAtLT4KPGcgaWQ9ImVkZ2U5IiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT5jcmFmdF9saXN0JiM0NTsmZ3Q7Y3JhZnQ8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNNTMxLjA0LC0zMzcuMjFDNTY0LjQyLC0zNDYuOTEgNjExLjE2LC0zNjAuNDkgNjQ2LjI4LC0zNzAuNyIvPgo8cG9seWdvbiBmaWxsPSJibGFjayIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSI2NDUuNzQsLTM3NC4xOSA2NTYuMzIsLTM3My42MiA2NDcuNjksLTM2Ny40NiA2NDUuNzQsLTM3NC4xOSIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI2MTAuNSIgeT0iLTM4MSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEwLjAwIj5mb3IgZWFjaDwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNjEwLjUiIHk9Ii0zNzAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMC4wMCI+ZGVwZW5kZW5jeTwvdGV4dD4KPC9nPgo8IS0tIGxpbmtfbGlzdCYjNDU7Jmd0O2NyYWZ0IC0tPgo8ZyBpZD0iZWRnZTE1IiBjbGFzcz0iZWRnZSI+Cjx0aXRsZT5saW5rX2xpc3QmIzQ1OyZndDtjcmFmdDwvdGl0bGU+CjxwYXRoIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzY2NjY2NiIgc3Ryb2tlLWRhc2hhcnJheT0iNSwyIiBkPSJNNTI3Ljc4LC0yNjAuMDVDNTU4LjY3LC0yNzYuMDIgNjAyLjMyLC0zMDAuNDMgNjM3LC0zMjcgNjQ5LjUyLC0zMzYuNTkgNjYyLjEsLTM0OC42NyA2NzIuMzcsLTM1OS4zMyIvPgo8cG9seWdvbiBmaWxsPSIjNjY2NjY2IiBzdHJva2U9IiM2NjY2NjYiIHBvaW50cz0iNjcwLC0zNjEuOTEgNjc5LjQxLC0zNjYuNzggNjc1LjA5LC0zNTcuMTEgNjcwLC0zNjEuOTEiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNjEwLjUiIHk9Ii0zNDEiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMC4wMCI+bGluazwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNjEwLjUiIHk9Ii0zMzAiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxMC4wMCI+aW5mb3JtYXRpb248L3RleHQ+CjwvZz4KPCEtLSBsZWdfc291cmNlIC0tPgo8ZyBpZD0ibm9kZTE5IiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT5sZWdfc291cmNlPC90aXRsZT4KPHBvbHlnb24gZmlsbD0iI2UxZjVmZiIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSI5NSwtNzY2IDkyLC03NzAgNzEsLTc3MCA2OCwtNzY2IDM2LC03NjYgMzYsLTcyOCA5NSwtNzI4IDk1LC03NjYiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNjUuNSIgeT0iLTc1MC44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQuMDAiPlNvdXJjZTwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNjUuNSIgeT0iLTczNS44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQuMDAiPkRhdGE8L3RleHQ+CjwvZz4KPCEtLSBsZWdfdG9vbCAtLT4KPGcgaWQ9Im5vZGUyMCIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+bGVnX3Rvb2w8L3RpdGxlPgo8cG9seWdvbiBmaWxsPSIjNjRiNWY2IiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjMyNywtNzY2IDI0MCwtNzY2IDI0MCwtNzYyIDIzNiwtNzYyIDIzNiwtNzU4IDI0MCwtNzU4IDI0MCwtNzM2IDIzNiwtNzM2IDIzNiwtNzMyIDI0MCwtNzMyIDI0MCwtNzI4IDMyNywtNzI4IDMyNywtNzY2Ii8+Cjxwb2x5bGluZSBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBwb2ludHM9IjI0MCwtNzYyIDI0NCwtNzYyIDI0NCwtNzU4IDI0MCwtNzU4ICIvPgo8cG9seWxpbmUgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSIyNDAsLTczNiAyNDQsLTczNiAyNDQsLTczMiAyNDAsLTczMiAiLz4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjgzLjUiIHk9Ii03NTAuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0LjAwIj5Ub29sLzwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iMjgzLjUiIHk9Ii03MzUuOCIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0LjAwIj5Db21wb25lbnQ8L3RleHQ+CjwvZz4KPCEtLSBsZWdfc291cmNlJiM0NTsmZ3Q7bGVnX3Rvb2wgLS0+CjwhLS0gbGVnX291dHB1dCAtLT4KPGcgaWQ9Im5vZGUyMSIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+bGVnX291dHB1dDwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9IiNjOGU2YzkiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNTIyLjUsLTc2NiA0NDcuNSwtNzY2IDQ0Ny41LC03MjggNTI4LjUsLTcyOCA1MjguNSwtNzYwIDUyMi41LC03NjYiLz4KPHBvbHlsaW5lIGZpbGw9Im5vbmUiIHN0cm9rZT0iYmxhY2siIHBvaW50cz0iNTIyLjUsLTc2NiA1MjIuNSwtNzYwICIvPgo8cG9seWxpbmUgZmlsbD0ibm9uZSIgc3Ryb2tlPSJibGFjayIgcG9pbnRzPSI1MjguNSwtNzYwIDUyMi41LC03NjAgIi8+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjQ4OCIgeT0iLTc1MC44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQuMDAiPkdlbmVyYXRlZDwvdGV4dD4KPHRleHQgdGV4dC1hbmNob3I9Im1pZGRsZSIgeD0iNDg4IiB5PSItNzM1LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNC4wMCI+QXJ0aWZhY3Q8L3RleHQ+CjwvZz4KPCEtLSBsZWdfdG9vbCYjNDU7Jmd0O2xlZ19vdXRwdXQgLS0+CjwhLS0gbGVnX3NvbGlkIC0tPgo8ZyBpZD0ibm9kZTIyIiBjbGFzcz0ibm9kZSI+Cjx0aXRsZT5sZWdfc29saWQ8L3RpdGxlPgo8cGF0aCBmaWxsPSJub25lIiBzdHJva2U9ImJsYWNrIiBkPSJNOTIsLTcwOUM5MiwtNzA5IDM5LC03MDkgMzksLTcwOSAzMywtNzA5IDI3LC03MDMgMjcsLTY5NyAyNywtNjk3IDI3LC02ODUgMjcsLTY4NSAyNywtNjc5IDMzLC02NzMgMzksLTY3MyAzOSwtNjczIDkyLC02NzMgOTIsLTY3MyA5OCwtNjczIDEwNCwtNjc5IDEwNCwtNjg1IDEwNCwtNjg1IDEwNCwtNjk3IDEwNCwtNjk3IDEwNCwtNzAzIDk4LC03MDkgOTIsLTcwOSIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSI2NS41IiB5PSItNjg3LjMiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNC4wMCI+RGF0YSBGbG93PC90ZXh0Pgo8L2c+CjwhLS0gbGVnX2Rhc2hlZCAtLT4KPGcgaWQ9Im5vZGUyMyIgY2xhc3M9Im5vZGUiPgo8dGl0bGU+bGVnX2Rhc2hlZDwvdGl0bGU+Cjxwb2x5Z29uIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzY2NjY2NiIgc3Ryb2tlLWRhc2hhcnJheT0iNSwyIiBwb2ludHM9IjMyOC41LC03MTAgMjM4LjUsLTcxMCAyMzguNSwtNjcyIDMyOC41LC02NzIgMzI4LjUsLTcxMCIvPgo8dGV4dCB0ZXh0LWFuY2hvcj0ibWlkZGxlIiB4PSIyODMuNSIgeT0iLTY5NC44IiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQuMDAiPlJlZmVyZW5jZWQ8L3RleHQ+Cjx0ZXh0IHRleHQtYW5jaG9yPSJtaWRkbGUiIHg9IjI4My41IiB5PSItNjc5LjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNC4wMCI+RHVyaW5nIEJ1aWxkPC90ZXh0Pgo8L2c+CjwhLS0gbGVnX3NvbGlkJiM0NTsmZ3Q7bGVnX2Rhc2hlZCAtLT4KPC9nPgo8L3N2Zz4K" alt="mulle-sde Craft Pipeline"></p>
+<p>The craft pipeline processes sourcetree nodes through multiple tools to generate code artifacts and build dependencies. Each tool examines node marks and makes decisions about what to generate or build.</p>
+<hr>
+<h2 id="mark-semantics-important">Mark Semantics: Important!</h2>
+<p><strong>All marks are implicitly present by default.</strong> Marks use a &quot;disable&quot; semantic:</p>
+<ul>
+<li><strong>Default state:</strong> Every capability is enabled (build, link, header, etc.)</li>
+<li><strong><code>no-*</code> prefix:</strong> Explicitly disables a capability</li>
+<li><strong><code>only-*</code> prefix:</strong> Forces a specific mode</li>
+</ul>
+<p><strong>Example:</strong></p>
+<pre><code># These marks are shown:
+no-header,no-all-load
+
+# These marks are implicit (not shown):
+build,link,update,fetch,share,require,...
+</code></pre>
+<p>When viewing sourcetree configs, you only see marks that <strong>disable</strong> or <strong>force</strong> behavior. This keeps configs concise and
+future proof.</p>
+<hr>
+<h2 id="stage-1-mulle-sourcetree-to-c-header-generation">Stage 1: mulle-sourcetree-to-c (Header Generation)</h2>
+<h3 id="purpose">Purpose</h3>
+<p>Generate C/Objective-C include statements for dependencies.</p>
+<h3 id="decision-flow">Decision Flow</h3>
+<pre><code>For each node in sourcetree:
+    │
+    ├─&gt; Has no-header mark?
+    │   └─&gt; YES: Skip (don't generate include)
+    │   └─&gt; NO: Continue
+    │
+    ├─&gt; Has no-dependency mark?
+    │   └─&gt; YES: Include in _include.h
+    │   └─&gt; NO: Include in _include-private.h
+    │
+    ├─&gt; Has no-public mark?
+    │   └─&gt; YES: Only in private header
+    │   └─&gt; NO: Can be in public header
+    │
+    ├─&gt; Has require mark?
+    │   └─&gt; YES: Use #include (mandatory)
+    │   └─&gt; NO: Wrap with #if __has_include (optional)
+    │
+    ├─&gt; Has no-import mark?
+    │   └─&gt; YES: Use #include
+    │   └─&gt; NO: Use #import (Objective-C)
+    │
+    ├─&gt; Has no-platform-&lt;os&gt; or no-sdk-&lt;sdk&gt;?
+    │   └─&gt; YES: Wrap with #ifndef &lt;PLATFORM&gt;
+    │   └─&gt; NO: No platform guard
+    │
+    └─&gt; Emit include statement
+</code></pre>
+<h3 id="input-example">Input Example</h3>
+<pre><code>Node: zlib
+Marks: no-header
+</code></pre>
+<h3 id="output-example">Output Example</h3>
+<pre><code class="language-c"><span class="hljs-comment">// src/reflect/_include.h (generated)</span>
+<span class="hljs-comment">// (zlib not included - has no-header mark)</span>
+
+<span class="hljs-comment">// src/reflect/_include-private.h (generated)  </span>
+<span class="hljs-comment">// (zlib not included - has no-header mark)</span>
+</code></pre>
+<h3 id="key-marks">Key Marks</h3>
+<ul>
+<li><code>no-header</code> - Skip completely</li>
+<li><code>no-public</code> - Private header only</li>
+<li><code>no-import</code> - Use #include not #import</li>
+<li><code>require</code> - Don't wrap with __has_include</li>
+<li><code>no-platform-*</code>, <code>no-sdk-*</code> - Add platform guards</li>
+</ul>
+<hr>
+<h2 id="stage-2-mulle-sourcetree-to-cmake-cmake-generation">Stage 2: mulle-sourcetree-to-cmake (CMake Generation)</h2>
+<h3 id="purpose-1">Purpose</h3>
+<p>Generate CMake <code>find_library()</code> commands and dependency includes.</p>
+<h3 id="decision-flow-1">Decision Flow</h3>
+<pre><code>For each node in sourcetree:
+    │
+    ├─&gt; Has no-cmake-add mark?
+    │   └─&gt; YES: Skip (don't add to library list)
+    │   └─&gt; NO: Continue
+    │
+    ├─&gt; Has no-cmake-inherit mark?
+    │   └─&gt; YES: Don't include foreign cmake files
+    │   └─&gt; NO: Include DependenciesAndLibraries.cmake
+    │
+    ├─&gt; Has no-all-load mark?
+    │   └─&gt; YES: Normal linking
+    │   └─&gt; NO: Whole-archive linking
+    │
+    ├─&gt; Has no-dynamic-link mark?
+    │   └─&gt; YES: Only search for static (.a)
+    │   └─&gt; NO: Continue
+    │
+    ├─&gt; Has no-static-link mark?
+    │   └─&gt; YES: Only search for dynamic (.so/.dylib)
+    │   └─&gt; NO: Continue
+    │
+    ├─&gt; Has only-framework mark?
+    │   └─&gt; YES: Search in Frameworks path
+    │   └─&gt; NO: Search in lib/
+    │
+    ├─&gt; Has require-link mark?
+    │   └─&gt; YES: REQUIRED in find_library
+    │   └─&gt; NO: Optional
+    │
+    └─&gt; Emit find_library() command
+</code></pre>
+<h3 id="input-example-1">Input Example</h3>
+<pre><code>Node: zlib
+Marks: no-all-load
+</code></pre>
+<h3 id="output-example-1">Output Example</h3>
+<pre><code class="language-cmake"><span class="hljs-comment"># cmake/reflect/Dependencies.cmake (generated)</span>
+<span class="hljs-keyword">if</span>( <span class="hljs-keyword">NOT</span> ZLIB_LIBRARY)
+   <span class="hljs-keyword">find_library</span>( ZLIB_LIBRARY NAMES z
+                 HINTS <span class="hljs-string">&quot;${DEPENDENCY_DIR}/lib&quot;</span>
+                 NO_CMAKE_SYSTEM_PATH)
+<span class="hljs-keyword">endif</span>()
+
+<span class="hljs-comment"># cmake/reflect/DependenciesAndLibraries.cmake (generated)</span>
+<span class="hljs-keyword">if</span>( ZLIB_LIBRARY)
+   <span class="hljs-keyword">list</span>( INSERT DEPENDENCY_LIBRARIES <span class="hljs-number">0</span> <span class="hljs-variable">${ZLIB_LIBRARY}</span>)
+<span class="hljs-keyword">endif</span>()
+</code></pre>
+<h3 id="key-marks-1">Key Marks</h3>
+<ul>
+<li><code>no-cmake-add</code> - Skip completely</li>
+<li><code>no-all-load</code> - Normal linking (not whole-archive)</li>
+<li><code>no-dynamic-link</code> / <code>no-static-link</code> - Library type preference</li>
+<li><code>only-framework</code> - Framework search</li>
+<li><code>require-link</code> - Mandatory library</li>
+</ul>
+<hr>
+<h2 id="stage-3-mulle-sde-craftorder-build-order">Stage 3: mulle-sde craftorder (Build Order)</h2>
+<h3 id="purpose-2">Purpose</h3>
+<p>Determine the order in which dependencies must be built.</p>
+<h3 id="decision-flow-2">Decision Flow</h3>
+<pre><code>For each node in sourcetree:
+    │
+    ├─&gt; Has no-build mark?
+    │   └─&gt; YES: Skip (exclude from craftorder)
+    │   └─&gt; NO: Continue
+    │
+    ├─&gt; Running on host OS?
+    │   ├─&gt; Has no-craft-os-&lt;UNAME&gt;?
+    │   │   └─&gt; YES: Skip (not for this OS)
+    │   │   └─&gt; NO: Continue
+    │
+    ├─&gt; Building for target platform?
+    │   ├─&gt; Has no-craft-platform-&lt;platform&gt;?
+    │   │   └─&gt; YES: Skip (not for this platform)
+    │   │   └─&gt; NO: Continue
+    │
+    ├─&gt; Building for SDK?
+    │   ├─&gt; Has no-craft-sdk-&lt;sdk&gt;?
+    │   │   └─&gt; YES: Skip (not for this SDK)
+    │   │   └─&gt; NO: Continue
+    │
+    ├─&gt; Building configuration?
+    │   ├─&gt; Has only-craft-release AND config!=Release?
+    │   │   └─&gt; YES: Skip (Release only)
+    │   │   └─&gt; NO: Continue
+    │
+    ├─&gt; Has no-dependency mark AND --no-dependency flag?
+    │   └─&gt; YES: Skip (dependencies disabled)
+    │   └─&gt; NO: Continue
+    │
+    ├─&gt; Source directory missing?
+    │   ├─&gt; Has no-require OR no-require-os-&lt;os&gt; OR no-require-platform-&lt;p&gt;?
+    │   │   └─&gt; YES: Skip (optional, source missing)
+    │   │   └─&gt; NO: Continue
+    │
+    ├─&gt; Compute position based on dependencies
+    │   └─&gt; Dependencies must come BEFORE this node
+    │
+    └─&gt; Add to craftorder list
+</code></pre>
+<h3 id="input-example-2">Input Example</h3>
+<pre><code>Node: zlib
+Source: dependency/stash/zlib/
+</code></pre>
+<h3 id="output-example-2">Output Example</h3>
+<pre><code># craftorder output (one path per line)
+dependency/stash/mulle-c11
+dependency/stash/zlib
+dependency/stash/mylib
+</code></pre>
+<h3 id="key-marks-2">Key Marks</h3>
+<ul>
+<li><code>no-build</code> - Never build</li>
+<li><code>no-craft-os-*</code>, <code>no-craft-platform-*</code>, <code>no-craft-sdk-*</code> - Platform filtering</li>
+<li><code>only-craft-release</code> - Only in Release config</li>
+<li><code>no-dependency</code> - Skip with <code>--no-dependency</code></li>
+<li><code>no-require-*</code> - Allow missing source</li>
+</ul>
+<hr>
+<h2 id="stage-4-mulle-sde-linkorder-link-order">Stage 4: mulle-sde linkorder (Link Order)</h2>
+<h3 id="purpose-3">Purpose</h3>
+<p>Determine the order in which libraries must be linked (reverse of build order).</p>
+<h3 id="decision-flow-3">Decision Flow</h3>
+<pre><code>For each node in sourcetree:
+    │
+    ├─&gt; Has no-link mark?
+    │   └─&gt; YES: Skip (exclude from linkorder)
+    │   └─&gt; NO: Continue
+    │
+    ├─&gt; Has no-cmake-add mark?
+    │   └─&gt; YES: Skip (not in cmake libs)
+    │   └─&gt; NO: Continue
+    │
+    ├─&gt; Has no-actual-link mark?
+    │   └─&gt; YES: Skip (present but not linked)
+    │   └─&gt; NO: Continue
+    │
+    ├─&gt; Has no-intermediate-link mark?
+    │   └─&gt; YES: Regular library
+    │   └─&gt; NO: Startup library (prefixed with STARTUP_)
+    │
+    ├─&gt; Has no-all-load mark?
+    │   └─&gt; YES: Normal container
+    │   └─&gt; NO: All-load container
+    │
+    ├─&gt; Compute position (reverse topological sort)
+    │   └─&gt; Dependencies must come AFTER this node
+    │
+    └─&gt; Add to linkorder list
+</code></pre>
+<h3 id="input-example-3">Input Example</h3>
+<pre><code>Node: zlib
+</code></pre>
+<h3 id="output-example-3">Output Example</h3>
+<pre><code># linkorder output (special format)
+STARTUP__
+mylib
+_
+zlib
+</code></pre>
+<p>Format:</p>
+<ul>
+<li><code>STARTUP__</code> marks startup libraries</li>
+<li><code>_</code> separates startup from regular libs</li>
+<li>Dependencies appear AFTER dependents (reverse of craftorder)</li>
+</ul>
+<h3 id="key-marks-3">Key Marks</h3>
+<ul>
+<li><code>no-link</code> - Never link</li>
+<li><code>no-cmake-add</code> - Not in link list</li>
+<li><code>no-actual-link</code> - Skip actual linking</li>
+<li><code>no-intermediate-link</code> - Not a startup lib</li>
+<li><code>no-all-load</code> - Normal linking</li>
+</ul>
+<hr>
+<h2 id="stage-5-mulle-craft-build-execution">Stage 5: mulle-craft (Build Execution)</h2>
+<h3 id="purpose-4">Purpose</h3>
+<p>Build each dependency from craftorder using mulle-make.</p>
+<h3 id="decision-flow-4">Decision Flow</h3>
+<pre><code>For each entry in craftorder:
+    │
+    ├─&gt; Source directory exists?
+    │   └─&gt; NO: Check no-require-* marks → skip or fail
+    │   └─&gt; YES: Continue
+    │
+    ├─&gt; Determine library style:
+    │   ├─&gt; Has no-dynamic-link mark?
+    │   │   └─&gt; YES: --library-style static
+    │   ├─&gt; Has no-static-link mark?
+    │   │   └─&gt; YES: --library-style dynamic
+    │   ├─&gt; Has only-standalone mark?
+    │   │   └─&gt; YES: --library-style standalone
+    │   └─&gt; Default: auto
+    │
+    ├─&gt; Has no-inplace mark?
+    │   └─&gt; NO (default): Build in tmp, dispense to dependency/
+    │   └─&gt; YES: Build directly in source dir
+    │
+    ├─&gt; Has no-singlephase mark?
+    │   └─&gt; NO (default): Build in parallel (header, compile, link)
+    │   └─&gt; YES: Single-phase build
+    │
+    ├─&gt; Call mulle-make:
+    │   └─&gt; mulle-make install --prefix /tmp/craft.XXX
+    │       └─&gt; Runs cmake/ninja/xcodebuild
+    │
+    ├─&gt; Has no-inplace mark?
+    │   └─&gt; NO: Call mulle-dispense
+    │       ├─&gt; Has no-rootheader mark?
+    │       │   └─&gt; YES: --header-dir include/&lt;name&gt;
+    │       │   └─&gt; NO: --header-dir include/
+    │       ├─&gt; Has only-liftheaders mark?
+    │       │   └─&gt; YES: --lift-headers
+    │       └─&gt; Install to dependency/&lt;sdk&gt;-&lt;platform&gt;/&lt;config&gt;/
+    │
+    ├─&gt; Has no-memo mark?
+    │   └─&gt; YES: Don't record build result (rebuild every time)
+    │   └─&gt; NO: Record successful build
+    │
+    └─&gt; Continue to next dependency
+</code></pre>
+<h3 id="input-example-4">Input Example</h3>
+<pre><code>Entry: dependency/stash/zlib
+Marks: no-all-load
+</code></pre>
+<h3 id="output-example-4">Output Example</h3>
+<pre><code># Build happens:
+cd dependency/stash/zlib
+mulle-make install --prefix /tmp/mulle-craft.XyZ9
+
+# Dispense happens:
+mulle-dispense /tmp/mulle-craft.XyZ9 dependency/Release
+
+# Result:
+dependency/Release/
+├── include/
+│   └── zlib.h
+└── lib/
+    └── libz.a
+</code></pre>
+<h3 id="key-marks-4">Key Marks</h3>
+<ul>
+<li><code>no-require-*</code> - Don't fail if missing</li>
+<li><code>no-dynamic-link</code> / <code>no-static-link</code> / <code>only-standalone</code> - Library style</li>
+<li><code>no-inplace</code> - Build location</li>
+<li><code>no-rootheader</code> - Header subdirectory</li>
+<li><code>only-liftheaders</code> - Lift headers</li>
+<li><code>no-singlephase</code> - Parallel build</li>
+<li><code>no-memo</code> - Don't cache result</li>
+</ul>
+<hr>
+<h2 id="stage-6-main-project-build">Stage 6: Main Project Build</h2>
+<h3 id="purpose-5">Purpose</h3>
+<p>Link main project against built dependencies using generated CMake files.</p>
+<h3 id="process">Process</h3>
+<pre><code>cmake configure:
+    │
+    ├─&gt; include( cmake/reflect/Dependencies.cmake)
+    │   └─&gt; Sets ZLIB_LIBRARY, MYLIB_LIBRARY, etc.
+    │
+    ├─&gt; include( cmake/reflect/DependenciesAndLibraries.cmake)
+    │   └─&gt; Populates DEPENDENCY_LIBRARIES list
+    │
+    └─&gt; target_link_libraries( my_project ${DEPENDENCY_LIBRARIES})
+        └─&gt; Links in correct order from linkorder
+</code></pre>
+<hr>
+<h2 id="complete-flow-diagram">Complete Flow Diagram</h2>
+<pre><code>mulle-sde craft
+    │
+    ├─────────────┬─────────────┬─────────────┬─────────────┐
+    │             │             │             │             │
+    ▼             ▼             ▼             ▼             ▼
+ to-c        to-cmake    craftorder    linkorder      (prepare)
+    │             │             │             │
+    ▼             ▼             │             │
+_include.h  Dependencies.cmake  │             │
+_include-   Dependencies        │             │
+private.h   AndLibraries.cmake  │             │
+    │             │             │             │
+    └─────────────┴─────────────┴─────────────┴─────────────┐
+                                                              │
+                                                              ▼
+                                                For each in craftorder:
+                                                              │
+                                                              ▼
+                                                         mulle-craft
+                                                              │
+                                                              ├─&gt; mulle-make
+                                                              │       │
+                                                              │       ▼
+                                                              │   Build library
+                                                              │
+                                                              ├─&gt; mulle-dispense
+                                                              │       │
+                                                              │       ▼
+                                                              │   Install to
+                                                              │   dependency/
+                                                              │
+                                                              ▼
+                                                         Next dependency
+                                                              │
+                                                              ▼
+                                                    All dependencies built
+                                                              │
+                                                              ▼
+                                                      Build main project
+                                                              │
+                                                              ▼
+                                                       Link with deps
+                                                       (using linkorder)
+</code></pre>
+<hr>
+<h2 id="example-run-single-dependency">Example Run: Single Dependency</h2>
+<p>Let's trace one dependency through the complete pipeline:</p>
+<h3 id="initial-configuration">Initial Configuration</h3>
+<pre><code>Address:  zlib
+URL:      https://github.com/madler/zlib/archive/1.2.11.tar.gz
+Nodetype: tar
+Marks:    no-header,no-all-load
+</code></pre>
+<p><strong>Note:</strong> Marks <code>share</code> and <code>update</code> are implicit (always enabled by default) so not shown. Only <code>no-header</code> and <code>no-all-load</code> are explicit.</p>
+<h3 id="to-c-stage">to-c Stage</h3>
+<ul>
+<li>Check <code>no-header</code>: YES → <strong>Skip</strong> (no include generated)</li>
+</ul>
+<h3 id="to-cmake-stage">to-cmake Stage</h3>
+<ul>
+<li>Check <code>no-cmake-add</code>: NO → Include</li>
+<li>Check <code>no-all-load</code>: YES → Normal linking</li>
+<li><strong>Output:</strong> <code>find_library( ZLIB_LIBRARY NAMES z )</code></li>
+</ul>
+<h3 id="craftorder-stage">craftorder Stage</h3>
+<ul>
+<li>Check <code>no-build</code>: NO → Include</li>
+<li>Check platform/os/sdk marks: None → Include</li>
+<li>Check source exists: YES → Include</li>
+<li><strong>Output:</strong> <code>dependency/stash/zlib</code> in build list</li>
+</ul>
+<h3 id="linkorder-stage">linkorder Stage</h3>
+<ul>
+<li>Check <code>no-link</code>: NO → Include</li>
+<li>Check <code>no-cmake-add</code>: NO → Include</li>
+<li><strong>Output:</strong> <code>zlib</code> in link list (after dependents)</li>
+</ul>
+<h3 id="craft-stage">craft Stage</h3>
+<ul>
+<li>Check source exists: YES → Build</li>
+<li>Check <code>no-dynamic-link</code>: NO → Auto library style</li>
+<li>Check <code>no-inplace</code>: NO → Build in tmp, dispense</li>
+<li><strong>Execute:</strong> Build libz.a, install to <code>dependency/Release/lib/libz.a</code></li>
+</ul>
+<h3 id="main-project">Main Project</h3>
+<ul>
+<li>CMake includes <code>Dependencies.cmake</code> → finds <code>libz.a</code></li>
+<li>Links main project with <code>${DEPENDENCY_LIBRARIES}</code></li>
+<li><strong>Result:</strong> Successfully linked</li>
+</ul>
+<hr>
+<h2 id="debugging-common-issues">Debugging Common Issues</h2>
+<h3 id="dependency-not-in-craftorder">Dependency not in craftorder?</h3>
+<p>Check these marks in sequence:</p>
+<ol>
+<li><code>no-build</code> → Never builds</li>
+<li><code>no-craft-os-&lt;os&gt;</code> → Filtered by host OS</li>
+<li><code>no-craft-platform-&lt;p&gt;</code> → Filtered by target platform</li>
+<li><code>no-craft-sdk-&lt;sdk&gt;</code> → Filtered by SDK</li>
+<li><code>only-craft-release</code> + Debug config → Release only</li>
+<li><code>no-require</code> + missing source → Skipped gracefully</li>
+</ol>
+<h3 id="dependency-not-in-linkorder">Dependency not in linkorder?</h3>
+<p>Check these marks:</p>
+<ol>
+<li><code>no-link</code> → Never links</li>
+<li><code>no-cmake-add</code> → Not in CMake libs</li>
+<li><code>no-actual-link</code> → Present but not linked</li>
+</ol>
+<h3 id="include-not-generated">Include not generated?</h3>
+<p>Check these marks:</p>
+<ol>
+<li><code>no-header</code> → No include generated</li>
+<li><code>no-public</code> → Only in private header</li>
+<li>Platform guards may hide it on current platform</li>
+</ol>
+<h3 id="cmake-cant-find-library">CMake can't find library?</h3>
+<p>Check these:</p>
+<ol>
+<li><code>no-cmake-add</code> → Not in library list</li>
+<li>Dependency not built (check craftorder)</li>
+<li>Wrong library type (check <code>no-dynamic-link</code>/<code>no-static-link</code>)</li>
+</ol>
+<hr>
+<h2 id="related-documentation">Related Documentation</h2>
+<ul>
+<li><code>mulle-sde-craft-pipeline.svg</code> - Visual pipeline architecture</li>
+<li><code>mulle-sde-craft-marks-matrix.md</code> - Complete mark reference table</li>
+<li><code>mulle-sourcetree-sync-marks-flow.md</code> - How marks control fetch/sync</li>
+<li><code>mulle-craft-marks.json</code> - Build mark definitions</li>
+</ul>

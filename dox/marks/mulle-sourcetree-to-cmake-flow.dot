@@ -1,0 +1,127 @@
+digraph to_cmake_flow {
+   rankdir=TB;
+   node [shape=box, style=rounded, fontname="Arial"];
+   edge [fontname="Arial", fontsize=10];
+   
+   start [label="mulle-sourcetree-to-cmake\n(for each node)", shape=ellipse, style=filled, fillcolor="#e1f5ff"];
+   
+   check_add [label="Has mark\nno-cmake-add?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip [label="Skip node\n(not in libs)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_inherit [label="Has mark\nno-cmake-inherit?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   no_inherit [label="Don't include\nforeign cmake", shape=note, style=filled, fillcolor="#ffe0b2"];
+   do_inherit [label="Include foreign\ncmake files", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   check_dependency [label="Has mark\nno-cmake-dependency?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   add_dependency [label="Include\nDependencies*.cmake", shape=box, style=filled, fillcolor="#c8e6c9"];
+   skip_dependency [label="Don't include\ndependencies", shape=box, style=filled, fillcolor="#ffe0b2"];
+   
+   check_loader [label="Has mark\nno-cmake-loader?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   add_loader [label="Include\nObjC loader", shape=box, style=filled, fillcolor="#c8e6c9"];
+   skip_loader [label="Don't include\nloader", shape=box, style=filled, fillcolor="#ffe0b2"];
+   
+   check_searchpath [label="Has mark\nno-cmake-searchpath?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   add_searchpath [label="Add include dir to\nINHERITED_INCLUDE_DIRS", shape=box, style=filled, fillcolor="#c8e6c9"];
+   skip_searchpath [label="Don't add to\nsearch path", shape=box, style=filled, fillcolor="#ffe0b2"];
+   
+   check_allload [label="Has mark\nno-all-load OR\nno-cmake-all-load?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   normal_link [label="Normal linking", shape=box, style=filled, fillcolor="#c8e6c9"];
+   whole_archive [label="Whole-archive\nlinking", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   check_intermediate [label="Has mark\nno-intermediate-link OR\nno-cmake-intermediate-link?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   regular_lib [label="Regular library", shape=box, style=filled, fillcolor="#c8e6c9"];
+   startup_lib [label="Startup library\n(STARTUP_ prefix)", shape=box, style=filled, fillcolor="#ffe0b2"];
+   
+   check_dynamic [label="Has mark\nno-dynamic-link?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   static_only [label="Only search\nfor static (.a)", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   check_static [label="Has mark\nno-static-link?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   dynamic_only [label="Only search for\ndynamic (.so/.dylib)", shape=box, style=filled, fillcolor="#c8e6c9"];
+   both [label="Search for\nboth types", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   check_framework [label="Has mark\nonly-framework?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   framework_search [label="Search in\nFrameworks/", shape=box, style=filled, fillcolor="#c8e6c9"];
+   lib_search [label="Search in\nlib/", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   check_suppress [label="Has mark\nno-cmake-suppress-system-path?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   no_system_path [label="NO_CMAKE_SYSTEM_PATH\n(don't use system)", shape=box, style=filled, fillcolor="#c8e6c9"];
+   allow_system_path [label="Allow system\npath search", shape=box, style=filled, fillcolor="#ffe0b2"];
+   
+   check_require [label="Has mark\nrequire-link?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   required [label="REQUIRED in\nfind_library", shape=box, style=filled, fillcolor="#c8e6c9"];
+   optional [label="Optional", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   emit [label="Emit\nfind_library()", shape=box, style=filled, fillcolor="#64b5f6"];
+   done [label="Done", shape=ellipse, style=filled, fillcolor="#c8e6c9"];
+   
+   start -> check_add;
+   check_add -> skip [label="yes"];
+   check_add -> check_inherit [label="no"];
+   
+   check_inherit -> no_inherit [label="yes"];
+   check_inherit -> do_inherit [label="no"];
+   
+   no_inherit -> check_allload;
+   do_inherit -> check_dependency;
+   
+   check_dependency -> skip_dependency [label="yes"];
+   check_dependency -> add_dependency [label="no"];
+   
+   skip_dependency -> check_loader;
+   add_dependency -> check_loader;
+   
+   check_loader -> skip_loader [label="yes"];
+   check_loader -> add_loader [label="no"];
+   
+   skip_loader -> check_searchpath;
+   add_loader -> check_searchpath;
+   
+   check_searchpath -> skip_searchpath [label="yes"];
+   check_searchpath -> add_searchpath [label="no"];
+   
+   skip_searchpath -> check_allload;
+   add_searchpath -> check_allload;
+   
+   check_allload -> normal_link [label="yes"];
+   check_allload -> whole_archive [label="no"];
+   
+   normal_link -> check_intermediate;
+   whole_archive -> check_intermediate;
+   
+   check_intermediate -> regular_lib [label="yes"];
+   check_intermediate -> startup_lib [label="no"];
+   
+   regular_lib -> check_dynamic;
+   startup_lib -> check_dynamic;
+   
+   check_dynamic -> static_only [label="yes"];
+   check_dynamic -> check_static [label="no"];
+   
+   check_static -> dynamic_only [label="yes"];
+   check_static -> both [label="no"];
+   
+   static_only -> check_framework;
+   dynamic_only -> check_framework;
+   both -> check_framework;
+   
+   check_framework -> framework_search [label="yes"];
+   check_framework -> lib_search [label="no"];
+   
+   framework_search -> check_suppress;
+   lib_search -> check_suppress;
+   
+   check_suppress -> allow_system_path [label="yes"];
+   check_suppress -> no_system_path [label="no"];
+   
+   allow_system_path -> check_require;
+   no_system_path -> check_require;
+   
+   check_require -> required [label="yes"];
+   check_require -> optional [label="no"];
+   
+   required -> emit;
+   optional -> emit;
+   
+   emit -> done;
+   skip -> done;
+}

@@ -113,6 +113,12 @@ sourcetree::craftorder::__augment_line()
    sourcetree::craftorder::r_create_filename "${_filename}"
    filename="${RVAL}"
 
+   if sourcetree::marks::disable "${_marks}" "craft"
+   then
+      log_debug "${filename} removed due to no-craft mark"
+      return 0
+   fi
+
    if ! find_line "${_remainder_collection}" "${filename}"
    then
       return 0
@@ -169,9 +175,13 @@ sourcetree::craftorder::__collect_line()
    sourcetree::craftorder::r_create_filename "${_filename}"
    filename="${RVAL}"
 
-   printf "%s\n" "${filename}"
+   if sourcetree::marks::disable "${_marks}" "craft"
+   then
+      log_debug "${filename} removed due to no-craft mark"
+      return 0
+   fi
 
-   return 0
+   printf "%s\n" "${filename}"
 }
 
 

@@ -1,0 +1,57 @@
+digraph linkorder_flow {
+   rankdir=TB;
+   node [shape=box, style=rounded, fontname="Arial"];
+   edge [fontname="Arial", fontsize=10];
+   
+   start [label="mulle-sde linkorder\n(for each node)", shape=ellipse, style=filled, fillcolor="#e1f5ff"];
+   
+   check_link [label="Has mark\nno-link?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_link [label="Skip node\n(never link)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_add [label="Has mark\nno-cmake-add?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_add [label="Skip node\n(not in cmake)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_actual [label="Has mark\nno-actual-link?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_actual [label="Skip node\n(present, not linked)", shape=box, style=filled, fillcolor="#ffccbc"];
+   
+   check_intermediate [label="Has mark\nno-intermediate-link?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   regular_lib [label="Regular library", shape=note, style=filled, fillcolor="#c8e6c9"];
+   startup_lib [label="Startup library\n(STARTUP_ prefix)", shape=note, style=filled, fillcolor="#ffe0b2"];
+   
+   check_allload [label="Has mark\nno-all-load?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   normal_container [label="Normal container", shape=box, style=filled, fillcolor="#c8e6c9"];
+   allload_container [label="All-load container", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   compute_pos [label="Compute position\n(reverse topo sort:\ndependencies after)", shape=box, style=filled, fillcolor="#64b5f6"];
+   add [label="Add to\nlinkorder list", shape=box, style=filled, fillcolor="#c8e6c9"];
+   done [label="Done", shape=ellipse, style=filled, fillcolor="#c8e6c9"];
+   
+   start -> check_link;
+   check_link -> skip_link [label="yes"];
+   check_link -> check_add [label="no"];
+   
+   check_add -> skip_add [label="yes"];
+   check_add -> check_actual [label="no"];
+   
+   check_actual -> skip_actual [label="yes"];
+   check_actual -> check_intermediate [label="no"];
+   
+   check_intermediate -> regular_lib [label="yes"];
+   check_intermediate -> startup_lib [label="no"];
+   
+   regular_lib -> check_allload;
+   startup_lib -> check_allload;
+   
+   check_allload -> normal_container [label="yes"];
+   check_allload -> allload_container [label="no"];
+   
+   normal_container -> compute_pos;
+   allload_container -> compute_pos;
+   
+   compute_pos -> add;
+   add -> done;
+   
+   skip_link -> done;
+   skip_add -> done;
+   skip_actual -> done;
+}

@@ -1,0 +1,107 @@
+digraph craft_flow {
+   rankdir=TB;
+   node [shape=box, style=rounded, fontname="Arial"];
+   edge [fontname="Arial", fontsize=10];
+   
+   start [label="mulle-craft\n(for each in craftorder)", shape=ellipse, style=filled, fillcolor="#e1f5ff"];
+   
+   check_exists [label="Source dir\nexists?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   check_require [label="Has mark\nno-require-*?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_missing [label="Skip\n(optional, missing)", shape=box, style=filled, fillcolor="#ffccbc"];
+   fail_missing [label="FAIL\n(required, missing)", shape=box, style=filled, fillcolor="#ef5350"];
+   
+   determine_style [label="Determine\nlibrary style", shape=box, style=filled, fillcolor="#b3e5fc"];
+   check_dynamic [label="Has mark\nno-dynamic-link?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   static_style [label="--library-style\nstatic", shape=note, style=filled, fillcolor="#e3f2fd"];
+   check_static [label="Has mark\nno-static-link?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   dynamic_style [label="--library-style\ndynamic", shape=note, style=filled, fillcolor="#e3f2fd"];
+   check_standalone [label="Has mark\nonly-standalone?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   standalone_style [label="--library-style\nstandalone", shape=note, style=filled, fillcolor="#e3f2fd"];
+   auto_style [label="--library-style\nauto", shape=note, style=filled, fillcolor="#e3f2fd"];
+   
+   check_inplace [label="Has mark\nno-inplace?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   build_tmp [label="Build in /tmp", shape=box, style=filled, fillcolor="#c8e6c9"];
+   build_source [label="Build in source", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   check_singlephase [label="Has mark\nno-singlephase?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   parallel_build [label="Parallel build\n(header,compile,link)", shape=box, style=filled, fillcolor="#c8e6c9"];
+   single_build [label="Single-phase build", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   call_make [label="Call mulle-make\ninstall --prefix", shape=box, style=filled, fillcolor="#64b5f6"];
+   
+   dispense_check [label="Was\nno-inplace?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   call_dispense [label="Call mulle-dispense", shape=box, style=filled, fillcolor="#64b5f6"];
+   check_rootheader [label="Has mark\nno-rootheader?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   header_subdir [label="--header-dir\ninclude/<name>", shape=note, style=filled, fillcolor="#e3f2fd"];
+   header_root [label="--header-dir\ninclude/", shape=note, style=filled, fillcolor="#e3f2fd"];
+   check_liftheaders [label="Has mark\nonly-liftheaders?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   lift_headers [label="--lift-headers", shape=note, style=filled, fillcolor="#e3f2fd"];
+   keep_headers [label="Keep structure", shape=note, style=filled, fillcolor="#e3f2fd"];
+   install [label="Install to\ndependency/", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   check_memo [label="Has mark\nno-memo?", shape=diamond, style=filled, fillcolor="#fff9c4"];
+   skip_memo [label="Don't record\nresult", shape=box, style=filled, fillcolor="#ffe0b2"];
+   record_memo [label="Record successful\nbuild", shape=box, style=filled, fillcolor="#c8e6c9"];
+   
+   done [label="Done", shape=ellipse, style=filled, fillcolor="#c8e6c9"];
+   
+   start -> check_exists;
+   check_exists -> check_require [label="no"];
+   check_exists -> determine_style [label="yes"];
+   
+   check_require -> skip_missing [label="yes"];
+   check_require -> fail_missing [label="no"];
+   
+   determine_style -> check_dynamic;
+   check_dynamic -> static_style [label="yes"];
+   check_dynamic -> check_static [label="no"];
+   check_static -> dynamic_style [label="yes"];
+   check_static -> check_standalone [label="no"];
+   check_standalone -> standalone_style [label="yes"];
+   check_standalone -> auto_style [label="no"];
+   
+   static_style -> check_inplace;
+   dynamic_style -> check_inplace;
+   standalone_style -> check_inplace;
+   auto_style -> check_inplace;
+   
+   check_inplace -> build_source [label="yes"];
+   check_inplace -> build_tmp [label="no"];
+   
+   build_source -> check_singlephase;
+   build_tmp -> check_singlephase;
+   
+   check_singlephase -> single_build [label="yes"];
+   check_singlephase -> parallel_build [label="no"];
+   
+   single_build -> call_make;
+   parallel_build -> call_make;
+   
+   call_make -> dispense_check;
+   
+   dispense_check -> done [label="yes\n(inplace)"];
+   dispense_check -> call_dispense [label="no"];
+   
+   call_dispense -> check_rootheader;
+   check_rootheader -> header_subdir [label="yes"];
+   check_rootheader -> header_root [label="no"];
+   
+   header_subdir -> check_liftheaders;
+   header_root -> check_liftheaders;
+   
+   check_liftheaders -> lift_headers [label="yes"];
+   check_liftheaders -> keep_headers [label="no"];
+   
+   lift_headers -> install;
+   keep_headers -> install;
+   
+   install -> check_memo;
+   
+   check_memo -> skip_memo [label="yes"];
+   check_memo -> record_memo [label="no"];
+   
+   skip_memo -> done;
+   record_memo -> done;
+   skip_missing -> done;
+   fail_missing -> done;
+}
