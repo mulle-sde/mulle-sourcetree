@@ -388,12 +388,12 @@ sourcetree::cfg::egrep()
             return 2
          fi
 
-         grep -E -v '^#' "${configfile}"
+         rexekutor grep -E -v '^#' "${configfile}"
          rval=$?
       ;;
    esac
 
-   grep -E -v -s '^#' "${configfile}"
+   rexekutor grep -E -v -s '^#' "${configfile}"
    return $?
 }
 
@@ -529,7 +529,8 @@ sourcetree::cfg::r_prepare_for_write()
       sharedir="${RVAL}"
 
       etc_setup_from_share_if_needed "${etcdir}" \
-                                     "${sharedir}"
+                                     "${sharedir}" \
+                                     'YES'
    fi
 
    sourcetree::cfg::r_configfile_for_write "${config}"

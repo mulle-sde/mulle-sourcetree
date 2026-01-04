@@ -111,7 +111,7 @@ Options:
    --force-format <format>  : like --format but unmodifiable by -g, -m etc.
    --marks <value>          : specify marks to match (e.g. build)
    --no-dedupe              : don't remove what are considered duplicates
-   --nodetype <value>       : node type to list, can be used multiple times
+   --nodetype <value>       : node type filter e.g. "no-comment,ALL"
    --output-banner          : print a banner with config information
    --output-eval            : show evaluated values as passed to ${MULLE_FETCH:-mulle-fetch}
    --output-format <value>  : possible values (fmt, cmd, raw)

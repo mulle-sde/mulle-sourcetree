@@ -501,6 +501,7 @@ emit_c_header()
                            ${MULLE_TECHNICAL_FLAGS} \
                         list \
                            --format "%_;%a;%m;%i={include,,-------}\\n" \
+                           --nodetypes "no-comment,ALL" \
                            --marks "${filter_marks}" \
                            --no-bequeath \
                            --output-format raw \
@@ -1041,7 +1042,6 @@ main()
 
    MULLE_SOURCETREE="${MULLE_SOURCETREE:-`command -v mulle-sourcetree`}"
    [ -z "${MULLE_SOURCETREE}" ] && fail "mulle-sourcetree not in PATH"
-
 
    if [ -z "${PROJECT_NAME}" ]
    then

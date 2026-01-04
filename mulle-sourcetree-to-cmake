@@ -1448,6 +1448,7 @@ MATCHES header AND \
                         list \
                               --no-bequeath \
                               --force-format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                              --nodetypes "no-comment,ALL" \
                               --qualifier "${qualifier}" \
                               --output-format raw \
                               --no-output-header`" || return 1
@@ -1469,6 +1470,7 @@ NOT MATCHES only-framework"
                            list \
                               --no-bequeath \
                               --force-format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                              --nodetypes "no-comment,ALL" \
                               --qualifier "${qualifier}" \
                               --output-format raw \
                               --no-output-header`" || return 1
@@ -1491,6 +1493,7 @@ MATCHES only-framework"
                            list \
                               --no-bequeath \
                               --force-format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                              --nodetypes "no-comment,ALL" \
                               --qualifier "${qualifier}" \
                               --output-format raw \
                               --no-output-header`" || return 1
@@ -1527,6 +1530,7 @@ MATCHES no-fs AND \
                         list \
                            --no-bequeath \
                            --force-format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                           --nodetypes "no-comment,ALL" \
                            --qualifier "${qualifier}" \
                            --output-format raw \
                            --no-output-header`" || return 1
@@ -1549,6 +1553,7 @@ NOT MATCHES only-framework"
                         list \
                            --no-bequeath \
                            --force-format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                           --nodetypes "no-comment,ALL" \
                            --qualifier "${qualifier}" \
                            --output-format raw \
                            --no-output-header`" || return 1
@@ -1571,6 +1576,7 @@ MATCHES only-framework"
                         list \
                            --no-bequeath \
                            --force-format '%_;%a;%m;%i={aliases,,};%i={include,,}\n' \
+                           --nodetypes "no-comment,ALL" \
                            --qualifier "${qualifier}" \
                            --output-format raw \
                            --no-output-header`" || return 1

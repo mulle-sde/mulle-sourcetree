@@ -897,6 +897,8 @@ in the sourcetree (${RVAL#"${MULLE_USER_PWD}/"}). Use -f to skip this check."
    sourcetree::node::__augment  # safe by default
 
    contents="`sourcetree::cfg::read "${SOURCETREE_START}" `"
+   log_setting "original contents: ${contents}"
+
    sourcetree::node::r_to_nodeline
    r_add_line "${contents}" "${RVAL}"
    appended="${RVAL}"
