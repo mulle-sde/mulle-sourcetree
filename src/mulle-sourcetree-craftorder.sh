@@ -58,10 +58,6 @@ Options:
    --output-eval          : resolve variables in the output
    --output-no-marks      : don't output marks of sourcetree node
    --print-qualifier      : prints qualifier for sourcetree marks, then exits
-
-Environment:
-   MULLE_PLATFORM_VERSION  : the OS version used for the build
-   MULLE_PLATFORM          : the platform used for the build
 EOF
   exit 1
 }
@@ -113,11 +109,14 @@ sourcetree::craftorder::__augment_line()
    sourcetree::craftorder::r_create_filename "${_filename}"
    filename="${RVAL}"
 
-   if sourcetree::marks::disable "${_marks}" "craft"
-   then
-      log_debug "${filename} removed due to no-craft mark"
-      return 0
-   fi
+#
+# this is done in mulle-craft now due to multi-platform crafting
+#
+#   if sourcetree::marks::disable "${_marks}" "craft"
+#   then
+#      log_debug "${filename} removed due to no-craft mark"
+#      return 0
+#   fi
 
    if ! find_line "${_remainder_collection}" "${filename}"
    then
@@ -175,11 +174,14 @@ sourcetree::craftorder::__collect_line()
    sourcetree::craftorder::r_create_filename "${_filename}"
    filename="${RVAL}"
 
-   if sourcetree::marks::disable "${_marks}" "craft"
-   then
-      log_debug "${filename} removed due to no-craft mark"
-      return 0
-   fi
+#
+# this is done in mulle-craft now due to multi-platform crafting
+#
+#   if sourcetree::marks::disable "${_marks}" "craft"
+#   then
+#      log_debug "${filename} removed due to no-craft mark"
+#      return 0
+#   fi
 
    printf "%s\n" "${filename}"
 }
@@ -217,6 +219,10 @@ sourcetree::craftorder::r_augment_marks()
 }
 
 
+#
+# MEMO: this is only useful if we get the constituents of mulle-core though
+#       they are not really "built" (so need MATCHES build OR MATCHES no-share-shirk)
+# 
 sourcetree::craftorder::r_remove_amalgamated()
 {
    log_entry "sourcetree::craftorder::r_remove_amalgamated" "$@"
@@ -243,6 +249,7 @@ sourcetree::craftorder::r_remove_amalgamated()
          filename="${line%;*}"
          r_basename "${filename##*\}}"  # remove ${MULLE_SOURCETREE_STASH_DIR} prefix, get name
          name="${RVAL}"
+
          # don't add it to results, also make sure that "proper" repo which
          # would exist in ${MULLE_SOURCETREE_STASH_DIR}, if it wasn't shadowed
          # by the amalgamation, isn't returned
@@ -259,19 +266,24 @@ sourcetree::craftorder::r_remove_amalgamated()
    .do
       filename="${line%;*}"
       marks="${line##*;}"
+      r_basename "${filename##*\}}"  # remove ${MULLE_SOURCETREE_STASH_DIR} prefix, get name
+      name="${RVAL}"
 
       log_debug "filename : ${filename}"
       log_debug "marks    : ${marks}"
       log_debug "name     : ${name}"
-
-      r_basename "${filename##*\}}"  # remove ${MULLE_SOURCETREE_STASH_DIR} prefix, get name
-      name="${RVAL}"
 
       if sourcetree::marks::enable "${marks}" "share-shirk"
       then
          if find_line "${shadows}" "${name}"
          then
             log_debug "${filename} was shadowed by an amalgamation"
+            .continue
+         fi
+      else
+         if find_line "${shadows}" "${name}"
+         then
+            log_debug "${filename} is a shadowing amalgamation"
             .continue
          fi
       fi
@@ -424,10 +436,12 @@ sourcetree::craftorder::main()
 
    local qualifier
 
-   qualifier="MATCHES build OR MATCHES no-share-shirk"
-   if [ "${OUTPUT_MARKS}" = 'NO' ]
+   # we need no-share-shirk listed to remove stuff from the amalgamations 
+   # later in sourcetree::craftorder::r_remove_amalgamated
+   qualifier="MATCHES build"
+   if [ "${OUTPUT_MARKS}" = 'YES' ]
    then
-      qualifier="MATCHES build"
+      qualifier="MATCHES build OR MATCHES no-share-shirk"
    fi
 
    local _craftorder_collection
@@ -469,6 +483,7 @@ sourcetree::craftorder::main()
    local _augmented_collection
 
    _remainder_collection="${_craftorder_collection}"
+
    _augmented_collection="`sourcetree::walk::do "" \
                                                 "" \
                                                 "${qualifier}" \

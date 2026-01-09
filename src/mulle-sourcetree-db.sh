@@ -474,7 +474,7 @@ sourcetree::db::forget()
 #
 sourcetree::db::bury()
 {
-   log_db_entry "sourcetree::db::bury" "$@"
+   log_entry "sourcetree::db::bury" "$@"
 
    local _database
    local _databasedir
@@ -563,8 +563,8 @@ sourcetree::db::bury()
 
       case "${RVAL}" in
          ../*)
-            _internal_fail "Bury path for \"${filename#"${MULLE_USER_PWD}/"}\" escapes \
-project \"${project_dir#"${MULLE_USER_PWD}/"}\".
+            _internal_fail "Bury path for \"${phys_filename}\" ($filename) escapes \
+project \"${phys_project_dir}\" ($project_dir).
 ${C_INFO}If you recently renamed your project, this is not unusual. 
 You need to clean it up manually (sorry). Suggested fix:
 ${C_RESET_BOLD} rm -rf .mulle/var ${KITCHEN_DIR:-kitchen} ${MULLE_SOURCETREE_STASH_DIR:-} ${DEPENDENCY_DIR:-dependency}"

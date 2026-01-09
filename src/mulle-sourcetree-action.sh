@@ -1056,8 +1056,9 @@ sourcetree::action::__update_perform_item()
                       log_verbose "Removing old symlink \"${_filename}\""
                       exekutor rm -f "${_filename}" >&2
                   else
-                     sourcetree::action::update_safe_clobber "${_database}" \
-                                                             "${_filename}"
+                     log_verbose "Removing old content \"${_filename}\" from db \"${_database}\""
+                     sourcetree::action::update_safe_clobber "${_filename}" \
+                                                             "${_database}"
                   fi
                fi
 
@@ -1312,7 +1313,7 @@ sourcetree::action::_memorize_node_in_db()
    sourcetree::node::__evaluate_values
 
    _log_debug "${C_INFO}Remembering ${_address} located at \"${filename}\" \
-in \"${database}\"..."
+in db \"${database}\"..."
 
    sourcetree::db::memorize "${database}" \
                             "${_uuid}" \
@@ -1456,8 +1457,7 @@ sourcetree::action::_r_do_actions_with_nodeline()
             sourcetree::action::_memorize_node_in_db "/" \
                                                      "${config}" \
                                                      "${squatfilename}" \
-                                                     "${index}" \
-                                                     "NO"
+                                                     "${index}"
          ) || fail "Failed to write into database"
 
          # need to still fetch it
@@ -1704,13 +1704,20 @@ nodetype        : ${_nodetype}"
       return 0
    fi
 
+   local fix='NO'
+
    if [ "${_remember}" = 'YES' ]
    then
+      if sourcetree::marks::enable "${_marks}" "readwrite"
+      then
+         fix="${OPTION_FIX}"
+      fi
+
       if ! sourcetree::action::_memorize_node_in_db "${database}" \
                                                     "${config}" \
                                                     "${filename}" \
                                                     "${index}" \
-                                                    "${OPTION_FIX}"
+                                                    "${fix}"
       then
          fail "Could not remember \"${filename}\" in database \"${database}\""
       fi

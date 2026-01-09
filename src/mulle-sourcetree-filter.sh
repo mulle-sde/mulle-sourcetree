@@ -46,7 +46,6 @@ Usage:
 
    Apply qualifier on marks, and report if it matches or not.
 
-
 Example:
    ${MULLE_USAGE_NAME} filter no-foo 'ENABLES foo'
    ${MULLE_USAGE_NAME} filter version-max-darwin-10.99.0 \\
