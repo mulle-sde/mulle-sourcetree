@@ -64,7 +64,7 @@ sourcetree::action::r_fetch_eval_options()
    local marks="$1"
 
    local options
-   local option_symlink="${OPTION_FETCH_SYMLINK}"
+   local option_symlink="${OPTION_FETCH_SYMLINK:-DEFAULT}"
    local option_writeprotect
 
    if [ "${option_symlink}" = 'COPY' ]

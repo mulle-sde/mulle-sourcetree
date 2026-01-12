@@ -1,3 +1,51 @@
+## 1.6.0
+
+
+feature: add JSON documentation for sourcetree marks
+
+* new marks.json files documenting mark meanings and usage
+* separate documentation for mulle-sourcetree, mulle-sourcetree-to-c, and mulle-sourcetree-to-cmake marks
+* comprehensive reference for all supported node marks
+
+
+* craftorder now does not filter for current platform anymore (to facilitate cross-builds)
+
+
+
+
+feat: improve marks handling and cmake generation
+
+* Enhance marks evaluation functions
+  - Add `r_enable` and `r_disable` functions that return matched mark in RVAL
+  - Add `r_enable_multi_marks` and `r_disable_multi_marks` for checking multiple marks
+  - Improve fetch blocking logic with better mark matching
+  - Add detailed logging showing which mark blocked an operation
+
+* Improve cmake generation for cross-platform builds
+  - Add WASI and WebAssembly/Emscripten platform support
+  - Add `NO_CMAKE_FIND_ROOT_PATH` to `find_library` for better cross-compilation
+  - Add `find_file` support with system path suppression options
+  - Improve error messages showing searched paths when libraries/headers not found
+  - Add no-cmake-suppress-system-path mark to allow system paths when needed
+
+* Add editor command
+  - New 'editor' command to run sourcetree editor (requires node.js)
+
+* Improve command line handling
+  - Add --config-file option for easier cmake integration
+  - Fix directory change error handling (exit 1 instead of exit)
+  - Add -lxx and -lxw trace flags for database and walk debugging
+
+* Other improvements
+  - Remove accidentally committed x.dot file
+  - Update .gitignore
+  - Improve `MULLE_SOURCETREE_PLATFORMS` handling in fetch logic
+
+* better support for raw userinfo of sourcetree nodes
+
+* need to update `cmake_minimum_required` because cmake has a weird concept of min required
+
+
 ## 1.5.0
 
 * allow rm as alias for remove
