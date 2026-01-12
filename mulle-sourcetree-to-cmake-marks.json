@@ -1,0 +1,82 @@
+[
+  {
+    "mark": "all-load",
+    "description": "Forces all members of a static library to be loaded. Useful for Objective-C categories."
+  },
+  {
+    "mark": "add",
+    "description": "Adds the library to the list of libraries to be linked."
+  },
+  {
+    "mark": "dependency",
+    "description": "Inherits build information from a foreign `DependenciesAndLibraries.cmake` file."
+  },
+  {
+    "mark": "inherit",
+    "description": "Inherits all build properties (search paths, dependencies, loader) from a dependency."
+  },
+  {
+    "mark": "intermediate-link",
+    "description": "Prefixes the container name with `STARTUP_`, affecting link order."
+  },
+  {
+    "mark": "loader",
+    "description": "Inherits a foreign `objc-loader.h` file for Objective-C."
+  },
+  {
+    "mark": "require",
+    "description": "Fails the build if the library or its header is not found."
+  },
+  {
+    "mark": "require-header",
+    "description": "Fails the build if the header file is not found."
+  },
+  {
+    "mark": "require-link",
+    "description": "Fails the build if the library is not found."
+  },
+  {
+    "mark": "framework",
+    "description": "Treats the dependency as a macOS Framework."
+  },
+  {
+    "mark": "searchpath",
+    "description": "Adds the dependency's header directory to the user search path."
+  },
+  {
+    "mark": "dynamic-link",
+    "description": "Disables static linking for this dependency, forcing shared linking."
+  },
+  {
+    "mark": "static-link",
+    "description": "Disables dynamic linking for this dependency, forcing static linking."
+  },
+  {
+    "mark": "suppress-system-path",
+    "description": "Allows searching for dependencies in system paths."
+  },
+  {
+    "mark": "platform",
+    "description": "Specifies that the dependency is platform-specific."
+  },
+  {
+    "mark": "sdk",
+    "description": "Specifies that the dependency is SDK-specific."
+  },
+  {
+    "mark": "link",
+    "description": "Specifies that the dependency should be linked."
+  },
+  {
+    "mark": "actual-link",
+    "description": "A flag to indicate that the dependency should be linked."
+  },
+  {
+    "mark": "header",
+    "description": "Specifies a header-only library."
+  },
+  {
+    "mark": "fs",
+    "description": "Specifies a filesystem-based dependency."
+  }
+]

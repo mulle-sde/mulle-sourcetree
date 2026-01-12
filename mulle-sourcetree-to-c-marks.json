@@ -1,0 +1,42 @@
+[
+  {
+    "mark": "dependency",
+    "description": "Indicates that the node is a dependency, affecting default include path generation."
+  },
+  {
+    "mark": "require",
+    "description": "Wraps the include statement with `#if __has_include` to make it optional."
+  },
+  {
+    "mark": "import",
+    "description": "Uses `#import` instead of `#include`, primarily for Objective-C."
+  },
+  {
+    "mark": "public",
+    "description": "Includes the header in the main public include file (`_<project>-include.h`)."
+  },
+  {
+    "mark": "platform",
+    "description": "Generates platform-specific preprocessor directives (e.g., `#ifndef __APPLE__`)."
+  },
+  {
+    "mark": "craft-platform",
+    "description": "Generates platform-specific preprocessor directives for crafting."
+  },
+  {
+    "mark": "sdk",
+    "description": "Generates SDK-specific preprocessor directives."
+  },
+  {
+    "mark": "craft-sdk",
+    "description": "Generates SDK-specific preprocessor directives for crafting."
+  },
+  {
+    "mark": "header",
+    "description": "Indicates that the node is a header file."
+  },
+  {
+    "mark": "include",
+    "description": "Specifies the name of the include file to use."
+  }
+]

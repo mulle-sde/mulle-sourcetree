@@ -13,7 +13,7 @@ Organize your projects freely with multiple archives and repositories.
 
 | Release Version                                       | Release Notes
 |-------------------------------------------------------|--------------
-| ![Mulle kybernetiK tag](https://img.shields.io/github/tag/mulle-sde/mulle-sourcetree.svg?branch=release)  | [RELEASENOTES](RELEASENOTES.md) |
+| ![Mulle kybernetiK tag](https://img.shields.io/github/tag/mulle-sde/mulle-sourcetree.svg)  | [RELEASENOTES](RELEASENOTES.md) |
 
 ## Executables
 

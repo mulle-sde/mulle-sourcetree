@@ -1,0 +1,183 @@
+
+[
+  {
+    "mark": "descend",
+    "description": "Controls recursion during sourcetree operations. If present, a fetched dependency is checked for its own sourcetree config."
+  },
+  {
+    "mark": "share",
+    "description": "Places a dependency into the local stash folder, ensuring it is fetched only once."
+  },
+  {
+    "mark": "fs",
+    "description": "Excludes a config entry from the actual sync process, useful for system libraries."
+  },
+  {
+    "mark": "readwrite",
+    "description": "If disabled (no-readwrite), the dependency will be write-protected to prevent accidental edits."
+  },
+  {
+    "mark": "delete",
+    "description": "If disabled (no-delete), a dependency cannot be deleted or moved by the sync."
+  },
+  {
+    "mark": "update",
+    "description": "If disabled (no-update), a dependency does not take part in the sync process."
+  },
+  {
+    "mark": "require",
+    "description": "If a dependency marked 'require' cannot be fetched, the sync will fail."
+  },
+  {
+    "mark": "bequeath",
+    "description": "If disabled (no-bequeath), recursion is stopped for any entry not in the top-most config."
+  },
+  {
+    "mark": "platform",
+    "description": "Filters dependencies based on the target platform (e.g., no-platform-linux)."
+  },
+  {
+    "mark": "version-min",
+    "description": "Specifies a minimum version for a dependency."
+  },
+  {
+    "mark": "version-max",
+    "description": "Specifies a maximum version for a dependency."
+  },
+  {
+    "mark": "static-link",
+    "description": "If disabled (no-static-link), dependencies are treated as dynamic (shared) libraries."
+  },
+  {
+    "mark": "standalone",
+    "description": "Marks a library as a standalone library, often an agglomeration of multiple single libraries."
+  },
+  {
+    "mark": "dependency",
+    "description": "If disabled (no-dependency), entries do not partake in linkorder output under certain conditions."
+  },
+  {
+    "mark": "intermediate-link",
+    "description": "If disabled (no-intermediate-link), affects linking behavior."
+  },
+  {
+    "mark": "dynamic-link",
+    "description": "If disabled (no-dynamic-link), a dependency or library can only be statically linked."
+  },
+  {
+    "mark": "actual-link",
+    "description": "If disabled (no-actual-link), affects linking behavior."
+  },
+  {
+    "mark": "build",
+    "description": "If disabled (no-build), the dependency will not be built."
+  },
+  {
+    "mark": "singlephase",
+    "description": "Forces serial compilation of a dependency."
+  },
+  {
+    "mark": "memo",
+    "description": "A specialized, possibly deprecated, flag for subprojects."
+  },
+  {
+    "mark": "sdk",
+    "description": "Filters dependencies based on the SDK to be built with (e.g., no-sdk-iphoneos)."
+  },
+  {
+    "mark": "inplace",
+    "description": "If enabled, inplace builds forego the dispense phase, installing directly to the dependency folder."
+  },
+  {
+    "mark": "all-load",
+    "description": "Indicates that a dependency (usually an Objective-C library) needs to be linked in a special way to prevent symbol optimization."
+  },
+  {
+    "mark": "rootheader",
+    "description": "If disabled (no-rootheader), a subdirectory is created in dependency/include for header files."
+  },
+  {
+    "mark": "liftheaders",
+    "description": "If enabled (only-liftheaders), header files are moved up one directory level from their subdirectories."
+  },
+  {
+    "mark": "cmake-dependency",
+    "description": "Used by mulle-sourcetree-to-c to generate header files."
+  },
+  {
+    "mark": "cmake-loader",
+    "description": "Used by mulle-sourcetree-to-c to generate header files."
+  },
+  {
+    "mark": "cmake-searchpath",
+    "description": "Used by mulle-sourcetree-to-c to generate header files."
+  },
+  {
+    "mark": "import",
+    "description": "Used by mulle-sourcetree-to-c to generate header files."
+  },
+  {
+    "mark": "public",
+    "description": "Used by mulle-sourcetree-to-c to generate header files."
+  },
+  {
+    "mark": "header",
+    "description": "Used by mulle-sourcetree-to-c to generate header files."
+  },
+  {
+    "mark": "symlink",
+    "description": "Controls whether a dependency is symlinked or copied."
+  },
+  {
+    "mark": "clobber",
+    "description": "If disabled (no-clobber), an existing file at the destination will not be overwritten."
+  },
+  {
+    "mark": "fetch",
+    "description": "If disabled (no-fetch), the dependency will not be fetched."
+  },
+  {
+    "mark": "share-shirk",
+    "description": "A mark to handle amalgamated dependencies and prevent redundant fetches."
+  },
+  {
+    "mark": "basename",
+    "description": "Uses the basename of the address for comparison."
+  },
+  {
+    "mark": "cmake-all-load",
+    "description": "Library that needs all symbols (ObjC)."
+  },
+  {
+    "mark": "cmake-add",
+    "description": "Add to the list of libraries to link."
+  },
+  {
+    "mark": "cmake-inherit",
+    "description": "Inherit anything from a foreign library."
+  },
+  {
+    "mark": "cmake-intermediate-link",
+    "description": "Prefix container name with STARTUP_."
+  },
+  {
+    "mark": "require-header",
+    "description": "The header must exist."
+  },
+  {
+    "mark": "require-link",
+    "description": "The library must exist."
+  },
+  {
+    "mark": "cmake-suppress-system-path",
+    "description": "If disabled (no-cmake-suppress-system-path), system paths are not suppressed during search."
+  },
+  {
+    "mark": "link",
+    "description": "Indicates that a dependency should be linked."
+  },
+  {
+    "mark": "framework",
+    "description": "Indicates that a dependency is a framework."
+  }
+]
