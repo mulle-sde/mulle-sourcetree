@@ -10,6 +10,10 @@ export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
 ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
 
 
+# Stub functions for log_walk_* to avoid "command not found" errors
+log_walk_entry() { :; }
+log_walk_debug() { :; }
+
 sourcetree::marks::add()
 {
    sourcetree::marks::r_add "$@"

@@ -1767,7 +1767,33 @@ sourcetree::db::do_bury_zombiefile()
    local _index
    local _evaledurl
 
-   sourcetree::db::__parse_dbentry "${entry}" &&
+   sourcetree::db::__parse_dbentry "${entry}"
+
+   # Preserve squatted nodes (marked with no-share-shirk) if their owner still exists.
+   # Squatted nodes are created by subdependencies (amalgamations) to reserve space
+   # in the parent's database. Without this check, they would be buried as zombies
+   # on every other run, causing the database to oscillate between having and not
+   # having these entries. We only bury them if their owner directory no longer exists.
+   local _address
+   local _nodetype
+   local _marks
+
+   if sourcetree::nodeline::__get_address_nodetype_marks "${_nodeline}"
+   then
+      if sourcetree::marks::disable "${_marks}" "share-shirk"
+      then
+         # Check if the owner directory still exists
+         if [ -d "${_owner}" ]
+         then
+            log_db_fluff "Preserving squatted node \"${_address}\" - owner exists"
+            db_remove_file_if_present "${zombiefile}"
+            return 0
+         else
+            log_db_fluff "Burying squatted node \"${_address}\" - owner gone"
+         fi
+      fi
+   fi
+
    sourcetree::db::safe_bury_dbentry "${database}" \
                                      "${_nodeline}" \
                                      "${_owner}" \

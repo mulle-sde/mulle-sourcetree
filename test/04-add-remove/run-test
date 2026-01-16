@@ -9,6 +9,10 @@ export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
 . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
 ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
 
+
+# Stub functions for log_walk_* to avoid "command not found" errors
+log_walk_entry() { :; }
+log_walk_debug() { :; }
 expect()
 {
    local output="$1"

@@ -9,6 +9,13 @@ export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
 . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
 ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
 
+# Define stub functions for log_walk_* if not already defined
+if ! command -v log_walk_entry > /dev/null 2>&1
+then
+   log_walk_entry() { :; }
+   log_walk_debug() { :; }
+fi
+
 
 TEST_DIR="`dirname "$0"`"
 PROJECT_DIR="$( cd "${TEST_DIR}/.." ; pwd -P)"

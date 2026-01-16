@@ -646,9 +646,23 @@ it doesn't exist (${PWD#"${MULLE_USER_PWD}/"})"
          #
          if sourcetree::action::is_squatted_filename "${newfilename}"
          then
-            _log_warning "Node \"${_address}\" is new but \"${newfilename#"${MULLE_USER_PWD}/"}\" has been \
+            # If we reach here, the location is already squatted in the database.
+            # Only warn if this is truly a NEW node being added (no previous record).
+            # If previousnodeline exists, this node was in our config before and we're
+            # just re-processing it - no need to warn again.
+            if [ -z "${previousnodeline}" ]
+            then
+               # This is a new node in the config that conflicts with a squatted location.
+               # Warn the user on the first fetch after adding it to the config.
+               if ! sourcetree::db::is_ready "${database}"
+               then
+                  _log_warning "Node \"${_address}\" is new but \"${newfilename#"${MULLE_USER_PWD}/"}\" has been \
 squatted by an amalgamation. You should probably remove this node from your sourcetree.
 Hint: Move mulle-testallocator to the bottom and/or run ${C_RESET_BOLD}mulle-sde clean -g"
+               else
+                  log_fluff "Node \"${_address}\" location is squatted by an amalgamation (expected)"
+               fi
+            fi
             ACTIONS="skip"
             RVAL="${ACTIONS}"
             return
