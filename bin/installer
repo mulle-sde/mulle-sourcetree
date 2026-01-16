@@ -183,6 +183,12 @@ main()
       mkdir -p "${libexec}" 2> /dev/null
       install ${VERBOSE} -m "${mode}" "${i}" "${libexec}" || exit 1
    done
+
+   for i in *-marks.json
+   do
+      mkdir -p "${share}" 2> /dev/null
+      install ${VERBOSE} -m "${mode}" "${i}" "${share}" || exit 1
+   done
 }
 
 main "$@"

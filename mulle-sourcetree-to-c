@@ -60,9 +60,13 @@ Usage:
       public     : takes part in the generation of the public include file
       platform   : to produce \`#ifndef __APPLE__\` and such
 
+   Use \`${MULLE_USAGE_NAME} --show-marks\` to see all available marks
+   and their descriptions.
+
 Flags:
    --import      : Emit import files
    --no-import   : Don't emit import files
+   --show-marks  : Display all available marks with descriptions (JSON)
    --stdout      : Emit to stdout instead
    --unames      : List known unames and their known cpp equivalent
 
@@ -1011,6 +1015,26 @@ main()
             MULLE_SOURCETREE_TO_C_PRIVATEINCLUDE_FILE="-"
             MULLE_SOURCETREE_TO_C_IMPORT_FILE="-"
             MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE="-"
+         ;;
+
+         --show-marks)
+            local sharedir="${MULLE_SOURCETREE_SHARE_DIR:-${MULLE_EXECUTABLE_DIR}/../share/mulle-sourcetree}"
+            local marksfile="${sharedir}/mulle-sourcetree-to-c-marks.json"
+            
+            if [ ! -f "${marksfile}" ]
+            then
+               local scriptdir
+               scriptdir="$(dirname "${MULLE_EXECUTABLE}")"
+               marksfile="${scriptdir}/mulle-sourcetree-to-c-marks.json"
+            fi
+            
+            if [ -f "${marksfile}" ]
+            then
+               cat "${marksfile}"
+            else
+               fail "Marks JSON file not found"
+            fi
+            exit 0
          ;;
 
          --unames)

@@ -263,10 +263,14 @@ sourcetree::commands::mark_usage()
    cat <<EOF >&2
 Usage:
    ${MULLE_EXECUTABLE_NAME} mark [options] <node> <mark>
+   ${MULLE_EXECUTABLE_NAME} mark --show
 
    You can mark or unmark a node with this command. Only negative marks
    are actually stored in the node. All positive marks are implicit.
    Marks are free-format, but there exist a number of predefined ones.
+
+   Use \`${MULLE_EXECUTABLE_NAME} mark --show\` to see all available marks
+   and their descriptions.
 
    Examine the nodes marks with
        \`${MULLE_EXECUTABLE_NAME} -N list\`.
@@ -277,6 +281,7 @@ Options:
    --extended-mark : allow the use of non-predefined marks
    --regex         : use regular expression to find address
    --set           : clear previous marks and set new marks
+   --show          : display all available marks with descriptions (JSON)
 
 Marks:
    Some commonly used marks:
@@ -2451,6 +2456,32 @@ sourcetree::commands::common()
 
          --no-extended-mark)
             OPTION_EXTENDED_MARK='NO'
+         ;;
+
+         --show|--show-marks)
+            if [ "${COMMAND}" = "mark" ]
+            then
+               local sharedir="${MULLE_SOURCETREE_SHARE_DIR:-${MULLE_EXECUTABLE_DIR}/../share/mulle-sourcetree}"
+               local marksfile="${sharedir}/mulle-sourcetree-marks.json"
+
+               # Fallback to directory where mulle-sourcetree script is located
+               if [ ! -f "${marksfile}" ]
+               then
+                  local scriptdir
+                  scriptdir="$(dirname "${MULLE_EXECUTABLE}")"
+                  marksfile="${scriptdir}/mulle-sourcetree-marks.json"
+               fi
+
+               if [ -f "${marksfile}" ]
+               then
+                  cat "${marksfile}"
+               else
+                  fail "Marks JSON file not found"
+               fi
+               exit 0
+            fi
+            log_error "Unknown option --show for ${COMMAND}"
+            ${USAGE}
          ;;
 
 

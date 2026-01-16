@@ -69,8 +69,12 @@ Usage:
      require-header           : the header must exist
      require-link             : the library must exist
 
+   Use \`${MULLE_USAGE_NAME} --show-marks\` to see all available marks
+   and their descriptions.
+
 Flags:
    --serial                   : serial operation
+   --show-marks               : display all available marks with descriptions (JSON)
    --stdout                   : emit to stdout (implies --serial)
 
 Environment:
@@ -1799,6 +1803,26 @@ main()
             MULLE_SOURCETREE_TO_CMAKE_DEPENDENCIES_FILE="-"
             MULLE_SOURCETREE_TO_CMAKE_LIBRARIES_FILE="-"
             OPTION_PARALLEL='NO'
+         ;;
+
+         --show-marks)
+            local sharedir="${MULLE_SOURCETREE_SHARE_DIR:-${MULLE_EXECUTABLE_DIR}/../share/mulle-sourcetree}"
+            local marksfile="${sharedir}/mulle-sourcetree-to-cmake-marks.json"
+            
+            if [ ! -f "${marksfile}" ]
+            then
+               local scriptdir
+               scriptdir="$(dirname "${MULLE_EXECUTABLE}")"
+               marksfile="${scriptdir}/mulle-sourcetree-to-cmake-marks.json"
+            fi
+            
+            if [ -f "${marksfile}" ]
+            then
+               cat "${marksfile}"
+            else
+               fail "Marks JSON file not found"
+            fi
+            exit 0
          ;;
 
          --enable-cmake-searchpath)
