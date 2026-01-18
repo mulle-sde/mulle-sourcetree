@@ -1,3 +1,7 @@
+### 1.6.2
+
+* fix stale stash dir bug
+
 ### 1.6.1
 
 * fix database oscillation for squatted amalgamation nodes

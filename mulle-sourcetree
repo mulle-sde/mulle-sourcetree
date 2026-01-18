@@ -35,7 +35,7 @@
 
 # zsh is our preference
 MULLE_BASH_EXE_SHELL='zsh'
-MULLE_EXECUTABLE_VERSION='1.6.1'
+MULLE_EXECUTABLE_VERSION='1.6.2'
 MULLE_EXECUTABLE_BASHFUNCTIONS='6.2'
 
 ##
@@ -433,6 +433,15 @@ sourcetree::main()
       ;;
    esac
 
+   log_setting "--- Values before environment setup ---"
+   log_setting "MULLE_SOURCETREE_PROJECT_DIR   : ${MULLE_SOURCETREE_PROJECT_DIR}"
+   log_setting "MULLE_SOURCETREE_ETC_DIR       : ${MULLE_SOURCETREE_ETC_DIR}"
+   log_setting "MULLE_SOURCETREE_STASH_DIRNAME : ${MULLE_SOURCETREE_STASH_DIRNAME}"
+   log_setting "MULLE_SOURCETREE_STASH_DIR     : ${MULLE_SOURCETREE_STASH_DIR}"
+   log_setting "MULLE_SOURCETREE_VAR_DIR       : ${MULLE_SOURCETREE_VAR_DIR}"
+   log_setting "MULLE_VIRTUAL_ROOT             : ${MULLE_VIRTUAL_ROOT}"
+
+
    # shellcheck source=mulle-sourcetree-environment.sh
    include "sourcetree::environment"
 
@@ -481,6 +490,7 @@ sourcetree::main()
    sourcetree::environment::set_default_db_mode "${SOURCETREE_START}" "${FLAG_SOURCETREE_MODE}" \
    || fail "Could not set database to \"${FLAG_SOURCETREE_MODE}\""
 
+   log_setting "--- Values after environment setup ---"
    log_setting "MULLE_SOURCETREE_PROJECT_DIR   : ${MULLE_SOURCETREE_PROJECT_DIR}"
    log_setting "MULLE_SOURCETREE_ETC_DIR       : ${MULLE_SOURCETREE_ETC_DIR}"
    log_setting "MULLE_SOURCETREE_STASH_DIRNAME : ${MULLE_SOURCETREE_STASH_DIRNAME}"

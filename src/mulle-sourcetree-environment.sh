@@ -263,14 +263,8 @@ sourcetree::environment::set_share_dir()
    if [ -z "${usershare_dir}" ]
    then
       #
-      # make stash the default, this is less painful when running
-      # mulle-sourcetree outside of the environment in most cases
-      #
-      MULLE_SOURCETREE_STASH_DIRNAME="${MULLE_SOURCETREE_STASH_DIRNAME:-stash}"
-      #
       # try to recover old user choice for shared directory
-      # this will override the ENVIRONMENT for consistency
-      # but only if the .db is not some trash w/o a config
+      # Overriding the ENVIRONMENT is a bad idea though
       #
       if sourcetree::cfg::is_config_present "${SOURCETREE_START}"
       then
@@ -278,15 +272,17 @@ sourcetree::environment::set_share_dir()
 
          if share_dir="`sourcetree::db::get_shareddir "${SOURCETREE_START}"`"
          then
-            if [ -d "${share_dir}" ]
+            if [ -z "${MULLE_SOURCETREE_STASH_DIR}" ]
             then
-               r_physicalpath "${share_dir}"
-               MULLE_SOURCETREE_STASH_DIR="${RVAL}"
-               log_debug "Using database share directory \"${share_dir}\""
-
-               r_basename "${MULLE_SOURCETREE_STASH_DIR}"
-               MULLE_SOURCETREE_STASH_DIRNAME="${RVAL}"
+               if [ -d "${share_dir}" ]
+               then
+                  r_physicalpath "${share_dir}"
+                  MULLE_SOURCETREE_STASH_DIR="${RVAL}"
+                  log_debug "Using database share directory \"${share_dir}\""
+               fi
             fi
+            r_basename "${MULLE_SOURCETREE_STASH_DIR}"
+            MULLE_SOURCETREE_STASH_DIRNAME="${RVAL}"
          fi
       fi
    else
@@ -299,6 +295,12 @@ sourcetree::environment::set_share_dir()
          log_debug "Using user supplied shared directory named \"${MULLE_SOURCETREE_STASH_DIRNAME}\""
       fi
    fi
+
+   #
+   # make stash the default, this is less painful when running
+   # mulle-sourcetree outside of the environment in most cases
+   #
+   MULLE_SOURCETREE_STASH_DIRNAME="${MULLE_SOURCETREE_STASH_DIRNAME:-stash}"
 
    case "${MULLE_SOURCETREE_STASH_DIR}" in
       "")

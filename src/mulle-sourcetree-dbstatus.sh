@@ -46,6 +46,7 @@ Returns:
     0 : yes
     1 : no sourcetree
     2 : no (not up to date)
+    3 : no (stash directory changed, needs fetch and clean)
 EOF
   exit 1
 }
@@ -56,6 +57,9 @@ sourcetree::dbstatus::main()
    log_entry "sourcetree::dbstatus::main" "$@"
 
    [ "$#" -eq 0 ] || sourcetree::dbstatus::usage
+
+   # Save the original MULLE_SOURCETREE_STASH_DIR from environment before it gets overwritten
+   local original_stash_dir="${MULLE_SOURCETREE_STASH_DIR}"
 
    include "sourcetree::cfg"
    include "sourcetree::db"
@@ -93,6 +97,25 @@ sourcetree::dbstatus::main()
    then
       log_warning "Needs sync as database is not ready"
       return 2
+   fi
+
+   # Check if the stash directory has changed
+   # Get the REAL environment value from mulle-env, not the one loaded from the database
+   local env_stash_dir
+
+   env_stash_dir="`\"${MULLE_ENV:-mulle-env}\" -s environment get --output-eval MULLE_SOURCETREE_STASH_DIR 2>/dev/null`"
+   if [ ! -z "${env_stash_dir}" ]
+   then
+      local cached_stashdir
+
+      if cached_stashdir="`sourcetree::db::get_shareddir "${SOURCETREE_START}"`"
+      then
+         if [ "${cached_stashdir}" != "${env_stash_dir}" ]
+         then
+            log_warning "Needs sync as stash directory changed from ${C_RESET_BOLD}${cached_stashdir}${C_WARNING} to ${C_RESET_BOLD}${env_stash_dir}"
+            return 3
+         fi
+      fi
    fi
 
    if rexekutor [ ! -e "${MULLE_SOURCETREE_STASH_DIR}" ]
