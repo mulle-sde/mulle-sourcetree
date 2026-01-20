@@ -260,29 +260,36 @@ sourcetree::environment::set_share_dir()
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && _internal_fail "MULLE_VIRTUAL_ROOT must be defined by now"
    [ -z "${SOURCETREE_START}" ]   && _internal_fail "SOURCETREE_START must be defined by now"
 
+   #
+   # make stash the default, this is less painful when running
+   # mulle-sourcetree outside of the environment in most cases
+   #
+   MULLE_SOURCETREE_STASH_DIRNAME="${MULLE_SOURCETREE_STASH_DIRNAME:-stash}"
+
    if [ -z "${usershare_dir}" ]
    then
-      #
-      # try to recover old user choice for shared directory
-      # Overriding the ENVIRONMENT is a bad idea though
-      #
-      if sourcetree::cfg::is_config_present "${SOURCETREE_START}"
+      if [ -z "${MULLE_SOURCETREE_STASH_DIR}" ]
       then
-         local share_dir
-
-         if share_dir="`sourcetree::db::get_shareddir "${SOURCETREE_START}"`"
+         #
+         # try to recover old user choice for shared directory
+         # but only if the .db is not some trash w/o a config
+         #
+         if sourcetree::cfg::is_config_present "${SOURCETREE_START}"
          then
-            if [ -z "${MULLE_SOURCETREE_STASH_DIR}" ]
+            local share_dir
+
+            if share_dir="`sourcetree::db::get_shareddir "${SOURCETREE_START}"`"
             then
                if [ -d "${share_dir}" ]
                then
                   r_physicalpath "${share_dir}"
                   MULLE_SOURCETREE_STASH_DIR="${RVAL}"
                   log_debug "Using database share directory \"${share_dir}\""
+
+                  r_basename "${MULLE_SOURCETREE_STASH_DIR}"
+                  MULLE_SOURCETREE_STASH_DIRNAME="${RVAL}"
                fi
             fi
-            r_basename "${MULLE_SOURCETREE_STASH_DIR}"
-            MULLE_SOURCETREE_STASH_DIRNAME="${RVAL}"
          fi
       fi
    else
@@ -295,12 +302,6 @@ sourcetree::environment::set_share_dir()
          log_debug "Using user supplied shared directory named \"${MULLE_SOURCETREE_STASH_DIRNAME}\""
       fi
    fi
-
-   #
-   # make stash the default, this is less painful when running
-   # mulle-sourcetree outside of the environment in most cases
-   #
-   MULLE_SOURCETREE_STASH_DIRNAME="${MULLE_SOURCETREE_STASH_DIRNAME:-stash}"
 
    case "${MULLE_SOURCETREE_STASH_DIR}" in
       "")

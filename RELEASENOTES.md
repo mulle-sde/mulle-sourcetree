@@ -1,3 +1,7 @@
+### 1.6.3
+
+* fix a potential symlink problem
+
 ### 1.6.2
 
 * fix stale stash dir bug

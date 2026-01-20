@@ -1636,11 +1636,24 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    #
    # find out, where it was previously located
    #
+   local previous_is_symlink='NO'
+
    if [ ! -z "${previousnodeline}" ]
    then
       previousfilename="`sourcetree::db::fetch_filename_for_uuid "${database}" "${_uuid}"`"
 
       [ -z "${previousfilename}" ] && _internal_fail "corrupted db"
+
+      if [ -L "${previousfilename}" ]
+      then
+         if [ ! -e "${previousfilename}" ]
+         then
+            log_verbose "Removing broken symlink \"${previousfilename}\""
+            exekutor rm -f "${previousfilename}" || exit 1
+         else
+            previous_is_symlink='YES'
+         fi
+      fi
    else
       if [ -L "${filename}" ]
       then
@@ -1662,7 +1675,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    #
    # For symlinks, we only care if the filename changes
    #
-   if [ "${filename}" = "${previousfilename}" -a -L "${filename}" ]
+   if [ "${filename}" = "${previousfilename}" -a "${previous_is_symlink}" = 'YES' ]
    then
       log_walk_fluff "Skip update of \"${filename}\" since it's a symlink."
 
