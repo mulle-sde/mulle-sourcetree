@@ -52,6 +52,7 @@ Flags:
    --write-name <name> : name of mulle-sourcetree config to write ()
    --directory <dir>   : directory of config (.mulle/etc/sourcetree)
    --write             : shortcut for --write-name config
+   --pretty            : parse pretty format (from mulle-sde dep list)
 
 EOF
       exit 1
@@ -136,10 +137,107 @@ r_parse_userinfos()
 }
 
 
+r_parse_pretty_format()
+{
+   log_entry "r_parse_pretty_format" "$@"
+
+   local input="$1"
+
+   local config
+   local line key value
+   local ui_line ui_key ui_value ui_info
+
+   input="`sed 's/\x1b\[[0-9;]*m//g' <<< "${input}"`"
+
+   local _branch
+   local _address
+   local _fetchoptions
+   local _marks
+   local _nodetype
+   local _tag
+   local _url
+   local _raw_userinfo
+   local _uuid
+
+   while IFS= read -r line
+   do
+      [ -z "${line}" ] && continue
+
+      case "${line}" in
+         [[:space:]]*)
+            line="${line#"${line%%[![:space:]]*}"}"
+
+            key="${line%%:*}"
+            value="${line#*:}"
+            value="${value#"${value%%[![:space:]]*}"}"
+            value="${value%\'}"
+            value="${value#\'}"
+
+            case "${key}" in
+               branch) _branch="${value}" ;;
+               fetchoptions) _fetchoptions="${value}" ;;
+               marks) _marks="${value}" ;;
+               nodetype) _nodetype="${value}" ;;
+               tag) _tag="${value}" ;;
+               url) _url="${value}" ;;
+               uuid) _uuid="${value}" ;;
+               userinfo)
+                  ui_info=""
+                  while IFS= read -r ui_line
+                  do
+                     ui_line="${ui_line#"${ui_line%%[![:space:]]*}"}"
+                     case "${ui_line}" in
+                        '}') break ;;
+                        *:*)
+                           ui_key="${ui_line%%:*}"
+                           ui_value="${ui_line#*:}"
+                           ui_value="${ui_value#"${ui_value%%[![:space:]]*}"}"
+                           ui_value="${ui_value%\'}"
+                           ui_value="${ui_value#\'}"
+                           r_add_line "${ui_info}" "${ui_key}=${ui_value}"
+                           ui_info="${RVAL}"
+                        ;;
+                     esac
+                  done
+                  _userinfo="${ui_info}"
+               ;;
+            esac
+         ;;
+
+         *)
+            if [ ! -z "${_address}" -a ! -z "${_nodetype}" ]
+            then
+               sourcetree::node::r_uuidgen
+               _uuid="${RVAL}"
+               sourcetree::node::r_to_nodeline
+               r_add_line "${config}" "${RVAL}"
+               config="${RVAL}"
+            fi
+
+            _address="${line}"
+            _nodetype="" _marks="" _uuid="" _url="" _branch="" _tag="" _fetchoptions="" _userinfo="" _raw_userinfo=""
+         ;;
+      esac
+   done <<< "${input}"
+
+   if [ ! -z "${_address}" -a ! -z "${_nodetype}" ]
+   then
+      sourcetree::node::r_uuidgen
+      _uuid="${RVAL}"
+      sourcetree::node::r_to_nodeline
+      r_add_line "${config}" "${RVAL}"
+      config="${RVAL}"
+   fi
+
+   RVAL="${config}"
+}
+
+
 main()
 {
    local FLAG_NAME
    local FLAG_DIRECTORY
+   local FLAG_PRETTY
    local output
 
 
@@ -185,6 +283,10 @@ main()
             FLAG_NAME="config"
          ;;
 
+         --pretty)
+            FLAG_PRETTY='YES'
+         ;;
+
          -*)
             log_error "${MULLE_EXECUTABLE_FAIL_PREFIX}: Unknown flag \"$1\""
             usage "${MULLE_TRACE}"
@@ -223,48 +325,57 @@ ${C_RESET_BOLD}   https://stedolan.github.io/jq"
 
    [ $# -gt 1 ] && shift && usage "Superfluous arguments $*"
 
-   #
-   #
-   #
-   json="`rexekutor cat "$@"`"
-   log_debug "JSON: ${json}"
-
-   #
-   # get "simple stuff"
-   #
-   local lines
-
-   lines="`rexekutor "${JQ}" -r '.[]  | .address + ";" + .nodetype + ";" + .marks ''
-                                         '' + ";" + .uuid     + ";" + .url ''
-                                         '' + ";" + .branch   + ";" + .tag ''
-                                         '' + ";" + .fetchoptions ' \
-                                            <<< "${json}" `" || exit 1
-
-   [ -z "${lines}" ] && return 0
-
-   #
-   # get userinfo
-   #
-   local userinfos
-
-   local userinfo_jsons
-
-   userinfo_jsons="`"${JQ}" '.[].userinfo' <<< "${json}" `"
-
-   log_debug "JSON: ${userinfo_jsons}"
-
-   r_parse_userinfos <<< "${userinfo_jsons}" || exit 1
-   userinfos="${RVAL}"
-
-   log_debug "ARRAYS: ${userinfos}"
-
-   #
-   # combine
-   #
    local config
 
-   # sed removes empty lines
-   config="`"${PASTE}" -d ';' <( echo "${lines}" ) <( echo "${userinfos}" ) | sed -e '/^;$/d' `" || exit 1
+   if [ "${FLAG_PRETTY}" = 'YES' ]
+   then
+      local input
+      input="`rexekutor cat "$@"`"
+      r_parse_pretty_format "${input}"
+      config="${RVAL}"
+   else
+      #
+      #
+      #
+      json="`rexekutor cat "$@"`"
+      log_debug "JSON: ${json}"
+
+      #
+      # get "simple stuff"
+      #
+      local lines
+
+      lines="`rexekutor "${JQ}" -r '.[]  | .address + ";" + .nodetype + ";" + .marks ''
+                                            '' + ";" + .uuid     + ";" + .url ''
+                                            '' + ";" + .branch   + ";" + .tag ''
+                                            '' + ";" + .fetchoptions ' \
+                                               <<< "${json}" `" || exit 1
+
+      [ -z "${lines}" ] && return 0
+
+      #
+      # get userinfo
+      #
+      local userinfos
+
+      local userinfo_jsons
+
+      userinfo_jsons="`"${JQ}" '.[].userinfo' <<< "${json}" `"
+
+      log_debug "JSON: ${userinfo_jsons}"
+
+      r_parse_userinfos <<< "${userinfo_jsons}" || exit 1
+      userinfos="${RVAL}"
+
+      log_debug "ARRAYS: ${userinfos}"
+
+      #
+      # combine
+      #
+
+      # sed removes empty lines
+      config="`"${PASTE}" -d ';' <( echo "${lines}" ) <( echo "${userinfos}" ) | sed -e '/^;$/d' `" || exit 1
+   fi
 
    #
    #
