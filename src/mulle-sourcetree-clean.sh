@@ -345,7 +345,7 @@ sourcetree::clean::main()
       ;;
    esac
 
-   local rval
+   local rc
 
    if [ "${OPTION_CLEAN_FS}" != 'NO' ]
    then
@@ -369,7 +369,7 @@ sourcetree::clean::main()
          fi
 
          sourcetree::clean::do "${mode}"
-         rval=$?
+         rc=$?
       else
          log_verbose "Already clean"
       fi
@@ -392,6 +392,6 @@ sourcetree::clean::main()
       rmdir_safer "${SOURCETREE_CONFIG_DIR}" # hmm!
    fi
 
-   return $rval
+   return $rc
 }
 

@@ -722,11 +722,11 @@ echo \"\${NODE_MARKS} \${NODE_TAG} \${NODE_BRANCH} \${NODE_URL} (\${WALK_DATASOU
 
 
 call_with_flags "sourcetree::main" "${MULLE_SOURCETREE_FLAGS:-}" "$@"
-rval=$?
+rc=$?
 
 if [ "${RUN_ZPROF}" = 'YES' ]
 then
    zprof
 fi
 
-exit $rval
+exit $rc

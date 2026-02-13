@@ -276,7 +276,7 @@ sourcetree::action::_do_fetch_operation()
    r_mkdir_parent_if_missing "${destination}"
    parent="${RVAL}"
 
-   local rval
+   local rc
 
    if [ ! -z "${OPTION_OVERRIDE_BRANCH}" ]
    then
@@ -338,8 +338,8 @@ disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
                                                  "${tag}" \
                                                  "${nodetype}" \
                                                  "${fetchoptions}"
-   rval="$?"
-   case $rval in
+   rc="$?"
+   case $rc in
       0)
       ;;
 
@@ -351,7 +351,7 @@ disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
       ;;
 
       *)
-         return $rval
+         return $rc
       ;;
    esac
 
@@ -361,7 +361,7 @@ disabled by marks. (MULLE_SOURCETREE_USE_PLATFORM_MARKS_FOR_FETCH)"
       redirect_append_exekutor "${UPTODATE_MIRRORS_FILE}" printf "%s\n" "${url}"
    fi
 
-   return $rval
+   return $rc
 }
 
 
@@ -676,7 +676,7 @@ Hint: Move mulle-testallocator to the bottom and/or run ${C_RESET_BOLD}mulle-sde
          then
             pretty_config="."
          fi
-         _log_verbose "Node \"${newfilename#"${MULLE_USER_PWD}/"}\" of \
+         _log_fluff "Node \"${newfilename#"${MULLE_USER_PWD}/"}\" of \
 sourcetree \"${pretty_config}\" is missing, so fetch"
 
 #         if [ "${newaddress}" = "Foundation" ]
@@ -1205,9 +1205,9 @@ sourcetree::action::__update_perform_actions()
    _nodeline="${nodeline}"
 
    local item
-   local rval
+   local rc
 
-   rval=0
+   rc=0
    shell_disable_glob
    for item in ${actionitems}
    do
@@ -1215,32 +1215,32 @@ sourcetree::action::__update_perform_actions()
 
       # if this returns 4 its fine (like a non-required dependency)
       sourcetree::action::__update_perform_item "${item}" # this will exit on fail
-      rval=$?
+      rc=$?
 
-      log_debug "sourcetree::action::__update_perform_item returned $rval"
+      log_debug "sourcetree::action::__update_perform_item returned $rc"
 
-      case $rval in
+      case $rc in
          0)
             continue
          ;;
 
          4)
             _skip='YES'
-            rval=0
+            rc=0
             break
          ;;
 
          *)
-            rval=1
+            rc=1
             break
          ;;
       esac
    done
    shell_enable_glob
 
-   log_debug "sourcetree::action::__update_perform_actions returns $rval"
+   log_debug "sourcetree::action::__update_perform_actions returns $rc"
 
-   return $rval
+   return $rc
 }
 
 
@@ -1312,7 +1312,7 @@ sourcetree::action::_memorize_node_in_db()
 #      filename="${RVAL}"
 #   fi
 
-   local rval
+   local rc
    local nodeline
 
    sourcetree::node::r_to_nodeline
@@ -1337,7 +1337,7 @@ in db \"${database}\"..."
                             "${_evaledurl}" \
                             "${index}"
 
-   rval=$?
+   rc=$?
 
    if [ "${fix}" != 'NO' ] && [ -d "${filename}" ]
    then
@@ -1345,7 +1345,7 @@ in db \"${database}\"..."
       sourcetree::action::write_fix_info "${nodeline}" "${filename}"
    fi
 
-   return $rval
+   return $rc
 }
 
 
@@ -1693,7 +1693,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    local _contentschanged
    local _remember
    local _skip
-   local rval
+   local rc
 
    # return 0 or 1
    sourcetree::action::__update_perform_actions "${style}" \
@@ -1703,9 +1703,9 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
                                                 "${previousfilename}" \
                                                 "${database}" \
                                                 "${config}"
-   rval=$?
+   rc=$?
 
-   case $rval in
+   case $rc in
       0)
       ;;
 
@@ -1714,7 +1714,7 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
       ;;
 
       *)
-         _internal_fail "unexpected return code ${rval}"
+         _internal_fail "unexpected return code ${rc}"
       ;;
    esac
 
@@ -1768,13 +1768,13 @@ sourcetree::action::do_actions_with_nodeline()
 #   local index=$5
 
    local uuid 
-   local rval 
+   local rc
 
    sourcetree::action::_r_do_actions_with_nodeline "$@"
-   rval=$?
+   rc=$?
    uuid="${RVAL}"
 
-   case $rval in
+   case $rc in
       0|2)
       ;;
 
@@ -1783,7 +1783,7 @@ sourcetree::action::do_actions_with_nodeline()
       ;;
 
       *)
-         return $rval
+         return $rc
       ;;
    esac
 
@@ -1818,11 +1818,11 @@ sourcetree::action::do_actions_with_nodelines()
    log_debug "\"${style}\" update \"${nodelines}\" for db \"${config:-ROOT}\" (${PWD#"${MULLE_USER_PWD}/"})"
 
    local nodeline
-   local rval
+   local rc
    local index
 
    index=-1
-   rval=0
+   rc=0
    .foreachline nodeline in ${nodelines}
    .do
       index=$(( index + 1 ))
@@ -1834,14 +1834,14 @@ sourcetree::action::do_actions_with_nodelines()
                                                         "${database}" \
                                                         "${index}"
       then
-         rval=1
+         rc=1
          .break
       fi
    .done
 
-   log_debug "sourcetree::action::do_actions_with_nodelines: $rval"
+   log_debug "sourcetree::action::do_actions_with_nodelines: $rc"
 
-   return $rval
+   return $rc
 }
 
 
@@ -1865,7 +1865,7 @@ sourcetree::action::do_actions_with_nodelines_parallel()
    log_debug "\"${style}\" update \"${nodelines}\" for db \"${config:-ROOT}\" (${PWD#"${MULLE_USER_PWD}/"})"
 
    local nodeline
-   local rval 
+   local rc
    local index
 
    index=-1
@@ -1891,11 +1891,11 @@ sourcetree::action::do_actions_with_nodelines_parallel()
    .done
 
    __parallel_end
-   rval=$? 
+   rc=$?
 
-   log_debug "sourcetree::action::do_actions_with_nodelines_parallel: $rval"
+   log_debug "sourcetree::action::do_actions_with_nodelines_parallel: $rc"
 
-   return $rval
+   return $rc
 }
 
 

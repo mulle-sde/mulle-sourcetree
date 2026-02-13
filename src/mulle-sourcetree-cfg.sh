@@ -377,7 +377,7 @@ sourcetree::cfg::egrep()
 {
    local configfile="$1"
 
-   local  rval
+   local  rc
 
    case "${MULLE_UNAME}" in
       sunos)
@@ -388,12 +388,12 @@ sourcetree::cfg::egrep()
             return 2
          fi
 
-         rexekutor grep -E -v '^#' "${configfile}"
-         rval=$?
+         grep -E -v '^#' "${configfile}"
+         rc=$?
       ;;
    esac
 
-   rexekutor grep -E -v -s '^#' "${configfile}"
+   grep -E -v -s '^#' "${configfile}"
    return $?
 }
 
@@ -457,21 +457,21 @@ sourcetree::cfg::_read()
       return
    fi
 
-   local  rval
+   local  rc
 
    sourcetree::cfg::egrep "${configfile}"
-   rval=$?
+   rc=$?
 
    # grep -E error is 2
-   case $rval in
+   case $rc in
       0|1)
-         log_debug "Successfully read config file \"${configfile#"${MULLE_USER_PWD}/"}\" (${PWD#"${MULLE_USER_PWD}/"}) with: ${rval}"
+         log_debug "Successfully read config file \"${configfile#"${MULLE_USER_PWD}/"}\" (${PWD#"${MULLE_USER_PWD}/"}) with: ${rc}"
          return 0
       ;;
    esac
 
-   log_debug "Read config file \"${configfile#"${MULLE_USER_PWD}/"}\" (${PWD#"${MULLE_USER_PWD}/"}) failed with: ${rval}"
-   return $rval
+   log_debug "Read config file \"${configfile#"${MULLE_USER_PWD}/"}\" (${PWD#"${MULLE_USER_PWD}/"}) failed with: ${rc}"
+   return $rc
 }
 
 
@@ -566,15 +566,15 @@ sourcetree::cfg::finish_for_write()
       fi
    fi
 
-   local rval
+   local rc
 
    if [ ! -z "${sharedir}" ]
    then
       etc_make_symlink_if_possible "${write_configfile}" "${sharedir}"
-      rval=$?
-      log_debug "rval=$rval"
+      rc=$?
+      log_debug "rc=$rc"
 
-      case $rval in
+      case $rc in
          0) # : did make symlink
             sourcetree::cfg::r_absolute_filename "${config}" "${SOURCETREE_CONFIG_DIR}"
             etcdir="${RVAL}"

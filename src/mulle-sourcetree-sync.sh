@@ -143,7 +143,7 @@ sourcetree::sync::__get_config_descendinfo()
 }
 
 
-# rval: 0 recurse
+# rc: 0 recurse
 #     : 1 don't recurse
 #     : 4 symlink
 #
@@ -172,7 +172,7 @@ sourcetree::sync::check_descend_nodeline()
       # properly, we also don't really want to write our .mulle-sourcetree
       # database into it.
       #
-      log_verbose "\"${filename}\" is a symlink"
+      log_walk_fluff "\"${filename}\" is a symlink"
       return 4
    fi
 
@@ -247,12 +247,12 @@ sourcetree::sync::_descend_db_nodeline()
    log_walk_setting "symbol             : ${_symbol}"
 
    local _style
-   local rval
+   local rc
 
    sourcetree::sync::check_descend_nodeline "${_filename}" "${_marks}"
-   rval=$?
+   rc=$?
 
-   if sourcetree::sync::_style_for_${style} ${rval}
+   if sourcetree::sync::_style_for_${style} ${rc}
    then
       sourcetree::sync::_sync_${_style} "${_config}" "${_database}" "${_symbol}"
       return $?
@@ -362,12 +362,12 @@ it is empty (${PWD#"${MULLE_USER_PWD}/"})"
                                              "${style}" \
                                              "${config}" \
                                              "${database}"
-      rval=$?
+      rc=$?
 
       # 127 is not really an error in a descendant 
-      if [ $rval -ne 0 -a $rval -ne 127 ]
+      if [ $rc -ne 0 -a $rc -ne 127 ]
       then
-         return $rval
+         return $rc
       fi
    .done
 
@@ -442,11 +442,11 @@ nodelines \"${nodelines}\" from config \"${config:-ROOT}\" (${PWD#"${MULLE_USER_
 #
 sourcetree::sync::_style_for_only_share()
 {
-   local rval="$1"
+   local rc="$1"
 
    _style="only_share"
 
-   case $rval in
+   case $rc in
       0|4)
          return 0
       ;;
@@ -558,12 +558,12 @@ sourcetree::sync::sync_only_share()
    local startpoint="$4"
 
    local UPDATED
-   local rval
+   local rc
 
    sourcetree::sync::_sync_only_share "${config}" "${database}" "${symbol}"
-   rval=$?
+   rc=$?
 
-   if [ $rval -eq 0 ]
+   if [ $rc -eq 0 ]
    then
       log_debug "UPDATED: ${UPDATED}"
 
@@ -573,9 +573,9 @@ sourcetree::sync::sync_only_share()
 the sourcetree root (${MULLE_VIRTUAL_ROOT})"
       fi
    else
-      log_debug "sourcetree sync of ${config} failed ($rval)"
+      log_debug "sourcetree sync of ${config} failed ($rc)"
    fi
-   return $rval
+   return $rc
 }
 
 
@@ -589,11 +589,11 @@ the sourcetree root (${MULLE_VIRTUAL_ROOT})"
 
 sourcetree::sync::_style_for_share()
 {
-   local rval="$1"
+   local rc="$1"
 
    _style="share"
 
-   case $rval in
+   case $rc in
       0)
          return 0
       ;;
@@ -635,12 +635,12 @@ sourcetree::sync::_sync_share()
    # but if there's also no database then just bail
    #
    local nodelines
-   local rval
+   local rc
 
    nodelines="`sourcetree::walk::cfg_read "${symbol}" "${config}"`"
-   rval=$?
+   rc=$?
 
-   if [ $rval -eq 2 ]
+   if [ $rc -eq 2 ]
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
 
@@ -701,18 +701,18 @@ sourcetree::sync::_sync_share()
                                                              "${style}" \
                                                              "${config}" \
                                                              "${database}"
-      rval=$?
-      log_debug "Parallel share update of ${config}: ${rval}"
+      rc=$?
+      log_debug "Parallel share update of ${config}: ${rc}"
    else
       sourcetree::action::do_actions_with_nodelines "${nodelines}" \
                                                     "${style}" \
                                                     "${config}" \
                                                     "${database}"
-      rval=$?
-      log_debug "Share update of ${config}: ${rval}"
+      rc=$?
+      log_debug "Share update of ${config}: ${rc}"
    fi
 
-   [ $rval -eq 0 ] || return 1
+   [ $rc -eq 0 ] || return 1
 
    #
    # Here we should bury all the zombies, that stemmed from the 
@@ -778,12 +778,12 @@ sourcetree::sync::sync_share()
    local startpoint="$4"
 
    local UPDATED
-   local rval
+   local rc
 
    sourcetree::sync::_sync_share "${config}" "${database}" "${symbol}"
-   rval=$?
+   rc=$?
 
-   if [ $rval -eq 0 ]
+   if [ $rc -eq 0 ]
    then
       log_debug "UPDATED: ${UPDATED}"
 
@@ -793,9 +793,9 @@ sourcetree::sync::sync_share()
 the sourcetree root (${MULLE_VIRTUAL_ROOT})"
       fi
    else
-      log_debug "sourcetree sync of ${config} failed ($rval)"
+      log_debug "sourcetree sync of ${config} failed ($rc)"
    fi
-   return $rval
+   return $rc
 }
 
 
@@ -805,11 +805,11 @@ the sourcetree root (${MULLE_VIRTUAL_ROOT})"
 
 sourcetree::sync::_style_for_recurse()
 {
-   local rval="$1"
+   local rc="$1"
 
    _style="recurse"
 
-   case $rval in
+   case $rc in
       0)
          return 0
       ;;
@@ -840,12 +840,12 @@ sourcetree::sync::_sync_recurse()
    # but if there's also no database then just bail
    #
    local nodelines
-   local rval
+   local rc
 
    nodelines="`sourcetree::walk::cfg_read "${symbol}" "${config}"`"
-   rval=$?
+   rc=$?
 
-   if [ $rval -eq 2 ]
+   if [ $rc -eq 2 ]
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! sourcetree::db::dir_exists "${database}"
@@ -876,18 +876,18 @@ sourcetree::sync::_sync_recurse()
                                                              "${style}" \
                                                              "${config}" \
                                                              "${database}"
-      rval=$?
-      log_debug "Parallel recurse update of ${config}: ${rval}"
+      rc=$?
+      log_debug "Parallel recurse update of ${config}: ${rc}"
    else
       sourcetree::action::do_actions_with_nodelines "${nodelines}" \
                                                     "${style}" \
                                                     "${config}" \
                                                     "${database}"
-      rval=$?
-      log_debug "Recurse update of ${config}: ${rval}"
+      rc=$?
+      log_debug "Recurse update of ${config}: ${rc}"
    fi
 
-   [ $rval -eq 0 ] || return 1
+   [ $rc -eq 0 ] || return 1
 
    sourcetree::db::bury_zombie_nodelines "${database}" "${nodelines}" || return 1
 
@@ -941,12 +941,12 @@ sourcetree::sync::_sync_flat()
    #
 
    local nodelines
-   local rval
+   local rc
 
    nodelines="`sourcetree::walk::cfg_read "${symbol}" "${config}"`"
-   rval=$?
+   rc=$?
 
-   if [ $rval -eq 2 ]
+   if [ $rc -eq 2 ]
    then
       log_debug "There is no sourcetree configuration in \"${config}\""
       if ! sourcetree::db::dir_exists "${database}"
@@ -972,14 +972,14 @@ sourcetree::sync::_sync_flat()
    if [ "${OPTION_PARALLEL}" = 'YES' -a ${count} -gt 1 ]
    then
       sourcetree::action::do_actions_with_nodelines_parallel "${nodelines}" "${style}" "${config}" "${database}"
-      rval=$?
-      log_debug "Parallel flat update of ${config}: ${rval}"
+      rc=$?
+      log_debug "Parallel flat update of ${config}: ${rc}"
    else
       sourcetree::action::do_actions_with_nodelines "${nodelines}" "${style}" "${config}" "${database}"
-      rval=$?
-      log_debug "Flat update of ${config}: ${rval}"
+      rc=$?
+      log_debug "Flat update of ${config}: ${rc}"
    fi
-   [ $rval -eq 0 ] || return 1
+   [ $rc -eq 0 ] || return 1
 
    sourcetree::db::bury_zombies "${database}" &&
    sourcetree::db::clear_update "${database}" &&
@@ -1067,17 +1067,17 @@ sourcetree::sync::start()
    sourcetree::db::ensure_consistency "${SOURCETREE_START}"
    sourcetree::db::ensure_compatible_dbtype "${SOURCETREE_START}" "${style}"
 
-   local rval
+   local rc
 
    sourcetree::sync::sync_${style} \
                           "${SOURCETREE_START}" \
                           "${SOURCETREE_START}" \
                           "" \
                           "${startpoint}"
-   rval=$?
+   rc=$?
 
    # this is checked by 17-minions
-   if [ $rval -eq 127 -a "${OPTION_LENIENT}" = 'YES' ]
+   if [ $rc -eq 127 -a "${OPTION_LENIENT}" = 'YES' ]
    then
       # it's OK we can live with that
       log_verbose "There is no sourcetree here (\"${SOURCETREE_CONFIG_DIR}\"), but that's OK"
@@ -1086,7 +1086,7 @@ sourcetree::sync::start()
 
    sourcetree::sync::write_cachedir_tag "${MULLE_SOURCETREE_STASH_DIR:-stash}"
 
-   return $rval
+   return $rc
 }
 
 

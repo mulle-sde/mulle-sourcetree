@@ -474,7 +474,7 @@ sourcetree::list::r_prepend_format_char_if_needed()
 sourcetree::list::warn_if_sync_outstanding()
 {
    local memo 
-   local rval 
+   local rc
 
    # shellcheck source=mulle-sourcetree-dbstatus.sh
    include "sourcetree::dbstatus"
@@ -482,10 +482,10 @@ sourcetree::list::warn_if_sync_outstanding()
    memo="${MULLE_FLAG_LOG_TERSE}"
    MULLE_FLAG_LOG_TERSE='YES'
    sourcetree::dbstatus::main
-   rval=$?
+   rc=$?
    MULLE_FLAG_LOG_TERSE="${memo}"
 
-   if [ $rval -eq 2 ]
+   if [ $rc -eq 2 ]
    then
       log_warning "Listing will be complete after a sync (${PWD#"${MULLE_USER_PWD}/"})."
    fi   

@@ -64,7 +64,7 @@ Usage:
      cmake-dependency         : inherit foreign DependenciesAndLibraries.cmake
      cmake-inherit            : inherit anything from foreign library
      cmake-intermediate-link  : prefix container name with STARTUP_
-     cmake-loader             : inherit foreign objc-loader.h
+     cmake-loader             : inherit foreign objc-deps.inc
      require                  : combines require-link and require-header
      require-header           : the header must exist
      require-link             : the library must exist
@@ -443,17 +443,17 @@ ${indent}      set( _TMP_${identifier}_DIR "\${_TMP_${identifier}_ROOT}/${header
 ${indent}      # use explicit path to avoid "surprises"
 ${indent}      if( IS_DIRECTORY "\${_TMP_${identifier}_DIR}")
 ${indent}         list( INSERT CMAKE_MODULE_PATH 0 "\${_TMP_${identifier}_DIR}")
-${indent}         # we only want top level INHERIT_OBJC_LOADERS, so disable them
-${indent}         if( NOT NO_INHERIT_OBJC_LOADERS)
-${indent}            set( NO_INHERIT_OBJC_LOADERS OFF)
+${indent}         # we only want top level INHERIT_OBJC_DEPS, so disable them
+${indent}         if( NOT NO_INHERIT_OBJC_DEPS)
+${indent}            set( NO_INHERIT_OBJC_DEPS OFF)
 ${indent}         endif()
-${indent}         list( APPEND _TMP_INHERIT_OBJC_LOADERS \${NO_INHERIT_OBJC_LOADERS})
-${indent}         set( NO_INHERIT_OBJC_LOADERS ON)
+${indent}         list( APPEND _TMP_INHERIT_OBJC_DEPS \${NO_INHERIT_OBJC_DEPS})
+${indent}         set( NO_INHERIT_OBJC_DEPS ON)
 ${indent}         #
 ${indent}         include( "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake" OPTIONAL)
 ${indent}         #
-${indent}         list( GET _TMP_INHERIT_OBJC_LOADERS -1 NO_INHERIT_OBJC_LOADERS)
-${indent}         list( REMOVE_AT _TMP_INHERIT_OBJC_LOADERS -1)
+${indent}         list( GET _TMP_INHERIT_OBJC_DEPS -1 NO_INHERIT_OBJC_DEPS)
+${indent}         list( REMOVE_AT _TMP_INHERIT_OBJC_DEPS -1)
 ${indent}         list( REMOVE_ITEM CMAKE_MODULE_PATH "\${_TMP_${identifier}_DIR}")
 ${indent}         #
 ${indent}         unset( ${identifier}_DEFINITIONS)
@@ -482,12 +482,12 @@ EOF
                if [ "${emit_objc_loader}" = 'YES' ]
                then
                   cat <<EOF
-${indent}            # we only want top level INHERIT_OBJC_LOADERS, so disable them
-${indent}            if( NOT NO_INHERIT_OBJC_LOADERS)
-${indent}               set( NO_INHERIT_OBJC_LOADERS OFF)
+${indent}            # we only want top level INHERIT_OBJC_DEPS, so disable them
+${indent}            if( NOT NO_INHERIT_OBJC_DEPS)
+${indent}               set( NO_INHERIT_OBJC_DEPS OFF)
 ${indent}            endif()
-${indent}            list( APPEND _TMP_INHERIT_OBJC_LOADERS \${NO_INHERIT_OBJC_LOADERS})
-${indent}            set( NO_INHERIT_OBJC_LOADERS ON)
+${indent}            list( APPEND _TMP_INHERIT_OBJC_DEPS \${NO_INHERIT_OBJC_DEPS})
+${indent}            set( NO_INHERIT_OBJC_DEPS ON)
 EOF
                fi
                cat <<EOF
@@ -498,16 +498,19 @@ EOF
                if [ "${emit_objc_loader}" = 'YES' ]
                then
                   cat <<EOF
-${indent}            list( GET _TMP_INHERIT_OBJC_LOADERS -1 NO_INHERIT_OBJC_LOADERS)
-${indent}            list( REMOVE_AT _TMP_INHERIT_OBJC_LOADERS -1)
+${indent}            list( GET _TMP_INHERIT_OBJC_DEPS -1 NO_INHERIT_OBJC_DEPS)
+${indent}            list( REMOVE_AT _TMP_INHERIT_OBJC_DEPS -1)
 EOF
                fi
                cat <<EOF
 ${indent}            list( REMOVE_ITEM CMAKE_MODULE_PATH "\${_TMP_${identifier}_DIR}")
 ${indent}            #
 ${indent}            unset( ${identifier}_DEFINITIONS)
+${indent}            unset( ${identifier}_RENDEZVOUS_GLOBALS)
 ${indent}            include( "\${_TMP_${identifier}_DIR}/Definitions.cmake" OPTIONAL)
 ${indent}            list( APPEND INHERITED_DEFINITIONS \${${identifier}_DEFINITIONS})
+${indent}            include( "\${_TMP_${identifier}_DIR}/Definitions.cmake" OPTIONAL)
+${indent}            list( APPEND RENDEZVOUS_GLOBALS \${${identifier}_RENDEZVOUS_GLOBALS})
 ${indent}            break()
 ${indent}         else()
 ${indent}            message( STATUS "\${_TMP_${identifier}_DIR} not found")
@@ -520,7 +523,7 @@ EOF
    esac
 
    #
-   # for objective-c we find objc-loader.inc in the public include files
+   # for objective-c we find objc-deps.inc in the public include files
    #
    case ",${marks}," in
       *,no-all-load,*|*,no-cmake-loader,*)
@@ -531,14 +534,14 @@ EOF
             *',only-framework,'*)
                cat <<EOF
 ${indent}      #
-${indent}      # Search for "MulleObjCLoader+<name>.h" in include directory.
+${indent}      # Search for "MulleObjCDeps+<name>.h" in include directory.
 ${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-loader\`
 ${indent}      #
-${indent}      if( NOT NO_INHERIT_OBJC_LOADERS)
+${indent}      if( NOT NO_INHERIT_OBJC_DEPS)
 ${indent}         get_filename_component( _TMP_${identifier}_NAME "\${_TMP_${identifier}_ROOT}" NAME_WE)
-${indent}         set( _TMP_${identifier}_FILE "\${_TMP_${identifier}_ROOT}/Headers/MulleObjCLoader+\${_TMP_${identifier}_NAME}.h")
+${indent}         set( _TMP_${identifier}_FILE "\${_TMP_${identifier}_ROOT}/Headers/MulleObjCDeps+\${_TMP_${identifier}_NAME}.h")
 ${indent}         if( EXISTS "\${_TMP_${identifier}_FILE}")
-${indent}            list( APPEND INHERITED_OBJC_LOADERS \${_TMP_${identifier}_FILE})
+${indent}            list( APPEND INHERITED_OBJC_DEPS \${_TMP_${identifier}_FILE})
 ${indent}         endif()
 ${indent}      endif()
 EOF
@@ -547,14 +550,14 @@ EOF
             *)
                cat <<EOF
 ${indent}      #
-${indent}      # Search for "MulleObjCLoader+<name>.h" in include directory.
+${indent}      # Search for "MulleObjCDeps+<name>.h" in include directory.
 ${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-loader\`
 ${indent}      #
-${indent}      if( NOT NO_INHERIT_OBJC_LOADERS)
+${indent}      if( NOT NO_INHERIT_OBJC_DEPS)
 ${indent}         foreach( _TMP_${identifier}_NAME ${quoted_names})
-${indent}            set( _TMP_${identifier}_FILE "\${_TMP_${identifier}_ROOT}/include/\${_TMP_${identifier}_NAME}/MulleObjCLoader+\${_TMP_${identifier}_NAME}.h")
+${indent}            set( _TMP_${identifier}_FILE "\${_TMP_${identifier}_ROOT}/include/\${_TMP_${identifier}_NAME}/MulleObjCDeps+\${_TMP_${identifier}_NAME}.h")
 ${indent}            if( EXISTS "\${_TMP_${identifier}_FILE}")
-${indent}               list( APPEND INHERITED_OBJC_LOADERS \${_TMP_${identifier}_FILE})
+${indent}               list( APPEND INHERITED_OBJC_DEPS \${_TMP_${identifier}_FILE})
 ${indent}               break()
 ${indent}            endif()
 ${indent}         endforeach()
@@ -1527,6 +1530,7 @@ MATCHES no-fs AND \
    MATCHES no-actual-link \
 )"
 
+   log_fluff "Emitting no-link/no-actual-link header only libraries"
    header="`exekutor "${MULLE_SOURCETREE}" \
                            --virtual-root \
                            --config-file "${FLAG_CONFIG_FILE}" \
@@ -1550,6 +1554,7 @@ MATCHES link AND \
 MATCHES actual-link AND \
 NOT MATCHES only-framework"
 
+   log_fluff "Emitting link/actual-link libraries (not frameworks)"
    library="`exekutor "${MULLE_SOURCETREE}" \
                            --virtual-root \
                            --config-file "${FLAG_CONFIG_FILE}" \

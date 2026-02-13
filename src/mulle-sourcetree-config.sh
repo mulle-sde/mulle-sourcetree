@@ -161,10 +161,10 @@ sourcetree::config::r_find()
 
 #   local scope
    local filename
-   local rval
+   local rc
    local name
 
-   rval=1
+   rc=1
 
    .foreachpath name in ${config_name}
    .do
@@ -187,14 +187,14 @@ sourcetree::config::r_find()
 #         filename="${MULLE_SOURCETREE_ETC_DIR}/${name}.${scope}"
 #         if [ -f "${MULLE_SOURCETREE_ETC_DIR}/${name}.${scope}" ]
 #         then
-#            rval=0
+#            rc=0
 #            .break
 #         fi
 #
 #         filename="${MULLE_SOURCETREE_SHARE_DIR}/${name}.${scope}"
 #         if [ -f "${MULLE_SOURCETREE_SHARE_DIR}/${name}.${scope}" ]
 #         then
-#            rval=0
+#            rc=0
 #            .break
 #         fi
 #      fi
@@ -204,14 +204,14 @@ sourcetree::config::r_find()
             filename="${MULLE_SOURCETREE_ETC_DIR}/${name}"
             if [ -f "${MULLE_SOURCETREE_ETC_DIR}/${name}" ]
             then
-               rval=0
+               rc=0
                .break
             fi
 
             filename="${MULLE_SOURCETREE_SHARE_DIR}/${name}"
             if [ -f "${MULLE_SOURCETREE_SHARE_DIR}/${name}" ]
             then
-               rval=0
+               rc=0
                .break
             fi
 #         ;;
@@ -221,7 +221,7 @@ sourcetree::config::r_find()
    .done
 
    RVAL="${filename}"
-   return $rval
+   return $rc
 }
 
 

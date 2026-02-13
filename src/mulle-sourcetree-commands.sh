@@ -214,9 +214,6 @@ Usage:
 Example:
    ${MULLE_EXECUTABLE_NAME} remove --if-present foo other-foo
 
-Options:
-   --if-present : don't complain if address is missing
-
 EOF
   exit 1
 }
@@ -417,6 +414,8 @@ Usage:
 Example:
       ${MULLE_EXECUTABLE_NAME} move 'zlib' after 'expat'
 
+Flags:
+   --if-exists : don't complain if node is missing
 EOF
   exit 1
 }
@@ -753,7 +752,7 @@ sourcetree::commands::r_get_nodeline_by_input()
    log_entry "sourcetree::commands::r_get_nodeline_by_input" "$@"
 
    local input="$1"
-   local warn="${2:-YES}"
+   local nowarn="${2:-NO}"
 
    [ -z "${input}" ] && fail "Node address is empty"
 
@@ -773,9 +772,9 @@ sourcetree::commands::r_get_nodeline_by_input()
                                                          "${OPTION_FUZZY}" \
                                                          "${OPTION_REGEX}"
    then
-      if [ "${warn}" = 'NO' ]
+      if [ "${nowarn}" = 'NO' ]
       then
-         log_warning "A node \"${_address:-${_url:-${_uuid}}}\" does not exist"
+         log_warning "A node \"${_address:-${_url:-${_uuid}}}\" does not exist ($input)"
       fi
       return 2  # also return non 0 , but lets's not be dramatic about it
    fi
@@ -1032,9 +1031,9 @@ sourcetree::commands::duplicate()
 
    local node
 
-   if ! sourcetree::commands::r_get_nodeline_by_input "${input}"
+   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_PRESENT}"
    then
-      fail "Node \"${input}\" not found"
+      return 1
    fi
    node="${RVAL}"
 
@@ -1339,9 +1338,8 @@ sourcetree::commands::set()
 
    local oldnodeline
 
-   if ! sourcetree::commands::r_get_nodeline_by_input "${input}"
+   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_PRESENT}"
    then
-      fail "Node \"${input}\" does not exist"
       return 2
    fi
    oldnodeline="${RVAL}"
@@ -1467,12 +1465,8 @@ sourcetree::commands::get()
 
    local nodeline
 
-   if ! sourcetree::commands::r_get_nodeline_by_input "${input}"
+   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_PRESENT}"
    then
-      if [ "${OPTION_IF_PRESENT}" = 'NO' ]
-      then
-         log_warning "Node \"${input}\" does not exist"
-      fi
       return 1
    fi
    nodeline="${RVAL}"
@@ -1614,9 +1608,9 @@ sourcetree::commands::move()
 
    local nodeline
 
-   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" 'NO'
+   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_PRESENT}"
    then
-      fail "No node for \"${input}\" found"
+      return 1
    fi
    nodeline="${RVAL}"
 
@@ -1711,7 +1705,7 @@ sourcetree::commands::remove()
       input="$1"
       shift 
       
-      if ! sourcetree::commands::r_get_nodeline_by_input "${input}"
+      if ! sourcetree::commands::r_get_nodeline_by_input "${input}" 'NO'
       then
          if [ "${OPTION_IF_PRESENT}" = 'YES' ]
          then
@@ -1890,9 +1884,8 @@ sourcetree::commands::_mark()
 
    local oldnodeline
 
-   if ! sourcetree::commands::r_get_nodeline_by_input "${input}"
+   if ! sourcetree::commands::r_get_nodeline_by_input "${input}"  "${OPTION_IF_PRESENT}"
    then
-      log_warning "Node \"${input}\" not found"
       return 2
    fi
    oldnodeline="${RVAL}"
@@ -1908,7 +1901,7 @@ sourcetree::commands::_mark()
    local _userinfo
    local _uuid
 
-   local rval
+   local rc
    local mark
    local blurb
 
@@ -1934,8 +1927,8 @@ sourcetree::commands::_mark()
                .continue
             fi
             sourcetree::commands::_add_mark_known_absent "${mark}"
-            rval=$?
-            [ $rval -ne 0 ] && return $rval
+            rc=$?
+            [ $rc -ne 0 ] && return $rc
          ;;
 
          [a-z_]*)
@@ -1944,16 +1937,16 @@ sourcetree::commands::_mark()
             then
                blurb='NO'
                sourcetree::commands::_remove_mark_known_present "no-${mark}"
-               rval=$?
-               [ $rval -ne 0 ] && return $rval
+               rc=$?
+               [ $rc -ne 0 ] && return $rc
             fi
 
             if sourcetree::marks::contain "${_marks}" "only-${mark}"
             then
                blurb='NO'
                sourcetree::commands::_remove_mark_known_present "only-${mark}"
-               rval=$?
-               [ $rval -ne 0 ] && return $rval
+               rc=$?
+               [ $rc -ne 0 ] && return $rc
             fi
 
             if [ "${blurb}" = 'YES' ]
@@ -2157,7 +2150,7 @@ sourcetree::commands::get_nodeline_from_config()
          # hacky
          SOURCETREE_START="#${RVAL}"
       fi
-      if sourcetree::commands::r_get_nodeline_by_input "$@"
+      if sourcetree::commands::r_get_nodeline_by_input "$1" "$2"
       then
          printf "%s\n" "${RVAL}"
          exit 0
@@ -2196,9 +2189,9 @@ sourcetree::commands::copy()
          fail "Can't copy \"${input}\" unto itself"
       fi
 
-      if ! sourcetree::commands::r_get_nodeline_by_input "${from}"
+      if ! sourcetree::commands::r_get_nodeline_by_input "${from}" "${OPTION_IF_PRESENT}"
       then
-         fail "No node \"${from}\" found, to copy from."
+         return 1
       fi
       from="${RVAL}"
    else
@@ -2438,8 +2431,8 @@ sourcetree::commands::common()
             OPTION_IF_MISSING='YES'
          ;;
 
-         # just for remove
-         --if-present)
+         # just for remove and move
+         --if-present|--if-exists)
             OPTION_IF_PRESENT='YES'
          ;;
 

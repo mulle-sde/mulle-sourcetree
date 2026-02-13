@@ -496,7 +496,7 @@ emit_c_header()
    # we use mulle-sourcetree directly
 
    # if mulle-sourcetree fails with 127 its ok
-   local rval 
+   local rc
    local headers
 
    headers="`exekutor "${MULLE_SOURCETREE}" \
@@ -510,11 +510,11 @@ emit_c_header()
                            --no-bequeath \
                            --output-format raw \
                            --no-output-header`"
-   rval=$?
+   rc=$?
 
-   if [ $rval -ne 0 -a $rval -ne 127 ]
+   if [ $rc -ne 0 -a $rc -ne 127 ]
    then 
-      return $rval 
+      return $rc
    fi
 
    log_setting "headers=${headers}"

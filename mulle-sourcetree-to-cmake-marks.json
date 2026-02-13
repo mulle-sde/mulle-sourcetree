@@ -21,7 +21,7 @@
   },
   {
     "mark": "loader",
-    "description": "Inherits a foreign `objc-loader.h` file for Objective-C."
+    "description": "Inherits a foreign `objc-deps.inc` file for Objective-C."
   },
   {
     "mark": "require",

@@ -307,9 +307,9 @@ sourcetree::marks::match()
 
    case "${pattern}" in
       "no-"*"*"*|"no-"*"["*"]"*|"only-"*"*"*|"only-"*"["*"]"*|"version-"*"*"*|"version-"*"["*"]"*)
-         local rval
+         local rc
 
-         rval=1
+         rc=1
          pattern="${pattern//\*/*([^,])}"
 
          shell_is_extglob_enabled || _internal_fail "extglob must be enabled"
@@ -318,17 +318,17 @@ sourcetree::marks::match()
          then
             case ",${marks}," in
                *\,${~pattern}\,*)
-                  rval=0
+                  rc=0
                ;;
             esac
          else
             case ",${marks}," in
                *\,${pattern}\,*)
-                  rval=0
+                  rc=0
                ;;
             esac
          fi
-         return $rval
+         return $rc
       ;;
 
       "no-"*|"only-"*|"version-"*)
@@ -365,7 +365,7 @@ sourcetree::marks::r_enable()
 
    # a no key disables
    mark="no-${key}"
-   if sourcetree::marks::_contain "${marks}" "no-${key}"
+   if sourcetree::marks::_contain "${marks}" "${mark}"
    then
       RVAL="${mark}"
       return 1
@@ -794,20 +794,20 @@ sourcetree::marks::walk()
    local callback="$1"; shift
 
    local i
-   local rval=0
+   local rc=0
 
    .foreachitem i in ${marks}
    .do
       "${callback}" "${i}" "$@"
-      rval=$?
+      rc=$?
 
-      if [ $rval -ne 0 ]
+      if [ $rc -ne 0 ]
       then
          .break
       fi
    .done
 
-   return $rval
+   return $rc
 }
 
 

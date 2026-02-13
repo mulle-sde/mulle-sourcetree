@@ -517,9 +517,9 @@ doesn't jive with permissions \"${filterpermissions}\""
       .done
    fi
 
-   local rval
+   local rc
 
-   rval=0
+   rc=0
    WALK_INDEX=$((WALK_INDEX + 1))
    case ",${mode}," in
       *,docd,*)
@@ -533,9 +533,9 @@ doesn't jive with permissions \"${filterpermissions}\""
                                           "${mode}" \
                                           "${callback}" \
                                           "$@"
-               rval=$?
+               rc=$?
             sourcetree::walk::__docd_postamble
-            log_walk_debug "(docd) callback returned $rval"
+            log_walk_debug "(docd) callback returned $rc"
          else
             log_walk_fluff "\"${_filename}\" not there, so no callback"
          fi
@@ -547,12 +547,12 @@ doesn't jive with permissions \"${filterpermissions}\""
                                     "${mode}" \
                                     "${callback}" \
                                     "$@"
-         rval=$?
-         log_walk_debug "callback returned $rval"
+         rc=$?
+         log_walk_debug "callback returned $rc"
       ;;
    esac
 
-   return $rval
+   return $rc
 }
 
 
@@ -655,7 +655,7 @@ to WILL_DESCEND_CALLBACK"
    r_basename "${WALK_PARENT}"
    WALK_PARENT_NAME="${RVAL}"
 
-   local rval
+   local rc
    local symbol
 
    log_walk_fluff "Descend into \"${next_datasource}\""
@@ -666,12 +666,12 @@ to WILL_DESCEND_CALLBACK"
    case ",${mode}," in
       *,walkdb,*)
          sourcetree::walk::_walk_db_uuids "${symbol}" "$@"
-         rval=$?
+         rc=$?
       ;;
 
       *)
          sourcetree::walk::_walk_config_uuids "${symbol}" "$@"
-         rval=$?
+         rc=$?
       ;;
    esac
 
@@ -681,13 +681,13 @@ to WILL_DESCEND_CALLBACK"
    r_basename "${WALK_PARENT}"
    WALK_PARENT_NAME="${RVAL}"
 
-   if [ $rval -eq 0 -a ! -z "${DID_DESCEND_CALLBACK}" ]
+   if [ $rc -eq 0 -a ! -z "${DID_DESCEND_CALLBACK}" ]
    then
       "${DID_DESCEND_CALLBACK}" "$@"
-      rval=$?
-      log_walk_debug "DID_DESCEND_CALLBACK of \"${virtual}/${_destination}\" returns $rval"
+      rc=$?
+      log_walk_debug "DID_DESCEND_CALLBACK of \"${virtual}/${_destination}\" returns $rc"
    fi
-   return $rval
+   return $rc
 }
 
 
@@ -911,13 +911,13 @@ sourcetree::walk::_visit_node()
       ;;
    esac
 
-   local rval
+   local rc
 
    case ",${mode}," in
       *,flat,*|*,in-flat,*|*,post-flat,*|*,breadth-flat,*)
          log_walk_debug "No descend in flat mode variant"
          sourcetree::walk::_visit_callback "$@"
-         rval=$?
+         rc=$?
       ;;
 
       *,in-order,*)
@@ -925,7 +925,7 @@ sourcetree::walk::_visit_node()
 
          # this is on the second pass, the callback will have been called already
          sourcetree::walk::_visit_descend "$@"
-         rval=$?
+         rc=$?
       ;;
 
       *,post-order,*)
@@ -933,32 +933,32 @@ sourcetree::walk::_visit_node()
 
          # this is on the first pass, the callback will be called later
          sourcetree::walk::_visit_descend "$@"
-         rval=$?
+         rc=$?
       ;;
 
       *,pre-order,*)
          sourcetree::walk::_visit_callback "$@"
-         rval=$?
+         rc=$?
 
          #
          # we don't need to check the  descendqualifier if its the same
          # as the callbackqualifier and it has already failed in
          # sourcetree::walk::_visit_callback
          #
-         if [ $rval -eq 121 ]
+         if [ $rc -eq 121 ]
          then
-            rval=0
+            rc=0
             if [ "${descendqualifier}" = "${callbackqualifier}" ]
             then
-               return $rval
+               return $rc
             fi
          fi
 
-         if [ $rval -eq 0 ]
+         if [ $rc -eq 0 ]
          then
             log_walk_debug "Pre-order descend into ${next_datasource}"
             sourcetree::walk::_visit_descend "$@"
-            rval=$?
+            rc=$?
          fi
       ;;
 
@@ -968,7 +968,7 @@ sourcetree::walk::_visit_node()
       *,breadth-order,*)
          log_walk_debug "Breadth-first descend into ${next_datasource}"
          sourcetree::walk::_visit_descend "$@"
-         rval=$?
+         rc=$?
       ;;
 
       *)
@@ -976,11 +976,11 @@ sourcetree::walk::_visit_node()
       ;;
    esac
 
-   if [ $rval -eq 121 ]
+   if [ $rc -eq 121 ]
    then
-      rval=0
+      rc=0
    fi
-   return $rval
+   return $rc
 }
 
 
@@ -1352,7 +1352,7 @@ sourcetree::walk::_walk_nodelines()
       ;;
    esac
 
-   local rval
+   local rc
    local tmpmode
    local NODE_INDEX
 
@@ -1377,8 +1377,8 @@ sourcetree::walk::_walk_nodelines()
                                             "${descendqualifier}" \
                                             "${tmpmode}" \
                                             "$@"
-            rval=$?
-            [ $rval -ne 0 ] && return $rval
+            rc=$?
+            [ $rc -ne 0 ] && return $rc
          .done
       ;;
    esac
@@ -1399,8 +1399,8 @@ sourcetree::walk::_walk_nodelines()
                                       "${descendqualifier}" \
                                       "${mode}" \
                                       "$@"
-      rval=$?
-      [ $rval -ne 0 ] && return $rval
+      rc=$?
+      [ $rc -ne 0 ] && return $rc
 
       case ",${mode}," in
          *,in-order,*)
@@ -1417,8 +1417,8 @@ sourcetree::walk::_walk_nodelines()
                                             "${descendqualifier}" \
                                             "${tmpmode}" \
                                             "$@"
-            rval=$?
-            [ $rval -ne 0 ] && return $rval
+            rc=$?
+            [ $rc -ne 0 ] && return $rc
          ;;
       esac
    .done
@@ -1443,8 +1443,8 @@ sourcetree::walk::_walk_nodelines()
                                             "${descendqualifier}" \
                                             "${tmpmode}" \
                                             "$@"
-            rval=$?
-            [ $rval -ne 0 ] && return $rval
+            rc=$?
+            [ $rc -ne 0 ] && return $rc
          .done
       ;;
    esac
@@ -1686,19 +1686,19 @@ sourcetree::walk::walk_config_uuids()
    WALKED=
    VISITED=
 
-   local rval
+   local rc
 
    sourcetree::walk::_walk_config_uuids "" "${SOURCETREE_START}" "" "$@"
-   rval=$?
+   rc=$?
 
    # on 2, which is preempt we dont call the callback
-   if [ $rval -eq 0 -a ! -z "${DID_WALK_CALLBACK}" ]
+   if [ $rc -eq 0 -a ! -z "${DID_WALK_CALLBACK}" ]
    then
       # keep callback signature somewhat uniform with other callbacks
       "${DID_WALK_CALLBACK}" "${SOURCETREE_START}" "" "$@"
    fi
 
-   return $rval
+   return $rc
 }
 
 
@@ -1778,15 +1778,15 @@ sourcetree::walk::walk_db_uuids()
    WALKED=
    VISITED=
    sourcetree::walk::_walk_db_uuids "" "${SOURCETREE_START}" "" "$@"
-   rval=$?
+   rc=$?
 
    if [ ! -z "${DID_WALK_CALLBACK}" ]
    then
       "${DID_WALK_CALLBACK}" "${SOURCETREE_START}" "" "$@"
-      rval=$?
+      rc=$?
    fi
 
-   return $rval
+   return $rc
 }
 
 
@@ -1829,9 +1829,9 @@ sourcetree::walk::do()
 
    MULLE_ROOT_DIR="`pwd -P`"
 
-   local rval
+   local rc
 
-   rval=0
+   rc=0
 
    #
    # make pre-order default if no order set for share or recurse
@@ -1851,28 +1851,28 @@ sourcetree::walk::do()
          case ",${mode}," in
             *,pre-order,*|*,breadth-order,*)
                sourcetree::walk::_visit_root_callback "${mode}" "${callback}" "$@"
-               rval=$?
+               rc=$?
             ;;
          esac
       ;;
    esac
 
-   if [ $rval -eq 0 ]
+   if [ $rc -eq 0 ]
    then
       case ",${mode}," in
          *,walkdb,*)
             sourcetree::walk::walk_db_uuids "$@"
-            rval=$?
+            rc=$?
          ;;
 
          *)
             sourcetree::walk::walk_config_uuids "$@"
-            rval=$?
+            rc=$?
          ;;
       esac
    fi
 
-   if [ $rval -eq 0 ]
+   if [ $rc -eq 0 ]
    then
       case ",${mode}," in
          *,callroot,*)
@@ -1882,20 +1882,20 @@ sourcetree::walk::do()
 
                *)
                   sourcetree::walk::_visit_root_callback "${mode}" "${callback}" "$@"
-                  rval=$?
+                  rc=$?
                ;;
             esac
          ;;
       esac
    fi
 
-   if [ $rval -eq 2 ]
+   if [ $rc -eq 2 ]
    then
       return 0
    fi
 
-   log_walk_debug "sourcetree::walk::do rval=$rval"
-   return $rval
+   log_walk_debug "sourcetree::walk::do rc=$rc"
+   return $rc
 }
 
 

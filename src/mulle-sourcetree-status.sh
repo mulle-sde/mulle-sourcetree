@@ -425,7 +425,7 @@ sourcetree::status::walk()
 {
    log_walk_entry "sourcetree::status::walk" "$@"
 
-   local rval
+   local rc
 
    sourcetree::status::r_emit "${NODE_ADDRESS}" \
                               "${WALK_VIRTUAL_ADDRESS}" \
@@ -433,9 +433,9 @@ sourcetree::status::walk()
                               "${NODE_MARKS}" \
                               "${WALK_MODE}" \
                               "${NODE_FILENAME}"
-   rval=$?
+   rc=$?
 
-   case $rval in
+   case $rc in
       1)
          return 1 # real error
       ;;
@@ -450,7 +450,7 @@ sourcetree::status::walk()
          #
          if [ "${OPTION_IS_UPTODATE}" = 'YES'  ]
          then
-            return $rval  # any other non-0 will preempt
+            return $rc  # any other non-0 will preempt
          fi
       ;;
    esac
@@ -482,7 +482,7 @@ sourcetree::status::do()
 
    local output
    local output2
-   local rval
+   local rc
 
    # empty parameters means local
    # output an entry for root node
@@ -495,21 +495,21 @@ sourcetree::status::do()
                                                  "" \
                                                  "${mode}" \
                                                  "sourcetree::status::walk"`"
-   rval="$?"
-   if [ $rval -eq 2 ]
+   rc="$?"
+   if [ $rc -eq 2 ]
    then
-      rval=0
+      rc=0
    fi
 
    if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
    then
-      return $rval
+      return $rc
    fi
 
-   if [ $rval -ne 0 ]
+   if [ $rc -ne 0 ]
    then
-      log_fluff "Walk errored out ($rval)"
-      return $rval
+      log_fluff "Walk errored out ($rc)"
+      return $rc
    fi
 
    #
@@ -689,6 +689,8 @@ sourcetree::status::main()
    fi
 
    # usually deep, unless --is-uptodate is given or --shallow/--deep explicitly
+   # though --deep seems not to make not much difference in speed vs -shallow
+   #
    if [ "${OPTION_DEEP}" = 'YES' ] || [ "${OPTION_DEEP}" = 'DEFAULT' -a  "${OPTION_IS_UPTODATE}" != 'YES' ]
    then
       r_comma_concat "${mode}" "deep"
@@ -711,9 +713,9 @@ sourcetree::status::main()
    fi
 
    sourcetree::status::do "${mode}"
-   rval=$?
+   rc=$?
 
-   case $rval in
+   case $rc in
       0)
          if [ "${OPTION_IS_UPTODATE}" = 'YES' ]
          then

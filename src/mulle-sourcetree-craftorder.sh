@@ -322,7 +322,7 @@ sourcetree::craftorder::main()
 
    local OPTION_CALLBACK
    local OPTION_ABSOLUTE='NO'
-   local OUTPUT_BEQUEATH='YES'   # default for craftorder
+   local OPTION_BEQUEATH='NO'   # default for craftorder
    local OUTPUT_MARKS='YES'
    local OUTPUT_DIRECTION='FORWARD'
    local OUTPUT_RAW_USERINFO='NO'
@@ -445,7 +445,7 @@ sourcetree::craftorder::main()
    fi
 
    local _craftorder_collection
-   local rval
+   local rc
 
    _craftorder_collection="`sourcetree::walk::do "" \
                                                  "" \
@@ -453,8 +453,8 @@ sourcetree::craftorder::main()
                                                  "${qualifier}" \
                                                  "${mode},in-order" \
                                                  "sourcetree::craftorder::__collect_line"`"
-   rval=$?
-   case "${rval}" in
+   rc=$?
+   case "${rc}" in
       1)
          exit 1
       ;;
@@ -490,9 +490,9 @@ sourcetree::craftorder::main()
                                                 "${qualifier}" \
                                                 "${mode},breadth-order" \
                                                 "sourcetree::craftorder::__augment_line"`"
-   rval=$?
+   rc=$?
 
-   case "${rval}" in
+   case "${rc}" in
       1)
          exit 1
       ;;

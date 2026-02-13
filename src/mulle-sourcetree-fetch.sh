@@ -47,7 +47,7 @@ sourcetree::fetch::r_guess_address()
       return 0
    fi
 
-   local rval
+   local rc
 
    RVAL="`rexekutor "${MULLE_DOMAIN:-mulle-domain}" \
                ${MULLE_TECHNICAL_FLAGS} \
@@ -55,13 +55,13 @@ sourcetree::fetch::r_guess_address()
             nameguess \
                -s "${evalednodetype}" \
                "${evaledurl}"`"
-   rval=$?
-   [ $rval -eq 127 ] \
+   rc=$?
+   [ $rc -eq 127 ] \
    && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
    _log_fluff "${MULLE_DOMAIN:-mulle-domain} returned \"${RVAL}\" as \
 default address for url ($evaledurl)"
-   return $rval
+   return $rc
 }
 
 
@@ -102,20 +102,20 @@ sourcetree::fetch::r_guess_nodetype()
       ;;
    esac
 
-   local rval
+   local rc
 
    RVAL="`rexekutor "${MULLE_DOMAIN:-mulle-domain}" \
                   ${MULLE_TECHNICAL_FLAGS} \
                   ${MULLE_DOMAIN_FLAGS} \
                typeguess \
                   "${evaledurl}"`" || return 1
-   rval=$?
-   [ $rval -eq 127 ] \
+   rc=$?
+   [ $rc -eq 127 ] \
    && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
    _log_fluff "${MULLE_DOMAIN:-mulle-domain} determined \"${RVAL}\" as \
 nodetype from url ($evaledurl)"
-   return $rval
+   return $rc
 }
 
 
@@ -134,15 +134,15 @@ sourcetree::fetch::r_resolve_url_with_tag()
       && _internal_fail "comment should have been ignored previously"
 
    local type 
-   local rval
+   local rc
 
    type="`rexekutor "${MULLE_SEMVER:-mulle-semver}" \
                          ${MULLE_TECHNICAL_FLAGS} \
                       "qualifier-type" \
                          "${tag}" `"
-   rval=$?
+   rc=$?
    
-   [ $rval -eq 127 ] \
+   [ $rc -eq 127 ] \
       && fail "mulle-semver not found (you may need to run mulle-sde upgrade)"
 
    case "${type}" in
@@ -159,11 +159,11 @@ sourcetree::fetch::r_resolve_url_with_tag()
                          --latest \
                          "${url}" \
                          "${tag}" `"
-   rval=$?
-   [ $rval -eq 127 ] \
+   rc=$?
+   [ $rc -eq 127 ] \
       && fail "mulle-domain not found (you may need to run mulle-sde upgrade)"
 
-   return $rval
+   return $rc
 }
 
 
@@ -307,7 +307,7 @@ MULLE_SOURCETREE_RESOLVE_TAG is NO"
       cmdoptions="${RVAL}"
    fi
 
-#   local rval
+#   local rc
 #   local localurl
 #   local localnodetype
 #   local cmd2options
@@ -337,8 +337,8 @@ MULLE_SOURCETREE_RESOLVE_TAG is NO"
 #                                       "search-local" \
 #                                          "${cmd2options}" \
 #                                          "'${_address}'" )"
-#         rval=$?
-#         [ $rval -eq 127 ] && fail "mulle-fetch not found"
+#         rc=$?
+#         [ $rc -eq 127 ] && fail "mulle-fetch not found"
 #
 #         if [ ! -z "${localurl}" ]
 #         then
@@ -388,10 +388,10 @@ MULLE_SOURCETREE_RESOLVE_TAG is NO"
                        "${cmdoptions}" \
                        "${options}" \
                        "'${_address}'"
-   rval=$?
-   [ $rval -eq 127 ] && fail "mulle-fetch not found"
+   rc=$?
+   [ $rc -eq 127 ] && fail "mulle-fetch not found"
 
-   return $rval
+   return $rc
 }
 
 

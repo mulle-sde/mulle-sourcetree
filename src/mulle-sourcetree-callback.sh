@@ -187,14 +187,14 @@ sourcetree::callback::call()
    WALK_VIRTUAL="${virtual}" \
    WALK_VIRTUAL_ADDRESS="${_virtual_address}" \
       ${evaluator} "${callback}" "$@"
-   rval="$?"
+   rc="$?"
 
-   if [ ${rval} -eq 0 ]
+   if [ ${rc} -eq 0 ]
    then
       return 0
    fi
 
-   log_debug "Command \"${callback}\" returned $rval for node \"${_address}\""
+   log_debug "Command \"${callback}\" returned $rc for node \"${_address}\""
 
    case ",${mode}," in
       *,lenient,*)
@@ -202,5 +202,5 @@ sourcetree::callback::call()
       ;;
    esac
 
-   return $rval
+   return $rc
 }
