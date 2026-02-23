@@ -38,17 +38,28 @@ sourcetree::dotdump::usage()
 Usage:
    ${MULLE_USAGE_NAME} dotdump [options]
 
-   Produces a picture of your sourcetree by emitting .dot output.
+   Generate a Graphviz .dot diagram of your sourcetree structure.
+   Pipe the output to 'dot' to create PNG/SVG images:
+      ${MULLE_USAGE_NAME} dotdump | dot -Tpng -o tree.png
+      ${MULLE_USAGE_NAME} dotdump | dot -Tsvg -o tree.svg
 
-Options:
-   -n <value>    : node types to walk (default: ALL)
-   -p <value>    : specify permissions (missing)
-   -m <value>    : specify marks to match (e.g. build)
-   --lr          : use left/right layout (default)
-   --td          : use top/down layout
-   --walk-config : traverse the config file (default)
-   --walk-db     : walk over information contained in the database instead
-   --output-html : emit HTML Graphviz nodes, for more information
+Layout:
+   --lr          : left-to-right layout (default)
+   --td          : top-to-bottom layout
+
+Output Detail:
+   --output-html : emit HTML table nodes with full node information
+   --output-eval : show expanded variable values (e.g. resolved URLs)
+   --output-state: show filesystem status (exists, missing, etc.)
+
+Data Source:
+   --walk-config : read from config files (default)
+   --walk-db     : read from synced database
+
+Filtering:
+   -m <qualifier>: filter by marks (e.g. "MATCHES build")
+   -n <types>    : filter by node types (e.g. "git,tar")
+   -p <perms>    : filter by permissions (missing, present, etc.)
 EOF
   exit 1
 }

@@ -68,7 +68,7 @@ EOF
 #
 sourcetree::clean::walk()
 {
-   log_entry "${C_RESET}sourcetree::clean::walk${C_DEBUG}" "${NODE_FILENAME}" "${NODE_MARKS}"
+   log_entry "sourcetree::clean::walk" "${NODE_FILENAME}" "${NODE_MARKS}"
 
    case "${NODE_TYPE}" in
       none)

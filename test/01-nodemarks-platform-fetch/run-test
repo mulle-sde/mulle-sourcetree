@@ -1,0 +1,109 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+# Stub functions for log_walk_* to avoid "command not found" errors
+log_walk_entry() { :; }
+log_walk_debug() { :; }
+
+main()
+{
+   _options_mini_main "$@" && set -x
+
+   local _marks
+   local _address
+
+   # Test 1: Single platform - node blocked on current platform should not fetch
+   MULLE_UNAME="linux"
+   MULLE_SOURCETREE_PLATFORMS="linux"
+   _marks="no-platform-linux"
+   _address="test-node"
+
+   sourcetree::action::r_is_fetchable "${_marks}" "${_address}" && _internal_fail "Test 1: Should not fetch no-platform-linux on linux with PLATFORMS=linux"
+
+   log_verbose "----- #1 PASSED -----"
+
+   # Test 2: Cross-platform - node blocked on current platform but needed for other platform
+   MULLE_UNAME="linux"
+   MULLE_SOURCETREE_PLATFORMS="linux:windows"
+   _marks="no-platform-linux"
+   _address="windows-only-lib"
+
+   sourcetree::action::r_is_fetchable "${_marks}" "${_address}" || _internal_fail "Test 2: Should fetch no-platform-linux on linux when PLATFORMS includes windows"
+
+   log_verbose "----- #2 PASSED -----"
+
+   # Test 3: Multiple platforms - node blocked on multiple platforms
+   MULLE_UNAME="linux"
+   MULLE_SOURCETREE_PLATFORMS="linux:windows:darwin"
+   _marks="no-platform-linux,no-platform-windows"
+   _address="darwin-only-lib"
+
+   sourcetree::action::r_is_fetchable "${_marks}" "${_address}" || _internal_fail "Test 3: Should fetch when at least one platform in PLATFORMS is not blocked"
+
+   log_verbose "----- #3 PASSED -----"
+
+   # Test 4: All platforms blocked
+   MULLE_UNAME="linux"
+   MULLE_SOURCETREE_PLATFORMS="linux:windows"
+   _marks="no-platform-linux,no-platform-windows"
+   _address="blocked-lib"
+
+   sourcetree::action::r_is_fetchable "${_marks}" "${_address}" && _internal_fail "Test 4: Should not fetch when all platforms in PLATFORMS are blocked"
+
+   log_verbose "----- #4 PASSED -----"
+
+   # Test 5: only-platform mark takes precedence
+   MULLE_UNAME="linux"
+   MULLE_SOURCETREE_PLATFORMS="linux:windows"
+   _marks="no-platform-linux,only-platform-windows"
+   _address="explicit-windows-lib"
+
+   sourcetree::action::r_is_fetchable "${_marks}" "${_address}" || _internal_fail "Test 5: Should fetch with only-platform-windows in PLATFORMS"
+
+   log_verbose "----- #5 PASSED -----"
+
+   # Test 6: no-fetch mark blocks everything
+   MULLE_UNAME="linux"
+   MULLE_SOURCETREE_PLATFORMS="linux:windows"
+   _marks="no-fetch"
+   _address="no-fetch-lib"
+
+   sourcetree::action::r_is_fetchable "${_marks}" "${_address}" && _internal_fail "Test 6: Should not fetch with no-fetch mark"
+
+   log_verbose "----- #6 PASSED -----"
+
+   # Test 7: no-fetch-platform-* works like no-platform-*
+   MULLE_UNAME="linux"
+   MULLE_SOURCETREE_PLATFORMS="linux:windows"
+   _marks="no-fetch-platform-linux"
+   _address="fetch-platform-test"
+
+   sourcetree::action::r_is_fetchable "${_marks}" "${_address}" || _internal_fail "Test 7: Should fetch no-fetch-platform-linux on linux when PLATFORMS includes windows"
+
+   log_verbose "----- #7 PASSED -----"
+
+   log_info "----- ALL PASSED -----"
+}
+
+
+init()
+{
+   MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
+   MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
+
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-marks.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-action.sh" || exit 1
+}
+
+
+init "$@"
+main "$@"

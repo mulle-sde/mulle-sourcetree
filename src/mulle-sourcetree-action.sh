@@ -963,6 +963,17 @@ sourcetree::action::r_is_fetchable()
             log_fluff "MULLE_SOURCETREE_PLATFORMS="${platform}" and mark \"only-fetch-platform-${platform}\" enables fetch of \"${address}\""
             return 0
          fi            
+         
+         # Check if this platform is NOT blocked by no-platform-* marks
+         # This handles cross-compilation: no-platform-linux should still fetch on Linux
+         # if MULLE_SOURCETREE_PLATFORMS includes windows/darwin/etc
+         if ! sourcetree::marks::r_disable_multi_marks "${marks}" \
+                                                       "platform-${platform}" \
+                                                       "fetch-platform-${platform}"
+         then
+            log_fluff "MULLE_SOURCETREE_PLATFORMS="${platform}" is not blocked, enables fetch of \"${address}\""
+            return 0
+         fi
       .done
 
       log_debug "Fetch of \"${address}\" blocked by \"${blocking_mark}\""

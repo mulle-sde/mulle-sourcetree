@@ -439,17 +439,17 @@ sourcetree::node::type_filter()
 
    case ",${filter}," in
       *,ALL,*|,,)
-         log_debug "ALL or empty matches always"
+         # log_trace "ALL or empty matches always"
          return 0
       ;;
 
       *,${nodetype},*)
-         log_debug "\"${nodetype}\" matches \"${filter}\""
+         # log_trace "\"${nodetype}\" matches \"${filter}\""
          return 0
       ;;
    esac
 
-   log_debug "\"${nodetype}\" doesn't match \"${filter}\""
+   #log_trace "\"${nodetype}\" doesn't match \"${filter}\""
    return 1
 }
 

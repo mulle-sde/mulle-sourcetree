@@ -154,12 +154,26 @@ sourcetree::commands::rcopy_usage()
 Usage:
    ${MULLE_EXECUTABLE_NAME} rcopy [options] <directory> <specifier> [qualifier]
 
-   Copy a node from another sourcetree. This is a simplification of the
-   copy command, which can do the same thing and more.
-   Use specifier "*" to copy all nodes.
+   Copy nodes from another sourcetree. The specifier uses shell pattern
+   matching to select nodes by address. The optional qualifier filters nodes
+   by their marks.
 
-Example:
+   <specifier>  : Shell pattern to match node addresses
+                  "*"       - matches all nodes
+                  "libz"    - matches exact address "libz"
+                  "lib*"    - matches addresses starting with "lib"
+                  "*/foo"   - matches addresses ending with "/foo"
+
+   [qualifier]  : Optional mark filter expression
+                  "MATCHES build"     - only nodes with mark "build"
+                  "ENABLES require"   - only nodes where "require" is enabled
+                  "NOT MATCHES test"  - nodes without mark "test"
+                  "IFDEF VAR"         - only if environment variable VAR is set
+
+Examples:
    ${MULLE_EXECUTABLE_NAME} rcopy ../other-project libz
+   ${MULLE_EXECUTABLE_NAME} rcopy ../other-project "*"
+   ${MULLE_EXECUTABLE_NAME} rcopy ../other-project "lib*" "MATCHES build"
 
    (This command only affects the local sourcetree.)
 
@@ -752,7 +766,7 @@ sourcetree::commands::r_get_nodeline_by_input()
    log_entry "sourcetree::commands::r_get_nodeline_by_input" "$@"
 
    local input="$1"
-   local nowarn="${2:-NO}"
+   local warning_disabled="${2:-NO}"
 
    [ -z "${input}" ] && fail "Node address is empty"
 
@@ -772,7 +786,7 @@ sourcetree::commands::r_get_nodeline_by_input()
                                                          "${OPTION_FUZZY}" \
                                                          "${OPTION_REGEX}"
    then
-      if [ "${nowarn}" = 'NO' ]
+      if [ "${warning_disabled}" = 'NO' ]
       then
          log_warning "A node \"${_address:-${_url:-${_uuid}}}\" does not exist ($input)"
       fi
@@ -1031,7 +1045,7 @@ sourcetree::commands::duplicate()
 
    local node
 
-   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_PRESENT}"
+   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_EXISTS}"
    then
       return 1
    fi
@@ -1338,7 +1352,7 @@ sourcetree::commands::set()
 
    local oldnodeline
 
-   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_PRESENT}"
+   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_EXISTS}"
    then
       return 2
    fi
@@ -1465,7 +1479,7 @@ sourcetree::commands::get()
 
    local nodeline
 
-   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_PRESENT}"
+   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_EXISTS}"
    then
       return 1
    fi
@@ -1488,7 +1502,7 @@ sourcetree::commands::get()
    then
       if [ "${_nodetype}" != "${OPTION_NODETYPE}" ]
       then
-         if [ "${OPTION_IF_PRESENT}" = 'NO' ]
+         if [ "${OPTION_IF_EXISTS}" = 'NO' ]
          then
             log_warning "Node \"${input}\" nodetype \"${_nodetype}\" does not match \"${OPTION_NODETYPE}\""
          fi
@@ -1500,7 +1514,7 @@ sourcetree::commands::get()
    then
       if ! sourcetree::marks::compatible_with_marks "${_marks}" "${OPTION_MARKS}"
       then
-         if [ "${OPTION_IF_PRESENT}" = 'NO' ]
+         if [ "${OPTION_IF_EXISTS}" = 'NO' ]
          then
             log_warning "Node \"${input}\" marks \"${_marks}\" are not compatible to \"${OPTION_MARKS}\""
          fi
@@ -1608,7 +1622,7 @@ sourcetree::commands::move()
 
    local nodeline
 
-   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_PRESENT}"
+   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_EXISTS}"
    then
       return 1
    fi
@@ -1705,9 +1719,9 @@ sourcetree::commands::remove()
       input="$1"
       shift 
       
-      if ! sourcetree::commands::r_get_nodeline_by_input "${input}" 'NO'
+      if ! sourcetree::commands::r_get_nodeline_by_input "${input}" 'YES'
       then
-         if [ "${OPTION_IF_PRESENT}" = 'YES' ]
+         if [ "${OPTION_IF_EXISTS}" = 'YES' ]
          then
             continue
          fi
@@ -1884,7 +1898,7 @@ sourcetree::commands::_mark()
 
    local oldnodeline
 
-   if ! sourcetree::commands::r_get_nodeline_by_input "${input}"  "${OPTION_IF_PRESENT}"
+   if ! sourcetree::commands::r_get_nodeline_by_input "${input}"  "${OPTION_IF_EXISTS}"
    then
       return 2
    fi
@@ -2189,7 +2203,7 @@ sourcetree::commands::copy()
          fail "Can't copy \"${input}\" unto itself"
       fi
 
-      if ! sourcetree::commands::r_get_nodeline_by_input "${from}" "${OPTION_IF_PRESENT}"
+      if ! sourcetree::commands::r_get_nodeline_by_input "${from}" "${OPTION_IF_EXISTS}"
       then
          return 1
       fi
@@ -2401,7 +2415,7 @@ sourcetree::commands::common()
 
    local OPTION_EXTENDED_MARK='DEFAULT'
    local OPTION_IF_MISSING='NO'
-   local OPTION_IF_PRESENT='NO'
+   local OPTION_IF_EXISTS='NO'
    local OPTION_FUZZY='YES'
    local OPTION_REGEX='NO'
 
@@ -2433,11 +2447,11 @@ sourcetree::commands::common()
 
          # just for remove and move
          --if-present|--if-exists)
-            OPTION_IF_PRESENT='YES'
+            OPTION_IF_EXISTS='YES'
          ;;
 
          --error-if-missing)
-            OPTION_IF_PRESENT='NO'
+            OPTION_IF_EXISTS='NO'
          ;;
 
          #

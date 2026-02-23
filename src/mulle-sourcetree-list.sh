@@ -677,7 +677,7 @@ sourcetree::list::main()
             OPTION_NO_OUTPUT_MARKS=NO
          ;;
 
-         -r)
+         -r|--recurse|--recursive)
             FLAG_SOURCETREE_MODE="share"
             if [ "${OPTION_FORMAT}" = 'DEFAULT' ]
             then
