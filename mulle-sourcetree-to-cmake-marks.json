@@ -8,19 +8,19 @@
     "description": "Adds the library to the list of libraries to be linked."
   },
   {
-    "mark": "dependency",
+    "mark": "cmake-dependency",
     "description": "Inherits build information from a foreign `DependenciesAndLibraries.cmake` file."
   },
   {
-    "mark": "inherit",
+    "mark": "cmake-inherit",
     "description": "Inherits all build properties (search paths, dependencies, loader) from a dependency."
   },
   {
-    "mark": "intermediate-link",
+    "mark": "cmake-intermediate-link",
     "description": "Prefixes the container name with `STARTUP_`, affecting link order."
   },
   {
-    "mark": "loader",
+    "mark": "cmake-loader",
     "description": "Inherits a foreign `objc-deps.inc` file for Objective-C."
   },
   {

@@ -338,7 +338,6 @@ sourcetree::craftorder::main()
    local callbackscript
    local randomstring
 
-
    while [ $# -ne 0 ]
    do
       case "$1" in

@@ -304,11 +304,10 @@ sourcetree::marks::match()
 {
    local marks="$1"
    local pattern="$2"
+   local rc
 
    case "${pattern}" in
       "no-"*"*"*|"no-"*"["*"]"*|"only-"*"*"*|"only-"*"["*"]"*|"version-"*"*"*|"version-"*"["*"]"*)
-         local rc
-
          rc=1
          pattern="${pattern//\*/*([^,])}"
 

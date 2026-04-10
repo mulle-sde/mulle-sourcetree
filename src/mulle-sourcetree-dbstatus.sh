@@ -56,6 +56,14 @@ sourcetree::dbstatus::main()
 {
    log_entry "sourcetree::dbstatus::main" "$@"
 
+   local OPTION_QUIET
+
+   if [ "$1" = '-s' ]
+   then
+      OPTION_QUIET="YES"
+      shift
+   fi
+
    [ "$#" -eq 0 ] || sourcetree::dbstatus::usage
 
    # Save the original MULLE_SOURCETREE_STASH_DIR from environment before it gets overwritten
@@ -78,7 +86,10 @@ sourcetree::dbstatus::main()
 
    if [ ! -e "${configfile}" ]
    then
-      log_warning "No sourcetree here"
+      if [ "${OPTION_QUIET}" != 'YES' ]
+      then
+         log_warning "No sourcetree here"
+      fi
       return 1
    fi
 
@@ -112,6 +123,8 @@ sourcetree::dbstatus::main()
       then
          if [ "${cached_stashdir}" != "${env_stash_dir}" ]
          then
+            # log_trace "cached_stashdir : ${cached_stashdir}"
+            # log_trace "env_stash_dir   : ${env_stash_dir}"
             log_warning "Needs sync as stash directory changed from ${C_RESET_BOLD}${cached_stashdir}${C_WARNING} to ${C_RESET_BOLD}${env_stash_dir}"
             return 3
          fi
@@ -160,7 +173,10 @@ sourcetree::dbstatus::main()
       fi
    fi
 
-   log_info "Is up-to-date"
+   if [ "${OPTION_QUIET}" != 'YES' ]
+   then
+      log_info "Is up-to-date"
+   fi
    return 0
 }
 

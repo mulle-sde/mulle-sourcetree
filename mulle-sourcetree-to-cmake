@@ -740,21 +740,55 @@ _emit_cmake_find_library()
          ;;
 
          'static')
-            r_add_line "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
-            libraries="${RVAL}"
+            # Check if marks explicitly force static/shared
+            case ",${marks}," in
+               *',no-dynamic-link,'*)
+                  # Explicitly static only
+                  r_add_line "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
+                  libraries="${RVAL}"
+                  r_add_line "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
+                  libraries="${RVAL}"
+               ;;
 
-            # fallback to non CMAKE_DEBUG_POSTFIX
-            r_add_line "${libraries}" "\${CMAKE_STATIC_LIBRARY_PREFIX}${name}\${CMAKE_STATIC_LIBRARY_SUFFIX}"
-            libraries="${RVAL}"
+               *)
+                  # Use BUILD_SHARED_LIBS-aware preference
+                  r_add_line "${libraries}" "\${MULLE_PREFERRED_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${MULLE_PREFERRED_LIBRARY_SUFFIX}"
+                  libraries="${RVAL}"
+                  r_add_line "${libraries}" "\${MULLE_PREFERRED_LIBRARY_PREFIX}${name}\${MULLE_PREFERRED_LIBRARY_SUFFIX}"
+                  libraries="${RVAL}"
+                  # Fallback to opposite linkage
+                  r_add_line "${libraries}" "\${MULLE_FALLBACK_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${MULLE_FALLBACK_LIBRARY_SUFFIX}"
+                  libraries="${RVAL}"
+                  r_add_line "${libraries}" "\${MULLE_FALLBACK_LIBRARY_PREFIX}${name}\${MULLE_FALLBACK_LIBRARY_SUFFIX}"
+                  libraries="${RVAL}"
+               ;;
+            esac
          ;;
 
          'shared')
-            r_add_line "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
-            libraries="${RVAL}"
+            # Check if marks explicitly force static/shared
+            case ",${marks}," in
+               *',no-static-link,'*)
+                  # Explicitly shared only
+                  r_add_line "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
+                  libraries="${RVAL}"
+                  r_add_line "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${name}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
+                  libraries="${RVAL}"
+               ;;
 
-            # fallback to non CMAKE_DEBUG_POSTFIX
-            r_add_line "${libraries}" "\${CMAKE_SHARED_LIBRARY_PREFIX}${name}\${CMAKE_SHARED_LIBRARY_SUFFIX}"
-            libraries="${RVAL}"
+               *)
+                  # Use BUILD_SHARED_LIBS-aware preference (inverted for 'shared')
+                  r_add_line "${libraries}" "\${MULLE_FALLBACK_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${MULLE_FALLBACK_LIBRARY_SUFFIX}"
+                  libraries="${RVAL}"
+                  r_add_line "${libraries}" "\${MULLE_FALLBACK_LIBRARY_PREFIX}${name}\${MULLE_FALLBACK_LIBRARY_SUFFIX}"
+                  libraries="${RVAL}"
+                  # Fallback to opposite linkage
+                  r_add_line "${libraries}" "\${MULLE_PREFERRED_LIBRARY_PREFIX}${name}\${CMAKE_DEBUG_POSTFIX}\${MULLE_PREFERRED_LIBRARY_SUFFIX}"
+                  libraries="${RVAL}"
+                  r_add_line "${libraries}" "\${MULLE_PREFERRED_LIBRARY_PREFIX}${name}\${MULLE_PREFERRED_LIBRARY_SUFFIX}"
+                  libraries="${RVAL}"
+               ;;
+            esac
          ;;
       esac
 
@@ -1439,6 +1473,25 @@ emit_dependency_or_subproject()
    local dependency
    local header
    local qualifier
+
+   # Emit header with BUILD_SHARED_LIBS preference logic
+   cat <<'EOF'
+#
+# Set library preference based on BUILD_SHARED_LIBS
+#
+if( BUILD_SHARED_LIBS)
+   set( MULLE_PREFERRED_LIBRARY_PREFIX "${CMAKE_SHARED_LIBRARY_PREFIX}")
+   set( MULLE_PREFERRED_LIBRARY_SUFFIX "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+   set( MULLE_FALLBACK_LIBRARY_PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}")
+   set( MULLE_FALLBACK_LIBRARY_SUFFIX "${CMAKE_STATIC_LIBRARY_SUFFIX}")
+else()
+   set( MULLE_PREFERRED_LIBRARY_PREFIX "${CMAKE_STATIC_LIBRARY_PREFIX}")
+   set( MULLE_PREFERRED_LIBRARY_SUFFIX "${CMAKE_STATIC_LIBRARY_SUFFIX}")
+   set( MULLE_FALLBACK_LIBRARY_PREFIX "${CMAKE_SHARED_LIBRARY_PREFIX}")
+   set( MULLE_FALLBACK_LIBRARY_SUFFIX "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+endif()
+
+EOF
 
    qualifier="\
 MATCHES dependency AND \

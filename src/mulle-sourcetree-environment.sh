@@ -94,26 +94,35 @@ sourcetree::environment::minimal()
    if [ -z "${directory}" -a ! -z "${MULLE_VIRTUAL_ROOT}" ]
    then
       directory="${MULLE_VIRTUAL_ROOT}"
-      log_fluff "Sourcetree uses MULLE_VIRTUAL_ROOT ($MULLE_VIRTUAL_ROOT)"
+      log_fluff "Sourcetree uses MULLE_VIRTUAL_ROOT as project directory \"${MULLE_VIRTUAL_ROOT}\" ($MULLE_VIRTUAL_ROOT_ID)"
    fi
 
    if [ -z "${directory}" ]
    then
       directory="${PWD}"
-      log_debug "Sourcetree uses PWD ($directory)"
+      log_debug "Sourcetree uses PWD as project directory \"$directory\""
    fi
 
-   [ -z "${MULLE_PATH_SH}" ] && . "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-path.sh"
+   include "path"
 
    r_absolutepath "${directory}"
    r_physicalpath "${RVAL}"
 
    MULLE_SOURCETREE_PROJECT_DIR="${RVAL}"
 
+   #
+   # this must die eventually
+   #
    if [ -z "${MULLE_VIRTUAL_ROOT}" ]
    then
       MULLE_VIRTUAL_ROOT="${MULLE_SOURCETREE_PROJECT_DIR}"
-      log_fluff "Sourcetree sets MULLE_VIRTUAL_ROOT to \"${MULLE_VIRTUAL_ROOT}\""
+   fi
+
+   if [ -z "${MULLE_VIRTUAL_ROOT_ID}" ]
+   then
+      MULLE_VIRTUAL_ROOT_ID="$(PATH='/bin:/usr/bin:/usr/local/bin' shasum -a 256 <<< "${MULLE_VIRTUAL_ROOT}")"
+      MULLE_VIRTUAL_ROOT_ID="${MULLE_VIRTUAL_ROOT_ID:1:12}"
+      log_fluff "Sourcetree sets MULLE_VIRTUAL_ROOT_ID to \"${MULLE_VIRTUAL_ROOT_ID}\""
    fi
 
    MULLE_HOSTNAME="${MULLE_HOSTNAME:-`hostname`}" # -s doesn't work on solaris
@@ -151,13 +160,13 @@ sourcetree::environment::basic()
                                    "${mode}"
 
 
-   log_setting "MULLE_SOURCETREE_PROJECT_DIR   : ${MULLE_SOURCETREE_PROJECT_DIR}"
    log_setting "SOURCETREE_CONFIG_NAME         : ${SOURCETREE_CONFIG_NAME}"
    log_setting "SOURCETREE_CONFIG_DIR          : ${SOURCETREE_CONFIG_DIR}"
    log_setting "SOURCETREE_FALLBACK_CONFIG_DIR : ${SOURCETREE_FALLBACK_CONFIG_DIR}"
    log_setting "MULLE_SOURCETREE_ETC_DIR       : ${MULLE_SOURCETREE_ETC_DIR}"
-   log_setting "MULLE_SOURCETREE_VAR_DIR       : ${MULLE_SOURCETREE_VAR_DIR}"
+   log_setting "MULLE_SOURCETREE_PROJECT_DIR   : ${MULLE_SOURCETREE_PROJECT_DIR}"
    log_setting "MULLE_SOURCETREE_SHARE_DIR     : ${MULLE_SOURCETREE_SHARE_DIR}"
+   log_setting "MULLE_SOURCETREE_VAR_DIR       : ${MULLE_SOURCETREE_VAR_DIR}"
 }
 
 
@@ -185,7 +194,8 @@ sourcetree::environment::default()
 
    if [ "${defer}" = "VIRTUAL" ]
    then
-      [ -z "${MULLE_VIRTUAL_ROOT}" ] && fail "MULLE_VIRTUAL_ROOT not set"
+      [ -z "${MULLE_VIRTUAL_ROOT}" ]    && fail "MULLE_VIRTUAL_ROOT not set"
+      [ -z "${MULLE_VIRTUAL_ROOT_ID}" ] && fail "MULLE_VIRTUAL_ROOT_ID not set"
 
       cd "${MULLE_VIRTUAL_ROOT}" || fail "failed to cd to \"${MULLE_VIRTUAL_ROOT}\""
 
@@ -258,6 +268,7 @@ sourcetree::environment::set_share_dir()
    local usershare_dir="$1"
 
    [ -z "${MULLE_VIRTUAL_ROOT}" ] && _internal_fail "MULLE_VIRTUAL_ROOT must be defined by now"
+   [ -z "${MULLE_VIRTUAL_ROOT_ID}" ] && _internal_fail "MULLE_VIRTUAL_ROOT_ID must be defined by now"
    [ -z "${SOURCETREE_START}" ]   && _internal_fail "SOURCETREE_START must be defined by now"
 
    #
@@ -475,7 +486,7 @@ sourcetree::environment::setup()
 
    sourcetree::environment::default "" \
                                     "${option_dirname}" \
-                                    "" \
+                                    "${MULLE_SOURCETREE_CONFIG_NAME}" \
                                     "" \
                                     "" \
                                     "" \

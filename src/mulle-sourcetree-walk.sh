@@ -1185,7 +1185,6 @@ sourcetree::walk::walk_nodeline()
       ;;
    esac
 
-
    local _nodeline
 
    _nodeline="${nodeline}"

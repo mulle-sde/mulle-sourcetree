@@ -66,6 +66,7 @@ Usage:
 Flags:
    --import      : Emit import files
    --no-import   : Don't emit import files
+   --enable-sourcetree-deps : Emit sourcetree.deps.inc for ObjC library dependencies
    --show-marks  : Display all available marks with descriptions (JSON)
    --stdout      : Emit to stdout instead
    --unames      : List known unames and their known cpp equivalent
@@ -75,6 +76,7 @@ Environment:
    MULLE_SOURCETREE_TO_C_IMPORT_FILE         | file generation. NONE to emit an
    MULLE_SOURCETREE_TO_C_PRIVATEINCLUDE_FILE | empty file. - outputs to stdout.
    MULLE_SOURCETREE_TO_C_PRIVATEIMPORT_FILE  | Otherwise specify the filename.
+   MULLE_SOURCETREE_TO_C_OBJC_DEPS_FILE      | sourcetree.deps.inc output path.
 EOF
    exit 1
 }
@@ -843,6 +845,98 @@ ${text_h}
 }
 
 
+emit_objc_sourcetree_deps()
+{
+   log_entry "emit_objc_sourcetree_deps" "$@"
+
+   local headers
+
+   headers="`exekutor "${MULLE_SOURCETREE}" \
+                           --virtual-root \
+                           --config-file "${FLAG_CONFIG_FILE}" \
+                           ${MULLE_TECHNICAL_FLAGS} \
+                        list \
+                           --format "%_;%a;%m\n" \
+                           --nodetypes "no-comment,ALL" \
+                           --marks "dependency" \
+                           --no-bequeath \
+                           --output-format raw \
+                           --no-output-header`"
+
+   local uuid
+   local address
+   local marks
+   local name
+   local emit_objc_loader
+
+   .foreachline header in ${headers}
+   .do
+      IFS=";" read uuid address marks <<< "${header}"
+      [ -z "${uuid}" ] && .continue
+
+      emit_objc_loader='NO'
+      case ",${marks}," in
+         *,no-import,*|*,no-cmake-loader,*)
+            # not ObjC or loader explicitly disabled
+         ;;
+         *)
+            case "${address}" in
+               [A-Z]*)
+                  emit_objc_loader='YES'
+               ;;
+            esac
+         ;;
+      esac
+
+      [ "${emit_objc_loader}" = 'NO' ] && .continue
+
+      r_basename "${address%#*}"
+      printf "      { @selector( %sDeps), MULLE_OBJC_NO_CATEGORYID },      // %s\n" \
+             "${RVAL}" "${address}"
+   .done
+}
+
+
+objc_sourcetree_deps()
+{
+   log_entry "objc_sourcetree_deps" "$@"
+
+   case "${MULLE_SOURCETREE_TO_C_OBJC_DEPS_FILE}" in
+      ON|YES)
+         MULLE_SOURCETREE_TO_C_OBJC_DEPS_FILE=""
+      ;;
+   esac
+
+   case "${MULLE_SOURCETREE_TO_C_OBJC_DEPS_FILE}" in
+      NO|DISABLE*)
+         return
+      ;;
+   esac
+
+   MULLE_SOURCETREE_TO_C_OBJC_DEPS_FILE="${MULLE_SOURCETREE_TO_C_OBJC_DEPS_FILE:-\
+${PROJECT_SOURCE_DIR:-src}/reflect/sourcetree.deps.inc}"
+
+   local text_h
+
+   text_h="`emit_objc_sourcetree_deps`" || exit 1
+
+   if [ -z "${text_h}" ]
+   then
+      text_h="/* no ObjC library dependencies */"
+   fi
+
+   r_text_info_on 'MULLE_SOURCETREE_TO_C_OBJC_DEPS_FILE'
+   text_h="${RVAL}
+
+${text_h}"
+
+   output_file "${MULLE_SOURCETREE_TO_C_OBJC_DEPS_FILE}" \
+               "${text_h}" \
+               "sourcetree.deps.inc" \
+               "MULLE_SOURCETREE_TO_C_OBJC_DEPS_FILE"
+}
+
+
 objc_import_private()
 {
    log_entry "objc_import_private" "$@"
@@ -944,6 +1038,7 @@ main()
    local MULLE_TRACE_SETTINGS_FLIP_X='NO'
 
    local OPTION_IMPORT="DEFAULT"
+   local OPTION_SOURCETREE_DEPS="${MULLE_SOURCETREE_TO_C_OBJC_DEPS_FILE}"
 
    local FLAG_CONFIG_FILE='-'
 
@@ -966,6 +1061,10 @@ main()
 
          --no-import)
             OPTION_IMPORT='NO'
+         ;;
+
+         --enable-sourcetree-deps)
+            OPTION_SOURCETREE_DEPS="${OPTION_SOURCETREE_DEPS:-YES}"
          ;;
 
          --config-dir)
@@ -1100,6 +1199,12 @@ main()
 
       objc_import "${PROJECT_NAME}" "${PROJECT_IDENTIFIER}"         || _fatal "objc_import failed"
       objc_import_private "${PROJECT_NAME}" "${PROJECT_IDENTIFIER}" || _fatal "objc_import_private failed"
+
+      if [ ! -z "${OPTION_SOURCETREE_DEPS}" ]
+      then
+         MULLE_SOURCETREE_TO_C_OBJC_DEPS_FILE="${OPTION_SOURCETREE_DEPS}" \
+            objc_sourcetree_deps || _fatal "objc_sourcetree_deps failed"
+      fi
    fi
 
    :

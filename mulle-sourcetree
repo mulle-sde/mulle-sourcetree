@@ -440,6 +440,7 @@ sourcetree::main()
    log_setting "MULLE_SOURCETREE_STASH_DIR     : ${MULLE_SOURCETREE_STASH_DIR}"
    log_setting "MULLE_SOURCETREE_VAR_DIR       : ${MULLE_SOURCETREE_VAR_DIR}"
    log_setting "MULLE_VIRTUAL_ROOT             : ${MULLE_VIRTUAL_ROOT}"
+   log_setting "MULLE_VIRTUAL_ROOT_ID          : ${MULLE_VIRTUAL_ROOT_ID}"
 
 
    # shellcheck source=mulle-sourcetree-environment.sh
@@ -654,11 +655,19 @@ wrap"
             fail "star-search needs one node address to search for"
          fi
 
+         # `NODE_ADDRESS` : Address part of the node
+         # `NODE_BRANCH` : Branch part of the node
+         # `NODE_FETCHOPTIONS` : Fetch options for the node
+         # `NODE_MARKS` : Marks of the node
+         # `NODE_RAW_USERINFO` : Raw userinfo (possibly base64 encoded)
+         # `NODE_TAG` : Tag part of the node
+         # `NODE_TYPE` : Node type
+         # `NODE_URL` : URL part of the node
          sourcetree::walk::main \
             --dedupe-mode nodeline-no-uuid \
             --lenient \
             "[ \"\${NODE_ADDRESS}\" = \"$1\" ] && \
-echo \"\${NODE_MARKS} \${NODE_TAG} \${NODE_BRANCH} \${NODE_URL} (\${WALK_DATASOURCE#\${PWD}/})\"" | sort -u
+echo \"\${NODE_ADDRESS} \${NODE_MARKS} \${NODE_TAG} \${NODE_BRANCH} \${NODE_URL} \${NODE_TYPE} \${NODE_FETCHOPTIONS} \${NODE_RAW_USERINFO} (\${WALK_DATASOURCE#\${PWD}/})\"" | sort -u
       ;;
 
       tool-env)

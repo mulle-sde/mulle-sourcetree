@@ -230,7 +230,7 @@ sourcetree::cfg::r_configfile_for_read()
 
 
 #
-# config file stuff. The fallback file is usally in "share" and the default
+# config file stuff. The fallback file is usually in "share" and the default
 # in "etc"
 #
 # $1 is SOURCE_TREE_START usually '/'

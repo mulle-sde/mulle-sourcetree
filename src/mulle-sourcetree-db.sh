@@ -1452,7 +1452,7 @@ sourcetree::db::ensure_consistency()
 
    if sourcetree::db::is_updating "${database}" && [ "${MULLE_FLAG_MAGNUM_FORCE}" = "NONE" ]
    then
-      log_error "A previous update was incomplete.
+      _log_error "A previous update was incomplete.
 Suggested resolution:
     ${C_RESET_BOLD}cd '${MULLE_VIRTUAL_ROOT}${_database}'${C_ERROR}
     ${C_RESET_BOLD}${MULLE_EXECUTABLE_NAME} clean${C_ERROR}
