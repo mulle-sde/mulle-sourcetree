@@ -640,6 +640,20 @@ As node is marked \"no-delete\" just remember it."
 it doesn't exist (${PWD#"${MULLE_USER_PWD}/"})"
          fi
 
+         # Elide fetch for bequeathed no-share-shirk nodes in descendant databases.
+         # These nodes are placeholders of amalgamations and should only squat
+         # top-level share space, not trigger standalone fetches in consumers.
+         if [ "${style}" = 'share' -a "${database}" != "/" ]
+         then
+            if sourcetree::marks::disable "${newmarks}" "share-shirk"
+            then
+               _log_fluff "Node \"${newfilename#"${MULLE_USER_PWD}/"}\" is a bequeathed no-share-shirk placeholder, skip fetch"
+               ACTIONS="skip"
+               RVAL="${ACTIONS}"
+               return
+            fi
+         fi
+
          # could be that its an amalgamation, check that and if yes just ignore
          # An amalgamation writes two db entries, one for its embedding and
          # one squats out space, lets get that and check for no-share-shirk

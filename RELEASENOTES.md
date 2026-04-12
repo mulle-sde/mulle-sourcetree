@@ -1,3 +1,7 @@
+### 1.6.4
+
+* fix: skip fetch for bequeathed no-share-shirk placeholder nodes in descendant databases (amalgamation clib deps no longer fetched by consumers)
+
 ### 1.6.3
 
 * fix a potential symlink problem
