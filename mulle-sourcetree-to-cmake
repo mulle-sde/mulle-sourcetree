@@ -479,9 +479,7 @@ ${indent}            list( INSERT CMAKE_MODULE_PATH 0 "\${_TMP_${identifier}_DIR
 EOF
 
 
-               if [ "${emit_objc_loader}" = 'YES' ]
-               then
-                  cat <<EOF
+               cat <<EOF
 ${indent}            # we only want top level INHERIT_OBJC_DEPS, so disable them
 ${indent}            if( NOT NO_INHERIT_OBJC_DEPS)
 ${indent}               set( NO_INHERIT_OBJC_DEPS OFF)
@@ -489,19 +487,15 @@ ${indent}            endif()
 ${indent}            list( APPEND _TMP_INHERIT_OBJC_DEPS \${NO_INHERIT_OBJC_DEPS})
 ${indent}            set( NO_INHERIT_OBJC_DEPS ON)
 EOF
-               fi
                cat <<EOF
 ${indent}            #
 ${indent}            include( "\${_TMP_${identifier}_DIR}/DependenciesAndLibraries.cmake" OPTIONAL)
 ${indent}            #
 EOF
-               if [ "${emit_objc_loader}" = 'YES' ]
-               then
-                  cat <<EOF
+               cat <<EOF
 ${indent}            list( GET _TMP_INHERIT_OBJC_DEPS -1 NO_INHERIT_OBJC_DEPS)
 ${indent}            list( REMOVE_AT _TMP_INHERIT_OBJC_DEPS -1)
 EOF
-               fi
                cat <<EOF
 ${indent}            list( REMOVE_ITEM CMAKE_MODULE_PATH "\${_TMP_${identifier}_DIR}")
 ${indent}            #
@@ -635,9 +629,11 @@ _emit_cmake_find_library()
 {
    log_entry "_emit_cmake_find_library" "$@"
 
-   local preference="$1"; shift
-   local findoptions="$1"; shift
-   local findoptionskey="$1"; shift
+   local preference="$1"
+   local findoptions="$2"
+   local findoptionskey="$3"
+
+   shift 3
 
    local names="$1"
    local address="$2"
@@ -852,14 +848,19 @@ _emit_cmake_find_library()
 # Seems to fix a problem when old libs are in /usr/local/lib
 # TODO: maybenot use CMAKE_LIBRARY_PATH and CMAKE_FRAMEWORK_PATH then ?
 
-      cat  <<EOF
+   local name
+
+   name="${names%%,*}"
+   name="${name#*:}"       # remove Release: prefix if present (see MulleCurl)
+
+   cat  <<EOF
 ${indent}if( COLLECT_${containername}_AS_NAMES)
-${indent}   list( APPEND ${containername} "${names%%,*}")
+${indent}   list( APPEND ${containername} "${name}")
 ${indent}else()
 EOF
-      indent="${indent}   "
+   indent="${indent}   "
 
-      cat  <<EOF
+   cat  <<EOF
 ${indent}if( NOT ${key})
 EOF
 
