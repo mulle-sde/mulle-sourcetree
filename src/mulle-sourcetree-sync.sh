@@ -681,9 +681,23 @@ sourcetree::sync::_sync_share()
 
    if [ "${need_db}" = 'YES' ]
    then
+      # Re-evaluate stash dir from mulle-env before persisting it.
+      # This prevents writing back stale values after a reset when
+      # MULLE_VIRTUAL_ROOT_ID changed and runtime env still carries
+      # an old expanded MULLE_SOURCETREE_STASH_DIR.
+      local persisted_stash_dir
+      local env_stash_dir
+
+      persisted_stash_dir="${MULLE_SOURCETREE_STASH_DIR}"
+      env_stash_dir="`"${MULLE_ENV:-mulle-env}" -s environment get --output-eval MULLE_SOURCETREE_STASH_DIR 2>/dev/null`"
+      if [ ! -z "${env_stash_dir}" ]
+      then
+         persisted_stash_dir="${env_stash_dir}"
+      fi
+
       sourcetree::db::set_dbtype "${database}" "${style}"
       sourcetree::db::set_update "${database}" "${configfile}"
-      sourcetree::db::set_shareddir "${database}" "${MULLE_SOURCETREE_STASH_DIR}"
+      sourcetree::db::set_shareddir "${database}" "${persisted_stash_dir}"
       #
       # do a flat update first and remove what we don't have
       #

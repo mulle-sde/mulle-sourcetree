@@ -462,7 +462,7 @@ sourcetree::commands::get_usage()
 
    cat <<EOF >&2
 Usage:
-   ${MULLE_EXECUTABLE_NAME} get <address> [key|all]
+   ${MULLE_EXECUTABLE_NAME} [--recurse] get <address> [key|all]
 
    Prints the node values for a node with the given key. By default key is
    'address'. If you use the special key 'all', then you will get an
@@ -495,7 +495,7 @@ Keys:
    url          : the url of the node
    userinfo     : the userinfo of the node
 
-   (This command only affects the local sourcetree.)
+   (This command only affects the local sourcetree unless --recurse is given.)
 EOF
   exit 1
 }
@@ -1464,6 +1464,50 @@ in the sourcetree (${PWD#"${MULLE_USER_PWD}/"})"
 }
 
 
+#
+# Recursively search for a node by address in fetched subdependencies.
+# Returns the nodeline in RVAL. In share mode all fetched deps are in the
+# same flat stash directory, so we iterate all stash entries with configs.
+#
+sourcetree::commands::r_recursive_get_nodeline()
+{
+   log_entry "sourcetree::commands::r_recursive_get_nodeline" "$@"
+
+   local input="$1"
+   local stashdir="${2:-${MULLE_SOURCETREE_STASH_DIR}}"
+
+   [ -z "${stashdir}" -o ! -d "${stashdir}" ] && return 1
+
+   local configname="${SOURCETREE_CONFIG_NAME:-config}"
+   local subdir
+   local configfile
+   local subnodelines
+
+   for subdir in "${stashdir}"/*/
+   do
+      [ -d "${subdir}" ] || continue
+
+      configfile="${subdir}.mulle/etc/sourcetree/${configname}"
+      if [ ! -f "${configfile}" ]
+      then
+         configfile="${subdir}.mulle/share/sourcetree/${configname}"
+         [ -f "${configfile}" ] || continue
+      fi
+
+      subnodelines="`sourcetree::cfg::egrep "${configfile}"`"
+      if [ ! -z "${subnodelines}" ]
+      then
+         if sourcetree::nodeline::r_find "${subnodelines}" "${input}" 'NO'
+         then
+            return 0
+         fi
+      fi
+   done
+
+   return 1
+}
+
+
 sourcetree::commands::get()
 {
    log_entry "sourcetree::commands::get" "$@"
@@ -1479,9 +1523,28 @@ sourcetree::commands::get()
 
    local nodeline
 
-   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" "${OPTION_IF_EXISTS}"
+   if ! sourcetree::commands::r_get_nodeline_by_input "${input}" 'YES'
    then
-      return 1
+      case "${SOURCETREE_MODE}" in
+         recurse|share)
+            if ! sourcetree::commands::r_recursive_get_nodeline "${input}"
+            then
+               if [ "${OPTION_IF_EXISTS}" = 'NO' ]
+               then
+                  log_warning "A node \"${input}\" does not exist (${input})"
+               fi
+               return 1
+            fi
+         ;;
+
+         *)
+            if [ "${OPTION_IF_EXISTS}" = 'NO' ]
+            then
+               log_warning "A node \"${input}\" does not exist (${input})"
+            fi
+            return 1
+         ;;
+      esac
    fi
    nodeline="${RVAL}"
 

@@ -891,7 +891,7 @@ emit_objc_sourcetree_deps()
       [ "${emit_objc_loader}" = 'NO' ] && .continue
 
       r_basename "${address%#*}"
-      printf "      { @selector( %sDeps), MULLE_OBJC_NO_CATEGORYID },      // %s\n" \
+      printf "      { @selector( MulleObjCDeps), @selector( %s) },      // %s\n" \
              "${RVAL}" "${address}"
    .done
 }

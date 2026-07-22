@@ -830,8 +830,8 @@ sourcetree::list::main()
       r_physicalpath "${RVAL}"
       MULLE_VIRTUAL_ROOT="${RVAL}"
 
-      MULLE_VIRTUAL_ROOT_ID="$(PATH='/bin:/usr/bin:/usr/local/bin' shasum -a 256 <<< "${MULLE_VIRTUAL_ROOT}")"
-      MULLE_VIRTUAL_ROOT_ID="${MULLE_VIRTUAL_ROOT_ID:1:12}"
+      r_fnv1a_32  "${MULLE_VIRTUAL_ROOT}"
+      printf -v MULLE_VIRTUAL_ROOT_ID "%08x" "${RVAL}"
 
       log_fluff "mulle-sourcetree (list) sets MULLE_VIRTUAL_ROOT to \"${MULLE_VIRTUAL_ROOT}\" ($MULLE_VIRTUAL_ROOT_ID)"
 
