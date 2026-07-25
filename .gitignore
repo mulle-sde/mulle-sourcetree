@@ -34,3 +34,4 @@ cmake_install.cmake
 .graveyard/
 dox.unreleased
 *.backup
+.roam/
