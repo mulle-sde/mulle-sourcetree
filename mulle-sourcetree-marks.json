@@ -69,6 +69,10 @@
     "description": "If disabled (no-actual-link), affects linking behavior."
   },
   {
+    "mark": "actual-build",
+    "description": "If disabled (no-actual-build), the node is still traversed for its subdependencies but is not built itself. Use for dependency convenience wrappers."
+  },
+  {
     "mark": "build",
     "description": "If disabled (no-build), the dependency will not be built."
   },

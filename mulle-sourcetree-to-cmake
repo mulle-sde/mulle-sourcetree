@@ -848,8 +848,6 @@ _emit_cmake_find_library()
 # Seems to fix a problem when old libs are in /usr/local/lib
 # TODO: maybenot use CMAKE_LIBRARY_PATH and CMAKE_FRAMEWORK_PATH then ?
 
-   local name
-
    name="${names%%,*}"
    name="${name#*:}"       # remove Release: prefix if present (see MulleCurl)
 

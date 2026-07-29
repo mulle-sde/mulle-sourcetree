@@ -1814,6 +1814,7 @@ sourcetree::commands::remove()
 # TODO: make this more stringent maybe no-- vs no-os-
 #       so we can scope this nicer ?
 KNOWN_MARKS="\
+no-actual-build
 no-actual-link
 no-all-load
 no-bequeath

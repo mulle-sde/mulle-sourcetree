@@ -963,7 +963,7 @@ sourcetree::action::r_is_fetchable()
 
       local platform
 
-      .foreachpath platform in ${MULLE_SOURCETREE_PLATFORMS}
+      .foreachpath platform in ${MULLE_SOURCETREE_PLATFORMS:-${MULLE_CRAFT_PLATFORMS}}
       .do
          # clumsy         
          if sourcetree::marks::contain "${_marks}" "only-platform-${platform}"
