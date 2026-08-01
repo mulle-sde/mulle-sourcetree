@@ -643,14 +643,27 @@ it doesn't exist (${PWD#"${MULLE_USER_PWD}/"})"
          # Elide fetch for bequeathed no-share-shirk nodes in descendant databases.
          # These nodes are placeholders of amalgamations and should only squat
          # top-level share space, not trigger standalone fetches in consumers.
+         # But do NOT skip nodes that are nested inside another node's directory
+         # (e.g., shared/a/b is an embedded dep of a and must still be fetched).
          if [ "${style}" = 'share' -a "${database}" != "/" ]
          then
             if sourcetree::marks::disable "${newmarks}" "share-shirk"
             then
-               _log_fluff "Node \"${newfilename#"${MULLE_USER_PWD}/"}\" is a bequeathed no-share-shirk placeholder, skip fetch"
-               ACTIONS="skip"
-               RVAL="${ACTIONS}"
-               return
+               local _relpath
+
+               _relpath="${newfilename#"${MULLE_SOURCETREE_STASH_DIR}/"}"
+               case "${_relpath}" in
+                  */*)
+                     # nested inside another node's directory, don't skip
+                  ;;
+
+                  *)
+                     _log_fluff "Node \"${newfilename#"${MULLE_USER_PWD}/"}\" is a bequeathed no-share-shirk placeholder, skip fetch"
+                     ACTIONS="skip"
+                     RVAL="${ACTIONS}"
+                     return
+                  ;;
+               esac
             fi
          fi
 

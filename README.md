@@ -254,7 +254,7 @@ The output of mulle-sourcetree-to-cmake is also self documenting!
 | `cmakeinherit`               | Old spelling of `cmake-inherit`.                            |
 | `cmake-inherit`              | Participate in cmake dependency inclusion scheme.           |
 | `cmake-intermediate-link`    | Prefixes generated container name with `STARTUP_`           |
-| `cmake-loader `              | Inherit foreign MulleObjCDeps for mulle-objc-loader-tool. |
+| `cmake-loader `              | Inherit foreign MulleObjCDeps for mulle-objc-deps-tool. |
 | `cmake-searchpath`           | Add include directory to searchpath (flattens headers).     |
 | `cmake-suppress-system-path` | Dependencies are not searched in the system libs.           |
 | `dynamic-link`               | Use dynamic linking.                                        |
