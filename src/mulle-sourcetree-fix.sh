@@ -129,8 +129,6 @@ sourcetree::fix::r_locate_fix_file()
          return 0
       fi
 
-      local fixname
-
       r_basename "${fix}"
       fixname="${RVAL}"
       if [ -z "${match}" ] && [ "${fixname}" = "${name}" ]
@@ -199,7 +197,6 @@ sourcetree::fix::_fixup_dir_exists()
    local fixname
 
    local nodeline
-   local fix
 
    if [ ! -f "${filename}/${SOURCETREE_FIX_FILENAME}" ]
    then

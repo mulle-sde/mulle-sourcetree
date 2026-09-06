@@ -33,7 +33,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_C_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="1.6.4"
+MULLE_EXECUTABLE_VERSION="1.7.0"
 
 
 usage()
@@ -1042,6 +1042,10 @@ main()
 
    local FLAG_CONFIG_FILE='-'
 
+   local sharedir
+   local marksfile
+   local scriptdir
+
    while [ $# -ne 0 ]
    do
       if options_technical_flags "$1"
@@ -1117,12 +1121,11 @@ main()
          ;;
 
          --show-marks)
-            local sharedir="${MULLE_SOURCETREE_SHARE_DIR:-${MULLE_EXECUTABLE_DIR}/../share/mulle-sourcetree}"
-            local marksfile="${sharedir}/mulle-sourcetree-to-c-marks.json"
+            sharedir="${MULLE_SOURCETREE_SHARE_DIR:-${MULLE_EXECUTABLE_DIR}/../share/mulle-sourcetree}"
+            marksfile="${sharedir}/mulle-sourcetree-to-c-marks.json"
             
             if [ ! -f "${marksfile}" ]
             then
-               local scriptdir
                scriptdir="$(dirname "${MULLE_EXECUTABLE}")"
                marksfile="${scriptdir}/mulle-sourcetree-to-c-marks.json"
             fi

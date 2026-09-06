@@ -83,7 +83,6 @@ git_export_callback()
          local domain
          local scm
          local user
-         local repo
          local branch
          local tag
 

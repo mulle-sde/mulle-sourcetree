@@ -7,6 +7,7 @@
       username="mulle-sde";
       reponame="mulle-sourcetree";
       homepage="https://github.com/mulle-sde/mulle-sourcetree";
-      license="BSD-3-Clause"
+      license="BSD-3-Clause";
+      version="1.7.0"
    };
 }

@@ -62,6 +62,7 @@ sourcetree::action::r_fetch_eval_options()
    log_entry "sourcetree::action::r_fetch_eval_options" "$@"
 
    local marks="$1"
+   local destination="$2"
 
    local options
    local option_symlink="${OPTION_FETCH_SYMLINK:-DEFAULT}"
@@ -116,10 +117,48 @@ sourcetree::action::r_fetch_eval_options()
       ;;
    esac
 
-   if [ "${option_symlink}" = 'YES' -a "${OPTION_FETCH_ABSOLUTE_SYMLINK}" = 'YES' ]
+   #
+   # Symlink kind depends on where the destination lives:
+   #   - inside the stash directory  -> absolute symlink (stash may be shared
+   #     across projects / moved with the project as a unit, relative links
+   #     back out of the stash tend to break)
+   #   - outside the stash (embedded/minion inside the project tree) ->
+   #     relative symlink, so the project stays relocatable and syncs cleanly.
+   #
+   # OPTION_FETCH_ABSOLUTE_SYMLINK=YES forces absolute everywhere (override).
+   #
+   if [ "${option_symlink}" = 'YES' ]
    then
-      r_concat "${options}" "--absolute-symlink"
-      options="${RVAL}"
+      local want_absolute='NO'
+
+      if [ "${OPTION_FETCH_ABSOLUTE_SYMLINK}" = 'YES' ]
+      then
+         want_absolute='YES'
+      else
+         if [ ! -z "${MULLE_SOURCETREE_STASH_DIR}" -a ! -z "${destination}" ]
+         then
+            #
+            # MULLE_SOURCETREE_STASH_DIR is always absolute (see
+            # sourcetree::environment), but "destination" may be relative to
+            # PWD, so absolutize it before the prefix test.
+            #
+            local abs_destination
+
+            r_simplified_absolutepath "${destination}"
+            abs_destination="${RVAL}"
+
+            if string_has_prefix "${abs_destination}" "${MULLE_SOURCETREE_STASH_DIR}/"
+            then
+               want_absolute='YES'
+            fi
+         fi
+      fi
+
+      if [ "${want_absolute}" = 'YES' ]
+      then
+         r_concat "${options}" "--absolute-symlink"
+         options="${RVAL}"
+      fi
    fi
 
    if [ "${option_symlink}" = 'NO' -o "${option_writeprotect}" = 'YES' ]
@@ -285,7 +324,7 @@ sourcetree::action::_do_fetch_operation()
 
    local options
 
-   sourcetree::action::r_fetch_eval_options "${marks}"
+   sourcetree::action::r_fetch_eval_options "${marks}" "${destination}"
    options="${RVAL}"
 
    #
@@ -399,7 +438,7 @@ sourcetree::action::do_operation()
 
    local options
 
-   sourcetree::action::r_fetch_eval_options "${marks}"
+   sourcetree::action::r_fetch_eval_options "${marks}" "${destination}"
    options="${RVAL}"
 
    sourcetree::fetch::sync_operation "${opname}" "${options}" \

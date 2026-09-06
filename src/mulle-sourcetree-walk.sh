@@ -1216,7 +1216,7 @@ sourcetree::walk::walk_nodeline()
    local filterpermissions="$4"
    local callbackqualifier="$5"
    local descendqualifier="$6"
-   local mode="$7"
+   mode="$7"
 
    shift 7
 
@@ -1929,7 +1929,6 @@ sourcetree::walk::main()
    local OPTION_MARKS=""
    local OPTION_NODETYPES=""
    local OPTION_PERMISSIONS=""
-   local OPTION_COMMENTS="D"
    local OPTION_QUALIFIER=""
    local OPTION_TRAVERSE_STYLE="PREORDER"
    local OPTION_WALK_DB='DEFAULT'

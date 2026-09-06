@@ -314,8 +314,6 @@ ${C_RESET_BOLD}   https://stedolan.github.io/jq"
    include "string"
    include "sourcetree::node"
 
-   local output
-
    output="-"
    if [ ! -z "${FLAG_NAME}" ]
    then

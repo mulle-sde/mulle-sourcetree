@@ -41,7 +41,7 @@
 [ "${TRACE}" = 'YES' -o "${MULLE_CMAKE_SOURCETREE_REFLECT_TRACE}" = 'YES' ] && set -x && : "$0" "$@"
 
 
-MULLE_EXECUTABLE_VERSION="1.6.4"
+MULLE_EXECUTABLE_VERSION="1.7.0"
 
 
 usage()
@@ -594,6 +594,21 @@ _emit_find_library_command()
    printf "%s%s\n" "${indent}" ")"
 }
 
+_emit_find_target_command()
+{
+   local key="$1"
+   local names="$2"
+   local indent="$3"
+
+   printf "%s%s\n" "${indent}" "foreach( _TMP_${key}_TARGET ${names})"
+   printf "%s%s\n" "${indent}   " "if( TARGET \${_TMP_${key}_TARGET})"
+   printf "%s%s\n" "${indent}      " "set( ${key} \${_TMP_${key}_TARGET})"
+   printf "%s%s\n" "${indent}      " "break()"
+   printf "%s%s\n" "${indent}   " "endif()"
+   printf "%s%s\n" "${indent}" "endforeach()"
+}
+
+
 
 _emit_find_library()
 {
@@ -602,19 +617,24 @@ _emit_find_library()
    local findoptions="$3"
    local findoptionskey="$4"
    local indent="$5"
+   local targetnames="$6"
 
+   _emit_find_target_command "${key}" "${targetnames}" "${indent}"
+
+   printf "%s%s\n" "${indent}" "if( NOT ${key})"
    if [ ! -z "${findoptions}" ]
    then
       # prefer finding a "local" library regardless of name
-      _emit_find_library_command "${key}" "${libraries}" "${findoptions}" "${indent}"
+      _emit_find_library_command "${key}" "${libraries}" "${findoptions}" "${indent}   "
 
       # fallback to system library
-      printf "%s%s\n" "${indent}" "if( NOT ${key} AND NOT ${findoptionskey})"
-      _emit_find_library_command "${key}" "${libraries}" "" "${indent}   "
-      printf "%s%s\n" "${indent}" "endif()"
+      printf "%s%s\n" "${indent}   " "if( NOT ${key} AND NOT ${findoptionskey})"
+      _emit_find_library_command "${key}" "${libraries}" "" "${indent}      "
+      printf "%s%s\n" "${indent}   " "endif()"
    else
-      _emit_find_library_command "${key}" "${libraries}" "" "${indent}"
+      _emit_find_library_command "${key}" "${libraries}" "" "${indent}   "
    fi
+   printf "%s%s\n" "${indent}" "endif()"
 }
 
 
@@ -652,6 +672,7 @@ _emit_cmake_find_library()
    local name
    local library_key
    local types
+   local targetnames
 
    .foreachitem i in ${names}
    .do
@@ -668,6 +689,9 @@ _emit_cmake_find_library()
 
       name="${name:-$i}"
       type="${type:-Release}"
+
+      r_concat_unique "${targetnames}" "${name}"
+      targetnames="${RVAL}"
 
       r_add_unique_line "${types}" "${type}"
       types="${RVAL}"
@@ -870,7 +894,8 @@ EOF
                          "${Release_libraries}" \
                          "${findoptions}" \
                          "${findoptionskey}" \
-                         "${indent}   "
+                         "${indent}   " \
+                         "${targetnames}"
    else
       local clause
       #
@@ -898,7 +923,8 @@ EOF
                                "${libraries}" \
                                "${findoptions}" \
                                "${findoptionskey}" \
-                               "${indent}      "
+                               "${indent}      " \
+                               "${targetnames}"
             cat  <<EOF
 ${indent}   endif()
 EOF
@@ -915,7 +941,8 @@ EOF
                                "${Release_libraries}" \
                                "${findoptions}" \
                                "${findoptionskey}" \
-                               "${indent}      "
+                               "${indent}      " \
+                               "${targetnames}"
       cat  <<EOF
 ${indent}   endif()
 EOF
@@ -923,11 +950,8 @@ EOF
 
       cat  <<EOF
 ${indent}   message( STATUS "${key} is \${${key}}")
-${indent}   #
-${indent}   # The order looks ascending, but due to the way this file is read
-${indent}   # it ends up being descending, which is what we need.
-${indent}   #
-${indent}   if( ${key})
+${indent}endif()
+${indent}if( ${key})
 EOF
    case ",${marks}," in
       *',no-cmake-add,'*)
@@ -939,7 +963,9 @@ ${indent}      #
 ${indent}      # Add ${key} to ${containername} list.
 ${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-add\`
 ${indent}      #
-${indent}      list( APPEND ${containername} \${${key}})
+${indent}      if( NOT \${${key}} IN_LIST ${containername})
+${indent}         list( APPEND ${containername} \${${key}})
+${indent}      endif()
 EOF
       ;;
    esac
@@ -991,17 +1017,13 @@ EOF
 # ${indent}         message( STATUS "_TMP_${identifier}_DIR is \${_TMP_${identifier}_DIR}")
 
    cat <<EOF
-${indent}   else()
-${indent}      ${failcomment}
-${indent}      message( ${failstatus} "${failstring}")
-${indent}   endif()
+${indent}else()
+${indent}   ${failcomment}
+${indent}   message( ${failstatus} "${failstring}")
+${indent}endif()
 EOF
 
    indent="${indent%   }"
-
-   cat <<EOF
-${indent}   endif()
-EOF
 
   cat <<EOF
 ${indent}endif()
@@ -1209,8 +1231,15 @@ _emit_cmake_header_only()
    # The header find_file might be useful to copy it somewhere. Otherwise
    # probably useless. (could leave it out)
    #
+   # If one of our aliases is a cmake target, the dependency was added with
+   # add_subdirectory. Its headers then arrive via the targets
+   # INTERFACE_INCLUDE_DIRECTORIES, possibly not before build time, so
+   # find_file can not and need not find them.
+   #
+   _emit_find_target_command "${key}_TARGET" "${names//,/ }" "${indent}"
+
    cat <<EOF
-${indent}if( NOT ${key})
+${indent}if( NOT ${key} AND NOT ${key}_TARGET)
 EOF
 
    _emit_find_file "${key}" "${headers}" "${findoptions}" "${findoptionskey}" "${indent}   "
@@ -1825,6 +1854,10 @@ main()
 
    local FLAG_CONFIG_FILE='-'
 
+   local sharedir
+   local marksfile
+   local scriptdir
+
    while [ $# -ne 0 ]
    do
       if options_technical_flags "$1"
@@ -1863,12 +1896,11 @@ main()
          ;;
 
          --show-marks)
-            local sharedir="${MULLE_SOURCETREE_SHARE_DIR:-${MULLE_EXECUTABLE_DIR}/../share/mulle-sourcetree}"
-            local marksfile="${sharedir}/mulle-sourcetree-to-cmake-marks.json"
+            sharedir="${MULLE_SOURCETREE_SHARE_DIR:-${MULLE_EXECUTABLE_DIR}/../share/mulle-sourcetree}"
+            marksfile="${sharedir}/mulle-sourcetree-to-cmake-marks.json"
             
             if [ ! -f "${marksfile}" ]
             then
-               local scriptdir
                scriptdir="$(dirname "${MULLE_EXECUTABLE}")"
                marksfile="${scriptdir}/mulle-sourcetree-to-cmake-marks.json"
             fi

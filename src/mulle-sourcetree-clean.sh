@@ -315,13 +315,13 @@ sourcetree::clean::main()
    include "path"
    include "file"
 
+   local graveyard
+
    case "${OPTION_CLEAN_GRAVEYARD}" in
       NO|DEFAULT)
       ;;
 
       ALL)
-         local graveyard
-
          log_verbose "Removing all graveyards"
 
          shell_enable_nullglob
@@ -335,8 +335,6 @@ sourcetree::clean::main()
       ;;
 
       YES)
-         local graveyard
-
          graveyard="${MULLE_SOURCETREE_VAR_DIR}/../../${MULLE_HOSTNAME}/sourcetree/graveyard"
 
          log_verbose "Removing host graveyard"

@@ -2483,6 +2483,10 @@ sourcetree::commands::common()
    local OPTION_FUZZY='YES'
    local OPTION_REGEX='NO'
 
+   local sharedir
+   local marksfile
+   local scriptdir
+
    while [ $# -ne 0 ]
    do
       case "$1" in
@@ -2532,13 +2536,12 @@ sourcetree::commands::common()
          --show|--show-marks)
             if [ "${COMMAND}" = "mark" ]
             then
-               local sharedir="${MULLE_SOURCETREE_SHARE_DIR:-${MULLE_EXECUTABLE_DIR}/../share/mulle-sourcetree}"
-               local marksfile="${sharedir}/mulle-sourcetree-marks.json"
+               sharedir="${MULLE_SOURCETREE_SHARE_DIR:-${MULLE_EXECUTABLE_DIR}/../share/mulle-sourcetree}"
+               marksfile="${sharedir}/mulle-sourcetree-marks.json"
 
                # Fallback to directory where mulle-sourcetree script is located
                if [ ! -f "${marksfile}" ]
                then
-                  local scriptdir
                   scriptdir="$(dirname "${MULLE_EXECUTABLE}")"
                   marksfile="${scriptdir}/mulle-sourcetree-marks.json"
                fi
