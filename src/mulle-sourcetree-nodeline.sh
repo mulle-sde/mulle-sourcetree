@@ -653,6 +653,11 @@ sourcetree::nodeline::printf_header()
             dash="------------"
          ;;
 
+         %F*)
+            name="filename"
+            dash="--------"
+         ;;
+
          %v*)
             if [ "${formatstring:2:2}" = "={" ]
             then
@@ -693,6 +698,11 @@ sourcetree::nodeline::printf_header()
          %n*)
             name="nodetype"
             dash="--------"
+         ;;
+
+         %o*)
+            name="owner"
+            dash="-----"
          ;;
 
          %s*)

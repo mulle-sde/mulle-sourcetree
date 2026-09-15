@@ -143,6 +143,7 @@ sourcetree::print_commands()
    config         : manipulate sourcetree config files
    craftorder     : emit nodes that are marked \"build\", in dependency order
    dbstatus       : query state of the database
+   dblist         : list the contents of the database
    desecrate      : remove all graveyards
    dotdump        : create a picture of the sourcetree or the database
    duplicate      : duplicate a sourcetree node
@@ -150,6 +151,7 @@ sourcetree::print_commands()
    fix            : support to track user modifications in the filesystem
    eval-add       : batch process mulle-sourcetree add commands
    get            : get a node's properties from the sourcetree
+   graphviz       : create HTML tables of all sourcetrees and their nodes
    info           : print current sourcetree information
    libexec-dir    : print path to ${MULLE_USAGE_NAME} libexec
    knownmarks     : list known marks
@@ -478,7 +480,7 @@ sourcetree::main()
    # default mode
    #
    case "${cmd}" in
-      reset|craftorder|dbstatus)
+      reset|craftorder|dbstatus|dblist)
       ;;
 
       *)
@@ -535,6 +537,7 @@ clean
 config
 craftorder
 dbstatus
+dblist
 desecrate
 dotdump
 duplicate
@@ -543,6 +546,7 @@ eval-add
 filter
 fix
 get
+graphviz
 info
 json
 knownmarks
@@ -594,6 +598,20 @@ wrap"
          include "sourcetree::dotdump"
 
          sourcetree::dotdump::main "$@"
+      ;;
+
+      graphviz)
+         # shellcheck source=src/mulle-sourcetree-graphviz.sh
+         include "sourcetree::graphviz"
+
+         sourcetree::graphviz::main "$@"
+      ;;
+
+      dblist)
+         # shellcheck source=src/mulle-sourcetree-dblist.sh
+         include "sourcetree::dblist"
+
+         sourcetree::dblist::main "$@"
       ;;
 
       'editor')

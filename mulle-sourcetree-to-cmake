@@ -1069,7 +1069,7 @@ _emit_cmake_dependency()
    # /usr/local/lib
    #
    findoptions="NO_CMAKE_SYSTEM_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_FIND_ROOT_PATH"
-   findoptionskey="DEPENDENCY_IGNORE_SYSTEM_LIBARIES"
+   findoptionskey="DEPENDENCY_IGNORE_SYSTEM_LIBRARIES"
 
    case ",${marks}," in
       *,no-cmake-suppress-system-path,*)
@@ -1238,14 +1238,25 @@ _emit_cmake_header_only()
    #
    _emit_find_target_command "${key}_TARGET" "${names//,/ }" "${indent}"
 
+   #
+   # If a target was found, mirror the linkable case and assign it to ${key},
+   # the variable that is later added to ${containername}. Otherwise the
+   # dependency would be silently dropped, as the target was only stored in
+   # ${key}_TARGET which had no consumer.
+   #
    cat <<EOF
-${indent}if( NOT ${key} AND NOT ${key}_TARGET)
+${indent}if( ${key}_TARGET)
+${indent}   set( ${key} \${${key}_TARGET})
+${indent}endif()
+
+${indent}if( NOT ${key})
 EOF
 
    _emit_find_file "${key}" "${headers}" "${findoptions}" "${findoptionskey}" "${indent}   "
 
    cat <<EOF
 ${indent}   message( STATUS "${key} is \${${key}}")
+${indent}endif()
 
 EOF
 
@@ -1255,40 +1266,40 @@ EOF
 
       *)
          cat <<EOF
-${indent}   #
-${indent}   # Add ${key} to ${containername} list.
-${indent}   # Disable with: \`mulle-sourcetree mark ${address} no-cmake-add\`
-${indent}   #
-${indent}   set( ${containername}
-${indent}      \${${key}}
-${indent}      \${${containername}}
-${indent}   )
+${indent}#
+${indent}# Add ${key} to ${containername} list.
+${indent}# Disable with: \`mulle-sourcetree mark ${address} no-cmake-add\`
+${indent}#
+${indent}set( ${containername}
+${indent}   \${${key}}
+${indent}   \${${containername}}
+${indent})
 EOF
       ;;
    esac
 
    cat <<EOF
-${indent}   if( ${key})
+${indent}if( ${key})
 EOF
 
 
    case ",${marks}," in
       *',no-cmake-inherit,'*)
          cat <<EOF
-${indent}      # intentionally left blank
+${indent}   # intentionally left blank
 EOF
       ;;
 
       *)
          cat <<EOF
-${indent}      #
-${indent}      # Inherit ObjC loader and link dependency info.
-${indent}      # Disable with: \`mulle-sourcetree mark ${address} no-cmake-inherit\`
-${indent}      #
-${indent}      get_filename_component( _TMP_${identifier}_ROOT "\${${key}}" DIRECTORY)
-${indent}      get_filename_component( _TMP_${identifier}_NAME "\${_TMP_${identifier}_ROOT}" NAME)
-${indent}      get_filename_component( _TMP_${identifier}_ROOT "\${_TMP_${identifier}_ROOT}" DIRECTORY)
-${indent}      get_filename_component( _TMP_${identifier}_ROOT "\${_TMP_${identifier}_ROOT}" DIRECTORY)
+${indent}   #
+${indent}   # Inherit ObjC loader and link dependency info.
+${indent}   # Disable with: \`mulle-sourcetree mark ${address} no-cmake-inherit\`
+${indent}   #
+${indent}   get_filename_component( _TMP_${identifier}_ROOT "\${${key}}" DIRECTORY)
+${indent}   get_filename_component( _TMP_${identifier}_NAME "\${_TMP_${identifier}_ROOT}" NAME)
+${indent}   get_filename_component( _TMP_${identifier}_ROOT "\${_TMP_${identifier}_ROOT}" DIRECTORY)
+${indent}   get_filename_component( _TMP_${identifier}_ROOT "\${_TMP_${identifier}_ROOT}" DIRECTORY)
 EOF
 
          #
@@ -1304,10 +1315,9 @@ EOF
    esac
 
    cat <<EOF
-${indent}   else()
-${indent}      ${failcomment}
-${indent}      message( ${failstatus} "${failstring}")
-${indent}   endif()
+${indent}else()
+${indent}   ${failcomment}
+${indent}   message( ${failstatus} "${failstring}")
 ${indent}endif()
 
 EOF

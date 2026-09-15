@@ -676,6 +676,11 @@ sourcetree::node::printf()
             value="${_fetchoptions}"
          ;;
 
+         %F*)
+            switch=""
+            value="${_filename:-}"
+         ;;
+
          %i*)
             switch="--userinfo"
 
@@ -728,6 +733,11 @@ sourcetree::node::printf()
          %n*)
             switch="--nodetype"
             value="${_nodetype}"
+         ;;
+
+         %o*)
+            switch=""
+            value="${_owner:-}"
          ;;
 
          %s*)

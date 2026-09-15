@@ -47,6 +47,7 @@ config
 copy
 craftorder
 dbstatus
+dblist
 desecrate
 dotdump
 duplicate
@@ -581,6 +582,27 @@ _mulle_sourcetree_list_complete()
     fi
 }
 
+_mulle_sourcetree_dblist_complete()
+{
+    local options="
+        -h --help -F -m -o -u -_
+        --format --force-format
+        --output-format
+        --output-eval
+        --output-header --no-output-header
+        --output-column --no-output-column
+    "
+
+    case "${prev}" in
+        --output-format) __mulle_sourcetree_complete_words "default nodeline raw"; return 0 ;;
+    esac
+
+    if [[ "${cur}" == -* ]]
+    then
+        __mulle_sourcetree_complete_words "${options}"
+    fi
+}
+
 _mulle_sourcetree_status_complete()
 {
     local options="
@@ -1000,6 +1022,7 @@ _mulle_sourcetree_complete()
         reuuid)               _mulle_sourcetree_reuuid_complete ;;
         rewrite)              _mulle_sourcetree_rewrite_complete ;;
         wrap)                 _mulle_sourcetree_wrap_complete ;;
+        dblist)               _mulle_sourcetree_dblist_complete ;;
         dbstatus|etc-dir|libexec-dir|library-path|project-dir|pwd|path|share-dir|stash-dir|shell|tool-env|touch|uname|version|mode)
             _mulle_sourcetree_noargs_complete
             ;;

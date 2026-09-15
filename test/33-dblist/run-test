@@ -1,0 +1,168 @@
+#! /bin/sh
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+# Stub functions for log_walk_* to avoid "command not found" errors
+log_walk_entry() { :; }
+log_walk_debug() { :; }
+
+run_mulle_sourcetree()
+{
+   log_fluff "####################################" >&2
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS:-} "$@"
+   log_fluff "####################################" >&2
+
+   (
+      set +e
+
+      MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
+
+      . "${MULLE_SOURCETREE}" ${MULLE_SOURCETREE_FLAGS:-} "$@"
+   )
+}
+
+
+_setup_demo_archive_a()
+{
+   local archives="$1"
+
+   redirect_exekutor VERSION echo "1.0.0"
+   run_mulle_sourcetree add "file://${archives}/b.tar.gz"
+
+   ( cd .. ; tar cfz "${archives}/a.tar.gz" a)
+}
+
+
+_setup_demo_archive_b()
+{
+   local archives="$1"
+
+   redirect_exekutor VERSION echo "1.0.0"
+
+   ( cd .. ; tar cfz "${archives}/b.tar.gz" b)
+}
+
+
+setup_demo_archives()
+{
+   (
+      set -e
+      mkdir_if_missing "$1/a" &&
+      exekutor cd "$1/a" && _setup_demo_archive_a "$1"
+      mkdir_if_missing "$1/b" &&
+      exekutor cd "$1/b" && _setup_demo_archive_b "$1"
+      set +e
+   ) || exit 1
+}
+
+
+run_test1()
+{
+   local archives="$1"
+
+   if ! run_mulle_sourcetree add --url "file://${archives}/a.tar.gz" "root/a"
+   then
+      fail "add failed unexpectedly"
+   fi
+
+   if ! run_mulle_sourcetree update
+   then
+      fail "update failed unexpectedly"
+   fi
+
+   local result
+
+   #
+   # nodeline output must contain the address and the uuid of the node
+   #
+   result="`run_mulle_sourcetree dblist --output-format nodeline`" || exit 1
+
+   if ! grep -q -e ";root/a;" -e "^root/a;" <<< "${result}"
+   then
+      fail "dblist nodeline output \"${result}\" misses \"root/a\""
+   fi
+
+   #
+   # formatted output must contain the address and the filename
+   #
+   result="`run_mulle_sourcetree dblist -F --output-no-header --output-no-column`" || exit 1
+
+   if ! grep -q "root/a" <<< "${result}"
+   then
+      fail "dblist formatted output \"${result}\" misses \"root/a\""
+   fi
+
+   if ! grep -q "/stash/a" <<< "${result}"
+   then
+      fail "dblist formatted output \"${result}\" misses filename"
+   fi
+
+   #
+   # raw output must contain the stored evaledurl
+   #
+   result="`run_mulle_sourcetree dblist --output-format raw`" || exit 1
+
+   if ! grep -q "a.tar.gz" <<< "${result}"
+   then
+      fail "dblist raw output \"${result}\" misses the evaledurl"
+   fi
+
+   log_verbose "----- #1 PASSED -----"
+}
+
+
+main()
+{
+   MULLE_SOURCETREE_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
+
+   local project
+   local archives
+
+   project="${directory}/project"
+   archives="${directory}/archives"
+
+   setup_demo_archives "${archives}" > /dev/null 2>&1 || exit 1
+
+   (
+      rmdir_safer "${project}" &&
+      mkdir_if_missing "${project}" &&
+
+      cd "${project}" &&
+      run_test1 "${archives}"
+   ) || exit 1
+
+   log_info "----- ALL PASSED -----"
+   cd ..
+   rmdir_safer "${directory}"
+}
+
+
+init()
+{
+   MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
+   MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
+
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-node.sh"     || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-nodeline.sh" || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-db.sh"       || exit 1
+   . "${MULLE_SOURCETREE_LIBEXEC_DIR}/mulle-sourcetree-walk.sh"     || exit 1
+}
+
+
+init "$@"
+main "$@"
