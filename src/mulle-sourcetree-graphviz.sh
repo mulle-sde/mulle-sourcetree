@@ -56,7 +56,7 @@ Usage:
 Options:
    --svg|--png|--dot : output format (default: dot)
    --td|--lr         : graph direction (default: TD)
-   --recurse         : recurse into dependencies (default)
+   -r|--recurse|--recursive : recurse through shared dependencies (default)
    --share           : operate on the shared/stash sourcetree
    --flat            : only the current sourcetree
    --no-dedupe       : do not deduplicate nodes by UUID
@@ -374,8 +374,8 @@ sourcetree::graphviz::main()
             OPTION_DIRECTION="TD"
          ;;
 
-         --recurse|--recursive)
-            OPTION_MODE="recurse"
+         -r|--recurse|--recursive)
+            OPTION_MODE="share"
          ;;
 
          --share)

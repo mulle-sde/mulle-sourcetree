@@ -198,7 +198,7 @@ main()
    GRAPH_DIRECTION="${GRAPH_DIRECTION:-TD}"
    GRAPH_LIBRARIES="${GRAPH_LIBRARIES:-NO}"
    GRAPH_MAX_LEVEL="${GRAPH_MAX_LEVEL:-3}"
-   GRAPH_OPTIONS="${GRAPH_OPTIONS:---ignore mulle-objc-list}"
+   GRAPH_OPTIONS="${GRAPH_OPTIONS:---ignore mulle-objc-tools}"
 
    while [ $# -ne 0 ]
    do
