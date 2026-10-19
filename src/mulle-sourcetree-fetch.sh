@@ -406,6 +406,7 @@ sourcetree::fetch::r_list_operations()
 
    local cachekey
    local cachekey_value
+   local value
 
    include "case"
 
@@ -434,7 +435,7 @@ sourcetree::fetch::r_list_operations()
    fi
 
    RVAL="${cachekey_value}"
-   case "${value}" in
+   case "${cachekey_value}" in
       ERROR)
          RVAL=""
          return 1

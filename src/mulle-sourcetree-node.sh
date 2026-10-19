@@ -547,7 +547,7 @@ sourcetree::node::__evaluate_values()
    _evaledtag="${RVAL}"
 
    MULLE_BRANCH="${_evaledbranch}" \
-   MULLE_TAG="${_evaledtag}"
+   MULLE_TAG="${_evaledtag}" \
       r_expanded_string "${_url}"
       _evaledurl="${RVAL}"
 

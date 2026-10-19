@@ -161,33 +161,137 @@ fi
 #
 #
 #
+#
+# A db file looks like this (see sourcetree::db::memorize):
+#
+#    <index>;<nodeline>
+#    <owner>
+#    <filename>
+#    <index>
+#    <evaledurl>
+#
+# These accessors read from stdin with builtins only (no fork/exec)
+#
 sourcetree::db::_nodeline()
 {
-   head -1 | sed -e 's/^[^;]*\;//'
+   local line
+
+   IFS= read -r line
+   printf "%s\n" "${line#*;}"
 }
 
 
 sourcetree::db::_owner()
 {
-   sed -n '2p;2q'
+   local line
+
+   IFS= read -r line
+   IFS= read -r line && printf "%s\n" "${line}"
 }
 
 
 sourcetree::db::_filename()
 {
-   sed -n '3p;3q'
+   local line
+
+   IFS= read -r line
+   IFS= read -r line
+   IFS= read -r line && printf "%s\n" "${line}"
 }
 
 
+# MEMO: this used to be `sed -e 's/^\([^;]\)*\;.*/\1/'` which returns only the
+#       last character of the index. Unused though.
 sourcetree::db::_index()
 {
-   head -1 | sed -e 's/^\([^;]\)*\;.*/\1/'
+   local line
+
+   IFS= read -r line
+   printf "%s\n" "${line%%;*}"
 }
 
 
 sourcetree::db::_evaledurl()
 {
-   tail -1
+   local line
+   local last
+
+   while IFS= read -r line || [ ! -z "${line}" ]
+   do
+      last="${line}"
+   done
+   printf "%s\n" "${last}"
+}
+
+
+#
+# Read a db file into variables, without fork/exec. Returns 1 if the file
+# isn't readable.
+#
+# local _db_nodeline
+# local _db_owner
+# local _db_filename
+# local _db_evaledurl
+#
+sourcetree::db::__read_dbfile()
+{
+   local dbfilepath="$1"
+
+   _db_nodeline=
+   _db_owner=
+   _db_filename=
+   _db_evaledurl=
+
+   [ -r "${dbfilepath}" ] || return 1
+
+   #
+   # MEMO: zsh `read` reads byte by byte, which is ~40x slower than $(<file)
+   #       which doesn't fork in zsh (and newer bash). Trailing linefeeds are
+   #       stripped, so a missing line means empty.
+   #
+   local text
+   local nl=$'\n'
+
+   text="$(<"${dbfilepath}")"
+
+   _db_nodeline="${text%%"${nl}"*}"
+   case "${text}" in
+      *"${nl}"*)
+         text="${text#*"${nl}"}"
+         _db_owner="${text%%"${nl}"*}"
+      ;;
+      *)
+         text=
+      ;;
+   esac
+   case "${text}" in
+      *"${nl}"*)
+         text="${text#*"${nl}"}"
+         _db_filename="${text%%"${nl}"*}"
+      ;;
+      *)
+         text=
+      ;;
+   esac
+   # now at index (line 4), the evaledurl is the last line (was `tail -1`)
+   case "${text}" in
+      *"${nl}"*)
+         text="${text#*"${nl}"}"
+      ;;
+      *)
+         text=
+      ;;
+   esac
+   # skip index
+   case "${text}" in
+      *"${nl}"*)
+         text="${text#*"${nl}"}"
+         _db_evaledurl="${text##*"${nl}"}"
+      ;;
+   esac
+
+   _db_nodeline="${_db_nodeline#*;}"
+   return 0
 }
 
 
@@ -419,7 +523,38 @@ ${evaledurl}"
 
    log_db_debug "Remembering uuid \"${uuid}\" ($_databasedir)"
 
-   db_redirect_exekutor "${dbfilepath}" printf "%s\n" "${content}"
+   # for sync --quick: destination must still exist next time
+   # R: directory that will be descended into (needs a C/N config line)
+   if [ ! -z "${_SOURCETREE_QUICK_LOG}" ] && [ -e "${filename}" ]
+   then
+      local quick_marks
+
+      quick_marks="${nodeline#*;}"
+      quick_marks="${quick_marks#*;}"
+      quick_marks="${quick_marks%%;*}"
+
+      if [ -d "${filename}" ] && sourcetree::marks::enable "${quick_marks}" "descend"
+      then
+         printf "R %s\n" "${filename}" >> "${_SOURCETREE_QUICK_LOG}"
+      else
+         printf "D %s\n" "${filename}" >> "${_SOURCETREE_QUICK_LOG}"
+      fi
+   fi
+
+   db_redirect_exekutor "${dbfilepath}" printf "%s\n" "${content}" || return 1
+
+   local nodeline_uuid
+
+   nodeline_uuid="${nodeline#*;}"
+   nodeline_uuid="${nodeline_uuid#*;}"
+   nodeline_uuid="${nodeline_uuid#*;}"
+   nodeline_uuid="${nodeline_uuid%%;*}"
+
+   sourcetree::db::__index_did_write "${_databasedir}" \
+                                     "${uuid}" \
+                                     "${nodeline%%;*}" \
+                                     "${nodeline_uuid}" \
+                                     "${evaledurl}"
 }
 
 
@@ -459,7 +594,8 @@ sourcetree::db::forget()
    if sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
    then
       log_db_debug "Forgetting about uuid \"${_uuid}\" ($_databasedir)"
-      db_remove_file_if_present "${_dbfilepath}"
+      db_remove_file_if_present "${_dbfilepath}" &&
+      sourcetree::db::__index_did_write "${_databasedir}" "${_uuid}"
    fi
 }
 
@@ -683,9 +819,12 @@ sourcetree::db::get__rootdir()
 }
 
 
-sourcetree::db::fetch_nodeline_for_uuid()
+#
+# r_ variants don't need a subshell. RVAL is empty and rc 1 if not found
+#
+sourcetree::db::r_fetch_nodeline_for_uuid()
 {
-   log_db_entry "sourcetree::db::fetch_nodeline_for_uuid" "$@"
+   log_db_entry "sourcetree::db::r_fetch_nodeline_for_uuid" "$@"
 
    local _database
    local _databasedir
@@ -694,13 +833,57 @@ sourcetree::db::fetch_nodeline_for_uuid()
    sourcetree::db::__common_databasedir_uuid "$@"
 
    local _dbfilepath
+   local _db_nodeline
+   local _db_owner
+   local _db_filename
+   local _db_evaledurl
 
-   if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
+   RVAL=
+   if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}" ||
+      ! sourcetree::db::__read_dbfile "${_dbfilepath}"
    then
       return 1
    fi
 
-   sourcetree::db::_nodeline < "${_dbfilepath}"
+   RVAL="${_db_nodeline}"
+   return 0
+}
+
+
+sourcetree::db::r_fetch_filename_for_uuid()
+{
+   log_db_entry "sourcetree::db::r_fetch_filename_for_uuid" "$@"
+
+   local _database
+   local _databasedir
+   local _uuid
+
+   sourcetree::db::__common_databasedir_uuid "$@"
+
+   local _dbfilepath
+   local _db_nodeline
+   local _db_owner
+   local _db_filename
+   local _db_evaledurl
+
+   RVAL=
+   if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}" ||
+      ! sourcetree::db::__read_dbfile "${_dbfilepath}"
+   then
+      return 1
+   fi
+
+   RVAL="${_db_filename}"
+   return 0
+}
+
+
+sourcetree::db::fetch_nodeline_for_uuid()
+{
+   log_db_entry "sourcetree::db::fetch_nodeline_for_uuid" "$@"
+
+   sourcetree::db::r_fetch_nodeline_for_uuid "$@" || return 1
+   printf "%s\n" "${RVAL}"
 }
 
 
@@ -728,20 +911,8 @@ sourcetree::db::fetch_filename_for_uuid()
 {
    log_db_entry "sourcetree::db::fetch_filename_for_uuid" "$@"
 
-   local _database
-   local _databasedir
-   local _uuid
-
-   sourcetree::db::__common_databasedir_uuid "$@"
-
-   local _dbfilepath
-
-   if ! sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
-   then
-      return 1
-   fi
-
-   sourcetree::db::_filename < "${_dbfilepath}"
+   sourcetree::db::r_fetch_filename_for_uuid "$@" || return 1
+   printf "%s\n" "${RVAL}"
 }
 
 
@@ -819,25 +990,314 @@ sourcetree::db::fetch_all_nodelines()
    # nodelines have a prefixed sort index, that we use for the proper
    # order but then strip it off
    (
-
       cd "${_databasedir}" 2> /dev/null || exit 0
+
+      local i
+      local line
 
       if sourcetree::db::r_files
       then
          for i in "${RVAL[@]}"
          do
-            head -1 "${i}" || _internal_fail "malformed file $i"
+            { IFS= read -r line || [ ! -z "${line}" ]; } < "${i}" \
+            || _internal_fail "malformed file $i"
+            printf "%s\n" "${line}"
          done
       fi
    ) \
    | sort -d -t';' -k 1,1 \
-   | sed -e 's/^[^;]*\;//'
+   | while IFS= read -r line
+     do
+        printf "%s\n" "${line#*;}"
+     done
 }
 
 
-sourcetree::db::fetch_uuid_for_address()
+#
+# In-memory index of a database, so that lookups don't need to grep through
+# all db files. One line per db file, in glob order (same as the grep):
+#
+#    <file-uuid> TAB <address> TAB <nodeline-uuid> TAB <evaledurl>
+#
+# Validity: every write to a database (memorize/forget), in whatever process,
+# writes a new token into ".db_gen". The index remembers the token it was
+# built with, so writes in (parallel) subshells invalidate it. Own writes
+# update the index in place, if it was in sync before the write.
+#
+# Set MULLE_SOURCETREE_DB_INDEX_CHECK=YES to cross-check every lookup with
+# the old grep implementation.
+#
+sourcetree::db::__r_index_varname()
 {
-   log_db_entry "sourcetree::db::fetch_uuid_for_address" "$@"
+   r_identifier "$1"
+   RVAL="_SOURCETREE_DBX_${RVAL}"
+}
+
+
+sourcetree::db::__r_read_gen()
+{
+   RVAL=
+   if [ -f "$1/.db_gen" ]
+   then
+      IFS= read -r RVAL < "$1/.db_gen"
+   fi
+   return 0
+}
+
+
+sourcetree::db::__r_new_gen_token()
+{
+   local pid
+
+   # pid, because subshells may have the same RANDOM state as the parent
+   if [ ${ZSH_VERSION+x} ]
+   then
+      zmodload -F zsh/system p:sysparams 2> /dev/null
+      eval 'pid="${sysparams[pid]}"'
+   else
+      pid="${BASHPID}"
+   fi
+
+   RVAL="${RANDOM}${RANDOM}${RANDOM}-${pid}"
+}
+
+
+#
+# RVAL: index contents (starts and ends with a linefeed)
+# returns 1, if database directory does not exist
+#
+sourcetree::db::__r_index()
+{
+   local databasedir="$1"
+
+   if [ ! -d "${databasedir}" ]
+   then
+      RVAL=
+      return 1
+   fi
+
+   local varname
+   local gen
+
+   sourcetree::db::__r_index_varname "${databasedir}"
+   varname="${RVAL}"
+
+   sourcetree::db::__r_read_gen "${databasedir}"
+   gen="G${RVAL}"
+
+   r_shell_indirect_expand "${varname}_GEN"
+   if [ "${RVAL}" = "${gen}" ]
+   then
+      r_shell_indirect_expand "${varname}_DIR"
+      if [ "${RVAL}" = "${databasedir}" ]
+      then
+         r_shell_indirect_expand "${varname}"
+         return 0
+      fi
+   fi
+
+   log_db_debug "Building index of \"${databasedir}\""
+
+   local tab=$'\t'
+   local nl=$'\n'
+   local index
+   local files
+   local i
+   local uuid
+   local _db_nodeline
+   local _db_owner
+   local _db_filename
+   local _db_evaledurl
+
+   index="${nl}"
+
+   shell_enable_nullglob
+   files=( "${databasedir}"/????????-????-????-????-???????????? )
+   shell_disable_nullglob
+
+   for i in "${files[@]}"
+   do
+      sourcetree::db::__read_dbfile "${i}" || continue
+
+      # nodeline: address;nodetype;marks;uuid;...
+      uuid="${_db_nodeline#*;}"
+      uuid="${uuid#*;}"
+      uuid="${uuid#*;}"
+      uuid="${uuid%%;*}"
+
+      index="${index}${i##*/}${tab}${_db_nodeline%%;*}${tab}${uuid}${tab}${_db_evaledurl}${nl}"
+   done
+
+   printf -v "${varname}" "%s" "${index}"
+   printf -v "${varname}_GEN" "%s" "${gen}"
+   printf -v "${varname}_DIR" "%s" "${databasedir}"
+
+   RVAL="${index}"
+   return 0
+}
+
+
+#
+# Called after a successful own write to the database. If <address> is empty
+# the entry for <uuid> was removed.
+#
+sourcetree::db::__index_did_write()
+{
+   local databasedir="$1"
+   local fileuuid="$2"
+   local address="$3"
+   local uuid="$4"
+   local evaledurl="$5"
+
+   # in a dry run, nothing is written so the index stays valid
+   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" = 'YES' ] || [ ! -d "${databasedir}" ]
+   then
+      return 0
+   fi
+
+   local varname
+   local gen
+   local token
+
+   sourcetree::db::__r_index_varname "${databasedir}"
+   varname="${RVAL}"
+
+   sourcetree::db::__r_read_gen "${databasedir}"
+   gen="G${RVAL}"
+
+   sourcetree::db::__r_new_gen_token
+   token="${RVAL}"
+
+   printf "%s\n" "${token}" > "${databasedir}/.db_gen"
+
+   local cachedgen
+   local cacheddir
+
+   r_shell_indirect_expand "${varname}_GEN"
+   cachedgen="${RVAL}"
+   r_shell_indirect_expand "${varname}_DIR"
+   cacheddir="${RVAL}"
+
+   # index wasn't in sync before our write, so drop it
+   if [ "${cachedgen}" != "${gen}" -o "${cacheddir}" != "${databasedir}" ]
+   then
+      printf -v "${varname}_GEN" "%s" ""
+      return 0
+   fi
+
+   local tab=$'\t'
+   local nl=$'\n'
+   local index
+   local prefix
+   local rest
+
+   r_shell_indirect_expand "${varname}"
+   index="${RVAL}"
+
+   case "${index}" in
+      *"${nl}${fileuuid}${tab}"*)
+         prefix="${index%%"${nl}${fileuuid}${tab}"*}"
+         rest="${index#"${prefix}${nl}"}"
+         rest="${rest#*"${nl}"}"
+
+         if [ -z "${address}" ]
+         then
+            index="${prefix}${nl}${rest}"
+         else
+            index="${prefix}${nl}${fileuuid}${tab}${address}${tab}${uuid}${tab}${evaledurl}${nl}${rest}"
+         fi
+      ;;
+
+      *)
+         if [ ! -z "${address}" ]
+         then
+            # new entry, would have to be inserted in glob order, so rebuild
+            printf -v "${varname}_GEN" "%s" ""
+            return 0
+         fi
+      ;;
+   esac
+
+   printf -v "${varname}" "%s" "${index}"
+   printf -v "${varname}_GEN" "%s" "G${token}"
+}
+
+
+sourcetree::db::__index_check()
+{
+   local what="$1"
+   local expect="$2"
+   local expect_rc="$3"
+   local actual="$4"
+   local actual_rc="$5"
+
+   if [ "${expect}" != "${actual}" -o "${expect_rc}" != "${actual_rc}" ]
+   then
+      _internal_fail "db index mismatch for ${what}: \
+grep=\"${expect}\" (${expect_rc}) index=\"${actual}\" (${actual_rc})"
+   fi
+}
+
+
+#
+# returns uuids for address, one per line (in RVAL)
+#
+sourcetree::db::r_fetch_uuid_for_address()
+{
+   log_db_entry "sourcetree::db::r_fetch_uuid_for_address" "$@"
+
+   local _database
+   local _databasedir
+
+   sourcetree::db::__common_databasedir "$1"
+
+   local address="$2"
+
+   [ -z "${address}" ] && _internal_fail "address is empty"
+
+   local index
+
+   if ! sourcetree::db::__r_index "${_databasedir}"
+   then
+      RVAL=
+      return 1
+   fi
+   index="${RVAL}"
+
+   local tab=$'\t'
+   local line
+   local rest
+   local result
+
+   .foreachline line in ${index}
+   .do
+      rest="${line#*"${tab}"}"
+      if [ "${rest%%"${tab}"*}" = "${address}" ]
+      then
+         rest="${rest#*"${tab}"}"
+         r_add_line "${result}" "${rest%%"${tab}"*}"
+         result="${RVAL}"
+      fi
+   .done
+
+   if [ "${MULLE_SOURCETREE_DB_INDEX_CHECK}" = 'YES' ]
+   then
+      sourcetree::db::__r_fetch_uuid_for_address_grep "$1" "${address}"
+      sourcetree::db::__index_check "address \"${address}\" in \"$1\"" \
+                                    "${RVAL}" "$?" "${result}" "0"
+   fi
+
+   RVAL="${result}"
+   return 0
+}
+
+
+#
+# old implementation, used to cross-check the index
+#
+sourcetree::db::__r_fetch_uuid_for_address_grep()
+{
+   log_db_entry "sourcetree::db::__r_fetch_uuid_for_address_grep" "$@"
 
    local _database
    local _databasedir
@@ -849,8 +1309,10 @@ sourcetree::db::fetch_uuid_for_address()
    [ -z "${address}" ] && _internal_fail "address is empty"
 
    local old_dir="${PWD}"
+   local matches
    local rc
 
+   RVAL=
    cd "${_databasedir}" 2> /dev/null || return 1
    {
       local pattern
@@ -858,10 +1320,47 @@ sourcetree::db::fetch_uuid_for_address()
       r_escaped_grep_pattern "${address}"
       pattern="${RVAL}"
 
-      sourcetree::db::grep -E "^[^;]*;${pattern};" | cut -s '-d;' -f 5
-      rc=$?
+      # -h: no filename prefix
+      matches="`sourcetree::db::grep -h -E "^[^;]*;${pattern};"`"
+      rc=0  # sic: was the rc of `cut`
    }
    cd "${old_dir}"
+
+   #
+   # emulate `cut -s '-d;' -f 5`, the matched line is
+   # <index>;<address>;<nodetype>;<marks>;<uuid>;...
+   #
+   local line
+   local result
+
+   .foreachline line in ${matches}
+   .do
+      case "${line}" in
+         *\;*)
+            line="${line#*;}"
+            line="${line#*;}"
+            line="${line#*;}"
+            line="${line#*;}"
+            r_add_line "${result}" "${line%%;*}"
+            result="${RVAL}"
+         ;;
+      esac
+   .done
+
+   RVAL="${result}"
+   return $rc
+}
+
+
+sourcetree::db::fetch_uuid_for_address()
+{
+   log_db_entry "sourcetree::db::fetch_uuid_for_address" "$@"
+
+   local rc
+
+   sourcetree::db::r_fetch_uuid_for_address "$@"
+   rc=$?
+   [ -z "${RVAL}" ] || printf "%s\n" "${RVAL}"
    return $rc
 }
 
@@ -879,22 +1378,84 @@ sourcetree::db::r_fetch_uuid_for_evaledurl()
 
    [ -z "${searchurl}" ] && _internal_fail "url is empty"
 
+   local index
+   local result
+   local rc
+
+   if ! sourcetree::db::__r_index "${_databasedir}"
+   then
+      result=
+      rc=1
+   else
+      index="${RVAL}"
+
+      local tab=$'\t'
+      local nl=$'\n'
+      local prefix
+
+      # evaledurl is the last field, the first match is what grep finds first
+      case "${index}" in
+         *"${tab}${searchurl}${nl}"*)
+            prefix="${index%%"${tab}${searchurl}${nl}"*}"
+            prefix="${prefix##*"${nl}"}"
+            result="${prefix%%"${tab}"*}"
+            rc=0
+         ;;
+
+         *)
+            result=
+            rc=1
+         ;;
+      esac
+   fi
+
+   if [ "${MULLE_SOURCETREE_DB_INDEX_CHECK}" = 'YES' ]
+   then
+      sourcetree::db::__r_fetch_uuid_for_evaledurl_grep "$1" "${searchurl}" 2> /dev/null
+      sourcetree::db::__index_check "evaledurl \"${searchurl}\" in \"$1\"" \
+                                    "${RVAL}" "$?" "${result}" "${rc}"
+   fi
+
+   RVAL="${result}"
+   return $rc
+}
+
+
+#
+# old implementation, used to cross-check the index
+#
+sourcetree::db::__r_fetch_uuid_for_evaledurl_grep()
+{
+   log_db_entry "sourcetree::db::__r_fetch_uuid_for_evaledurl_grep" "$@"
+
+   local _database
+   local _databasedir
+
+   sourcetree::db::__common_databasedir "$1"
+
+   local searchurl="$2"
+
+   [ -z "${searchurl}" ] && _internal_fail "url is empty"
+
    local old_dir="${PWD}"
 
    RVAL=
    # not using subshell here
    cd "${_databasedir}" || return 1
    {
-      local evaledurl
       local candidate
       local candidates
+      local _db_nodeline
+      local _db_owner
+      local _db_filename
+      local _db_evaledurl
 
       candidates="`sourcetree::db::grep -F -l -x -e "${searchurl}"`"
 
       .foreachline candidate in ${candidates}
       .do
-         evaledurl="`sourcetree::db::_evaledurl < "${candidate}" `"
-         if [ "${searchurl}" = "${evaledurl}" ]
+         sourcetree::db::__read_dbfile "${candidate}"
+         if [ "${searchurl}" = "${_db_evaledurl}" ]
          then
             RVAL="${candidate}"
             .break
@@ -996,14 +1557,17 @@ sourcetree::db::fetch_nodeline_for_filename()
    cd "${_databasedir}" 2> /dev/null || return 1
    {
       local i
-      local squatfilename
+      local _db_nodeline
+      local _db_owner
+      local _db_filename
+      local _db_evaledurl
 
       for i in `sourcetree::db::grep -F -x -l -e "${searchfilename}"`
       do
-         squatfilename="`sourcetree::db::_filename < "${i}"`"
-         if [ "${searchfilename}" = "${squatfilename}" ]
+         sourcetree::db::__read_dbfile "${i}"
+         if [ "${searchfilename}" = "${_db_filename}" ]
          then
-            sourcetree::db::_nodeline < "${i}"
+            printf "%s\n" "${_db_nodeline}"
             rc=0
          fi
       done
@@ -1671,27 +2235,37 @@ sourcetree::db::zombify_nodes()
    db_rmdir_safer "${_zombiedir}"
 
    local filename
-   local set
+   local files
+   local _db_nodeline
+   local _db_owner
+   local _db_filename
+   local _db_evaledurl
+
+   files=()
 
    shell_enable_nullglob
    for filename in "${_databasedir}"/*
    do
-      if [ ! -z "${owner}" ] && \
-         [ "`sourcetree::db::_owner < "${filename}"`" != "${owner}" ]
+      if [ ! -z "${owner}" ]
       then
-         continue
+         sourcetree::db::__read_dbfile "${filename}"
+         if [ "${_db_owner}" != "${owner}" ]
+         then
+            continue
+         fi
       fi
 
-      if [ -z "${set}" ]
-      then
-         db_mkdir_if_missing "${_zombiedir}"
-         set='YES'
-      fi
-
-      db_exekutor cp ${OPTION_COPYMOVEFLAGS} "${filename}" "${_zombiedir}/" \
-      || exit 1
+      files+=( "${filename}" )
    done
    shell_disable_nullglob
+
+   # one cp for all instead of one per node
+   if [ ${#files[@]} -ne 0 ]
+   then
+      db_mkdir_if_missing "${_zombiedir}"
+      db_exekutor cp ${OPTION_COPYMOVEFLAGS} "${files[@]}" "${_zombiedir}/" \
+      || exit 1
+   fi
 }
 
 
@@ -1730,6 +2304,9 @@ sourcetree::db::zombify_nodelines()
    local _uuid
 
    local _dbfilepath
+   local files
+
+   files=()
 
    .foreachline nodeline in ${nodelines}
    .do
@@ -1739,10 +2316,16 @@ sourcetree::db::zombify_nodelines()
 
          if sourcetree::db::__common_dbfilepath "${_databasedir}" "${_uuid}"
          then
-            db_exekutor cp ${OPTION_COPYMOVEFLAGS} "${_dbfilepath}" "${_zombiedir}/"
+            files+=( "${_dbfilepath}" )
          fi
       fi
    .done
+
+   # one cp for all instead of one per node
+   if [ ${#files[@]} -ne 0 ]
+   then
+      db_exekutor cp ${OPTION_COPYMOVEFLAGS} "${files[@]}" "${_zombiedir}/"
+   fi
 }
 
 
@@ -1922,6 +2505,10 @@ sourcetree::db::bury_flat_zombies()
    sourcetree::db::__zombiedir "${_databasedir}"
 
    local zombiefile
+   local _db_nodeline
+   local _db_owner
+   local _db_filename
+   local _db_evaledurl
 
    if dir_has_files "${_zombiedir}" f
    then
@@ -1929,7 +2516,8 @@ sourcetree::db::bury_flat_zombies()
 
       for zombiefile in `dir_list_files "${_zombiedir}"`
       do
-         if [ "`sourcetree::db::_owner <"${zombiefile}" `" = "$1" ]
+         sourcetree::db::__read_dbfile "${zombiefile}"
+         if [ "${_db_owner}" = "$1" ]
          then
             sourcetree::db::do_bury_zombiefile "${_database}" "${zombiefile}"
          fi

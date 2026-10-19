@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.13...99.99)
 
-project( mulle-sourcetree VERSION 1.8.0 LANGUAGES NONE)
+project( mulle-sourcetree VERSION 1.9.0 LANGUAGES NONE)
 
 #
 # Primarily used for packaging on Linux

@@ -1159,6 +1159,16 @@ sourcetree::action::__update_perform_item()
                then
                   log_info "${C_MAGENTA}${C_BOLD}${_filename}${C_INFO} is not required by \"${RVAL}\"."
 
+                  #
+                  # for sync --quick: a failed fetch should be retried next
+                  # time, so prevent a quick stamp. (Nodes disabled by marks
+                  # are deterministic and don't need this)
+                  #
+                  if [ ! -z "${_SOURCETREE_QUICK_LOG}" ]
+                  then
+                     printf "M %s\n" "${_uuid}" >> "${_SOURCETREE_QUICK_LOG}"
+                  fi
+
                   sourcetree::db::add_missing "${_database}" \
                                               "${_uuid}" \
                                               "${_nodeline}"
@@ -1675,8 +1685,8 @@ but it is not required"
       compare="${RVAL}"
    fi
 
-   otheruuid="`sourcetree::db::fetch_uuid_for_address "${database}" \
-                                                      "${compare}"`"
+   sourcetree::db::r_fetch_uuid_for_address "${database}" "${compare}"
+   otheruuid="${RVAL}"
 
    if [ ! -z "${otheruuid}" ]
    then
@@ -1708,7 +1718,8 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
    local previousnodeline
    local previousfilename
 
-   previousnodeline="`sourcetree::db::fetch_nodeline_for_uuid "${database}" "${_uuid}"`"
+   sourcetree::db::r_fetch_nodeline_for_uuid "${database}" "${_uuid}"
+   previousnodeline="${RVAL}"
 
    #
    # find out, where it was previously located
@@ -1717,7 +1728,8 @@ node \"${otheruuid}\" in database \"${database}\". Skip it."
 
    if [ ! -z "${previousnodeline}" ]
    then
-      previousfilename="`sourcetree::db::fetch_filename_for_uuid "${database}" "${_uuid}"`"
+      sourcetree::db::r_fetch_filename_for_uuid "${database}" "${_uuid}"
+      previousfilename="${RVAL}"
 
       [ -z "${previousfilename}" ] && _internal_fail "corrupted db"
 

@@ -56,7 +56,9 @@ Options:
    -r                         : sync recursively
    --serial                   : don't fetch dependencies in parallel
    --parallel                 : fetch dependencies in parallel (default)
-   --quick-check              : if present in filesystem assume node is OK
+   --quick                    : skip sync, if configs, environment and
+                                destinations are unchanged since the last
+                                successful sync (not with -f)
    --no-fix                   : do not write ${SOURCETREE_FIX_FILENAME} files
    --override-branch <branch> : temporary override of the _branch for all nodes
 
@@ -89,7 +91,8 @@ sourcetree::sync::__get_db_descendinfo()
    local address="$2"
    local uuid="$3"
 
-   _filename="`sourcetree::db::fetch_filename_for_uuid "${database}" "${uuid}" `"
+   sourcetree::db::r_fetch_filename_for_uuid "${database}" "${uuid}"
+   _filename="${RVAL}"
 
    [ -z "${_filename}" ] && _internal_fail "corrupted db ${database} for ${uuid}, better clean it (${MULLE_VIRTUAL_ROOT:-$PWD})"
 
@@ -392,7 +395,14 @@ sourcetree::sync::descend_config_nodelines()
 
    local nodelines
 
-   nodelines="`sourcetree::walk::cfg_read "${symbol}" "${config}" `"
+   # caller may pass already read nodelines as 4th argument
+   if [ $# -ge 4 ]
+   then
+      nodelines="$4"
+   else
+      nodelines="`sourcetree::walk::cfg_read "${symbol}" "${config}" `"
+   fi
+
    if [ -z "${nodelines}" ]
    then
       _log_fluff "No\"${style}\" update of config \"${config:-ROOT}\" as it \
@@ -544,7 +554,8 @@ sourcetree::sync::_sync_only_share()
    sourcetree::sync::descend_config_nodelines "only_share" \
                                               "${config}" \
                                               "${database}" \
-                                              "${symbol}" || return 1
+                                              "${symbol}" \
+                                              "${nodelines}" || return 1
 }
 
 
@@ -685,19 +696,18 @@ sourcetree::sync::_sync_share()
       # This prevents writing back stale values after a reset when
       # MULLE_VIRTUAL_ROOT_ID changed and runtime env still carries
       # an old expanded MULLE_SOURCETREE_STASH_DIR.
-      local persisted_stash_dir
-      local env_stash_dir
-
-      persisted_stash_dir="${MULLE_SOURCETREE_STASH_DIR}"
-      env_stash_dir="`"${MULLE_ENV:-mulle-env}" -s environment get --output-eval MULLE_SOURCETREE_STASH_DIR 2>/dev/null`"
-      if [ ! -z "${env_stash_dir}" ]
+      # This can't change during a sync, so ask mulle-env only once per run.
+      if [ -z "${_SOURCETREE_PERSISTED_STASH_DIR+x}" ]
       then
-         persisted_stash_dir="${env_stash_dir}"
+         local env_stash_dir
+
+         env_stash_dir="`"${MULLE_ENV:-mulle-env}" -s environment get --output-eval MULLE_SOURCETREE_STASH_DIR 2>/dev/null`"
+         _SOURCETREE_PERSISTED_STASH_DIR="${env_stash_dir:-${MULLE_SOURCETREE_STASH_DIR}}"
       fi
 
       sourcetree::db::set_dbtype "${database}" "${style}"
       sourcetree::db::set_update "${database}" "${configfile}"
-      sourcetree::db::set_shareddir "${database}" "${persisted_stash_dir}"
+      sourcetree::db::set_shareddir "${database}" "${_SOURCETREE_PERSISTED_STASH_DIR}"
       #
       # do a flat update first and remove what we don't have
       #
@@ -1038,6 +1048,377 @@ You can suppress the generation of this file with:
 }
 
 
+####
+# QUICK
+####
+#
+# "sync --quick" skips the whole sync, if nothing relevant changed since the
+# last successful sync. A stamp file ".db_quick" in the start database
+# contains these lines:
+#
+#   E <name>=<value> : environment fingerprint, compared as a whole
+#   U <name>=<value> : user variable referenced in a config file
+#   C <file>         : config file that was read, must not be newer than ref
+#   N <file>         : config file that was absent, must still be absent
+#   D <file>         : memorized destination, must still exist
+#   R <dir>          : memorized destination that is descended into, must
+#                      still exist (and must have C/N lines for its config)
+#
+# ".db_quick_ref" is created at the start of a sync, its mtime is the
+# reference for "C" files. During sync the C/N/D/M lines are appended to
+# ".db_quick_log" (with builtins, so it works in parallel subshells).
+# An "M" line (missing, not required node) prevents writing a stamp.
+#
+sourcetree::sync::r_quick_names()
+{
+   local names
+
+   if [ ${ZSH_VERSION+x} ]
+   then
+      eval 'names=( ${(o)${(k)parameters[(I)MULLE_SOURCETREE_*]}}
+                    ${(o)${(k)parameters[(I)SOURCETREE_*]}}
+                    ${(o)${(k)parameters[(I)MULLE_FETCH_*]}}
+                    ${(o)${(k)parameters[(I)OPTION_FETCH_*]}} )'
+   else
+      eval 'names=( ${!MULLE_SOURCETREE_@}
+                    ${!SOURCETREE_@}
+                    ${!MULLE_FETCH_@}
+                    ${!OPTION_FETCH_@} )'
+   fi
+
+   names+=( MULLE_UNAME
+            MULLE_CRAFT_PLATFORMS
+            MULLE_VIRTUAL_ROOT
+            OPTION_OVERRIDE_BRANCH
+            OPTION_FIX
+            OPTION_LENIENT )
+
+   local name
+   local result
+
+   for name in "${names[@]}"
+   do
+      case "${name}" in
+         # module include guards differ depending on what's loaded
+         *_SH)
+            continue
+         ;;
+      esac
+      result="${result}${name}
+"
+   done
+
+   RVAL="${result}"
+}
+
+
+sourcetree::sync::r_quick_value_line()
+{
+   local prefix="$1"
+   local name="$2"
+
+   r_shell_indirect_expand "${name}"
+   # keep it to one line
+   RVAL="${prefix} ${name}=${RVAL//$'\n'/\\n}"
+}
+
+
+sourcetree::sync::r_quick_fingerprint()
+{
+   log_entry "sourcetree::sync::r_quick_fingerprint" "$@"
+
+   local name
+   local result
+
+   sourcetree::sync::r_quick_names
+
+   .foreachline name in ${RVAL}
+   .do
+      sourcetree::sync::r_quick_value_line "E" "${name}"
+      result="${result}${RVAL}
+"
+   .done
+
+   RVAL="${result}"
+}
+
+
+#
+# collect names of ${VARIABLE} references in a text
+#
+sourcetree::sync::r_add_referenced_variables()
+{
+   local names="$1"
+   local s="$2"
+
+   local name
+   local nl=$'\n'
+
+   while :
+   do
+      case "${s}" in
+         *'${'*)
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+
+      s="${s#*\$\{}"
+      name="${s%%[!A-Za-z0-9_]*}"
+
+      case "${name}" in
+         ""|MULLE_TAG|MULLE_BRANCH|MULLE_URL|MULLE_TAG_OR_BRANCH)
+            # these are computed during sync
+            continue
+         ;;
+      esac
+
+      # case is much faster than find_line in zsh
+      case "${nl}${names}${nl}" in
+         *"${nl}${name}${nl}"*)
+         ;;
+
+         *)
+            names="${names:+${names}${nl}}${name}"
+         ;;
+      esac
+   done
+
+   RVAL="${names}"
+}
+
+
+sourcetree::sync::quick_is_uptodate()
+{
+   log_entry "sourcetree::sync::quick_is_uptodate" "$@"
+
+   local database="$1"
+   local fingerprint="$2"
+
+   local _database
+   local _databasedir
+
+   sourcetree::db::__common_databasedir "${database}"
+
+   local stamp="${_databasedir}/.db_quick"
+   local ref="${_databasedir}/.db_quick_ref"
+
+   if [ ! -f "${stamp}" -o ! -f "${ref}" ]
+   then
+      log_fluff "No quick stamp, need to sync"
+      return 1
+   fi
+
+   if sourcetree::db::is_updating "${database}" || ! sourcetree::db::is_ready "${database}"
+   then
+      log_fluff "Database not ready, need to sync"
+      return 1
+   fi
+
+   local line
+   local filepath
+   local name
+   local value
+   local env
+   local stamptext
+
+   # $(<file) is much faster than `read` in zsh
+   stamptext="$(<"${stamp}")"
+
+   .foreachline line in ${stamptext}
+   .do
+      filepath="${line:2}"
+
+      case "${line}" in
+         E\ *)
+            env="${env}${line}
+"
+         ;;
+
+         U\ *)
+            name="${filepath%%=*}"
+            sourcetree::sync::r_quick_value_line "U" "${name}"
+            if [ "${RVAL}" != "${line}" ]
+            then
+               log_fluff "Variable \"${name}\" changed, need to sync"
+               return 1
+            fi
+         ;;
+
+         C\ *)
+            if [ ! -f "${filepath}" ] || [ "${filepath}" -nt "${ref}" ]
+            then
+               log_fluff "Config \"${filepath}\" changed, need to sync"
+               return 1
+            fi
+         ;;
+
+         N\ *)
+            if [ -e "${filepath}" ]
+            then
+               log_fluff "Config \"${filepath}\" appeared, need to sync"
+               return 1
+            fi
+         ;;
+
+         D\ *|R\ *)
+            if [ ! -e "${filepath}" ]
+            then
+               log_fluff "Destination \"${filepath}\" is gone, need to sync"
+               return 1
+            fi
+         ;;
+      esac
+   .done
+
+   if [ "${env}" != "${fingerprint}" ]
+   then
+      log_fluff "Environment changed, need to sync"
+      log_debug "old: ${env}"
+      log_debug "new: ${fingerprint}"
+      return 1
+   fi
+
+   return 0
+}
+
+
+sourcetree::sync::quick_begin()
+{
+   log_entry "sourcetree::sync::quick_begin" "$@"
+
+   local database="$1"
+
+   local _database
+   local _databasedir
+
+   sourcetree::db::__common_databasedir "${database}"
+
+   mkdir_if_missing "${_databasedir}"
+
+   # invalidate old stamp first, so a failed sync leaves none
+   remove_file_if_present "${_databasedir}/.db_quick"
+
+   _SOURCETREE_QUICK_LOG="${_databasedir}/.db_quick_log"
+
+   # builtin truncation/creation, mtime of ref is our reference
+   : > "${_SOURCETREE_QUICK_LOG}" || _SOURCETREE_QUICK_LOG=""
+   : > "${_databasedir}/.db_quick_ref"
+}
+
+
+sourcetree::sync::quick_end()
+{
+   log_entry "sourcetree::sync::quick_end" "$@"
+
+   local database="$1"
+   local fingerprint="$2"
+   local rc="$3"
+
+   local logfile="${_SOURCETREE_QUICK_LOG}"
+
+   _SOURCETREE_QUICK_LOG=""
+
+   [ -z "${logfile}" ] && return
+
+   local _database
+   local _databasedir
+
+   sourcetree::db::__common_databasedir "${database}"
+
+   local stamp="${_databasedir}/.db_quick"
+   local ref="${_databasedir}/.db_quick_ref"
+
+   # if sync failed or the db was reset during the sync, write no stamp
+   if [ "${rc}" -ne 0 ] || [ ! -f "${logfile}" -o ! -f "${ref}" ]
+   then
+      remove_file_if_present "${logfile}"
+      return
+   fi
+
+   local line
+   local lines
+   local names
+   local logtext
+   local nl=$'\n'
+
+   # $(<file) is much faster than `read` in zsh
+   logtext="$(<"${logfile}")"
+
+   .foreachline line in ${logtext}
+   .do
+      # dedupe, case is much faster than find_line in zsh
+      case "${nl}${lines}${nl}" in
+         *"${nl}${line}${nl}"*)
+            .continue
+         ;;
+      esac
+
+      case "${line}" in
+         M\ *)
+            log_fluff "Not all nodes were fetched, so no quick stamp"
+            remove_file_if_present "${logfile}"
+            return
+         ;;
+
+         C\ *)
+            # collect ${VARIABLE} references
+            sourcetree::sync::r_add_referenced_variables "${names}" "$(<"${line:2}")"
+            names="${RVAL}"
+         ;;
+      esac
+
+      lines="${lines:+${lines}${nl}}${line}"
+   .done
+
+   local name
+   local uservars
+   local rpath
+
+   #
+   # every directory we could descend into, must have been checked for a
+   # config. If not (e.g. it was fetched during this sync and not descended
+   # yet), don't write a stamp. The next sync will be complete. In flat mode
+   # nothing is descended.
+   #
+   if [ "${SOURCETREE_MODE}" != 'flat' ]
+   then
+      .foreachline line in ${lines}
+      .do
+         case "${line}" in
+            R\ *)
+               rpath="${line:2}"
+               case "${lines}" in
+                  *"C ${rpath}/"*|*"N ${rpath}/"*)
+                  ;;
+
+                  *)
+                     log_fluff "\"${rpath}\" was not descended, so no quick stamp"
+                     remove_file_if_present "${logfile}"
+                     return
+                  ;;
+               esac
+            ;;
+         esac
+      .done
+   fi
+
+   .foreachline name in ${names}
+   .do
+      sourcetree::sync::r_quick_value_line "U" "${name}"
+      uservars="${uservars}${RVAL}
+"
+   .done
+
+   printf "%s%s%s\n" "${fingerprint}" "${uservars}" "${lines}" > "${stamp}"
+   remove_file_if_present "${logfile}"
+
+   log_fluff "Wrote quick stamp \"${stamp}\""
+}
+
+
 #
 # Updating flat or recursive is simple. It can be done on any sourcetree,
 # that is not share.
@@ -1081,6 +1462,29 @@ sourcetree::sync::start()
    sourcetree::db::ensure_consistency "${SOURCETREE_START}"
    sourcetree::db::ensure_compatible_dbtype "${SOURCETREE_START}" "${style}"
 
+   #
+   # quick check: skip everything if nothing changed since last sync
+   # the fingerprint is computed here, so it sees the same state as the
+   # next run will
+   #
+   local quick_fingerprint
+   local _SOURCETREE_QUICK_LOG
+
+   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" != 'YES' ]
+   then
+      sourcetree::sync::r_quick_fingerprint
+      quick_fingerprint="${RVAL}"
+
+      if [ "${OPTION_QUICK}" = 'YES' -a "${MULLE_FLAG_MAGNUM_FORCE}" != 'YES' ] &&
+         sourcetree::sync::quick_is_uptodate "${SOURCETREE_START}" "${quick_fingerprint}"
+      then
+         log_verbose "Sourcetree is unchanged since last sync (--quick)"
+         return 0
+      fi
+
+      sourcetree::sync::quick_begin "${SOURCETREE_START}"
+   fi
+
    local rc
 
    sourcetree::sync::sync_${style} \
@@ -1089,6 +1493,11 @@ sourcetree::sync::start()
                           "" \
                           "${startpoint}"
    rc=$?
+
+   if [ "${MULLE_FLAG_EXEKUTOR_DRY_RUN}" != 'YES' ]
+   then
+      sourcetree::sync::quick_end "${SOURCETREE_START}" "${quick_fingerprint}" "${rc}"
+   fi
 
    # this is checked by 17-minions
    if [ $rc -eq 127 -a "${OPTION_LENIENT}" = 'YES' ]
@@ -1158,8 +1567,12 @@ sourcetree::sync::main()
             OPTION_LENIENT='NO'
          ;;
 
-         --quick)
+         --quick|--quick-check)
             OPTION_QUICK='YES'
+         ;;
+
+         --no-quick|--no-quick-check)
+            OPTION_QUICK='NO'
          ;;
 
          --cache-refresh|--refresh|--mirror-refresh)

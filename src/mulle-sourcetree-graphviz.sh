@@ -48,7 +48,8 @@ Usage:
    If a node is itself a sourcetree, an edge is drawn from that (inferior)
    row to the table of the other sourcetree. The edge is anchored to the
    row and labelled with the UUID of the connecting node. Nodes are
-   deduplicated by UUID.
+   deduplicated by UUID. Edges to embedded dependencies (no-build,no-share)
+   use a round arrowhead (dot) in gray.
 
    Repositories must have been synced (mulle-sourcetree sync) for the walk
    to be complete.
@@ -189,6 +190,20 @@ sourcetree::graphviz::emit()
          return "\"" s "\""
       }
 
+      # an embedded dependency carries both no-build and no-share
+      function is_embedded( m,   k, n, a, has_no_build, has_no_share)
+      {
+         n = split( m, a, ",")
+         for( k = 1; k <= n; k++)
+         {
+            if( a[k] == "no-build" )
+               has_no_build = 1
+            if( a[k] == "no-share" )
+               has_no_share = 1
+         }
+         return( has_no_build && has_no_share )
+      }
+
       BEGIN {
          n = 0
          nt = 0
@@ -278,8 +293,13 @@ sourcetree::graphviz::emit()
          for( i = 1; i <= n; i++)
          {
             if( cflag[i] == "YES" && (cds[i] in tree) && cds[i] != ds[i])
-               printf "   %s:p%d -> %s [ label=%s ];\n", \
-                  q( tid[ds[i]]), i, q( tid[cds[i]]), q( esc( uuid[i]))
+            {
+               attrs = "label=" q( esc( uuid[i]))
+               if( is_embedded( marks[i]) )
+                  attrs = attrs ", arrowhead=dot, color=gray40"
+               printf "   %s:p%d -> %s [ %s ];\n", \
+                  q( tid[ds[i]]), i, q( tid[cds[i]]), attrs
+            }
          }
 
          printf "}\n"

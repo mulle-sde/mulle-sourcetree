@@ -1,0 +1,156 @@
+#! /usr/bin/env bash
+
+[ "${TRACE}" = 'YES' ] && set -x && : "$0" "$@"
+
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+MULLE_BASHFUNCTIONS_LIBEXEC_DIR="`mulle-bashfunctions libexec-dir`" || exit 1
+export MULLE_BASHFUNCTIONS_LIBEXEC_DIR
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-boot.sh" || exit 1
+. "${MULLE_BASHFUNCTIONS_LIBEXEC_DIR}/mulle-bashfunctions.sh" || exit 1
+###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###   ###
+
+
+run_mulle_sourcetree()
+{
+   log_fluff "####################################" >&2
+   log_fluff ${MULLE_SOURCETREE} ${MULLE_SOURCETREE_FLAGS:-} "$@"
+   log_fluff "####################################" >&2
+
+   (
+      set +e
+
+      MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} libexec-dir`"
+
+      . "${MULLE_SOURCETREE}" ${MULLE_SOURCETREE_FLAGS:-} "$@"
+   )
+}
+
+
+#
+# run a "sync --quick" and check if it was skipped or not
+#
+expect_quick()
+{
+   local expect="$1"
+   local title="$2"
+
+   local output
+
+   output="`run_mulle_sourcetree -v -N --share sync --quick 2>&1`" \
+   || fail "${title}: sync failed: ${output}"
+
+   local skipped='NO'
+
+   case "${output}" in
+      *"unchanged since last sync"*)
+         skipped='YES'
+      ;;
+   esac
+
+   if [ "${skipped}" != "${expect}" ]
+   then
+      fail "${title}: expected quick skip to be ${expect}, got ${skipped}"
+   fi
+
+   log_verbose "----- ${title} PASSED -----"
+}
+
+
+#
+#  root -> a, b
+#  a    -> b
+#  b    -> c (c has no config initially)
+#
+main()
+{
+   MULLE_SOURCETREE_FLAGS="$@"
+
+   _options_mini_main "$@" && set -x
+
+   local directory
+
+   r_make_tmp_directory || exit 1
+   directory="${RVAL}"
+
+   local projects="${directory}/projects"
+
+   log_verbose "------- SETUP-------"
+
+   mkdir_if_missing "${projects}/root"
+   mkdir_if_missing "${projects}/a"
+   mkdir_if_missing "${projects}/b"
+   mkdir_if_missing "${projects}/c"
+
+   (
+      cd "${projects}/b" &&
+      run_mulle_sourcetree -s -N add --nodetype symlink --url "${projects}/c" c
+   ) || _internal_fail "failed"
+
+   (
+      cd "${projects}/a" &&
+      run_mulle_sourcetree -s -N add --nodetype symlink --url "${projects}/b" b
+   ) || _internal_fail "failed"
+
+   (
+      cd "${projects}/root" &&
+      run_mulle_sourcetree -s -N add --nodetype symlink --url "${projects}/a" a &&
+      run_mulle_sourcetree -s -N add --nodetype symlink \
+                                     --url '${QUICK_TEST_B_URL:-'"${projects}"'/b}' b
+   ) || _internal_fail "failed"
+
+   log_verbose "------- START-------"
+
+   cd "${projects}/root" || exit 1
+
+   # there is no stamp yet
+   expect_quick 'NO'  "#1 initial"
+   expect_quick 'YES' "#2 unchanged"
+
+   # config edit in a descendant (wait for mtime granularity)
+   sleep 1
+   touch "${projects}/b/.mulle/etc/sourcetree/config"
+   expect_quick 'NO'  "#3 config touched"
+   expect_quick 'YES' "#4 unchanged"
+
+   # destination vanished, must be restored
+   local stashdir
+
+   stashdir="${projects}/root/stash"
+   [ -L "${stashdir}/c" ] || fail "stash/c not symlinked: `ls -la "${stashdir}"`"
+   remove_file_if_present "${stashdir}/c"
+   expect_quick 'NO'  "#5 destination removed"
+   [ -L "${stashdir}/c" ] || fail "stash/c not restored"
+   # the restoring sync doesn't descend into the restored "c", so it writes
+   # no stamp and the next sync is a full one again
+   expect_quick 'NO'  "#6a full sync after restore"
+   expect_quick 'YES' "#6 unchanged"
+
+   # a config appears, where there was none
+   mkdir_if_missing "${projects}/c/.mulle/etc/sourcetree"
+   redirect_exekutor "${projects}/c/.mulle/etc/sourcetree/config" printf ""
+   expect_quick 'NO'  "#7 config appeared"
+   expect_quick 'YES' "#8 unchanged"
+
+   # variable referenced by a config changes
+   QUICK_TEST_B_URL="${projects}/b"
+   export QUICK_TEST_B_URL
+   expect_quick 'NO'  "#9 user variable changed"
+   expect_quick 'YES' "#10 unchanged"
+
+   # sourcetree environment changes
+   MULLE_SOURCETREE_QUICK_TEST_DUMMY="x"
+   export MULLE_SOURCETREE_QUICK_TEST_DUMMY
+   expect_quick 'NO'  "#11 environment changed"
+   expect_quick 'YES' "#12 unchanged"
+
+   log_info "----- ALL PASSED -----"
+
+   cd  "/"
+   rmdir_safer "${directory}"
+}
+
+
+MULLE_SOURCETREE="${MULLE_SOURCETREE:-${PWD}/../../mulle-sourcetree}"
+MULLE_SOURCETREE_LIBEXEC_DIR="`${MULLE_SOURCETREE} library-path`" || exit 1
+
+main "$@"

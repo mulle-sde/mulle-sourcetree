@@ -44,7 +44,9 @@ Usage:
    Create a pretty SVG picture of your projects dependencies as they
    are stored in the mulle-sourcetree. The sourcetree must have been synced
    before the picture can be rendered completely. The default graph is
-   prettier, but many edges (arrows) are hidden for simplification.
+   prettier, but many edges (arrows) are hidden for simplification. Edges
+   to embedded dependencies (no-build,no-share) use a round arrowhead (dot)
+   in gray.
 
    Needs the "dot" command (graphviz) to be installed.
 
@@ -142,7 +144,11 @@ EOF
                                ${options} \
                                ${ignorelist} \
                                "$@" \
-                               'echo "\"${WALK_PARENT_NAME}\" -> \"${NODE_NAME}\"
+                               'edgeattrs=""
+case ",${NODE_MARKS}," in
+   *,no-build,*) case ",${NODE_MARKS}," in *,no-share,*) edgeattrs=" [ arrowhead=dot, color=gray40 ]" ;; esac ;;
+esac
+echo "\"${WALK_PARENT_NAME}\" -> \"${NODE_NAME}\"${edgeattrs}
 \"${NODE_NAME}\" [ href=\"`mulle-domain '"${MULLE_TECHNICAL_FLAGS}"' homepage-url \"${NODE_EVALED_URL:-https://unknown.com}\"`\" ]"'
    ) \
    | sort \

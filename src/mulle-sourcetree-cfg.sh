@@ -377,24 +377,101 @@ sourcetree::cfg::egrep()
 {
    local configfile="$1"
 
-   local  rc
+   #
+   # was: grep -E -v -s '^#' "${configfile}", now with builtins only
+   #
+   if [ ! -f "${configfile}" ] || [ ! -r "${configfile}" ]
+   then
+      log_debug "File not found \"${configfile#"${MULLE_USER_PWD}/"}\" (${PWD#"${MULLE_USER_PWD}/"})"
+      return 2
+   fi
 
-   case "${MULLE_UNAME}" in
-      sunos)
-         # slowlaris can't do grep -E -s :(
-         if [ ! -f "${configfile}" ]
-         then
-            log_debug "File not found \"${configfile#"${MULLE_USER_PWD}/"}\" (${PWD#"${MULLE_USER_PWD}/"})"
-            return 2
-         fi
+   #
+   # MEMO: $(<file) instead of `read`, which is byte by byte in zsh
+   #
+   local text
+   local nl=$'\n'
 
-         grep -E -v '^#' "${configfile}"
-         rc=$?
+   text="$(<"${configfile}")"
+   if [ -z "${text}" ]
+   then
+      return 1
+   fi
+
+   # fast path, no comments at all
+   case "${nl}${text}" in
+      *"${nl}#"*)
+      ;;
+
+      *)
+         printf "%s\n" "${text}"
+         return 0
       ;;
    esac
 
-   grep -E -v -s '^#' "${configfile}"
-   return $?
+   local line
+   local out
+   local rc=1
+
+   while :
+   do
+      line="${text%%"${nl}"*}"
+      case "${line}" in
+         '#'*)
+         ;;
+
+         *)
+            out="${out}${line}${nl}"
+            rc=0
+         ;;
+      esac
+
+      case "${text}" in
+         *"${nl}"*)
+            text="${text#*"${nl}"}"
+         ;;
+
+         *)
+            break
+         ;;
+      esac
+   done
+
+   printf "%s" "${out}"
+   return $rc
+}
+
+
+#
+# Log config candidates of sourcetree::cfg::read for "sync --quick"
+#   C <file> : file was used, must not change
+#   N <file> : file was absent, must not appear
+#
+# uses _configfile and _fallback_configfile of caller
+#
+sourcetree::cfg::quick_log()
+{
+   local mode="$1"
+
+   if [ "${mode}" != "fallback-only" ]
+   then
+      if [ -f "${_configfile}" ]
+      then
+         printf "C %s\n" "${_configfile}" >> "${_SOURCETREE_QUICK_LOG}"
+         return
+      fi
+      printf "N %s\n" "${_configfile}" >> "${_SOURCETREE_QUICK_LOG}"
+   fi
+
+   if [ "${mode}" != "config-only" -a ! -z "${_fallback_configfile}" ]
+   then
+      if [ -f "${_fallback_configfile}" ]
+      then
+         printf "C %s\n" "${_fallback_configfile}" >> "${_SOURCETREE_QUICK_LOG}"
+      else
+         printf "N %s\n" "${_fallback_configfile}" >> "${_SOURCETREE_QUICK_LOG}"
+      fi
+   fi
 }
 
 
@@ -416,6 +493,15 @@ sourcetree::cfg::read()
 
    log_setting "configfile           : ${_configfile}"
    log_setting "fallback_configfile  : ${_fallback_configfile}"
+
+   #
+   # for sync --quick: remember which config files were (or would have been)
+   # used. Builtins only, works in subshells.
+   #
+   if [ ! -z "${_SOURCETREE_QUICK_LOG}" ]
+   then
+      sourcetree::cfg::quick_log "${mode}"
+   fi
 
    if [ "${mode}" != "fallback-only" ]
    then
